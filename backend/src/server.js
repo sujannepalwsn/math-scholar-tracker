@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+// import mongoose from 'mongoose'; // Removed mongoose
+import { createClient } from '@supabase/supabase-js';
 import userRoutes from './routes/userRoutes.js';
 import lessonRoutes from './routes/lessonRoutes.js';
 import homeworkRoutes from './routes/homeworkRoutes.js';
@@ -11,29 +12,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY; // Use service key for backend
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("FATAL ERROR: SUPABASE_URL or SUPABASE_SERVICE_KEY is not defined in .env file.");
+  process.exit(1);
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
-const MONGO_URI = process.env.MONGO_URI;
-
-if (!MONGO_URI) {
-  console.error("FATAL ERROR: MONGO_URI is not defined in .env file.");
-  process.exit(1); // Exit the application if DB connection string is not found
-}
-
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB Connected Successfully'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1); // Exit on connection error
-  });
+// Removed MongoDB connection logic
 
 // API Routes
 app.get('/api', (req, res) => {
-  res.json({ message: 'Welcome to Tuition Tracker API - V1' });
+  res.json({ message: 'Welcome to Tuition Tracker API - V1 (Supabase integrated)' });
 });
 
 app.use('/api/users', userRoutes);
