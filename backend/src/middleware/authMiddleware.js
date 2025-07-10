@@ -1,50 +1,63 @@
-import jwt from 'jsonwebtoken';
-import User from '../models/UserModel.js';
+import { supabase } from '../server.js';
 
-// Middleware to protect routes - checks for valid token
-const protect = async (req, res, next) => {
-  let token;
+export const authMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
 
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Attach user to request object, excluding password
-      req.user = await User.findById(decoded.id).select('-password');
-
-      if (!req.user) {
-        return res.status(401).json({ message: 'Not authorized, user not found' });
-      }
-      next();
-    } catch (error) {
-      console.error('Token verification error:', error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
-    }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !user) {
+      return res.status(401).json({ message: 'Not authorized, token failed or user not found' });
+    }
+
+    req.user = user; // Attach Supabase auth user object to request
+
+    // Fetch the full profile using the get_profile RPC function
+    // The p_user_id parameter name must match the function definition in SQL.
+    const { data: profile, error: profileError } = await supabase
+      .rpc('get_profile', { p_user_id: user.id })
+      .single();
+
+    if (profileError) {
+      // Log the error but proceed; some routes might not need full profile,
+      // or the profile might not exist yet (e.g., just after signup before student details are filled).
+      console.error('Error fetching profile in authMiddleware:', profileError.message);
+      // Depending on strictness, you might want to return an error here:
+      // return res.status(500).json({ message: 'Error fetching user profile data.', details: profileError.message });
+    }
+
+    req.profile = profile || null; // Attach profile data (or null if not found/error) to request
+
+    next();
+  } catch (error) {
+    console.error('Critical error in auth middleware:', error);
+    res.status(500).json({ message: 'Server error during authentication' });
   }
 };
 
-// Middleware to authorize based on role(s)
-// roles can be a single role string or an array of roles
-const authorize = (roles) => {
+// Optional: Role-based authorization middleware
+// This can now use req.profile.role if it's consistently populated by get_profile.
+// Or, it can still use req.user.role if the role from JWT is sufficient.
+/*
+export const authorizeRole = (allowedRoles) => {
   return (req, res, next) => {
-    const userRole = req.user?.role; // User should be attached by 'protect' middleware
+    // Prefer role from profile if available and reliable, otherwise fallback to JWT role
+    const userRole = req.profile?.role || req.user?.role;
+
     if (!userRole) {
-        return res.status(403).json({ message: 'User role not found. Authorization denied.' });
+      return res.status(403).json({ message: 'Forbidden: No user role information.' });
     }
-
-    const rolesArray = Array.isArray(roles) ? roles : [roles];
-
-    if (rolesArray.includes(userRole)) {
-      next(); // User has one of the required roles
+    if (allowedRoles.includes(userRole)) {
+      next();
     } else {
-      res.status(403).json({ message: `User role '${userRole}' is not authorized to access this resource. Required roles: ${rolesArray.join(', ')}.` });
+      res.status(403).json({ message: `Forbidden: Role '${userRole}' is not authorized.` });
     }
   };
 };
-
-export { protect, authorize };
+*/

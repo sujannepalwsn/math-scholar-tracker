@@ -1,27 +1,58 @@
 import express from 'express';
-import Lesson from '../models/LessonModel.js';
-import { protect, authorize } ROKEN_STRIPPED_VALUE // (e.g., ['admin', 'teacher', 'co-teacher'])
+import { supabase } from '../server.js'; // Import Supabase client
+import { authMiddleware } from '../middleware/authMiddleware.js'; // Renamed from 'protect'
+
+// TODO: Implement authorize middleware if complex role logic is needed beyond simple checks.
+// For now, role checks will be inline or use a simpler checker.
+// import { authorize } from '../middleware/authMiddleware.js';
+
+
+const router = express.Router();
+
+// Helper to check roles (can be expanded or moved to middleware)
+const checkRole = (allowedRoles) => (req, res, next) => {
+  if (!req.user || !req.user.role) {
+    return res.status(403).json({ message: 'Access denied. User role not available.' });
+  }
+  if (allowedRoles.includes(req.user.role)) {
+    next();
+  } else {
+    res.status(403).json({ message: `Access denied. Role '${req.user.role}' is not authorized.` });
+  }
+};
+
+
+// @desc    Create a new lesson
+// @route   POST /api/lessons
+// @access  Private (admin, teacher, co-teacher)
 router.post(
   '/',
-  protect,
-  authorize(['admin', 'teacher', 'co-teacher']),
+  authMiddleware,
+  checkRole(['admin', 'teacher', 'co-teacher']),
   async (req, res) => {
-    const { topicName, subjectArea, grade, lessonDate, resources, status } = req.body;
+    const { topic_name, subject_area, grade, lesson_date, resources, status } = req.body;
+
+    // Validate required fields
+    if (!topic_name || !subject_area || !grade || !lesson_date) {
+      return res.status(400).json({ message: 'Missing required fields for lesson (topic_name, subject_area, grade, lesson_date)' });
+    }
+
     try {
-      if (!topicName || !subjectArea || !grade || !lessonDate) {
-        return res.status(400).json({ message: 'Missing required fields for lesson' });
-      }
-      const lesson = new Lesson({
-        topicName,
-        subjectArea,
-        grade,
-        lessonDate,
-        resources: resources || [],
-        status: status || 'planned',
-        createdBy: req.user._id, // User from 'protect' middleware
-      });
-      const createdLesson = await lesson.save();
-      res.status(201).json(createdLesson);
+      const { data, error } = await supabase
+        .from('lessons') // Assuming table name is 'lessons'
+        .insert([{
+          topic_name,
+          subject_area,
+          grade,
+          lesson_date,
+          resources: resources || [],
+          status: status || 'planned',
+          created_by: req.user.id, // User ID from Supabase auth
+        }])
+        .select(); // Return the created record
+
+      if (error) throw error;
+      res.status(201).json(data[0]);
     } catch (error) {
       console.error("Error creating lesson:", error);
       res.status(500).json({ message: 'Server error creating lesson', error: error.message });
@@ -29,31 +60,42 @@ router.post(
   }
 );
 
-// @desc    Get all lessons (can be filtered by grade, subject, etc. via query params)
+// @desc    Get all lessons (can be filtered)
 // @route   GET /api/lessons
-// @access  Private (students, parents, teachers, admin)
-router.get('/', protect, async (req, res) => {
+// @access  Private (all authenticated users, filtered by role/grade)
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const { grade, subjectArea, dateFrom, dateTo, teacherId } = req.query;
-    const filter = {};
-    if (grade) filter.grade = grade;
-    if (subjectArea) filter.subjectArea = { $regex: subjectArea, $options: 'i' }; // Case-insensitive search
-    if (dateFrom || dateTo) {
-      filter.lessonDate = {};
-      if (dateFrom) filter.lessonDate.$gte = new Date(dateFrom);
-      if (dateTo) filter.lessonDate.$lte = new Date(dateTo);
-    }
-    if (teacherId) filter.createdBy = teacherId;
+    const { grade, subject_area, date_from, date_to, teacher_id } = req.query;
+    let query = supabase.from('lessons').select('*, created_by_profile:profiles(full_name, email)'); // Join with profiles for creator info
 
-    // For students/parents, maybe only show lessons relevant to their grade?
-    // This logic can be enhanced based on user role.
-    if (req.user.role === 'student' && req.user.grade) {
-        filter.grade = req.user.grade;
-    }
-    // TODO: For parents, filter by their children's grades.
+    if (grade) query = query.eq('grade', grade);
+    if (subject_area) query = query.ilike('subject_area', `%${subject_area}%`); // Case-insensitive like
+    if (date_from) query = query.gte('lesson_date', date_from);
+    if (date_to) query = query.lte('lesson_date', date_to);
+    if (teacher_id) query = query.eq('created_by', teacher_id);
 
-    const lessons = await Lesson.find(filter).populate('createdBy', 'firstName lastName email').sort({ lessonDate: -1 });
-    res.json(lessons);
+    // Role-based filtering (example)
+    if (req.user.role === 'student') {
+      const studentGrade = req.profile?.grade; // Use grade from req.profile
+      if (studentGrade) {
+        query = query.eq('grade', studentGrade);
+      } else {
+        // If student grade isn't available from profile, this might return too many/few lessons.
+        // Or it might indicate the student's profile/student record is incomplete.
+        console.warn(`Student ${req.user.id} has no grade in their profile for lesson filtering.`);
+        // Depending on policy, you might want to return empty or error.
+        // For now, it will attempt to fetch without grade filter if studentGrade is null/undefined.
+        // Consider adding: return res.json([]); or similar if grade is mandatory for students.
+      }
+    }
+    // TODO: Add filtering for parents based on their children's grades.
+
+    query = query.order('lesson_date', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    res.json(data);
   } catch (error) {
     console.error("Error fetching lessons:", error);
     res.status(500).json({ message: 'Server error fetching lessons', error: error.message });
@@ -63,30 +105,36 @@ router.get('/', protect, async (req, res) => {
 // @desc    Get a single lesson by ID
 // @route   GET /api/lessons/:id
 // @access  Private
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const lesson = await Lesson.findById(req.params.id).populate('createdBy', 'firstName lastName email');
-    if (!lesson) {
+    const { data: lesson, error } = await supabase
+      .from('lessons')
+      .select('*, created_by_profile:profiles(full_name, email)')
+      .eq('id', req.params.id)
+      .single(); // Expect one row
+
+    if (error && error.code === 'PGRST116') { // PGRST116: "The result contains 0 rows"
       return res.status(404).json({ message: 'Lesson not found' });
     }
+    if (error) throw error;
 
-    // Optional: Check if student/parent has access to this lesson's grade
-    if ((req.user.role === 'student' || req.user.role === 'parent') && lesson.grade !== req.user.grade) {
-        // This assumes parent's profile also has a 'grade' field matching their child, or requires linking children to parent.
-        // For now, a student can only see lessons of their own grade.
-        // Parent access needs more sophisticated logic (e.g. check against linked children's grades)
-        // For simplicity, if user is a student and lesson grade doesn't match, deny.
-        if (req.user.role === 'student' && lesson.grade !== req.user.grade) {
-             return res.status(403).json({ message: 'Not authorized to view this lesson' });
+
+    // Optional: Role-based access control for specific lesson
+    // Example: Student can only access lessons of their grade
+    if (req.user.role === 'student') {
+        const studentGrade = req.profile?.grade; // Use grade from req.profile
+        if (studentGrade && lesson.grade !== studentGrade) {
+            return res.status(403).json({ message: 'Not authorized to view this lesson' });
         }
+        // If studentGrade is null here, they might see lessons not intended for them if not caught by RLS.
+        // RLS policy `Students can view lesson plans for their grade` in migration depends on `students` table.
+        // The `get_profile` function now provides this grade, so this check should be effective if profile has grade.
     }
+    // TODO: Parent access based on children's grades.
 
     res.json(lesson);
   } catch (error) {
     console.error("Error fetching lesson:", error);
-    if (error.kind === 'ObjectId') {
-        return res.status(404).json({ message: 'Lesson not found (invalid ID format)' });
-    }
     res.status(500).json({ message: 'Server error fetching lesson', error: error.message });
   }
 });
@@ -96,36 +144,57 @@ router.get('/:id', protect, async (req, res) => {
 // @access  Private (creator, admin, teacher with rights)
 router.put(
   '/:id',
-  protect,
-  authorize(['admin', 'teacher', 'co-teacher']),
+  authMiddleware,
+  checkRole(['admin', 'teacher', 'co-teacher']),
   async (req, res) => {
     try {
-      const lesson = await Lesson.findById(req.params.id);
-      if (!lesson) {
+      // First, fetch the lesson to check ownership if not admin
+      const { data: existingLesson, error: fetchError } = await supabase
+        .from('lessons')
+        .select('created_by')
+        .eq('id', req.params.id)
+        .single();
+
+      if (fetchError && fetchError.code === 'PGRST116') {
         return res.status(404).json({ message: 'Lesson not found' });
       }
+      if (fetchError) throw fetchError;
 
       // Authorization: Only creator or admin can update
-      if (lesson.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      // Note: Supabase RLS policies are the primary way to enforce this.
+      // This check is an additional safeguard or for more complex logic.
+      if (req.user.role !== 'admin' && existingLesson.created_by !== req.user.id) {
         return res.status(403).json({ message: 'User not authorized to update this lesson' });
       }
 
-      const { topicName, subjectArea, grade, lessonDate, resources, status } = req.body;
+      const { topic_name, subject_area, grade, lesson_date, resources, status } = req.body;
 
-      lesson.topicName = topicName || lesson.topicName;
-      lesson.subjectArea = subjectArea || lesson.subjectArea;
-      lesson.grade = grade || lesson.grade;
-      lesson.lessonDate = lessonDate || lesson.lessonDate;
-      lesson.resources = resources !== undefined ? resources : lesson.resources;
-      lesson.status = status || lesson.status;
+      // Construct update object with only provided fields
+      const updateData = {};
+      if (topic_name !== undefined) updateData.topic_name = topic_name;
+      if (subject_area !== undefined) updateData.subject_area = subject_area;
+      if (grade !== undefined) updateData.grade = grade;
+      if (lesson_date !== undefined) updateData.lesson_date = lesson_date;
+      if (resources !== undefined) updateData.resources = resources;
+      if (status !== undefined) updateData.status = status;
 
-      const updatedLesson = await lesson.save();
-      res.json(updatedLesson);
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ message: 'No fields provided for update.' });
+      }
+      updateData.updated_at = new Date().toISOString(); // Manually set updated_at if not auto-handled by DB
+
+      const { data, error } = await supabase
+        .from('lessons')
+        .update(updateData)
+        .eq('id', req.params.id)
+        .select();
+
+      if (error) throw error;
+      if (!data || data.length === 0) return res.status(404).json({ message: 'Lesson not found or not updated' });
+
+      res.json(data[0]);
     } catch (error) {
       console.error("Error updating lesson:", error);
-      if (error.kind === 'ObjectId') {
-        return res.status(404).json({ message: 'Lesson not found (invalid ID format)' });
-      }
       res.status(500).json({ message: 'Server error updating lesson', error: error.message });
     }
   }
@@ -136,36 +205,42 @@ router.put(
 // @access  Private (creator, admin, teacher with rights)
 router.delete(
   '/:id',
-  protect,
-  authorize(['admin', 'teacher', 'co-teacher']),
+  authMiddleware,
+  checkRole(['admin', 'teacher', 'co-teacher']),
   async (req, res) => {
     try {
-      const lesson = await Lesson.findById(req.params.id);
-      if (!lesson) {
-        return res.status(404).json({ message: 'Lesson not found' });
+      // Optional: Fetch lesson to check ownership if RLS is not solely relied upon
+      if (req.user.role !== 'admin') {
+        const { data: lesson, error: fetchError } = await supabase
+          .from('lessons')
+          .select('created_by')
+          .eq('id', req.params.id)
+          .single();
+
+        if (fetchError && fetchError.code === 'PGRST116') return res.status(404).json({ message: 'Lesson not found' });
+        if (fetchError) throw fetchError;
+        if (lesson.created_by !== req.user.id) {
+          return res.status(403).json({ message: 'User not authorized to delete this lesson' });
+        }
       }
 
-      // Authorization: Only creator or admin can delete
-      if (lesson.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'User not authorized to delete this lesson' });
+      // TODO: Consider Supabase cascade delete settings for related homework.
+      // If not set up, manual deletion of related homework might be needed here.
+      // e.g., await supabase.from('homework').delete().eq('lesson_id', req.params.id);
+
+      const { error, count } = await supabase
+        .from('lessons')
+        .delete()
+        .eq('id', req.params.id);
+
+      if (error) throw error;
+      if (count === 0) {
+         return res.status(404).json({ message: 'Lesson not found or already deleted' });
       }
-
-      // TODO: Consider what happens to homework associated with this lesson.
-      // Option 1: Delete them (cascade delete - implement in pre-remove hook on Lesson model or here)
-      // Option 2: Unlink them (set lesson field to null - may not make sense)
-      // Option 3: Prevent deletion if homework exists.
-      // For now, just deleting the lesson.
-      // await Homework.deleteMany({ lesson: lesson._id }); // Example of cascade delete
-
-      await lesson.deleteOne(); // Mongoose v6+
-      // For older Mongoose: await lesson.remove();
 
       res.json({ message: 'Lesson removed successfully' });
     } catch (error) {
       console.error("Error deleting lesson:", error);
-       if (error.kind === 'ObjectId') {
-        return res.status(404).json({ message: 'Lesson not found (invalid ID format)' });
-      }
       res.status(500).json({ message: 'Server error deleting lesson', error: error.message });
     }
   }
