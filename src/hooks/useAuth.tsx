@@ -49,7 +49,7 @@ export const useAuth = () => {
   const fetchProfile = async (userId: string) => {
     try {
       // Use raw SQL query to bypass type issues while schema updates
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc('get_profile', { user_id: userId })
         .single();
 
