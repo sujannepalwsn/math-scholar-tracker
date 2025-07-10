@@ -12,6 +12,7 @@ interface Profile {
   avatar_url?: string;
   created_at: string;
   updated_at: string;
+  grade?: string; // Added for student's grade
 }
 
 export const useAuth = () => {
@@ -47,41 +48,21 @@ export const useAuth = () => {
   }, []);
 
   const fetchProfile = async (userId: string) => {
+    setLoading(true); // Ensure loading is true at the start of fetch
     try {
-      // Use raw SQL query to bypass type issues while schema updates
-      const { data, error } = await (supabase as any)
-        .rpc('get_profile', { user_id: userId })
+      const { data, error } = await supabase
+        .rpc('get_profile', { p_user_id: userId }) // Corrected parameter name
         .single();
 
       if (error) {
-        console.log('Profile fetch error (expected during setup):', error);
-        // For now, create a basic profile from user data if table doesn't exist yet
-        if (user) {
-          setProfile({
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            role: (user.user_metadata?.role as Profile['role']) || 'student',
-            created_at: user.created_at,
-            updated_at: user.updated_at || user.created_at
-          });
-        }
+        console.error('Error fetching profile from RPC:', error);
+        setProfile(null); // Set profile to null if RPC fails
       } else {
-        setProfile(data);
+        setProfile(data as Profile); // Cast to Profile; ensure 'data' matches Profile structure
       }
     } catch (error) {
-      console.log('Profile fetch error (expected during setup):', error);
-      // Fallback to user metadata
-      if (user) {
-        setProfile({
-          id: user.id,
-          email: user.email || '',
-          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-          role: (user.user_metadata?.role as Profile['role']) || 'student',
-          created_at: user.created_at,
-          updated_at: user.updated_at || user.created_at
-        });
-      }
+      console.error('Exception during fetchProfile:', error);
+      setProfile(null); // Also set profile to null on catch
     } finally {
       setLoading(false);
     }
