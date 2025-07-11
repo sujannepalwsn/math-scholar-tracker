@@ -51,50 +51,41 @@ export const useAuth = () => {
   const fetchProfile = async (userId: string) => {
     setLoading(true);
     try {
-      // Try to get profile using RPC function first
-      const { data: rpcData, error: rpcError } = await (supabase as any)
-        .rpc('get_profile', { user_id: userId })
+      // Use raw query to avoid TypeScript issues with unsynced types
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles' as any)
+        .select('*')
+        .eq('id', userId)
         .single();
 
-      if (!rpcError && rpcData) {
-        setProfile(rpcData as Profile);
+      if (!profileError && profileData) {
+        setProfile(profileData as Profile);
       } else {
-        // Fallback: try to get profile directly from profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+        console.log('No profile found, creating from user metadata...');
+        // Create profile from user metadata if it doesn't exist
+        const user = await supabase.auth.getUser();
+        if (user.data.user) {
+          const metadata = user.data.user.user_metadata;
+          const newProfile = {
+            id: userId,
+            email: user.data.user.email || '',
+            full_name: metadata.full_name || 'User',
+            role: metadata.role || 'student',
+            phone: metadata.phone,
+            grade: metadata.grade,
+          };
 
-        if (!profileError && profileData) {
-          setProfile(profileData as Profile);
-        } else {
-          console.log('No profile found, creating from user metadata...');
-          // Create profile from user metadata if it doesn't exist
-          const user = await supabase.auth.getUser();
-          if (user.data.user) {
-            const metadata = user.data.user.user_metadata;
-            const newProfile = {
-              id: userId,
-              email: user.data.user.email || '',
-              full_name: metadata.full_name || 'User',
-              role: metadata.role || 'student',
-              phone: metadata.phone,
-              grade: metadata.grade,
-            };
+          const { data: insertedProfile, error: insertError } = await supabase
+            .from('profiles' as any)
+            .insert(newProfile)
+            .select()
+            .single();
 
-            const { data: insertedProfile, error: insertError } = await supabase
-              .from('profiles')
-              .insert(newProfile)
-              .select()
-              .single();
-
-            if (!insertError && insertedProfile) {
-              setProfile(insertedProfile as Profile);
-            } else {
-              console.error('Failed to create profile:', insertError);
-              setProfile(null);
-            }
+          if (!insertError && insertedProfile) {
+            setProfile(insertedProfile as Profile);
+          } else {
+            console.error('Failed to create profile:', insertError);
+            setProfile(null);
           }
         }
       }
