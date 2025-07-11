@@ -1,29 +1,31 @@
 
-import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import AuthForm from '@/components/auth/AuthForm';
-import DashboardLayout from '@/components/layout/DashboardLayout';
 import DashboardOverview from '@/components/dashboard/DashboardOverview';
 
 const Index = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { profile, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthForm />;
-  }
-
   return (
-    <DashboardLayout>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Welcome back, {profile?.full_name || 'User'}!
+        </h1>
+        <p className="text-muted-foreground">
+          Here's what's happening with your {profile?.role === 'admin' ? 'system' : 'progress'} today.
+        </p>
+      </div>
+      
       <DashboardOverview />
-    </DashboardLayout>
+    </div>
   );
 };
 

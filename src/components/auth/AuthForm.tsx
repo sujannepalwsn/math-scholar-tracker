@@ -64,16 +64,27 @@ const AuthForm = () => {
         },
       });
 
-      if (error) throw error;
-
-      toast({
-        title: "Account created successfully!",
-        description: "Please check your email to verify your account.",
-      });
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast({
+            title: "Account already exists",
+            description: "Please try signing in instead.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Account created successfully!",
+          description: "Please check your email to verify your account, or you can sign in directly.",
+        });
+      }
     } catch (error: any) {
+      console.error('Sign up error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to create account. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -100,20 +111,37 @@ const AuthForm = () => {
         password,
       });
 
-      if (error) throw error;
-
-      if (data.user) {
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Invalid credentials",
+            description: "Please check your email and password and try again.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email not verified",
+            description: "Please check your email and click the verification link.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else if (data.user) {
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
         // Force page reload for clean state
-        window.location.href = '/';
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
       }
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Sign in failed",
+        description: error.message || "Failed to sign in. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -173,8 +201,9 @@ const AuthForm = () => {
                   {loading ? "Signing In..." : "Sign In"}
                 </Button>
                 <div className="text-center text-sm text-muted-foreground">
-                  <p>Admin Demo Account:</p>
-                  <p className="font-mono text-xs">sujan01nepal@gmail.com / precioussn</p>
+                  <p className="font-semibold">Demo Admin Account:</p>
+                  <p className="font-mono text-xs">sujan01nepal@gmail.com</p>
+                  <p className="font-mono text-xs">precioussn</p>
                 </div>
               </form>
             </TabsContent>
@@ -242,10 +271,11 @@ const AuthForm = () => {
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="Create a password (min 6 characters)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={6}
                   />
                 </div>
                 <div className="space-y-2">
