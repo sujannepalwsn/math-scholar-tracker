@@ -20,28 +20,11 @@ const AuthForm = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Clean up any existing auth state
-  const cleanupAuthState = () => {
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
-    });
-    Object.keys(sessionStorage || {}).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        sessionStorage.removeItem(key);
-      }
-    });
-  };
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Clean up existing state first
-      cleanupAuthState();
-      
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
@@ -97,15 +80,6 @@ const AuthForm = () => {
     setLoading(true);
 
     try {
-      // Clean up existing state first
-      cleanupAuthState();
-      
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
