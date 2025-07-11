@@ -51,15 +51,27 @@ export const useAuth = () => {
   const fetchProfile = async (userId: string) => {
     setLoading(true);
     try {
-      // Use raw query to avoid TypeScript issues with unsynced types
+      // Use the properly typed profiles table from the Database types
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
       if (!profileError && profileData) {
-        setProfile(profileData as Profile);
+        // Safely construct the profile object
+        const profileObj: Profile = {
+          id: profileData.id,
+          email: profileData.email,
+          full_name: profileData.full_name,
+          role: profileData.role,
+          phone: profileData.phone || undefined,
+          avatar_url: profileData.avatar_url || undefined,
+          created_at: profileData.created_at,
+          updated_at: profileData.updated_at,
+          grade: profileData.grade || undefined,
+        };
+        setProfile(profileObj);
       } else {
         console.log('No profile found, creating from user metadata...');
         // Create profile from user metadata if it doesn't exist
@@ -76,13 +88,25 @@ export const useAuth = () => {
           };
 
           const { data: insertedProfile, error: insertError } = await supabase
-            .from('profiles' as any)
+            .from('profiles')
             .insert(newProfile)
             .select()
             .single();
 
           if (!insertError && insertedProfile) {
-            setProfile(insertedProfile as Profile);
+            // Safely construct the profile object from inserted data  
+            const profileObj: Profile = {
+              id: insertedProfile.id,
+              email: insertedProfile.email,
+              full_name: insertedProfile.full_name,
+              role: insertedProfile.role,
+              phone: insertedProfile.phone || undefined,
+              avatar_url: insertedProfile.avatar_url || undefined,
+              created_at: insertedProfile.created_at,
+              updated_at: insertedProfile.updated_at,
+              grade: insertedProfile.grade || undefined,
+            };
+            setProfile(profileObj);
           } else {
             console.error('Failed to create profile:', insertError);
             setProfile(null);
