@@ -12,7 +12,7 @@ interface Profile {
   avatar_url?: string;
   created_at: string;
   updated_at: string;
-  grade?: string; // Added for student's grade
+  grade?: string;
 }
 
 export const useAuth = () => {
@@ -21,7 +21,21 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        // Defer profile fetching to prevent deadlocks
+        setTimeout(() => {
+          fetchProfile(session.user.id);
+        }, 0);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -31,47 +45,89 @@ export const useAuth = () => {
       }
     });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
     return () => subscription.unsubscribe();
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    setLoading(true); // Ensure loading is true at the start of fetch
+    setLoading(true);
     try {
-      const { data, error } = await supabase
-        .rpc('get_profile', { p_user_id: userId }) // Corrected parameter name
+      // Try to get profile using RPC function first
+      const { data: rpcData, error: rpcError } = await (supabase as any)
+        .rpc('get_profile', { user_id: userId })
         .single();
 
-      if (error) {
-        console.error('Error fetching profile from RPC:', error);
-        setProfile(null); // Set profile to null if RPC fails
+      if (!rpcError && rpcData) {
+        setProfile(rpcData as Profile);
       } else {
-        setProfile(data as Profile); // Cast to Profile; ensure 'data' matches Profile structure
+        // Fallback: try to get profile directly from profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (!profileError && profileData) {
+          setProfile(profileData as Profile);
+        } else {
+          console.log('No profile found, creating from user metadata...');
+          // Create profile from user metadata if it doesn't exist
+          const user = await supabase.auth.getUser();
+          if (user.data.user) {
+            const metadata = user.data.user.user_metadata;
+            const newProfile = {
+              id: userId,
+              email: user.data.user.email || '',
+              full_name: metadata.full_name || 'User',
+              role: metadata.role || 'student',
+              phone: metadata.phone,
+              grade: metadata.grade,
+            };
+
+            const { data: insertedProfile, error: insertError } = await supabase
+              .from('profiles')
+              .insert(newProfile)
+              .select()
+              .single();
+
+            if (!insertError && insertedProfile) {
+              setProfile(insertedProfile as Profile);
+            } else {
+              console.error('Failed to create profile:', insertError);
+              setProfile(null);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Exception during fetchProfile:', error);
-      setProfile(null); // Also set profile to null on catch
+      setProfile(null);
     } finally {
       setLoading(false);
     }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    try {
+      // Clean up auth state
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Attempt global sign out
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+      }
+      
+      // Force page reload for clean state
+      window.location.href = '/';
+    } catch (error) {
       console.error('Error signing out:', error);
+      // Force reload anyway
+      window.location.href = '/';
     }
   };
 

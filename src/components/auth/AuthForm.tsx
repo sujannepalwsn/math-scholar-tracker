@@ -14,22 +14,52 @@ const AuthForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [grade, setGrade] = useState('');
   const [role, setRole] = useState<'admin' | 'student' | 'parent' | 'co_teacher'>('student');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  // Clean up any existing auth state
+  const cleanupAuthState = () => {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    Object.keys(sessionStorage || {}).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Clean up existing state first
+      cleanupAuthState();
+      
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+      }
+
+      const redirectUrl = `${window.location.origin}/`;
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
             role: role,
+            phone: phone,
+            grade: role === 'student' ? grade : undefined,
           },
         },
       });
@@ -56,17 +86,30 @@ const AuthForm = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Clean up existing state first
+      cleanupAuthState();
+      
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
-      });
+      if (data.user) {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+        // Force page reload for clean state
+        window.location.href = '/';
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -129,44 +172,15 @@ const AuthForm = () => {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Signing In..." : "Sign In"}
                 </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  <p>Admin Demo Account:</p>
+                  <p className="font-mono text-xs">sujan01nepal@gmail.com / precioussn</p>
+                </div>
               </form>
             </TabsContent>
 
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
                   <Select value={role} onValueChange={(value: any) => setRole(value)}>
@@ -201,6 +215,62 @@ const AuthForm = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Phone (Optional)</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+                {role === 'student' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-grade">Grade</Label>
+                    <Input
+                      id="signup-grade"
+                      type="text"
+                      placeholder="Enter your grade (e.g., 10, 11, 12)"
+                      value={grade}
+                      onChange={(e) => setGrade(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Creating Account..." : "Create Account"}
                 </Button>
