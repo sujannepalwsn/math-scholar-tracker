@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -20,18 +19,98 @@ const AuthForm = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Clear any existing auth state before login
+  const clearAuthState = () => {
+    // Clear all possible auth keys
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('supabase') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Clear any existing auth state first
+      clearAuthState();
+      
+      // Try to sign out globally first
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+        console.log('Global signout failed, continuing...');
+      }
+
+      console.log('Attempting to sign in with:', email);
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      });
+
+      if (error) {
+        console.error('Sign in error:', error);
+        
+        if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Invalid credentials",
+            description: "Please check your email and password. Make sure you're using the correct credentials.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email not verified",
+            description: "Please check your email and click the verification link.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Sign in failed",
+            description: error.message || "Failed to sign in. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } else if (data.user) {
+        console.log('Sign in successful:', data.user.email);
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+        
+        // Force page reload to ensure clean state
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
+      }
+    } catch (error: any) {
+      console.error('Sign in exception:', error);
+      toast({
+        title: "Sign in failed",
+        description: error.message || "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       // Clear any existing session first
+      clearAuthState();
       await supabase.auth.signOut({ scope: 'global' });
 
       const redirectUrl = `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           emailRedirectTo: redirectUrl,
@@ -71,55 +150,6 @@ const AuthForm = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to create account. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        console.error('Sign in error details:', error);
-        if (error.message.includes('Invalid login credentials')) {
-          toast({
-            title: "Invalid credentials",
-            description: "Please check your email and password and try again.",
-            variant: "destructive",
-          });
-        } else if (error.message.includes('Email not confirmed')) {
-          toast({
-            title: "Email not verified",
-            description: "Please check your email and click the verification link.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Sign in failed",
-            description: error.message || "Failed to sign in. Please try again.",
-            variant: "destructive",
-          });
-        }
-      } else if (data.user) {
-        toast({
-          title: "Welcome back!",
-          description: "You have successfully signed in.",
-        });
-      }
-    } catch (error: any) {
-      console.error('Sign in exception:', error);
-      toast({
-        title: "Sign in failed",
-        description: error.message || "Failed to sign in. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -178,10 +208,13 @@ const AuthForm = () => {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Signing In..." : "Sign In"}
                 </Button>
-                <div className="text-center text-sm text-muted-foreground">
-                  <p className="font-semibold">Demo Admin Account:</p>
-                  <p className="font-mono text-xs">sujan1nepal@gmail.com</p>
-                  <p className="font-mono text-xs">precioussn</p>
+                <div className="text-center text-sm text-muted-foreground border-t pt-4">
+                  <p className="font-semibold mb-2">Demo Admin Account:</p>
+                  <div className="bg-gray-100 p-3 rounded text-xs font-mono">
+                    <p><strong>Email:</strong> sujan1nepal@gmail.com</p>
+                    <p><strong>Password:</strong> precioussn</p>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">Use these credentials to sign in as admin</p>
                 </div>
               </form>
             </TabsContent>
