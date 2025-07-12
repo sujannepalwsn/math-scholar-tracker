@@ -25,11 +25,8 @@ const AuthForm = () => {
     setLoading(true);
 
     try {
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
-      }
+      // Clear any existing session first
+      await supabase.auth.signOut({ scope: 'global' });
 
       const redirectUrl = `${window.location.origin}/`;
       
@@ -60,8 +57,14 @@ const AuthForm = () => {
       } else {
         toast({
           title: "Account created successfully!",
-          description: "Please check your email to verify your account, or you can sign in directly.",
+          description: "You can now sign in with your credentials.",
         });
+        // Reset form
+        setEmail('');
+        setPassword('');
+        setFullName('');
+        setPhone('');
+        setGrade('');
       }
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -86,6 +89,7 @@ const AuthForm = () => {
       });
 
       if (error) {
+        console.error('Sign in error details:', error);
         if (error.message.includes('Invalid login credentials')) {
           toast({
             title: "Invalid credentials",
@@ -99,20 +103,20 @@ const AuthForm = () => {
             variant: "destructive",
           });
         } else {
-          throw error;
+          toast({
+            title: "Sign in failed",
+            description: error.message || "Failed to sign in. Please try again.",
+            variant: "destructive",
+          });
         }
       } else if (data.user) {
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
-        // Force page reload for clean state
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
       }
     } catch (error: any) {
-      console.error('Sign in error:', error);
+      console.error('Sign in exception:', error);
       toast({
         title: "Sign in failed",
         description: error.message || "Failed to sign in. Please try again.",
@@ -176,7 +180,7 @@ const AuthForm = () => {
                 </Button>
                 <div className="text-center text-sm text-muted-foreground">
                   <p className="font-semibold">Demo Admin Account:</p>
-                  <p className="font-mono text-xs">sujan01nepal@gmail.com</p>
+                  <p className="font-mono text-xs">sujan1nepal@gmail.com</p>
                   <p className="font-mono text-xs">precioussn</p>
                 </div>
               </form>

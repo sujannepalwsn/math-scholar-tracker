@@ -21,22 +21,24 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
       setUser(session?.user ?? null);
+      
       if (session?.user) {
-        // Defer profile fetching to prevent deadlocks
-        setTimeout(() => {
-          fetchProfile(session.user.id);
-        }, 0);
+        // Fetch profile when user is authenticated
+        await fetchProfile(session.user.id);
       } else {
         setProfile(null);
         setLoading(false);
       }
     });
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
@@ -49,42 +51,30 @@ export const useAuth = () => {
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    setLoading(true);
     try {
-      // Use the properly typed profiles table from the Database types
+      console.log('Fetching profile for user:', userId);
+      
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (!profileError && profileData) {
-        // Safely construct the profile object
-        const profileObj: Profile = {
-          id: profileData.id,
-          email: profileData.email,
-          full_name: profileData.full_name,
-          role: profileData.role,
-          phone: profileData.phone || undefined,
-          avatar_url: profileData.avatar_url || undefined,
-          created_at: profileData.created_at,
-          updated_at: profileData.updated_at,
-          grade: profileData.grade || undefined,
-        };
-        setProfile(profileObj);
-      } else {
-        console.log('No profile found, creating from user metadata...');
-        // Create profile from user metadata if it doesn't exist
-        const user = await supabase.auth.getUser();
-        if (user.data.user) {
-          const metadata = user.data.user.user_metadata;
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        
+        // If profile doesn't exist, try to create it from user metadata
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.user_metadata) {
+          console.log('Creating profile from user metadata:', user.user_metadata);
+          
           const newProfile = {
             id: userId,
-            email: user.data.user.email || '',
-            full_name: metadata.full_name || 'User',
-            role: metadata.role || 'student',
-            phone: metadata.phone,
-            grade: metadata.grade,
+            email: user.email || '',
+            full_name: user.user_metadata.full_name || 'User',
+            role: (user.user_metadata.role as 'admin' | 'student' | 'parent' | 'co_teacher') || 'student',
+            phone: user.user_metadata.phone,
+            grade: user.user_metadata.grade,
           };
 
           const { data: insertedProfile, error: insertError } = await supabase
@@ -93,25 +83,19 @@ export const useAuth = () => {
             .select()
             .single();
 
-          if (!insertError && insertedProfile) {
-            // Safely construct the profile object from inserted data  
-            const profileObj: Profile = {
-              id: insertedProfile.id,
-              email: insertedProfile.email,
-              full_name: insertedProfile.full_name,
-              role: insertedProfile.role,
-              phone: insertedProfile.phone || undefined,
-              avatar_url: insertedProfile.avatar_url || undefined,
-              created_at: insertedProfile.created_at,
-              updated_at: insertedProfile.updated_at,
-              grade: insertedProfile.grade || undefined,
-            };
-            setProfile(profileObj);
-          } else {
+          if (insertError) {
             console.error('Failed to create profile:', insertError);
             setProfile(null);
+          } else {
+            console.log('Profile created successfully:', insertedProfile);
+            setProfile(insertedProfile as Profile);
           }
+        } else {
+          setProfile(null);
         }
+      } else {
+        console.log('Profile fetched successfully:', profileData);
+        setProfile(profileData as Profile);
       }
     } catch (error) {
       console.error('Exception during fetchProfile:', error);
@@ -123,19 +107,16 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      // Attempt global sign out
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
       }
-      
-      // Force page reload for clean state
-      window.location.href = '/';
+      // State will be cleared by the auth state listener
     } catch (error) {
-      console.error('Error signing out:', error);
-      // Force reload anyway
-      window.location.href = '/';
+      console.error('Exception during sign out:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
