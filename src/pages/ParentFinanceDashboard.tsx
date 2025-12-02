@@ -65,14 +65,24 @@ const ParentFinanceDashboard = () => {
     ).length
   };
 
-  // Fetch payment history
+  // Fetch payment history via invoices
   const { data: payments = [], isLoading: paymentsLoading } = useQuery({
     queryKey: ['student-payments', user.student_id],
     queryFn: async () => {
+      // Get invoices for this student first
+      const { data: invoices, error: invError } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('student_id', user.student_id!);
+      
+      if (invError) throw invError;
+      if (!invoices || invoices.length === 0) return [];
+      
+      const invoiceIds = invoices.map(inv => inv.id);
       const { data, error } = await supabase
         .from('payments')
         .select('*')
-        .eq('student_id', user.student_id!)
+        .in('invoice_id', invoiceIds)
         .order('payment_date', { ascending: false });
 
       if (error) throw error;

@@ -143,13 +143,8 @@ export default function PreschoolActivities() {
       // First create the activity
       const { data: activity, error: activityError } = await supabase.from("activities").insert({
         center_id: user.center_id,
-        title,
+        name: title,
         description,
-        activity_date: activityDate,
-        photo_url: photoUrl,
-        video_url: videoUrl,
-        activity_type_id: activityTypeId,
-        created_by: user.id,
       }).select().single();
       if (activityError) throw activityError;
 
@@ -157,7 +152,8 @@ export default function PreschoolActivities() {
       const { error: saError } = await supabase.from("student_activities").insert({
         student_id: studentId,
         activity_id: activity.id,
-        involvement_score: involvementRating,
+        activity_type_id: activityTypeId,
+        rating: involvementRating,
       });
       if (saError) throw saError;
     },

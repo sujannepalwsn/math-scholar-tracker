@@ -148,10 +148,10 @@ export default function MeetingManagement() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {meeting.meeting_conclusions && meeting.meeting_conclusions.length > 0 ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-600" title="Conclusion Added" />
+                      {meeting.meeting_conclusions && meeting.meeting_conclusions.length > 0 ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
                         ) : (
-                          <XCircle className="h-5 w-5 text-red-600" title="No Conclusion" />
+                          <XCircle className="h-5 w-5 text-red-600" />
                         )}
                       </TableCell>
                       <TableCell className="flex gap-2">
@@ -189,7 +189,6 @@ export default function MeetingManagement() {
           {selectedMeetingForAttendance && (
             <MeetingAttendanceRecorder
               meetingId={selectedMeetingForAttendance.id}
-              meetingType={selectedMeetingForAttendance.meeting_type}
               onClose={() => setShowAttendanceDialog(false)}
             />
           )}

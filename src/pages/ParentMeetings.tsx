@@ -57,14 +57,10 @@ export default function ParentMeetings() {
     }
   };
 
-  const getAttendanceStatusColor = (status: MeetingAttendee['attendance_status']) => {
-    switch (status) {
-      case 'present': return 'text-green-600';
-      case 'absent': return 'text-red-600';
-      case 'excused': return 'text-orange-600';
-      case 'pending': return 'text-gray-600';
-      default: return 'text-gray-600';
-    }
+  const getAttendanceStatusColor = (attended: boolean | null) => {
+    if (attended === true) return 'text-green-600';
+    if (attended === false) return 'text-red-600';
+    return 'text-gray-600';
   };
 
   const handleViewConclusion = (conclusion: MeetingConclusion) => {

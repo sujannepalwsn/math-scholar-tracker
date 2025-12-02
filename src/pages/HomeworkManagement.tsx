@@ -142,12 +142,13 @@ export default function HomeworkManagement() {
         center_id: user.center_id,
         title,
         subject,
+        class: grade,
         grade,
         description: description || null,
         due_date: dueDate,
         attachment_url: fileUrl || imageUrl,
         attachment_name: file?.name || image?.name || null,
-        created_by: user.id,
+        teacher_id: user.teacher_id || null,
       }).select().single();
       if (error) throw error;
 

@@ -34,18 +34,17 @@ export default function TeacherMeetings() {
         .select(`
           *,
           meetings(
-            id, title, agenda, meeting_date, meeting_time, meeting_type, status,
+            id, title, description, meeting_date, meeting_type, status,
             meeting_conclusions(conclusion_notes, recorded_at)
           )
         `)
-        .eq("teacher_id", user.teacher_id!)
-        .in("meetings.meeting_type", ['teachers', 'both'])
-        .order("meetings.meeting_date", { ascending: false });
+        .eq("user_id", user.id!)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user.teacher_id,
+    enabled: !!user.id,
   });
 
   const getStatusColor = (status: Meeting['status']) => {
@@ -57,14 +56,10 @@ export default function TeacherMeetings() {
     }
   };
 
-  const getAttendanceStatusColor = (status: MeetingAttendee['attendance_status']) => {
-    switch (status) {
-      case 'present': return 'text-green-600';
-      case 'absent': return 'text-red-600';
-      case 'excused': return 'text-orange-600';
-      case 'pending': return 'text-gray-600';
-      default: return 'text-gray-600';
-    }
+  const getAttendanceStatusColor = (attended: boolean | null) => {
+    if (attended === true) return 'text-green-600';
+    if (attended === false) return 'text-red-600';
+    return 'text-gray-600';
   };
 
   const handleViewConclusion = (conclusion: MeetingConclusion) => {

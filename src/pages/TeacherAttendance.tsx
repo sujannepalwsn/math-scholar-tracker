@@ -135,13 +135,13 @@ export default function TeacherAttendancePage() {
       initialRecords[teacher.id] = record || {
         id: '', // Will be generated on insert
         teacher_id: teacher.id,
+        center_id: user?.center_id || '',
         date: dateStr,
         status: 'absent', // Default to absent
         time_in: null,
         time_out: null,
         notes: null,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       };
     });
     setAttendanceRecords(initialRecords);
@@ -180,14 +180,12 @@ export default function TeacherAttendancePage() {
         const record = attendanceRecords[teacherId];
         if (record.id) {
           // Existing record, update
-          recordsToUpdate.push({
-            ...record,
-            updated_at: new Date().toISOString(),
-          });
+          recordsToUpdate.push(record);
         } else {
           // New record, insert
           recordsToInsert.push({
             teacher_id: record.teacher_id,
+            center_id: user.center_id!,
             date: record.date,
             status: record.status,
             time_in: record.time_in,
@@ -210,7 +208,6 @@ export default function TeacherAttendancePage() {
             time_in: record.time_in,
             time_out: record.time_out,
             notes: record.notes,
-            updated_at: record.updated_at,
           }).eq("id", record.id);
           if (updateError) throw updateError;
         }

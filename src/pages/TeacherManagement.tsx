@@ -197,9 +197,9 @@ export default function TeacherManagement() {
   const handleEditClick = (teacher: Teacher) => {
     setEditingTeacher(teacher);
     setName(teacher.name);
-    setContactNumber(teacher.contact_number || "");
+    setContactNumber(teacher.phone || "");
     setEmail(teacher.email || "");
-    setHireDate(teacher.hire_date);
+    setHireDate(format(new Date(teacher.created_at), "yyyy-MM-dd"));
     setIsDialogOpen(true);
   };
 

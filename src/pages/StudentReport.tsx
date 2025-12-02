@@ -158,7 +158,18 @@ export default function StudentReport() {
     queryKey: ["student-payments-report", selectedStudentId, dateRange],
     queryFn: async () => {
       if (!selectedStudentId || selectedStudentId === "none") return [];
-      const { data, error } = await supabase.from("payments").select("*").eq("student_id", selectedStudentId)
+      // Get invoices for this student first
+      const { data: invoices, error: invError } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('student_id', selectedStudentId);
+      
+      if (invError) throw invError;
+      if (!invoices || invoices.length === 0) return [];
+      
+      const invoiceIds = invoices.map(inv => inv.id);
+      const { data, error } = await supabase.from("payments").select("*")
+        .in("invoice_id", invoiceIds)
         .gte("payment_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("payment_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
       if (error) throw error;

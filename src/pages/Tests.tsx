@@ -171,13 +171,11 @@ export default function Tests() {
       const { data, error } = await supabase.from("tests").insert({
         name: testName || 'Unnamed Test',
         subject: testSubject,
+        class: grade || 'General',
         date: testDate,
         total_marks: parseInt(totalMarks),
-        grade: grade || null,
-        lesson_plan_id: lessonPlanId, // Include lesson_plan_id
-        uploaded_file_url: uploadedFileUrl,
-        center_id: user?.center_id,
-        questions: questions.length > 0 ? (questions as any) : null, // Save questions as Json
+        center_id: user?.center_id!,
+        questions: questions.length > 0 ? (questions as any) : null,
       }).select().single();
 
       if (error) throw error;
@@ -289,11 +287,7 @@ export default function Tests() {
         throw new Error("You don't have permission to delete this test");
       }
 
-      if (test.uploaded_file_url) {
-        await supabase.storage
-          .from("test-files")
-          .remove([test.uploaded_file_url]);
-      }
+      // Note: uploaded_file_url not in schema, skipping file deletion
 
       await supabase
         .from("test_results")
@@ -373,10 +367,10 @@ export default function Tests() {
   };
 
   const selectedTestData = tests.find((t) => t.id === selectedTest);
-  const testsWithFiles = tests.filter((t) => t.uploaded_file_url);
+  const testsWithFiles: typeof tests = []; // No uploaded_file_url in schema
 
-  const filteredStudents = selectedTestData?.grade
-    ? students.filter((s: Student) => s.grade === selectedTestData.grade)
+  const filteredStudents = selectedTestData?.class
+    ? students.filter((s: Student) => s.grade === selectedTestData.class)
     : students;
 
   return (
@@ -404,16 +398,11 @@ export default function Tests() {
                       <div className="min-w-0">
                         <h3 className="font-semibold text-sm line-clamp-2">{test.name}</h3>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {test.subject} • {format(new Date(test.date), "MMM d, yyyy")}
+                          {test.subject} • {test.date ? format(new Date(test.date), "MMM d, yyyy") : 'No date'}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <QuestionPaperViewer
-                    testId={test.id}
-                    testName={test.name}
-                    fileName={test.uploaded_file_url}
-                  />
                 </div>
               ))}
             </div>
@@ -769,28 +758,7 @@ export default function Tests() {
         )}
       </div>
 
-      {selectedTest && selectedTestData && selectedTestData.uploaded_file_url && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Question Paper
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Simplified structure for debugging */}
-            <div className="flex flex-col items-center justify-center p-6">
-              <p className="font-semibold text-gray-900 mb-2">Test: {selectedTestData.name}</p>
-              <p className="text-sm text-gray-600 mb-4">Uploaded: {format(new Date(selectedTestData.created_at), "PPP")}</p>
-              <QuestionPaperViewer
-                testId={selectedTest}
-                testName={selectedTestData.name}
-                fileName={selectedTestData.uploaded_file_url}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Question paper section removed - uploaded_file_url not in schema */}
 
       <OCRModal
         open={showOCRModal}

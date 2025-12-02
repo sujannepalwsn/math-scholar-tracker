@@ -202,6 +202,7 @@ export default function TakeAttendance() {
       // Insert new attendance
       const records = studentsToSave.map((student) => ({
         student_id: student.id,
+        center_id: user.center_id!,
         date: dateStr,
         status: attendance[student.id]?.present ? "Present" : "Absent",
         time_in: attendance[student.id]?.timeIn || null,

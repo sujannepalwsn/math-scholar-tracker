@@ -119,15 +119,15 @@ export default function LessonPlans() {
 
       const { error } = await supabase.from("lesson_plans").insert({
         center_id: user.center_id,
-        created_by: user.id,
+        teacher_id: user.teacher_id || null,
         subject,
         chapter,
         topic,
-        grade: gradeFilter === "all" ? null : gradeFilter, // Save selected grade or null
+        class: gradeFilter === "all" ? "General" : gradeFilter,
+        grade: gradeFilter === "all" ? null : gradeFilter,
         lesson_date: lessonDate,
         notes: notes || null,
         lesson_file_url: fileUrl,
-        is_active: true,
       });
       if (error) throw error;
     },
