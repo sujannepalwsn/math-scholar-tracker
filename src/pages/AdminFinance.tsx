@@ -6,189 +6,142 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FinancialSummary as FinancialSummaryType } from '@/integrations/supabase/finance-types';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, AlertCircle, FileText, ArrowLeft } from 'lucide-react';
+import { DollarSign, TrendingUp, AlertCircle, FileText, ArrowLeft, Wallet } from 'lucide-react';
 import FeeManagement from '@/components/finance/FeeManagement';
 import InvoiceManagement from '@/components/finance/InvoiceManagement';
 import PaymentTracking from '@/components/finance/PaymentTracking';
 import ExpenseManagement from '@/components/finance/ExpenseManagement';
 import FinanceReports from '@/components/finance/FinanceReports';
+import { formatCurrency } from '@/integrations/supabase/finance-types';
 
 const AdminFinance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // The finance page is accessible by both admin and center users.
-  // Admin users see all centers' data (if implemented), center users see their own.
-  // The data fetching queries below already filter by user?.center_id,
-  // so no explicit role-based redirect is needed here for center users.
-  // If a user is not logged in, the ProtectedRoute will handle the redirect.
-
-  // Fetch current month financial summary
-  const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['financial-summary', user?.center_id, selectedMonth, selectedYear],
+  // Fetch invoices summary
+  const { data: invoices = [] } = useQuery({
+    queryKey: ['invoices-summary', user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return null; // Ensure center_id exists for center-specific data
-      const { data, error } = await supabase
-        .from('financial_summaries')
-        .select('*')
-        .eq('center_id', user.center_id) // Filter by center_id
-        .eq('summary_month', selectedMonth)
-        .eq('summary_year', selectedYear)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows found
-      return data as FinancialSummaryType;
-    },
-    enabled: !!user?.center_id // Only enable query if center_id is available
-  });
-
-  // Fetch overdue invoices count
-  const { data: overdueCount = 0 } = useQuery({
-    queryKey: ['overdue-invoices', user?.center_id],
-    queryFn: async () => {
-      if (!user?.center_id) return 0;
+      if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from('invoices')
-        .select('id', { count: 'exact' })
-        .eq('center_id', user.center_id) // Filter by center_id
-        .eq('status', 'overdue');
-
+        .select('total_amount, status')
+        .eq('center_id', user.center_id);
       if (error) throw error;
-      return data?.length || 0;
+      return data;
     },
     enabled: !!user?.center_id
   });
 
-  // Fetch unpaid invoices count
-  const { data: unpaidCount = 0 } = useQuery({
-    queryKey: ['unpaid-invoices', user?.center_id],
+  // Fetch payments
+  const { data: payments = [] } = useQuery({
+    queryKey: ['payments-total', user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return 0;
+      if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from('invoices')
-        .select('id', { count: 'exact' })
-        .eq('center_id', user.center_id) // Filter by center_id
-        .in('status', ['issued', 'overdue', 'partial']);
-
+        .from('payments')
+        .select('amount');
       if (error) throw error;
-      return data?.length || 0;
+      return data;
     },
     enabled: !!user?.center_id
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-    }).format(amount || 0);
-  };
+  // Fetch expenses
+  const { data: expenses = [] } = useQuery({
+    queryKey: ['expenses-total', user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('center_id', user.center_id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id
+  });
+
+  const totalInvoiced = invoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);
+  const totalCollected = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const outstanding = totalInvoiced - totalCollected;
+  const netBalance = totalCollected - totalExpenses;
+
+  const overdueCount = invoices.filter(i => i.status === 'overdue').length;
+  const unpaidCount = invoices.filter(i => ['pending', 'overdue'].includes(i.status)).length;
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">Finance Management</h1>
-            <p className="text-muted-foreground">Manage fees, invoices, payments, and financial reports</p>
+            <p className="text-muted-foreground">Manage fees, invoices, payments, and reports</p>
           </div>
           <Button variant="outline" onClick={() => navigate(user?.role === 'admin' ? '/admin-dashboard' : '/')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            <ArrowLeft className="h-4 w-4 mr-2" />Back to Dashboard
           </Button>
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Total Invoiced */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Invoiced</CardTitle>
               <FileText className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(summary?.total_invoiced || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {selectedMonth}/{selectedYear}
-              </p>
+              <div className="text-2xl font-bold">{formatCurrency(totalInvoiced)}</div>
             </CardContent>
           </Card>
 
-          {/* Total Collected */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Collected</CardTitle>
               <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(summary?.total_collected || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {summary?.total_invoiced ? 
-                  `${Math.round((((summary.total_collected || 0) / summary.total_invoiced) * 100))}% collected` 
-                  : 'No invoices'
-                }
-              </p>
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(totalCollected)}</div>
             </CardContent>
           </Card>
 
-          {/* Outstanding Amount */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
               <AlertCircle className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(summary?.total_outstanding || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {unpaidCount} unpaid invoices
-              </p>
+              <div className="text-2xl font-bold text-orange-600">{formatCurrency(outstanding)}</div>
+              <p className="text-xs text-muted-foreground mt-1">{unpaidCount} unpaid invoices</p>
             </CardContent>
           </Card>
 
-          {/* Net Balance */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
               <Wallet className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${(summary?.net_balance || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(summary?.net_balance || 0)}
+              <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(netBalance)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                After expenses
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">After expenses</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Alert for Overdue Invoices */}
         {overdueCount > 0 && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="flex items-center gap-3 pt-6">
               <AlertCircle className="h-5 w-5 text-orange-600" />
               <div>
-                <p className="font-semibold text-orange-900">
-                  {overdueCount} overdue invoice{overdueCount > 1 ? 's' : ''}
-                </p>
-                <p className="text-sm text-orange-700">
-                  These invoices require immediate attention
-                </p>
+                <p className="font-semibold text-orange-900">{overdueCount} overdue invoice{overdueCount > 1 ? 's' : ''}</p>
+                <p className="text-sm text-orange-700">These invoices require immediate attention</p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Tabs for Finance Sections */}
         <Tabs defaultValue="invoices" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
@@ -198,25 +151,11 @@ const AdminFinance = () => {
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="invoices">
-            <InvoiceManagement />
-          </TabsContent>
-
-          <TabsContent value="fees">
-            <FeeManagement />
-          </TabsContent>
-
-          <TabsContent value="payments">
-            <PaymentTracking />
-          </TabsContent>
-
-          <TabsContent value="expenses">
-            <ExpenseManagement />
-          </TabsContent>
-
-          <TabsContent value="reports">
-            <FinanceReports />
-          </TabsContent>
+          <TabsContent value="invoices"><InvoiceManagement /></TabsContent>
+          <TabsContent value="fees"><FeeManagement /></TabsContent>
+          <TabsContent value="payments"><PaymentTracking /></TabsContent>
+          <TabsContent value="expenses"><ExpenseManagement /></TabsContent>
+          <TabsContent value="reports"><FinanceReports /></TabsContent>
         </Tabs>
       </div>
     </div>

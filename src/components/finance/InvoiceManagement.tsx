@@ -24,7 +24,7 @@ const InvoiceManagement = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('students')
-        .select('id, name, class')
+        .select('id, name, grade')
         .eq('center_id', user?.center_id!)
         .eq('is_active', true)
         .order('name');
@@ -138,7 +138,7 @@ const InvoiceManagement = () => {
                       <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
                       <SelectContent>
                         {students.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name} - {s.class}</SelectItem>
+                          <SelectItem key={s.id} value={s.id}>{s.name} - {s.grade}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

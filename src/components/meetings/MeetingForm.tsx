@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,15 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Tables } from "@/integrations/supabase/types";
-
-type Meeting = Tables<'meetings'>;
-type User = Tables<'users'>;
-type Student = Tables<'students'>;
-type Teacher = Tables<'teachers'>;
 
 interface MeetingFormProps {
-  meeting?: Meeting | null; // Optional: for editing an existing meeting
+  meeting?: any;
   onSave: () => void;
   onCancel: () => void;
 }
@@ -29,97 +23,39 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   const { user } = useAuth();
 
   const [title, setTitle] = useState(meeting?.title || "");
-  const [agenda, setAgenda] = useState(meeting?.agenda || "");
-  const [meetingDate, setMeetingDate] = useState(meeting?.meeting_date || format(new Date(), "yyyy-MM-dd"));
-  const [meetingTime, setMeetingTime] = useState(meeting?.meeting_time || format(new Date(), "HH:mm"));
-  const [meetingType, setMeetingType] = useState<Meeting['meeting_type']>(meeting?.meeting_type || "parents");
-  const [status, setStatus] = useState<Meeting['status']>(meeting?.status || "scheduled");
+  const [description, setDescription] = useState(meeting?.description || "");
+  const [meetingDate, setMeetingDate] = useState(meeting?.meeting_date ? format(new Date(meeting.meeting_date), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+  const [location, setLocation] = useState(meeting?.location || "");
+  const [meetingType, setMeetingType] = useState(meeting?.meeting_type || "general");
+  const [status, setStatus] = useState(meeting?.status || "scheduled");
 
   useEffect(() => {
     if (meeting) {
       setTitle(meeting.title);
-      setAgenda(meeting.agenda || "");
-      setMeetingDate(meeting.meeting_date);
-      setMeetingTime(meeting.meeting_time);
-      setMeetingType(meeting.meeting_type);
-      setStatus(meeting.status);
-    } else {
-      // Reset form for new meeting
-      setTitle("");
-      setAgenda("");
-      setMeetingDate(format(new Date(), "yyyy-MM-dd"));
-      setMeetingTime(format(new Date(), "HH:mm"));
-      setMeetingType("parents");
-      setStatus("scheduled");
+      setDescription(meeting.description || "");
+      setMeetingDate(meeting.meeting_date ? format(new Date(meeting.meeting_date), "yyyy-MM-dd'T'HH:mm") : format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+      setLocation(meeting.location || "");
+      setMeetingType(meeting.meeting_type || "general");
+      setStatus(meeting.status || "scheduled");
     }
   }, [meeting]);
 
-  // Fetch students and teachers for potential attendees
-  const { data: students = [] } = useQuery({
-    queryKey: ["students-for-meetings", user?.center_id],
-    queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("students").select("id, name").eq("center_id", user.center_id).order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id && (meetingType === 'parents' || meetingType === 'both'),
-  });
-
-  const { data: teachers = [] } = useQuery({
-    queryKey: ["teachers-for-meetings", user?.center_id],
-    queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("teachers").select("id, name").eq("center_id", user.center_id).order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id && (meetingType === 'teachers' || meetingType === 'both'),
-  });
-
   const createMeetingMutation = useMutation({
-    mutationFn: async (newMeeting: Tables<'meetings'>['Insert']) => {
+    mutationFn: async () => {
       if (!user?.center_id || !user?.id) throw new Error("User or Center ID not found");
-      const { data, error } = await supabase.from("meetings").insert({
-        ...newMeeting,
+      const { error } = await supabase.from("meetings").insert({
         center_id: user.center_id,
         created_by: user.id,
-      }).select().single();
+        title,
+        description: description || null,
+        meeting_date: new Date(meetingDate).toISOString(),
+        location: location || null,
+        meeting_type: meetingType,
+        status,
+      });
       if (error) throw error;
-      return data;
     },
-    onSuccess: async (newMeeting) => {
-      // Automatically add all relevant students/teachers as attendees with 'pending' status
-      const attendeesToInsert: Tables<'meeting_attendees'>['Insert'][] = [];
-
-      if (meetingType === 'parents' || meetingType === 'both') {
-        students.forEach(student => {
-          attendeesToInsert.push({
-            meeting_id: newMeeting.id,
-            student_id: student.id,
-            attendance_status: 'pending',
-            user_id: null, // Parent user ID will be linked if they have an account
-            teacher_id: null,
-          });
-        });
-      }
-      if (meetingType === 'teachers' || meetingType === 'both') {
-        teachers.forEach(teacher => {
-          attendeesToInsert.push({
-            meeting_id: newMeeting.id,
-            teacher_id: teacher.id,
-            attendance_status: 'pending',
-            user_id: null, // Teacher user ID will be linked if they have an account
-            student_id: null,
-          });
-        });
-      }
-
-      if (attendeesToInsert.length > 0) {
-        const { error: attendeesError } = await supabase.from('meeting_attendees').insert(attendeesToInsert);
-        if (attendeesError) console.error('Error inserting meeting attendees:', attendeesError);
-      }
-
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       toast.success("Meeting created successfully!");
       onSave();
@@ -130,14 +66,17 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   });
 
   const updateMeetingMutation = useMutation({
-    mutationFn: async (updatedMeeting: Tables<'meetings'>['Update']) => {
-      if (!meeting?.id) throw new Error("Meeting ID not found for update");
-      const { data, error } = await supabase.from("meetings").update({
-        ...updatedMeeting,
-        updated_at: new Date().toISOString(),
-      }).eq("id", meeting.id).select().single();
+    mutationFn: async () => {
+      if (!meeting?.id) throw new Error("Meeting ID not found");
+      const { error } = await supabase.from("meetings").update({
+        title,
+        description: description || null,
+        meeting_date: new Date(meetingDate).toISOString(),
+        location: location || null,
+        meeting_type: meetingType,
+        status,
+      }).eq("id", meeting.id);
       if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
@@ -151,19 +90,10 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const meetingData = {
-      title,
-      agenda: agenda || null,
-      meeting_date: meetingDate,
-      meeting_time: meetingTime,
-      meeting_type: meetingType,
-      status,
-    };
-
     if (meeting) {
-      updateMeetingMutation.mutate(meetingData);
+      updateMeetingMutation.mutate();
     } else {
-      createMeetingMutation.mutate(meetingData);
+      createMeetingMutation.mutate();
     }
   };
 
@@ -171,42 +101,38 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
     <form onSubmit={handleSubmit} className="space-y-4 py-4">
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
-        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Parent-Teacher Conference" required />
+        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Meeting title" required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="agenda">Agenda (Optional)</Label>
-        <Textarea id="agenda" value={agenda} onChange={(e) => setAgenda(e.target.value)} rows={3} placeholder="Key discussion points" />
+        <Label htmlFor="description">Description</Label>
+        <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Meeting details" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="meetingDate">Date *</Label>
-          <Input id="meetingDate" type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} required />
+          <Label htmlFor="meetingDate">Date & Time *</Label>
+          <Input id="meetingDate" type="datetime-local" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} required />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="meetingTime">Time *</Label>
-          <Input id="meetingTime" type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} required />
+          <Label htmlFor="location">Location</Label>
+          <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Meeting location" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="meetingType">Meeting Type *</Label>
-          <Select value={meetingType} onValueChange={(value: Meeting['meeting_type']) => setMeetingType(value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Type" />
-            </SelectTrigger>
+          <Label>Meeting Type</Label>
+          <Select value={meetingType} onValueChange={setMeetingType}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="general">General</SelectItem>
               <SelectItem value="parents">Parents</SelectItem>
               <SelectItem value="teachers">Teachers</SelectItem>
-              <SelectItem value="both">Both</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="status">Status *</Label>
-          <Select value={status} onValueChange={(value: Meeting['status']) => setStatus(value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Status" />
-            </SelectTrigger>
+          <Label>Status</Label>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="scheduled">Scheduled</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
@@ -216,11 +142,9 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
         </div>
       </div>
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={createMeetingMutation.isPending || updateMeetingMutation.isPending}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={!title || !meetingDate || !meetingTime || createMeetingMutation.isPending || updateMeetingMutation.isPending}>
-          {meeting ? (updateMeetingMutation.isPending ? "Updating..." : "Update Meeting") : (createMeetingMutation.isPending ? "Creating..." : "Create Meeting")}
+        <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" disabled={!title || createMeetingMutation.isPending || updateMeetingMutation.isPending}>
+          {meeting ? "Update" : "Create"} Meeting
         </Button>
       </div>
     </form>
