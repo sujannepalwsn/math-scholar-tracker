@@ -1,6 +1,4 @@
-// ============================================================================
-// FINANCE MODULE TYPES - Aligned with database schema
-// ============================================================================
+// Finance types aligned with database schema
 
 export type FeeHeading = {
   id: string;
@@ -27,8 +25,13 @@ export type Invoice = {
   student_id: string;
   invoice_number: string;
   total_amount: number;
+  paid_amount: number;
   due_date?: string;
   status: string;
+  invoice_date?: string;
+  invoice_month?: number;
+  invoice_year?: number;
+  notes?: string;
   created_at: string;
   updated_at: string;
 };
@@ -45,6 +48,7 @@ export type Payment = {
   id: string;
   invoice_id: string;
   amount: number;
+  amount_paid?: number;
   payment_date: string;
   payment_method?: string;
   reference_number?: string;
@@ -70,10 +74,6 @@ export type FinancialSummary = {
   total_outstanding: number;
   total_expenses: number;
 };
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
 
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-IN', {
