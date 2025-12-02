@@ -70,7 +70,7 @@ export default function Tests() {
     queryFn: async () => {
       let query = supabase
         .from("tests")
-        .select("*, lesson_plans(subject, chapter, topic)") // Fetch lesson plan details
+        .select("*") // lesson_plans relationship now exists via lesson_plan_id
         .order("date", { ascending: false });
       
       if (user?.role !== 'admin' && user?.center_id) {

@@ -34,16 +34,14 @@ export default function ParentMeetings() {
         .select(`
           *,
           meetings(
-            id, title, agenda, meeting_date, meeting_time, meeting_type, status,
+            id, title, agenda, meeting_date, meeting_type, status,
             meeting_conclusions(conclusion_notes, recorded_at)
           )
         `)
-        .eq("student_id", user.student_id!)
-        .in("meetings.meeting_type", ['parents', 'both'])
-        .order("meetings.meeting_date", { ascending: false });
+        .eq("student_id", user.student_id!);
 
       if (error) throw error;
-      return data;
+      return data?.filter((d: any) => d.meetings) || [];
     },
     enabled: !!user.student_id,
   });
@@ -107,7 +105,7 @@ export default function ParentMeetings() {
                       <TableRow key={attendee.id}>
                         <TableCell className="font-medium">{meeting.title}</TableCell>
                         <TableCell>{format(new Date(meeting.meeting_date), "PPP")}</TableCell>
-                        <TableCell>{meeting.meeting_time}</TableCell>
+                        <TableCell>{format(new Date(meeting.meeting_date), "p")}</TableCell>
                         <TableCell>{meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}</TableCell>
                         <TableCell>
                           <span className={`font-semibold ${getStatusColor(meeting.status)}`}>
@@ -115,8 +113,8 @@ export default function ParentMeetings() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className={`font-semibold ${getAttendanceStatusColor(attendee.attendance_status)}`}>
-                            {attendee.attendance_status.charAt(0).toUpperCase() + attendee.attendance_status.slice(1)}
+                          <span className={`font-semibold ${getAttendanceStatusColor(attendee.attended)}`}>
+                            {attendee.attended === true ? 'Present' : attendee.attended === false ? 'Absent' : 'Pending'}
                           </span>
                         </TableCell>
                         <TableCell>

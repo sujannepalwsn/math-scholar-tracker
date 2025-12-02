@@ -44,7 +44,7 @@ export default function TeacherManagement() {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("teachers")
-        .select("*, users(id, username, is_active)") // Fetch associated user data
+        .select("*, users!teachers_user_id_fkey(id, username, is_active)") // Specify FK relationship
         .eq("center_id", user.center_id)
         .order("name");
       if (error) throw error;
@@ -299,7 +299,7 @@ export default function TeacherManagement() {
                   {teachers.map((teacher: any) => (
                     <TableRow key={teacher.id}>
                       <TableCell className="font-medium">{teacher.name}</TableCell>
-                      <TableCell>{teacher.contact_number || '-'}</TableCell>
+                      <TableCell>{teacher.contact_number || teacher.phone || '-'}</TableCell>
                       <TableCell>{teacher.email || '-'}</TableCell>
                       <TableCell>{format(new Date(teacher.hire_date), "PPP")}</TableCell>
                       <TableCell>

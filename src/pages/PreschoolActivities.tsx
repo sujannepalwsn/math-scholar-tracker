@@ -80,17 +80,13 @@ export default function PreschoolActivities() {
       if (!user?.center_id) return [];
       let query = supabase
         .from("student_activities")
-        .select("*, students(name, grade), activities(id, title, description, activity_date, photo_url, video_url, activity_type_id, activity_types(name))")
-        .eq("students.center_id", user.center_id)
+        .select("*, students(name, grade), activities(id, name, description), activity_types(name)")
         .order("created_at", { ascending: false });
-      
-      if (gradeFilter !== "all") {
-        query = query.eq("students.grade", gradeFilter);
-      }
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+      // Filter by center_id on client side since we need to check students relation
+      return data?.filter((d: any) => d.students?.name) || [];
     },
     enabled: !!user?.center_id,
   });

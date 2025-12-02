@@ -39,8 +39,7 @@ export default function MeetingManagement() {
         .from("meetings")
         .select("*, meeting_conclusions(id)") // Fetch if a conclusion exists
         .eq("center_id", user.center_id)
-        .order("meeting_date", { ascending: false })
-        .order("meeting_time", { ascending: false });
+        .order("meeting_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -140,7 +139,7 @@ export default function MeetingManagement() {
                     <TableRow key={meeting.id}>
                       <TableCell className="font-medium">{meeting.title}</TableCell>
                       <TableCell>{format(new Date(meeting.meeting_date), "PPP")}</TableCell>
-                      <TableCell>{meeting.meeting_time}</TableCell>
+                      <TableCell>{meeting.meeting_time || format(new Date(meeting.meeting_date), "p")}</TableCell>
                       <TableCell>{meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}</TableCell>
                       <TableCell>
                         <span className={`font-semibold ${getStatusColor(meeting.status)}`}>

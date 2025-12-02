@@ -106,7 +106,7 @@ export default function TeacherMeetings() {
                       <TableRow key={attendee.id}>
                         <TableCell className="font-medium">{meeting.title}</TableCell>
                         <TableCell>{format(new Date(meeting.meeting_date), "PPP")}</TableCell>
-                        <TableCell>{meeting.meeting_time}</TableCell>
+                        <TableCell>{format(new Date(meeting.meeting_date), "p")}</TableCell>
                         <TableCell>{meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}</TableCell>
                         <TableCell>
                           <span className={`font-semibold ${getStatusColor(meeting.status)}`}>

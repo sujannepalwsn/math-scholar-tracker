@@ -16,35 +16,76 @@ export type Database = {
     Tables: {
       activities: {
         Row: {
+          activity_date: string | null
+          activity_type_id: string | null
           center_id: string
           created_at: string
+          created_by: string | null
           description: string | null
+          duration_minutes: number | null
+          grade: string | null
           id: string
           is_active: boolean | null
           name: string
+          notes: string | null
+          photo_url: string | null
+          title: string | null
+          video_url: string | null
         }
         Insert: {
+          activity_date?: string | null
+          activity_type_id?: string | null
           center_id: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          duration_minutes?: number | null
+          grade?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          notes?: string | null
+          photo_url?: string | null
+          title?: string | null
+          video_url?: string | null
         }
         Update: {
+          activity_date?: string | null
+          activity_type_id?: string | null
           center_id?: string
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          duration_minutes?: number | null
+          grade?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          notes?: string | null
+          photo_url?: string | null
+          title?: string | null
+          video_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "activities_activity_type_id_fkey"
+            columns: ["activity_type_id"]
+            isOneToOne: false
+            referencedRelation: "activity_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "activities_center_id_fkey"
             columns: ["center_id"]
             isOneToOne: false
             referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -807,6 +848,7 @@ export type Database = {
       }
       meetings: {
         Row: {
+          agenda: string | null
           center_id: string
           created_at: string
           created_by: string | null
@@ -814,12 +856,14 @@ export type Database = {
           id: string
           location: string | null
           meeting_date: string
+          meeting_time: string | null
           meeting_type: string | null
           status: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          agenda?: string | null
           center_id: string
           created_at?: string
           created_by?: string | null
@@ -827,12 +871,14 @@ export type Database = {
           id?: string
           location?: string | null
           meeting_date: string
+          meeting_time?: string | null
           meeting_type?: string | null
           status?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          agenda?: string | null
           center_id?: string
           created_at?: string
           created_by?: string | null
@@ -840,6 +886,7 @@ export type Database = {
           id?: string
           location?: string | null
           meeting_date?: string
+          meeting_time?: string | null
           meeting_type?: string | null
           status?: string | null
           title?: string
@@ -969,35 +1016,50 @@ export type Database = {
         Row: {
           activity_id: string | null
           activity_type_id: string | null
+          attended_at: string | null
+          completed: boolean | null
           created_at: string
           date: string
           id: string
+          involvement_score: number | null
           notes: string | null
+          participation_rating: string | null
           rating: number | null
           student_id: string
           teacher_id: string | null
+          teacher_notes: string | null
         }
         Insert: {
           activity_id?: string | null
           activity_type_id?: string | null
+          attended_at?: string | null
+          completed?: boolean | null
           created_at?: string
           date?: string
           id?: string
+          involvement_score?: number | null
           notes?: string | null
+          participation_rating?: string | null
           rating?: number | null
           student_id: string
           teacher_id?: string | null
+          teacher_notes?: string | null
         }
         Update: {
           activity_id?: string | null
           activity_type_id?: string | null
+          attended_at?: string | null
+          completed?: boolean | null
           created_at?: string
           date?: string
           id?: string
+          involvement_score?: number | null
           notes?: string | null
+          participation_rating?: string | null
           rating?: number | null
           student_id?: string
           teacher_id?: string | null
+          teacher_notes?: string | null
         }
         Relationships: [
           {
@@ -1292,8 +1354,10 @@ export type Database = {
       teachers: {
         Row: {
           center_id: string
+          contact_number: string | null
           created_at: string
           email: string | null
+          hire_date: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -1304,8 +1368,10 @@ export type Database = {
         }
         Insert: {
           center_id: string
+          contact_number?: string | null
           created_at?: string
           email?: string | null
+          hire_date?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -1316,8 +1382,10 @@ export type Database = {
         }
         Update: {
           center_id?: string
+          contact_number?: string | null
           created_at?: string
           email?: string | null
+          hire_date?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -1444,6 +1512,7 @@ export type Database = {
           created_by: string | null
           date: string | null
           id: string
+          lesson_plan_id: string | null
           max_marks: number | null
           name: string
           questions: Json | null
@@ -1460,6 +1529,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           id?: string
+          lesson_plan_id?: string | null
           max_marks?: number | null
           name: string
           questions?: Json | null
@@ -1476,6 +1546,7 @@ export type Database = {
           created_by?: string | null
           date?: string | null
           id?: string
+          lesson_plan_id?: string | null
           max_marks?: number | null
           name?: string
           questions?: Json | null
@@ -1498,6 +1569,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tests_lesson_plan_id_fkey"
+            columns: ["lesson_plan_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_plans"
             referencedColumns: ["id"]
           },
         ]
