@@ -29,7 +29,7 @@ const navItems: Array<{
   { to: "/records", label: "View Records", icon: FileText, role: 'center' as const, featureName: 'view_records' },
   { to: "/summary", label: "Summary", icon: BarChart3, role: 'center' as const, featureName: 'summary' },
   { to: "/finance", label: "Finance", icon: DollarSign, role: 'center' as const, featureName: 'finance' },
-  { to: "/meetings", label: "Meetings", icon: Video, role: 'center' as const, featureName: 'meetings_management' }, {/* NEW */}
+  { to: "/meetings", label: "Meetings", icon: Video, role: 'center' as const, featureName: 'meetings_management' },
   { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'center' as const },
 ];
 

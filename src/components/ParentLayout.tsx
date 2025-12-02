@@ -16,7 +16,7 @@ const navItems: Array<{
   { to: "/parent-homework", label: "Homework", icon: Book, role: 'parent' as const },
   { to: "/parent-activities", label: "Activities", icon: Paintbrush, role: 'parent' as const },
   { to: "/parent-discipline", label: "Discipline", icon: AlertTriangle, role: 'parent' as const },
-  { to: "/parent-meetings", label: "Meetings", icon: Video, role: 'parent' as const }, {/* NEW */}
+  { to: "/parent-meetings", label: "Meetings", icon: Video, role: 'parent' as const },
   { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'parent' as const },
 ];
 
