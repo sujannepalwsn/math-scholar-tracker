@@ -1508,8 +1508,11 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          last_login: string | null
           password_hash: string
           role: string
+          student_id: string | null
+          teacher_id: string | null
           updated_at: string
           username: string
         }
@@ -1518,8 +1521,11 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          last_login?: string | null
           password_hash: string
           role: string
+          student_id?: string | null
+          teacher_id?: string | null
           updated_at?: string
           username: string
         }
@@ -1528,8 +1534,11 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          last_login?: string | null
           password_hash?: string
           role?: string
+          student_id?: string | null
+          teacher_id?: string | null
           updated_at?: string
           username?: string
         }
@@ -1539,6 +1548,20 @@ export type Database = {
             columns: ["center_id"]
             isOneToOne: false
             referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
         ]
