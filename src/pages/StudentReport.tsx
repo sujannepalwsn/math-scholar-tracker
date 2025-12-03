@@ -183,6 +183,11 @@ export default function StudentReport() {
     enabled: !!selectedStudentId && selectedStudentId !== "none",
   });
 
+  // Calculate finance summary
+  const totalInvoiced = useMemo(() => invoices.reduce((sum, inv) => sum + inv.total_amount, 0), [invoices]);
+  const totalPaid = useMemo(() => payments.reduce((sum, p) => sum + p.amount, 0), [payments]);
+  const outstandingDues = useMemo(() => totalInvoiced - totalPaid, [totalInvoiced, totalPaid]);
+
   // Statistics
   const totalDays = attendanceData.length;
   const presentDays = attendanceData.filter((a) => a.status === "present").length;
@@ -507,7 +512,7 @@ export default function StudentReport() {
                       {payments.map((p) => (
                         <tr key={p.id}>
                           <td className="border px-2 py-1">{safeFormatDate(p.payment_date, "PPP")}</td>
-                          <td className="border px-2 py-1">{formatCurrency(p.amount_paid)}</td>
+                          <td className="border px-2 py-1">{formatCurrency(p.amount)}</td>
                           <td className="border px-2 py-1">{p.payment_method}</td>
                           <td className="border px-2 py-1">{p.reference_number || "-"}</td>
                         </tr>
