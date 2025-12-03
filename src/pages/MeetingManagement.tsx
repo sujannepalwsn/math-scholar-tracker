@@ -62,11 +62,16 @@ export default function MeetingManagement() {
     },
   });
 
-  const handleMeetingSave = async (meetingData: Tables<'meetings'>, selectedStudentIds: string[]) => {
+  const handleMeetingSave = async (meetingData: Tables<'meetings'>, selectedStudentIds: string[], selectedTeacherIds: string[]) => {
     // This function is called by MeetingForm after meeting is created/updated
     // meetingData is the newly created or updated meeting object from the DB.
 
-    // Handle attendees based on meeting type
+    // First, clear all existing attendees for this meeting to ensure a clean slate
+    // This simplifies logic by not having to figure out which ones to remove vs update
+    await supabase.from('meeting_attendees').delete().eq('meeting_id', meetingData.id);
+
+    const attendeesToInsert: Tables<'meeting_attendees'>['Insert'][] = [];
+
     if (meetingData.meeting_type === 'parents' && selectedStudentIds.length > 0) {
       // Fetch parent user IDs for the selected students
       const { data: parentUsers, error: parentUserError } = await supabase
@@ -81,44 +86,51 @@ export default function MeetingManagement() {
         return;
       }
 
-      const attendeesToUpsert = parentUsers.map(pu => ({
-        meeting_id: meetingData.id,
-        student_id: pu.student_id,
-        user_id: pu.id, // Link parent user ID
-        attendance_status: 'pending' as const,
-      }));
-
-      // First, delete any existing attendees for this meeting that are NOT in the new selection
-      // This ensures that if a student is unselected, their attendee record is removed.
-      const existingAttendeeStudentIds = (meetings.find(m => m.id === meetingData.id) as any)?.meeting_attendees?.map((att: any) => att.student_id) || [];
-      const studentIdsToRemove = existingAttendeeStudentIds.filter((id: string) => !selectedStudentIds.includes(id));
-
-      if (studentIdsToRemove.length > 0) {
-        await supabase.from('meeting_attendees').delete()
-          .eq('meeting_id', meetingData.id)
-          .in('student_id', studentIdsToRemove);
-      }
-
-      // Then, upsert the selected attendees
-      if (attendeesToUpsert.length > 0) {
-        const { error: attendeeError } = await supabase.from('meeting_attendees').upsert(attendeesToUpsert, {
-          onConflict: 'meeting_id, student_id', // Conflict on meeting_id and student_id
-          ignoreDuplicates: false, // Ensure updates happen if status changes
-        });
-        if (attendeeError) {
-          console.error("Error upserting meeting attendees:", attendeeError);
-          toast.error("Failed to save meeting attendees.");
+      parentUsers.forEach(pu => {
+        if (pu.student_id) {
+          attendeesToInsert.push({
+            meeting_id: meetingData.id,
+            student_id: pu.student_id,
+            user_id: pu.id, // Link parent user ID
+            attendance_status: 'pending',
+          });
         }
+      });
+
+    } else if (meetingData.meeting_type === 'teachers' && selectedTeacherIds.length > 0) {
+      // Fetch teacher user IDs for the selected teachers
+      const { data: teacherUsers, error: teacherUserError } = await supabase
+        .from('users')
+        .select('id, teacher_id')
+        .in('teacher_id', selectedTeacherIds)
+        .eq('role', 'teacher');
+
+      if (teacherUserError) {
+        console.error("Error fetching teacher users:", teacherUserError);
+        toast.error("Failed to link teachers to meeting.");
+        return;
       }
 
-    } else if (meetingData.meeting_type === 'teachers') {
-      // For teacher meetings, we'd fetch teachers and link their user_ids
-      // This is not explicitly requested by the user yet, so leaving it as a future enhancement.
-      // If there were previously parent attendees, they should be cleared.
-      await supabase.from('meeting_attendees').delete().eq('meeting_id', meetingData.id).not('student_id', 'is', null);
+      teacherUsers.forEach(tu => {
+        if (tu.teacher_id) {
+          attendeesToInsert.push({
+            meeting_id: meetingData.id,
+            teacher_id: tu.teacher_id,
+            user_id: tu.id, // Link teacher user ID
+            attendance_status: 'pending',
+          });
+        }
+      });
+    }
+    // For 'general' meetings, no specific attendees are added via this form.
 
-    } else { // For 'general' meetings, clear any specific attendees if they were previously set
-      await supabase.from('meeting_attendees').delete().eq('meeting_id', meetingData.id);
+    // Insert all new attendees
+    if (attendeesToInsert.length > 0) {
+      const { error: attendeeInsertError } = await supabase.from('meeting_attendees').insert(attendeesToInsert);
+      if (attendeeInsertError) {
+        console.error("Error inserting meeting attendees:", attendeeInsertError);
+        toast.error("Failed to save meeting attendees.");
+      }
     }
 
     queryClient.invalidateQueries({ queryKey: ["meetings"] });

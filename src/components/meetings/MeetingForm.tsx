@@ -18,7 +18,7 @@ import { Tables } from "@/integrations/supabase/types";
 
 interface MeetingFormProps {
   meeting?: Tables<'meetings'> & { meeting_attendees?: Tables<'meeting_attendees'>[] };
-  onSave: (meetingData: Tables<'meetings'>, selectedStudentIds: string[]) => void; // Updated prop signature
+  onSave: (meetingData: Tables<'meetings'>, selectedStudentIds: string[], selectedTeacherIds: string[]) => void; // Updated prop signature
   onCancel: () => void;
 }
 
@@ -32,8 +32,12 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   const [location, setLocation] = useState(meeting?.location || "");
   const [meetingType, setMeetingType] = useState(meeting?.meeting_type || "general");
   const [status, setStatus] = useState(meeting?.status || "scheduled");
+  
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
+
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]); // New state for teacher selection
+  const [teacherSearch, setTeacherSearch] = useState(""); // New state for teacher search
 
   // Fetch all students for the current center
   const { data: allStudents = [], isLoading: studentsLoading } = useQuery({
@@ -51,10 +55,32 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
     enabled: !!user?.center_id,
   });
 
+  // Fetch all active teachers for the current center
+  const { data: allTeachers = [], isLoading: teachersLoading } = useQuery({
+    queryKey: ["all-teachers-for-meeting-form", user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("teachers")
+        .select("id, name, user_id") // Also fetch user_id for linking
+        .eq("center_id", user.center_id)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id,
+  });
+
   // Filter students based on search input
   const filteredStudents = allStudents.filter(student =>
     student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
     student.grade?.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+
+  // Filter teachers based on search input
+  const filteredTeachers = allTeachers.filter(teacher =>
+    teacher.name.toLowerCase().includes(teacherSearch.toLowerCase())
   );
 
   useEffect(() => {
@@ -65,8 +91,17 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       setLocation(meeting.location || "");
       setMeetingType(meeting.meeting_type || "general");
       setStatus(meeting.status || "scheduled");
+      
       if (meeting.meeting_attendees) {
-        setSelectedStudentIds(meeting.meeting_attendees.map(att => att.student_id!).filter(Boolean) as string[]);
+        const initialSelectedStudentIds: string[] = [];
+        const initialSelectedTeacherIds: string[] = [];
+
+        meeting.meeting_attendees.forEach(att => {
+          if (att.student_id) initialSelectedStudentIds.push(att.student_id);
+          if (att.teacher_id) initialSelectedTeacherIds.push(att.teacher_id);
+        });
+        setSelectedStudentIds(initialSelectedStudentIds);
+        setSelectedTeacherIds(initialSelectedTeacherIds);
       }
     }
   }, [meeting]);
@@ -75,6 +110,28 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
     setSelectedStudentIds(prev =>
       prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
     );
+  };
+
+  const selectAllStudents = () => {
+    setSelectedStudentIds(allStudents.map(s => s.id));
+  };
+
+  const clearStudentSelection = () => {
+    setSelectedStudentIds([]);
+  };
+
+  const toggleTeacherSelection = (teacherId: string) => {
+    setSelectedTeacherIds(prev =>
+      prev.includes(teacherId) ? prev.filter(id => id !== teacherId) : [...prev, teacherId]
+    );
+  };
+
+  const selectAllTeachers = () => {
+    setSelectedTeacherIds(allTeachers.map(t => t.id));
+  };
+
+  const clearTeacherSelection = () => {
+    setSelectedTeacherIds([]);
   };
 
   const createMeetingMutation = useMutation({
@@ -96,7 +153,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       toast.success("Meeting created successfully!");
-      onSave(data, selectedStudentIds); // Pass both meeting data and selected student IDs
+      onSave(data, selectedStudentIds, selectedTeacherIds); // Pass all relevant IDs
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create meeting");
@@ -120,7 +177,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       toast.success("Meeting updated successfully!");
-      onSave(data, selectedStudentIds); // Pass both meeting data and selected student IDs
+      onSave(data, selectedStudentIds, selectedTeacherIds); // Pass all relevant IDs
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update meeting");
@@ -184,10 +241,10 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       {meetingType === "parents" && (
         <div className="space-y-3 border p-4 rounded-lg">
           <h3 className="font-semibold text-lg flex items-center gap-2">
-            <Users className="h-5 w-5" /> Select Parent Attendees
+            <Users className="h-5 w-5" /> Select Parent Attendees (via Students)
           </h3>
           <p className="text-sm text-muted-foreground">
-            Only parents of selected students will see this meeting.
+            Only parents of selected students will be linked to this meeting.
           </p>
           <Input
             placeholder="Search students..."
@@ -195,6 +252,10 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
             onChange={(e) => setStudentSearch(e.target.value)}
             className="mb-2"
           />
+          <div className="flex gap-2 mb-2">
+            <Button type="button" variant="outline" size="sm" onClick={selectAllStudents}>Select All Parents</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={clearStudentSelection}>Clear Selection</Button>
+          </div>
           <ScrollArea className="h-48 border rounded-md p-2">
             {studentsLoading ? (
               <p className="text-muted-foreground">Loading students...</p>
@@ -211,6 +272,46 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
                     />
                     <Label htmlFor={`student-${student.id}`} className="font-normal cursor-pointer">
                       {student.name} (Grade {student.grade})
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      )}
+
+      {meetingType === "teachers" && (
+        <div className="space-y-3 border p-4 rounded-lg">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Users className="h-5 w-5" /> Select Teacher Attendees
+          </h3>
+          <Input
+            placeholder="Search teachers..."
+            value={teacherSearch}
+            onChange={(e) => setTeacherSearch(e.target.value)}
+            className="mb-2"
+          />
+          <div className="flex gap-2 mb-2">
+            <Button type="button" variant="outline" size="sm" onClick={selectAllTeachers}>Select All Teachers</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={clearTeacherSelection}>Clear Selection</Button>
+          </div>
+          <ScrollArea className="h-48 border rounded-md p-2">
+            {teachersLoading ? (
+              <p className="text-muted-foreground">Loading teachers...</p>
+            ) : filteredTeachers.length === 0 ? (
+              <p className="text-muted-foreground">No teachers found.</p>
+            ) : (
+              <div className="space-y-2">
+                {filteredTeachers.map(teacher => (
+                  <div key={teacher.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`teacher-${teacher.id}`}
+                      checked={selectedTeacherIds.includes(teacher.id)}
+                      onCheckedChange={() => toggleTeacherSelection(teacher.id)}
+                    />
+                    <Label htmlFor={`teacher-${teacher.id}`} className="font-normal cursor-pointer">
+                      {teacher.name}
                     </Label>
                   </div>
                 ))}
