@@ -62,6 +62,7 @@ const InvoiceManagement = () => {
           invoice_number: invoiceNumber,
           total_amount: parseFloat(createForm.total_amount),
           due_date: createForm.due_date,
+          invoice_date: new Date().toISOString().split('T')[0], // Set invoice_date to current date
           status: 'pending'
         });
       if (error) throw error;
@@ -83,7 +84,7 @@ const InvoiceManagement = () => {
       // Update invoice status
       const { error: invoiceError } = await supabase
         .from('invoices')
-        .update({ status: 'paid' })
+        .update({ status: 'paid', paid_amount: invoice.total_amount }) // Mark as fully paid
         .eq('id', invoiceId);
       if (invoiceError) throw invoiceError;
 
