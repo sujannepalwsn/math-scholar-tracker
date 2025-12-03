@@ -35,10 +35,12 @@ import ParentFinanceDashboard from "./pages/ParentFinanceDashboard";
 import ParentHomework from "./pages/ParentHomework";
 import ParentActivities from "./pages/ParentActivities";
 import ParentDiscipline from "./pages/ParentDiscipline";
-import ParentMeetings from "./pages/ParentMeetings"; // NEW
+import ParentMeetings from "./pages/ParentMeetings";
+import ParentChapterRating from "./pages/ParentChapterRating"; // NEW
+import ParentLessonTracking from "./pages/ParentLessonTracking"; // NEW
 import TeacherDashboard from "./pages/TeacherDashboard";
-import TeacherMeetings from "./pages/TeacherMeetings"; // NEW
-import MeetingManagement from "./pages/MeetingManagement"; // NEW
+import TeacherMeetings from "./pages/TeacherMeetings";
+import MeetingManagement from "./pages/MeetingManagement";
 import Messaging from "./pages/Messaging";
 import ClassRoutine from "./pages/ClassRoutine";
 import ParentMessaging from "./pages/ParentMessaging";
@@ -72,6 +74,8 @@ const App = () => (
             <Route path="/parent-discipline" element={<ProtectedRoute role="parent"><ParentLayout><ParentDiscipline /></ParentLayout></ProtectedRoute>} />
             <Route path="/parent-meetings" element={<ProtectedRoute role="parent"><ParentLayout><ParentMeetings /></ParentLayout></ProtectedRoute>} />
             <Route path="/parent-messages" element={<ProtectedRoute role="parent"><ParentLayout><ParentMessaging /></ParentLayout></ProtectedRoute>} />
+            <Route path="/parent-chapter-rating" element={<ProtectedRoute role="parent"><ParentLayout><ParentChapterRating /></ParentLayout></ProtectedRoute>} /> {/* NEW */}
+            <Route path="/parent-lesson-tracking" element={<ProtectedRoute role="parent"><ParentLayout><ParentLessonTracking /></ParentLayout></ProtectedRoute>} /> {/* NEW */}
 
             {/* Teacher Routes */}
             <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherDashboard /></TeacherLayout></ProtectedRoute>} />
@@ -82,7 +86,7 @@ const App = () => (
             <Route path="/teacher/discipline-issues" element={<ProtectedRoute role="teacher"><TeacherLayout><DisciplineIssues /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/test-management" element={<ProtectedRoute role="teacher"><TeacherLayout><Tests /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/student-report" element={<ProtectedRoute role="teacher"><TeacherLayout><StudentReport /></TeacherLayout></ProtectedRoute>} />
-            <Route path="/teacher-meetings" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherMeetings /></TeacherLayout></ProtectedRoute>} /> {/* NEW */}
+            <Route path="/teacher-meetings" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherMeetings /></TeacherLayout></ProtectedRoute>} />
 
             {/* Center Routes */}
             <Route path="/" element={<ProtectedRoute role="center"><CenterLayout><Dashboard /></CenterLayout></ProtectedRoute>} />
