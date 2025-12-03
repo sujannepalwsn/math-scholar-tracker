@@ -410,6 +410,14 @@ export default function StudentReport() {
     }
   };
 
+  console.log("Selected Student ID:", selectedStudentId);
+  console.log("Date Range From:", dateRange.from, "To:", dateRange.to);
+  console.log("Fetched Invoices:", invoices);
+  console.log("Calculated Total Invoiced:", totalInvoiced);
+  console.log("Fetched Payments:", payments);
+  console.log("Calculated Total Paid:", totalPaid);
+  console.log("Calculated Outstanding Dues:", outstandingDues);
+
   return (
     <div className="space-y-6">
       {/* Header and Print/Export */}
