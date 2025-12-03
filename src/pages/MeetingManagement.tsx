@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, CalendarDays, Users, FileText, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { format } from "date-fns";
-import { Tables } from "@/integrations/supabase/types";
+import { Tables, TablesInsert } from "@/integrations/supabase/types";
 import MeetingForm from "@/components/meetings/MeetingForm";
 import MeetingAttendanceRecorder from "@/components/meetings/MeetingAttendanceRecorder";
 import MeetingConclusionForm from "@/components/meetings/MeetingConclusionForm";
@@ -85,7 +85,7 @@ export default function MeetingManagement() {
     // This simplifies logic by not having to figure out which ones to remove vs update
     await supabase.from('meeting_attendees').delete().eq('meeting_id', meetingData.id);
 
-    const attendeesToInsert: Tables<'meeting_attendees'>['Insert'][] = [];
+    const attendeesToInsert: TablesInsert<'meeting_attendees'>[] = [];
 
     if (meetingData.meeting_type === 'parents' && selectedStudentIds.length > 0) {
       // Fetch parent user IDs for the selected students

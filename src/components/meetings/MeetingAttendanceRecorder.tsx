@@ -8,24 +8,26 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Filter } from "lucide-react"; // Added Filter icon
-import { Tables } from "@/integrations/supabase/types";
+import { CheckCircle2, XCircle, Filter } from "lucide-react";
+import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 interface MeetingAttendanceRecorderProps {
   meetingId: string;
   onClose: () => void;
 }
 
-type AttendanceStatus = "pending" | "present" | "absent" | "excused" | "invite"; // Added "invite"
-type Student = Tables<'students'>;
-type Teacher = Tables<'teachers'>; // Added Teacher type for clarity
-type MeetingAttendee = Tables<'meeting_attendees'>;
+type AttendanceStatus = "pending" | "present" | "absent" | "excused" | "invite";
+// Define partial types for fetched data
+type PartialStudent = Pick<Tables<'students'>, 'id' | 'name' | 'grade'>;
+type PartialTeacher = Pick<Tables<'teachers'>, 'id' | 'name' | 'user_id'>;
+
+type MeetingAttendeeRow = Tables<'meeting_attendees'>;
 
 export default function MeetingAttendanceRecorder({ meetingId, onClose }: MeetingAttendanceRecorderProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [attendeeStatuses, setAttendeeStatuses] = useState<Record<string, AttendanceStatus>>({});
-  const [gradeFilter, setGradeFilter] = useState("all"); // New state for grade filter
+  const [gradeFilter, setGradeFilter] = useState("all");
 
   // Fetch meeting details to determine its type
   const { data: meetingDetails, isLoading: meetingDetailsLoading } = useQuery({
@@ -64,7 +66,7 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
     queryFn: async () => {
       const { data, error } = await supabase
         .from("meeting_attendees")
-        .select("*, students(id, name, grade), users(id, username, role), teachers(id, name)") // Fetch teacher details
+        .select("*, students(id, name, grade), users(id, username, role), teachers(id, name, user_id)") // Fetch teacher user_id
         .eq("meeting_id", meetingId);
       if (error) throw error;
       return data;
@@ -74,23 +76,19 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
 
   // Determine the list of participants to display
   const { data: participants = [], isLoading: participantsLoading } = useQuery({
-    queryKey: ["meeting-participants", meetingId, meetingDetails?.meeting_type, user?.center_id, gradeFilter], // Added gradeFilter
+    queryKey: ["meeting-participants", meetingId, meetingDetails?.meeting_type, user?.center_id, gradeFilter],
     queryFn: async () => {
       if (!user?.center_id || !meetingDetails) return [];
 
-      let fetchedParticipants: (Student | Teacher | Tables<'users'>)[] = [];
+      let fetchedParticipants: (PartialStudent | PartialTeacher | Tables<'users'>)[] = [];
 
       if (meetingDetails.meeting_type === "parents" || meetingDetails.meeting_type === "general") {
-        let query = supabase
+        const { data, error } = await supabase
           .from("students")
           .select("id, name, grade")
           .eq("center_id", user.center_id)
           .order("name");
         
-        if (gradeFilter !== "all") {
-          query = query.eq("grade", gradeFilter);
-        }
-        const { data, error } = await query;
         if (error) throw error;
         fetchedParticipants = data || [];
       } else if (meetingDetails.meeting_type === "teachers") {
@@ -112,11 +110,11 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
     const initialStatuses: Record<string, AttendanceStatus> = {};
     
     // Initialize with existing attendance
-    existingAttendees.forEach((attendee: MeetingAttendee & { students?: Student, users?: Tables<'users'>, teachers?: Teacher }) => {
+    existingAttendees.forEach((attendee: MeetingAttendeeRow & { students?: PartialStudent, users?: Tables<'users'>, teachers?: PartialTeacher }) => {
       let participantId: string | undefined;
       if (attendee.student_id) participantId = attendee.student_id;
       else if (attendee.teacher_id) participantId = attendee.teacher_id;
-      else if (attendee.user_id) participantId = attendee.user_id; // Fallback for general user attendees
+      else if (attendee.user_id) participantId = attendee.user_id;
 
       if (participantId) {
         initialStatuses[participantId] = (attendee.attendance_status as AttendanceStatus) || "pending";
@@ -135,8 +133,8 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
 
   const updateAttendanceMutation = useMutation({
     mutationFn: async () => {
-      const recordsToInsert: Tables<'meeting_attendees'>['Insert'][] = [];
-      const recordsToUpdate: Tables<'meeting_attendees'>['Update'][] = [];
+      const recordsToInsert: TablesInsert<'meeting_attendees'>[] = [];
+      const recordsToUpdate: TablesUpdate<'meeting_attendees'>[] = [];
       
       for (const participant of participants) {
         const participantId = participant.id;
@@ -148,7 +146,7 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
           (ea.teacher_id === participantId && meetingDetails?.meeting_type === 'teachers')
         );
 
-        const baseRecord: Tables<'meeting_attendees'>['Insert'] = {
+        const baseRecord: TablesInsert<'meeting_attendees'> = {
           meeting_id: meetingId,
           attended,
           attendance_status,
@@ -156,17 +154,23 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
         };
 
         if (meetingDetails?.meeting_type === 'parents' || meetingDetails?.meeting_type === 'general') {
-          Object.assign(baseRecord, { student_id: participantId, user_id: existingRecord?.user_id || null, teacher_id: null });
+          // Find the parent user ID associated with this student
+          const { data: parentUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('student_id', participantId)
+            .eq('role', 'parent')
+            .single();
+          
+          Object.assign(baseRecord, { student_id: participantId, user_id: parentUser?.id || null, teacher_id: null });
         } else if (meetingDetails?.meeting_type === 'teachers') {
-          const teacherUser = allTeachers.find(t => t.id === participantId);
+          const teacherUser = allTeachers.find(t => t.id === participantId); // allTeachers is in scope
           Object.assign(baseRecord, { teacher_id: participantId, user_id: teacherUser?.user_id || null, student_id: null });
         }
 
         if (existingRecord) {
-          // For update, we need the ID of the existing record
           recordsToUpdate.push({ id: existingRecord.id, ...baseRecord });
         } else {
-          // For insert, we just need the new record data
           recordsToInsert.push(baseRecord);
         }
       }
@@ -179,7 +183,6 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
 
       // Perform updates
       if (recordsToUpdate.length > 0) {
-        // Use upsert with 'id' for updates, as 'id' is the primary key
         const { error: updateError } = await supabase.from("meeting_attendees").upsert(recordsToUpdate, { onConflict: 'id' });
         if (updateError) throw updateError;
       }
@@ -265,7 +268,7 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="invite">Invite</SelectItem> {/* New "Invite" option */}
+                        <SelectItem value="invite">Invite</SelectItem>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="present">Present</SelectItem>
                         <SelectItem value="absent">Absent</SelectItem>
