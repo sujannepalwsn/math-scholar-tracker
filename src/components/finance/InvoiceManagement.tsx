@@ -10,14 +10,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Eye, DollarSign } from 'lucide-react';
+import { Plus, Eye, DollarSign, FilePlus } from 'lucide-react';
 import { formatCurrency } from '@/integrations/supabase/finance-types';
+import { format } from 'date-fns';
 
 const InvoiceManagement = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showBulkGenerateDialog, setShowBulkGenerateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({ student_id: '', total_amount: '', due_date: '' });
+
+  const [bulkGenerateForm, setBulkGenerateForm] = useState({
+    month: format(new Date(), 'MM'),
+    year: format(new Date(), 'yyyy'),
+    academicYear: '2024-2025', // Default academic year, can be made dynamic
+    dueInDays: '30',
+    gradeFilter: 'all',
+  });
 
   const { data: students = [] } = useQuery({
     queryKey: ['students', user?.center_id],
@@ -33,6 +43,8 @@ const InvoiceManagement = () => {
     },
     enabled: !!user?.center_id
   });
+
+  const uniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
 
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ['invoices', user?.center_id],
@@ -63,7 +75,7 @@ const InvoiceManagement = () => {
           total_amount: parseFloat(createForm.total_amount),
           due_date: createForm.due_date,
           invoice_date: new Date().toISOString().split('T')[0], // Set invoice_date to current date
-          status: 'pending'
+          status: 'issued' // Changed to 'issued' as per guide
         });
       if (error) throw error;
     },
@@ -74,6 +86,36 @@ const InvoiceManagement = () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
     onError: (error: any) => toast.error(error.message || 'Failed to create invoice')
+  });
+
+  const generateBulkInvoicesMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.center_id) throw new Error('Center ID not found');
+
+      const { data, error } = await supabase.functions.invoke('generate-monthly-invoices', {
+        body: {
+          centerId: user.center_id,
+          month: parseInt(bulkGenerateForm.month),
+          year: parseInt(bulkGenerateForm.year),
+          academicYear: bulkGenerateForm.academicYear,
+          dueInDays: parseInt(bulkGenerateForm.dueInDays),
+          gradeFilter: bulkGenerateForm.gradeFilter,
+        },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to generate invoices via Edge Function');
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Bulk invoices generated successfully!');
+      setShowBulkGenerateDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+    onError: (error: any) => {
+      console.error("Bulk invoice generation error:", error);
+      toast.error(error.message || 'Failed to generate bulk invoices');
+    }
   });
 
   const markAsPaidMutation = useMutation({
@@ -110,6 +152,8 @@ const InvoiceManagement = () => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
+      issued: 'bg-blue-100 text-blue-800', // Added 'issued' status
+      partial: 'bg-orange-100 text-orange-800',
       paid: 'bg-green-100 text-green-800',
       overdue: 'bg-red-100 text-red-800',
       cancelled: 'bg-slate-100 text-slate-800'
@@ -123,41 +167,122 @@ const InvoiceManagement = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Invoice Management</CardTitle>
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button><Plus className="h-4 w-4 mr-2" />Create Invoice</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Invoice</DialogTitle>
-                  <DialogDescription>Create a new invoice for a student.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Student *</Label>
-                    <Select value={createForm.student_id} onValueChange={(v) => setCreateForm({ ...createForm, student_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
-                      <SelectContent>
-                        {students.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name} - {s.grade}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+            <div className="flex gap-2">
+              <Dialog open={showBulkGenerateDialog} onOpenChange={setShowBulkGenerateDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline"><FilePlus className="h-4 w-4 mr-2" />Generate Monthly Invoices</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Generate Monthly Invoices</DialogTitle>
+                    <DialogDescription>Automatically create invoices for students based on fee structures.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="month">Month *</Label>
+                        <Input
+                          id="month"
+                          type="number"
+                          min="1"
+                          max="12"
+                          value={bulkGenerateForm.month}
+                          onChange={(e) => setBulkGenerateForm({ ...bulkGenerateForm, month: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="year">Year *</Label>
+                        <Input
+                          id="year"
+                          type="number"
+                          min="2000"
+                          value={bulkGenerateForm.year}
+                          onChange={(e) => setBulkGenerateForm({ ...bulkGenerateForm, year: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="academicYear">Academic Year *</Label>
+                      <Input
+                        id="academicYear"
+                        value={bulkGenerateForm.academicYear}
+                        onChange={(e) => setBulkGenerateForm({ ...bulkGenerateForm, academicYear: e.target.value })}
+                        placeholder="e.g., 2024-2025"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dueInDays">Due in Days *</Label>
+                      <Input
+                        id="dueInDays"
+                        type="number"
+                        min="1"
+                        value={bulkGenerateForm.dueInDays}
+                        onChange={(e) => setBulkGenerateForm({ ...bulkGenerateForm, dueInDays: e.target.value })}
+                        placeholder="30"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Filter by Grade</Label>
+                      <Select value={bulkGenerateForm.gradeFilter} onValueChange={(v) => setBulkGenerateForm({ ...bulkGenerateForm, gradeFilter: v })}>
+                        <SelectTrigger><SelectValue placeholder="All Grades" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Grades</SelectItem>
+                          {uniqueGrades.map((g) => (
+                            <SelectItem key={g} value={g}>{g}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      onClick={() => generateBulkInvoicesMutation.mutate()}
+                      disabled={
+                        !bulkGenerateForm.month || !bulkGenerateForm.year || !bulkGenerateForm.academicYear || !bulkGenerateForm.dueInDays ||
+                        generateBulkInvoicesMutation.isPending
+                      }
+                      className="w-full"
+                    >
+                      {generateBulkInvoicesMutation.isPending ? 'Generating...' : 'Generate Invoices'}
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Total Amount (₹) *</Label>
-                    <Input type="number" value={createForm.total_amount} onChange={(e) => setCreateForm({ ...createForm, total_amount: e.target.value })} />
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="h-4 w-4 mr-2" />Create Single Invoice</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Invoice</DialogTitle>
+                    <DialogDescription>Create a new invoice for a single student.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Student *</Label>
+                      <Select value={createForm.student_id} onValueChange={(v) => setCreateForm({ ...createForm, student_id: v })}>
+                        <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
+                        <SelectContent>
+                          {students.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>{s.name} - {s.grade}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Total Amount (₹) *</Label>
+                      <Input type="number" value={createForm.total_amount} onChange={(e) => setCreateForm({ ...createForm, total_amount: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Due Date *</Label>
+                      <Input type="date" value={createForm.due_date} onChange={(e) => setCreateForm({ ...createForm, due_date: e.target.value })} />
+                    </div>
+                    <Button onClick={() => createInvoiceMutation.mutate()} disabled={!createForm.student_id || !createForm.total_amount || !createForm.due_date || createInvoiceMutation.isPending} className="w-full">
+                      {createInvoiceMutation.isPending ? 'Creating...' : 'Create Invoice'}
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Due Date *</Label>
-                    <Input type="date" value={createForm.due_date} onChange={(e) => setCreateForm({ ...createForm, due_date: e.target.value })} />
-                  </div>
-                  <Button onClick={() => createInvoiceMutation.mutate()} disabled={!createForm.student_id || !createForm.total_amount || !createForm.due_date || createInvoiceMutation.isPending} className="w-full">
-                    {createInvoiceMutation.isPending ? 'Creating...' : 'Create Invoice'}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
