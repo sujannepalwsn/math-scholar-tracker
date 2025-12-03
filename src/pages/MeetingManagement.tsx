@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Edit, Trash2, CalendarDays, Users, FileText, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Edit, Trash2, CalendarDays, Users, FileText, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
 import MeetingForm from "@/components/meetings/MeetingForm";
 import MeetingAttendanceRecorder from "@/components/meetings/MeetingAttendanceRecorder";
 import MeetingConclusionForm from "@/components/meetings/MeetingConclusionForm";
+import MeetingConclusionViewer from "@/components/meetings/MeetingConclusionViewer"; // Import the new viewer
 
 type Meeting = Tables<'meetings'>;
 type MeetingConclusion = Tables<'meeting_conclusions'>;
@@ -28,7 +29,7 @@ export default function MeetingManagement() {
   const [showAttendanceDialog, setShowAttendanceDialog] = useState(false);
   const [selectedMeetingForAttendance, setSelectedMeetingForAttendance] = useState<Meeting | null>(null);
   const [showConclusionDialog, setShowConclusionDialog] = useState(false);
-  const [selectedMeetingForConclusion, setSelectedMeetingForConclusion] = useState<Meeting | null>(null);
+  const [selectedMeetingForConclusion, setSelectedMeetingForConclusion] = useState<Meeting & { meeting_conclusions: MeetingConclusion[] } | null>(null); // Update type to include conclusions
 
   // Fetch meetings for the current center
   const { data: meetings = [], isLoading } = useQuery({
@@ -70,7 +71,7 @@ export default function MeetingManagement() {
     setShowAttendanceDialog(true);
   };
 
-  const handleConclusionClick = (meeting: Meeting) => {
+  const handleConclusionClick = (meeting: Meeting & { meeting_conclusions: MeetingConclusion[] }) => {
     setSelectedMeetingForConclusion(meeting);
     setShowConclusionDialog(true);
   };
@@ -148,7 +149,9 @@ export default function MeetingManagement() {
                       </TableCell>
                       <TableCell>
                       {meeting.meeting_conclusions && meeting.meeting_conclusions.length > 0 ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <Button variant="ghost" size="sm" onClick={() => handleConclusionClick(meeting)}>
+                            <Eye className="h-4 w-4 mr-1" /> View
+                          </Button>
                         ) : (
                           <XCircle className="h-5 w-5 text-red-600" />
                         )}
@@ -194,22 +197,26 @@ export default function MeetingManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Conclusion Form Dialog */}
+      {/* Conclusion Form/Viewer Dialog */}
       <Dialog open={showConclusionDialog} onOpenChange={setShowConclusionDialog}>
-        <DialogContent className="max-w-2xl" aria-labelledby="conclusion-form-title" aria-describedby="conclusion-form-description">
+        <DialogContent className="max-w-2xl" aria-labelledby="conclusion-dialog-title" aria-describedby="conclusion-dialog-description">
           <DialogHeader>
-            <DialogTitle id="conclusion-form-title">Meeting Conclusion for {selectedMeetingForConclusion?.title}</DialogTitle>
-            <DialogDescription id="conclusion-form-description">
-              Add or edit the summary and notes for this meeting.
+            <DialogTitle id="conclusion-dialog-title">Meeting Conclusion for {selectedMeetingForConclusion?.title}</DialogTitle>
+            <DialogDescription id="conclusion-dialog-description">
+              {selectedMeetingForConclusion?.meeting_conclusions && selectedMeetingForConclusion.meeting_conclusions.length > 0
+                ? "View the summary and notes from this meeting."
+                : "Add the summary and notes for this meeting."}
             </DialogDescription>
           </DialogHeader>
-          {selectedMeetingForConclusion && (
+          {selectedMeetingForConclusion && selectedMeetingForConclusion.meeting_conclusions && selectedMeetingForConclusion.meeting_conclusions.length > 0 ? (
+            <MeetingConclusionViewer conclusion={selectedMeetingForConclusion.meeting_conclusions[0]} />
+          ) : selectedMeetingForConclusion ? (
             <MeetingConclusionForm
               meetingId={selectedMeetingForConclusion.id}
               onSave={() => setShowConclusionDialog(false)}
               onClose={() => setShowConclusionDialog(false)}
             />
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>
