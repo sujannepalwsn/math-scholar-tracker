@@ -16,6 +16,7 @@ import OCRModal from "@/components/OCRModal";
 import BulkMarksEntry from "@/components/BulkMarksEntry";
 import QuestionPaperViewer from "@/components/QuestionPaperViewer";
 import { Tables } from "@/integrations/supabase/types";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Import Table components
 
 type Test = Tables<'tests'>;
 type TestResult = Tables<'test_results'>;
@@ -119,7 +120,7 @@ export default function Tests() {
   });
 
   // Fetch test results for selected test
-  const { data: testResults = [] } = useQuery({
+  const { data: testResults = [], isLoading: testResultsLoading } = useQuery({
     queryKey: ["test-results", selectedTest],
     queryFn: async () => {
       if (!selectedTest) return [];
@@ -299,6 +300,10 @@ export default function Tests() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["test-results"] });
       toast.success("Result deleted");
+    },
+    onError: (error: any) => {
+      console.error("Error deleting test result:", error);
+      toast.error(error.message || "Failed to delete result");
     },
   });
 
@@ -611,7 +616,7 @@ export default function Tests() {
                   >
                     <div className="font-medium">{test.name}</div>
                     <div className="text-sm opacity-80">
-                      {test.subject} • {test.date ? format(new Date(test.date), "MMM d, yyyy") : 'No date'} • {test.total_marks} marks
+                      {test.subject} • {format(new Date(test.date), "PPP")} • {test.total_marks} marks
                       {test.questions && (test.questions as unknown as Question[]).length > 0 && (
                         <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary-foreground text-primary">
                           {(test.questions as unknown as Question[]).length} Questions
@@ -762,7 +767,6 @@ export default function Tests() {
                   onChange={(e) => setResultDate(e.target.value)}
                 />
               </div>
-              {/* Removed Notes section */}
               <Button
                 onClick={() => addResultMutation.mutate()}
                 disabled={!selectedStudentId || (!marksObtained && questions.length === 0) || addResultMutation.isPending}
@@ -770,6 +774,55 @@ export default function Tests() {
               >
                 Save Marks
               </Button>
+
+              {/* Display Entered Marks Table */}
+              <div className="mt-8">
+                <h3 className="font-semibold text-lg mb-4">Entered Marks for {selectedTestData.name}</h3>
+                {testResultsLoading ? (
+                  <p>Loading results...</p>
+                ) : testResults.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No marks entered for this test yet.</p>
+                ) : (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Student Name</TableHead>
+                          <TableHead>Grade</TableHead>
+                          <TableHead>Marks Obtained</TableHead>
+                          <TableHead>Percentage</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {testResults.map((result: any) => {
+                          const percentage = selectedTestData.total_marks
+                            ? ((result.marks_obtained / selectedTestData.total_marks) * 100).toFixed(1)
+                            : 'N/A';
+                          return (
+                            <TableRow key={result.id}>
+                              <TableCell className="font-medium">{result.students?.name || 'N/A'}</TableCell>
+                              <TableCell>{result.students?.grade || 'N/A'}</TableCell>
+                              <TableCell>{result.marks_obtained} / {selectedTestData.total_marks}</TableCell>
+                              <TableCell>{percentage}%</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => deleteResultMutation.mutate(result.id)}
+                                  disabled={deleteResultMutation.isPending}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
