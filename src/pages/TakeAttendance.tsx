@@ -79,7 +79,7 @@ export default function TakeAttendance() {
       if (!centerStudentIds.length) return [];
       const { data, error } = await supabase
         .from("attendance")
-        .select("student_id, status, time_in, time_out, date")
+        .select("student_id, status, time_in, time_out, date, center_id") // ADD center_id here
         .eq("date", dateStr)
         .in("student_id", centerStudentIds);
       if (error) throw error;
