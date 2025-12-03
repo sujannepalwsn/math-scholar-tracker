@@ -269,7 +269,7 @@ export default function StudentReport() {
         lr.lesson_plans?.subject,
         lr.lesson_plans?.chapter,
         lr.lesson_plans?.topic,
-        safeFormatDate(lr.date_completed, "PPP"),
+        safeFormatDate(lr.completed_at, "PPP"),
         lr.notes || '', // Include session notes
         lr.lesson_plans?.lesson_file_url ? supabase.storage.from("lesson-plan-files").getPublicUrl(lr.lesson_plans.lesson_file_url).data.publicUrl : '',
       ]),
