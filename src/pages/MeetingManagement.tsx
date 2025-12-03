@@ -50,8 +50,23 @@ export default function MeetingManagement() {
 
   const deleteMeetingMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("meetings").delete().eq("id", id);
-      if (error) throw error;
+      // First, delete associated meeting_attendees records
+      const { error: attendeesError } = await supabase
+        .from("meeting_attendees")
+        .delete()
+        .eq("meeting_id", id);
+      if (attendeesError) throw attendeesError;
+
+      // Next, delete associated meeting_conclusions records
+      const { error: conclusionsError } = await supabase
+        .from("meeting_conclusions")
+        .delete()
+        .eq("meeting_id", id);
+      if (conclusionsError) throw conclusionsError;
+
+      // Finally, delete the meeting itself
+      const { error: meetingError } = await supabase.from("meetings").delete().eq("id", id);
+      if (meetingError) throw meetingError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
