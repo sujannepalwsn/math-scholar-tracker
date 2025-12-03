@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Users } from "lucide-react";
+import { Tables } from "@/integrations/supabase/types";
 
 interface MeetingFormProps {
-  meeting?: any;
-  onSave: () => void;
+  meeting?: Tables<'meetings'> & { meeting_attendees?: Tables<'meeting_attendees'>[] };
+  onSave: (selectedStudentIds: string[]) => void;
   onCancel: () => void;
 }
 
@@ -28,6 +32,30 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   const [location, setLocation] = useState(meeting?.location || "");
   const [meetingType, setMeetingType] = useState(meeting?.meeting_type || "general");
   const [status, setStatus] = useState(meeting?.status || "scheduled");
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [studentSearch, setStudentSearch] = useState("");
+
+  // Fetch all students for the current center
+  const { data: allStudents = [], isLoading: studentsLoading } = useQuery({
+    queryKey: ["all-students-for-meeting-form", user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, name, grade")
+        .eq("center_id", user.center_id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id,
+  });
+
+  // Filter students based on search input
+  const filteredStudents = allStudents.filter(student =>
+    student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    student.grade?.toLowerCase().includes(studentSearch.toLowerCase())
+  );
 
   useEffect(() => {
     if (meeting) {
@@ -37,13 +65,22 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       setLocation(meeting.location || "");
       setMeetingType(meeting.meeting_type || "general");
       setStatus(meeting.status || "scheduled");
+      if (meeting.meeting_attendees) {
+        setSelectedStudentIds(meeting.meeting_attendees.map(att => att.student_id!).filter(Boolean) as string[]);
+      }
     }
   }, [meeting]);
+
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+    );
+  };
 
   const createMeetingMutation = useMutation({
     mutationFn: async () => {
       if (!user?.center_id || !user?.id) throw new Error("User or Center ID not found");
-      const { error } = await supabase.from("meetings").insert({
+      const { data, error } = await supabase.from("meetings").insert({
         center_id: user.center_id,
         created_by: user.id,
         title,
@@ -52,13 +89,14 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
         location: location || null,
         meeting_type: meetingType,
         status,
-      });
+      }).select().single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       toast.success("Meeting created successfully!");
-      onSave();
+      onSave(selectedStudentIds); // Pass selected student IDs back
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create meeting");
@@ -68,20 +106,21 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   const updateMeetingMutation = useMutation({
     mutationFn: async () => {
       if (!meeting?.id) throw new Error("Meeting ID not found");
-      const { error } = await supabase.from("meetings").update({
+      const { data, error } = await supabase.from("meetings").update({
         title,
         description: description || null,
         meeting_date: new Date(meetingDate).toISOString(),
         location: location || null,
         meeting_type: meetingType,
         status,
-      }).eq("id", meeting.id);
+      }).eq("id", meeting.id).select().single();
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       toast.success("Meeting updated successfully!");
-      onSave();
+      onSave(selectedStudentIds); // Pass selected student IDs back
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to update meeting");
@@ -141,6 +180,46 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
           </Select>
         </div>
       </div>
+
+      {meetingType === "parents" && (
+        <div className="space-y-3 border p-4 rounded-lg">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <Users className="h-5 w-5" /> Select Parent Attendees
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Only parents of selected students will see this meeting.
+          </p>
+          <Input
+            placeholder="Search students..."
+            value={studentSearch}
+            onChange={(e) => setStudentSearch(e.target.value)}
+            className="mb-2"
+          />
+          <ScrollArea className="h-48 border rounded-md p-2">
+            {studentsLoading ? (
+              <p className="text-muted-foreground">Loading students...</p>
+            ) : filteredStudents.length === 0 ? (
+              <p className="text-muted-foreground">No students found.</p>
+            ) : (
+              <div className="space-y-2">
+                {filteredStudents.map(student => (
+                  <div key={student.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`student-${student.id}`}
+                      checked={selectedStudentIds.includes(student.id)}
+                      onCheckedChange={() => toggleStudentSelection(student.id)}
+                    />
+                    <Label htmlFor={`student-${student.id}`} className="font-normal cursor-pointer">
+                      {student.name} (Grade {student.grade})
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" disabled={!title || createMeetingMutation.isPending || updateMeetingMutation.isPending}>
