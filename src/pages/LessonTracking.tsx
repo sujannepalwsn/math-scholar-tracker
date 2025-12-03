@@ -145,7 +145,7 @@ export default function LessonTracking() {
         student_id: studentId,
         lesson_plan_id: selectedLessonPlanId,
         completed: true,
-        date_completed: date,
+        completed_at: date,
         notes: notes || null,
       }));
 

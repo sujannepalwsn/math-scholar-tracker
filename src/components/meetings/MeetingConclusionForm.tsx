@@ -20,18 +20,42 @@ export default function MeetingConclusionForm({ meetingId, onSave, onClose }: Me
 
   const updateMeetingMutation = useMutation({
     mutationFn: async () => {
-      // Update the meeting description with conclusion notes
-      const { error } = await supabase
-        .from("meetings")
-        .update({ 
-          description: conclusionNotes,
-          status: 'completed'
-        })
-        .eq("id", meetingId);
-      if (error) throw error;
+      // First, check if a conclusion already exists for this meeting
+      const { data: existingConclusion, error: fetchError } = await supabase
+        .from("meeting_conclusions")
+        .select("id")
+        .eq("meeting_id", meetingId)
+        .single();
+
+      if (fetchError && fetchError.code !== "PGRST116") {
+        // PGRST116 means no rows found, which is expected for new conclusions
+        throw fetchError;
+      }
+
+      if (existingConclusion) {
+        // Update existing conclusion
+        const { error } = await supabase
+          .from("meeting_conclusions")
+          .update({
+            conclusion_notes: conclusionNotes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingConclusion.id);
+        if (error) throw error;
+      } else {
+        // Insert new conclusion
+        const { error } = await supabase
+          .from("meeting_conclusions")
+          .insert({
+            meeting_id: meetingId,
+            conclusion_notes: conclusionNotes,
+          });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
+      queryClient.invalidateQueries({ queryKey: ["meeting-conclusions"] });
       toast.success("Meeting conclusion saved successfully!");
       onSave();
     },
