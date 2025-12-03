@@ -4,12 +4,15 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import Sidebar from "./Sidebar"; // Import the new Sidebar component
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 
 const navItems: Array<{
   to: string;
   label: string;
   icon: React.ElementType;
   role?: 'admin' | 'center' | 'parent' | 'teacher';
+  unreadCount?: number; // Added unreadCount
 }> = [
   { to: "/parent-dashboard", label: "Dashboard", icon: Home, role: 'parent' as const },
   { to: "/parent-finance", label: "Finance", icon: DollarSign, role: 'parent' as const },
@@ -33,6 +36,42 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     navigate('/login-parent');
   };
 
+  // Fetch unread message count for parent
+  const { data: unreadMessageCount = 0 } = useQuery({
+    queryKey: ["unread-messages-parent", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { data: conversation, error: convError } = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .eq('parent_user_id', user.id)
+        .maybeSingle();
+      
+      if (convError || !conversation) {
+        // console.log("No conversation found for parent:", user.id, convError);
+        return 0;
+      }
+
+      const { count, error } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact' })
+        .eq('conversation_id', conversation.id)
+        .eq('is_read', false)
+        .neq('sender_user_id', user.id); // Messages NOT sent by the current parent user
+      if (error) {
+        console.error("Error fetching unread messages for parent:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+
+  const updatedNavItems = navItems.map(item => 
+    item.to === "/parent-messages" ? { ...item, unreadCount: unreadMessageCount } : item
+  );
+
   const headerContent = (
     <div className="flex items-center gap-2">
       <h1 className="text-xl font-bold text-foreground">Parent Portal</h1>
@@ -54,7 +93,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar
-        navItems={navItems}
+        navItems={updatedNavItems}
         headerContent={headerContent}
         footerContent={footerContent}
       />

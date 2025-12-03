@@ -24,10 +24,15 @@ import {
   ChevronRight,
   Settings,
   KeyRound,
+  MessageSquare, // Import MessageSquare icon
+  Video,
+  Clock,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge"; // Import Badge component
 import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
 
 interface NavItem {
@@ -36,6 +41,7 @@ interface NavItem {
   icon: React.ElementType;
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string; // New prop for feature name
+  unreadCount?: number; // NEW: Optional unread message count
 }
 
 interface SidebarProps {
@@ -60,9 +66,11 @@ export default function Sidebar({ navItems, headerContent, footerContent }: Side
       if (user?.role === 'center' && user.centerPermissions) {
         return user.centerPermissions[item.featureName];
       }
+      if (user?.role === 'teacher' && user.teacherPermissions) {
+        return user.teacherPermissions[item.featureName];
+      }
       // For admin, we'll assume all features are visible in their own dashboard,
       // but the toggle UI will be in AdminDashboard.
-      // For teachers, their specific permissions will be checked in their layout.
     }
     return true;
   });
@@ -107,10 +115,30 @@ export default function Sidebar({ navItems, headerContent, footerContent }: Side
                     )}
                   >
                     <Icon className="h-5 w-5" />
-                    {!isCollapsed && item.label}
+                    {!isCollapsed && (
+                      <span className="flex items-center justify-between w-full">
+                        {item.label}
+                        {item.unreadCount && item.unreadCount > 0 && (
+                          <Badge variant="destructive" className="ml-auto px-2 py-0.5 text-xs">
+                            {item.unreadCount}
+                          </Badge>
+                        )}
+                      </span>
+                    )}
                   </Link>
                 </TooltipTrigger>
-                {isCollapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
+                {isCollapsed && (
+                  <TooltipContent side="right">
+                    <span className="flex items-center gap-2">
+                      {item.label}
+                      {item.unreadCount && item.unreadCount > 0 && (
+                        <Badge variant="destructive" className="px-2 py-0.5 text-xs">
+                          {item.unreadCount}
+                        </Badge>
+                      )}
+                    </span>
+                  </TooltipContent>
+                )}
               </Tooltip>
             );
           })}

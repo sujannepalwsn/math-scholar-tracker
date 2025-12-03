@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import Sidebar from "./Sidebar"; // Import the new Sidebar component
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 
 const navItems: Array<{
   to: string;
@@ -11,6 +13,7 @@ const navItems: Array<{
   icon: React.ElementType;
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string;
+  unreadCount?: number; // Added unreadCount
 }> = [
   { to: "/", label: "Dashboard", icon: Home, role: 'center' as const },
   { to: "/register", label: "Register Student", icon: UserPlus, role: 'center' as const, featureName: 'register_student' },
@@ -45,6 +48,42 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
     navigate('/login');
   };
 
+  // Fetch unread message count for center
+  const { data: unreadMessageCount = 0 } = useQuery({
+    queryKey: ["unread-messages-center", user?.id, user?.center_id],
+    queryFn: async () => {
+      if (!user?.id || !user?.center_id) return 0;
+      const { data: conversations, error: convError } = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .eq('center_id', user.center_id);
+      if (convError) {
+        console.error("Error fetching center conversations:", convError);
+        return 0;
+      }
+      const conversationIds = conversations.map(c => c.id);
+      if (conversationIds.length === 0) return 0;
+
+      const { count, error } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact' })
+        .in('conversation_id', conversationIds)
+        .eq('is_read', false)
+        .neq('sender_user_id', user.id); // Messages NOT sent by the current center user
+      if (error) {
+        console.error("Error fetching unread messages for center:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!user?.id && !!user?.center_id,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+
+  const updatedNavItems = navItems.map(item => 
+    item.to === "/messages" ? { ...item, unreadCount: unreadMessageCount } : item
+  );
+
   const headerContent = (
     <div className="flex items-center gap-2">
       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
@@ -76,7 +115,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar
-        navItems={navItems}
+        navItems={updatedNavItems}
         headerContent={headerContent}
         footerContent={footerContent}
       />

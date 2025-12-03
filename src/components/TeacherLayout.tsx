@@ -1,9 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, CheckSquare, BookOpen, Book, Paintbrush, AlertTriangle, FileText, ClipboardCheck, User, LogOut, KeyRound, Video } from "lucide-react"; // Added Video icon
+import { Home, CheckSquare, BookOpen, Book, Paintbrush, AlertTriangle, FileText, ClipboardCheck, User, LogOut, KeyRound, Video, MessageSquare } from "lucide-react"; // Added Video icon
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import Sidebar from "./Sidebar";
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
 
 const navItems: Array<{
   to: string;
@@ -11,6 +13,7 @@ const navItems: Array<{
   icon: React.ElementType;
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string;
+  unreadCount?: number; // Added unreadCount
 }> = [
   { to: "/teacher-dashboard", label: "Dashboard", icon: Home, role: 'teacher' as const },
   { to: "/teacher/take-attendance", label: "Take Attendance", icon: CheckSquare, role: 'teacher' as const, featureName: 'take_attendance' },
@@ -21,6 +24,7 @@ const navItems: Array<{
   { to: "/teacher/test-management", label: "Test Management", icon: ClipboardCheck, role: 'teacher' as const, featureName: 'test_management' },
   { to: "/teacher/student-report", label: "Student Report", icon: User, role: 'teacher' as const, featureName: 'student_report_access' },
   { to: "/teacher-meetings", label: "Meetings", icon: Video, role: 'teacher' as const, featureName: 'meetings_management' },
+  { to: "/teacher-messages", label: "Messages", icon: MessageSquare, role: 'teacher' as const }, // Updated route
   { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'teacher' as const },
 ];
 
@@ -33,6 +37,45 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     logout();
     navigate('/login'); // Teachers also log in via the main login page
   };
+
+  // Fetch unread message count for teacher
+  const { data: unreadMessageCount = 0 } = useQuery({
+    queryKey: ["unread-messages-teacher", user?.id, user?.center_id],
+    queryFn: async () => {
+      if (!user?.id || !user?.center_id) return 0;
+      // Find conversation where this teacher's user ID is the 'parent_user_id' and center is their center
+      // This is a workaround given the current schema, treating teacher's user as a 'parent' in a conversation with the center.
+      const { data: conversation, error: convError } = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .eq('parent_user_id', user.id)
+        .eq('center_id', user.center_id)
+        .maybeSingle();
+      
+      if (convError || !conversation) {
+        // console.log("No conversation found for teacher with center:", user.id, convError);
+        return 0;
+      }
+
+      const { count, error } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact' })
+        .eq('conversation_id', conversation.id)
+        .eq('is_read', false)
+        .neq('sender_user_id', user.id); // Messages NOT sent by the current teacher user
+      if (error) {
+        console.error("Error fetching unread messages for teacher:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!user?.id && !!user?.center_id,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+
+  const updatedNavItems = navItems.map(item => 
+    item.to === "/teacher-messages" ? { ...item, unreadCount: unreadMessageCount } : item
+  );
 
   const headerContent = (
     <div className="flex items-center gap-2">
@@ -53,11 +96,11 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   );
 
   // Filter nav items based on teacher's specific permissions
-  const filteredTeacherNavItems = navItems.filter(item => {
+  const filteredTeacherNavItems = updatedNavItems.filter(item => {
     if (item.featureName && user?.teacherPermissions) {
       return user.teacherPermissions[item.featureName];
     }
-    return true; // Always show items without a specific featureName (like Dashboard, Change Password)
+    return true; // Always show items without a specific featureName (like Dashboard, Change Password, Messages)
   });
 
   return (
