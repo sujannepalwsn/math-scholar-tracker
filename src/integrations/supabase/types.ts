@@ -1317,6 +1317,9 @@ export type Database = {
           lesson_plan_id: string | null
           notes: string | null
           student_id: string
+          evaluation_rating: number | null; // NEW FIELD
+          teacher_notes: string | null; // NEW FIELD
+          recorded_by_teacher_id: string | null; // NEW FIELD
         }
         Insert: {
           chapter_name?: string | null
@@ -1327,6 +1330,9 @@ export type Database = {
           lesson_plan_id?: string | null
           notes?: string | null
           student_id: string
+          evaluation_rating?: number | null; // NEW FIELD
+          teacher_notes?: string | null; // NEW FIELD
+          recorded_by_teacher_id?: string | null; // NEW FIELD
         }
         Update: {
           chapter_name?: string | null
@@ -1337,6 +1343,9 @@ export type Database = {
           lesson_plan_id?: string | null
           notes?: string | null
           student_id?: string
+          evaluation_rating?: number | null; // NEW FIELD
+          teacher_notes?: string | null; // NEW FIELD
+          recorded_by_teacher_id?: string | null; // NEW FIELD
         }
         Relationships: [
           {
@@ -1351,6 +1360,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_chapters_recorded_by_teacher_id_fkey" // NEW FK
+            columns: ["recorded_by_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
         ]

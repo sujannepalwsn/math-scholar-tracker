@@ -11,9 +11,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Trash2, Users, Plus, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
+import { Trash2, Users, Plus, ChevronDown, ChevronUp, BookOpen, Edit, Star, User } from "lucide-react";
 import { format } from "date-fns";
 import { Tables } from "@/integrations/supabase/types";
+import EditStudentLessonRecord from "@/components/center/EditStudentLessonRecord"; // Import the new component
 
 type LessonPlan = Tables<'lesson_plans'>;
 type Student = Tables<'students'>;
@@ -21,22 +22,26 @@ type StudentChapter = Tables<'student_chapters'>;
 
 interface GroupedLessonRecord {
   lessonPlan: LessonPlan;
-  students: (StudentChapter & { students: Student })[];
+  students: (StudentChapter & { students: Student; recorded_by_teacher?: Tables<'teachers'> })[];
 }
 
 export default function LessonTracking() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // State
+  // State for recording new lessons
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("none"); // Changed initial state to "none"
-  const [notes, setNotes] = useState(""); // Notes for this specific teaching instance
+  const [selectedLessonPlanId, setSelectedLessonPlanId] = useState("none");
+  const [generalLessonNotes, setGeneralLessonNotes] = useState(""); // Renamed from 'notes'
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterStudent, setFilterStudent] = useState("all");
   const [filterGrade, setFilterGrade] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // State for editing individual student lesson records
+  const [showEditStudentRecordDialog, setShowEditStudentRecordDialog] = useState(false);
+  const [editingStudentChapterId, setEditingStudentChapterId] = useState<string | null>(null);
 
   // Track which lesson plans have students shown
   const [showStudentsMap, setShowStudentsMap] = useState<{ [lessonPlanId: string]: boolean }>({});
@@ -80,7 +85,12 @@ export default function LessonTracking() {
     queryFn: async () => {
       let query = supabase
         .from("student_chapters")
-        .select("*, students(id, name, grade, center_id), lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url)")
+        .select(`
+          *,
+          students(id, name, grade, center_id),
+          lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
+          recorded_by_teacher:recorded_by_teacher_id(name)
+        `)
         .eq("students.center_id", user?.center_id!);
 
       if (filterStudent !== "all") query = query.eq("student_id", filterStudent);
@@ -136,8 +146,11 @@ export default function LessonTracking() {
   // Mutations
   const recordLessonMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.center_id || selectedLessonPlanId === "none" || selectedStudentIds.length === 0) { // Updated check
+      if (!user?.center_id || selectedLessonPlanId === "none" || selectedStudentIds.length === 0) {
         throw new Error("Select a lesson plan and at least one student.");
+      }
+      if (!user?.teacher_id) {
+        throw new Error("Only teachers can record lessons.");
       }
 
       // Link lesson plan to selected students via student_chapters table
@@ -146,7 +159,8 @@ export default function LessonTracking() {
         lesson_plan_id: selectedLessonPlanId,
         completed: true,
         completed_at: date,
-        notes: notes || null,
+        notes: generalLessonNotes || null, // Use generalLessonNotes
+        recorded_by_teacher_id: user.teacher_id, // Record the teacher who assigned the lesson
       }));
 
       const { error: linkError } = await supabase.from("student_chapters").insert(studentLessonRecordsToInsert);
@@ -158,8 +172,8 @@ export default function LessonTracking() {
       queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] });
       toast.success("Lesson recorded for selected students!");
       setSelectedStudentIds([]);
-      setSelectedLessonPlanId("none"); // Reset to "none"
-      setNotes("");
+      setSelectedLessonPlanId("none");
+      setGeneralLessonNotes(""); // Reset general notes
       setIsDialogOpen(false);
     },
     onError: (error: any) => {
@@ -198,7 +212,7 @@ export default function LessonTracking() {
 
   const presentStudentIdsForDate: string[] = useMemo(() => {
     return (attendanceForDate || [])
-      .filter((a: any) => a.status === "Present")
+      .filter((a: any) => a.status === "present")
       .map((a: any) => a.student_id);
   }, [attendanceForDate]);
 
@@ -214,6 +228,11 @@ export default function LessonTracking() {
 
   const toggleShowStudents = (lessonPlanId: string) => {
     setShowStudentsMap((prev) => ({ ...prev, [lessonPlanId]: !prev[lessonPlanId] }));
+  };
+
+  const getRatingStars = (rating: number | null) => {
+    if (rating === null) return "N/A";
+    return Array(rating).fill("⭐").join("");
   };
 
   return (
@@ -244,7 +263,7 @@ export default function LessonTracking() {
                 <Select value={selectedLessonPlanId} onValueChange={setSelectedLessonPlanId}>
                   <SelectTrigger><SelectValue placeholder="Choose a lesson plan..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Choose a lesson plan...</SelectItem> {/* Added placeholder item */}
+                    <SelectItem value="none">Choose a lesson plan...</SelectItem>
                     {lessonPlans.map((lp: any) => (
                       <SelectItem key={lp.id} value={lp.id}>
                         {lp.subject} - {lp.chapter} - {lp.topic} ({format(new Date(lp.lesson_date), "MMM d")})
@@ -254,10 +273,10 @@ export default function LessonTracking() {
                 </Select>
               </div>
 
-              {/* NOTES */}
+              {/* GENERAL NOTES */}
               <div>
-                <Label>Notes for this session (Optional)</Label>
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Specific observations for this teaching session" />
+                <Label>General Notes for this session (Optional)</Label>
+                <Textarea value={generalLessonNotes} onChange={(e) => setGeneralLessonNotes(e.target.value)} rows={2} placeholder="General observations for this teaching session" />
               </div>
 
               {/* STUDENTS */}
@@ -309,7 +328,7 @@ export default function LessonTracking() {
               {/* RECORD BUTTON */}
               <Button
                 onClick={() => recordLessonMutation.mutate()}
-                disabled={selectedStudentIds.length === 0 || selectedLessonPlanId === "none" || recordLessonMutation.isPending} // Updated check
+                disabled={selectedStudentIds.length === 0 || selectedLessonPlanId === "none" || recordLessonMutation.isPending}
                 className="w-full"
               >
                 {recordLessonMutation.isPending ? "Recording..." : `Record Lesson for ${selectedStudentIds.length} Student(s)`}
@@ -400,7 +419,27 @@ export default function LessonTracking() {
                       <div key={record.id} className="flex items-center justify-between p-2 bg-muted/20 rounded">
                         <span>{record.students?.name} (Grade {record.students?.grade})</span>
                         <div className="flex items-center gap-2">
-                          {record.notes && <span className="text-xs text-muted-foreground italic">"{record.notes}"</span>}
+                          {record.teacher_notes && <span className="text-xs text-muted-foreground italic">"{record.teacher_notes}"</span>}
+                          {record.evaluation_rating && (
+                            <span className="text-xs flex items-center gap-1">
+                              <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /> {record.evaluation_rating}/5
+                            </span>
+                          )}
+                          {record.recorded_by_teacher?.name && (
+                            <span className="text-xs flex items-center gap-1 text-muted-foreground">
+                              <User className="h-3 w-3" /> {record.recorded_by_teacher.name}
+                            </span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingStudentChapterId(record.id);
+                              setShowEditStudentRecordDialog(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                           <Button variant="destructive" size="sm" onClick={() => deleteStudentLessonRecordMutation.mutate(record.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -415,6 +454,25 @@ export default function LessonTracking() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Student Lesson Record Dialog */}
+      <Dialog open={showEditStudentRecordDialog} onOpenChange={setShowEditStudentRecordDialog}>
+        <DialogContent className="max-w-xl" aria-labelledby="edit-student-lesson-record-title" aria-describedby="edit-student-lesson-record-description">
+          <DialogHeader>
+            <DialogTitle id="edit-student-lesson-record-title">Edit Student Lesson Record</DialogTitle>
+            <DialogDescription id="edit-student-lesson-record-description">
+              Add or update evaluation notes and rating for this student's lesson.
+            </DialogDescription>
+          </DialogHeader>
+          {editingStudentChapterId && (
+            <EditStudentLessonRecord
+              studentChapterId={editingStudentChapterId}
+              onSave={() => setShowEditStudentRecordDialog(false)}
+              onCancel={() => setShowEditStudentRecordDialog(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
