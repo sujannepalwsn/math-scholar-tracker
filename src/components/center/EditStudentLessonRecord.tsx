@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox"; // Added this import
 import { toast } from "sonner";
 import { Star, User } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
@@ -58,7 +59,9 @@ export default function EditStudentLessonRecord({ studentChapterId, onSave, onCa
 
   const updateStudentChapterMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.teacher_id) throw new Error("Teacher ID not found. Only teachers can update lesson records.");
+      // Allow both 'center' and 'teacher' roles to update.
+      // If a teacher is logged in, use their ID. Otherwise, leave recorded_by_teacher_id as null.
+      const recordedById = user?.role === 'teacher' ? user.teacher_id : null;
 
       const { error } = await supabase
         .from("student_chapters")
@@ -67,7 +70,7 @@ export default function EditStudentLessonRecord({ studentChapterId, onSave, onCa
           evaluation_rating: evaluationRating,
           completed: isCompleted,
           completed_at: isCompleted ? new Date().toISOString() : null,
-          recorded_by_teacher_id: user.teacher_id, // Record which teacher made the update
+          recorded_by_teacher_id: recordedById, // Record which teacher/center user made the update
         })
         .eq("id", studentChapterId);
       if (error) throw error;
