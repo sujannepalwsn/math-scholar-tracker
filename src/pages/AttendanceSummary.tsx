@@ -47,7 +47,7 @@ export default function AttendanceSummary() {
 
       const { data, error } = await supabase
         .from('attendance')
-        .select('*, students(name, class)')
+        .select('*, students(name, grade)') // Changed 'class' to 'grade'
         .in('student_id', studentIds)
         .gte('date', startDate)
         .lte('date', endDate)
