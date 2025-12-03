@@ -290,4 +290,6 @@ export default function MeetingManagement() {
       </Dialog>
     </div>
   );
-}
+};
+
+export default MeetingManagement;
