@@ -39,6 +39,9 @@ import ParentMeetings from "./pages/ParentMeetings"; // NEW
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherMeetings from "./pages/TeacherMeetings"; // NEW
 import MeetingManagement from "./pages/MeetingManagement"; // NEW
+import Messaging from "./pages/Messaging";
+import ClassRoutine from "./pages/ClassRoutine";
+import ParentMessaging from "./pages/ParentMessaging";
 import InitAdmin from "./pages/InitAdmin";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/admin/Settings";
@@ -67,7 +70,8 @@ const App = () => (
             <Route path="/parent-homework" element={<ProtectedRoute role="parent"><ParentLayout><ParentHomework /></ParentLayout></ProtectedRoute>} />
             <Route path="/parent-activities" element={<ProtectedRoute role="parent"><ParentLayout><ParentActivities /></ParentLayout></ProtectedRoute>} />
             <Route path="/parent-discipline" element={<ProtectedRoute role="parent"><ParentLayout><ParentDiscipline /></ParentLayout></ProtectedRoute>} />
-            <Route path="/parent-meetings" element={<ProtectedRoute role="parent"><ParentLayout><ParentMeetings /></ParentLayout></ProtectedRoute>} /> {/* NEW */}
+            <Route path="/parent-meetings" element={<ProtectedRoute role="parent"><ParentLayout><ParentMeetings /></ParentLayout></ProtectedRoute>} />
+            <Route path="/parent-messages" element={<ProtectedRoute role="parent"><ParentLayout><ParentMessaging /></ParentLayout></ProtectedRoute>} />
 
             {/* Teacher Routes */}
             <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherDashboard /></TeacherLayout></ProtectedRoute>} />
@@ -98,7 +102,9 @@ const App = () => (
             <Route path="/records" element={<ProtectedRoute role="center"><CenterLayout><ViewRecords /></CenterLayout></ProtectedRoute>} />
             <Route path="/summary" element={<ProtectedRoute role="center"><CenterLayout><Summary /></CenterLayout></ProtectedRoute>} />
             <Route path="/finance" element={<ProtectedRoute role="center"><CenterLayout><AdminFinance /></CenterLayout></ProtectedRoute>} />
-            <Route path="/meetings" element={<ProtectedRoute role="center"><CenterLayout><MeetingManagement /></CenterLayout></ProtectedRoute>} /> {/* NEW */}
+            <Route path="/meetings" element={<ProtectedRoute role="center"><CenterLayout><MeetingManagement /></CenterLayout></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute role="center"><CenterLayout><Messaging /></CenterLayout></ProtectedRoute>} />
+            <Route path="/class-routine" element={<ProtectedRoute role="center"><CenterLayout><ClassRoutine /></CenterLayout></ProtectedRoute>} />
 
             {/* Admin Routes */}
             <Route path="/admin-dashboard" element={<ProtectedRoute role="admin"><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />

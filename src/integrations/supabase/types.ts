@@ -293,6 +293,144 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_conversations: {
+        Row: {
+          center_id: string
+          created_at: string | null
+          id: string
+          parent_user_id: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          center_id: string
+          created_at?: string | null
+          id?: string
+          parent_user_id: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          center_id?: string
+          created_at?: string | null
+          id?: string
+          parent_user_id?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_parent_user_id_fkey"
+            columns: ["parent_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message_text: string
+          read_at: string | null
+          sender_user_id: string
+          sent_at: string | null
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_text: string
+          read_at?: string | null
+          sender_user_id: string
+          sent_at?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_text?: string
+          read_at?: string | null
+          sender_user_id?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_periods: {
+        Row: {
+          center_id: string
+          created_at: string | null
+          end_time: string
+          id: string
+          is_active: boolean | null
+          period_number: number
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          center_id: string
+          created_at?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          period_number: number
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          center_id?: string
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          period_number?: number
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_periods_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discipline_categories: {
         Row: {
           center_id: string
@@ -754,27 +892,39 @@ export type Database = {
       }
       meeting_attendees: {
         Row: {
+          attendance_status: string | null
           attended: boolean | null
           created_at: string
           id: string
           meeting_id: string
+          notes: string | null
           student_id: string | null
+          teacher_id: string | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          attendance_status?: string | null
           attended?: boolean | null
           created_at?: string
           id?: string
           meeting_id: string
+          notes?: string | null
           student_id?: string | null
+          teacher_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          attendance_status?: string | null
           attended?: boolean | null
           created_at?: string
           id?: string
           meeting_id?: string
+          notes?: string | null
           student_id?: string | null
+          teacher_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -790,6 +940,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_attendees_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
           {
@@ -943,6 +1100,64 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      period_schedules: {
+        Row: {
+          center_id: string
+          class_period_id: string
+          created_at: string | null
+          day_of_week: number
+          grade: string
+          id: string
+          subject: string
+          teacher_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          center_id: string
+          class_period_id: string
+          created_at?: string | null
+          day_of_week: number
+          grade: string
+          id?: string
+          subject: string
+          teacher_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          center_id?: string
+          class_period_id?: string
+          created_at?: string | null
+          day_of_week?: number
+          grade?: string
+          id?: string
+          subject?: string
+          teacher_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "period_schedules_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_schedules_class_period_id_fkey"
+            columns: ["class_period_id"]
+            isOneToOne: false
+            referencedRelation: "class_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "period_schedules_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
         ]

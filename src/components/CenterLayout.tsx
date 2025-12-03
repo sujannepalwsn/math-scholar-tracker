@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, UserPlus, CheckSquare, FileText, BarChart3, BookOpen, ClipboardCheck, User, Brain, LogOut, Shield, Calendar, DollarSign, LayoutList, Book, Paintbrush, AlertTriangle, Users, UserCheck, KeyRound, Video } from "lucide-react"; // Added Video icon
+import { Home, UserPlus, CheckSquare, FileText, BarChart3, BookOpen, ClipboardCheck, User, Brain, LogOut, Shield, Calendar, DollarSign, LayoutList, Book, Paintbrush, AlertTriangle, Users, UserCheck, KeyRound, Video, MessageSquare, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ const navItems: Array<{
   { to: "/summary", label: "Summary", icon: BarChart3, role: 'center' as const, featureName: 'summary' },
   { to: "/finance", label: "Finance", icon: DollarSign, role: 'center' as const, featureName: 'finance' },
   { to: "/meetings", label: "Meetings", icon: Video, role: 'center' as const, featureName: 'meetings_management' },
+  { to: "/messages", label: "Messages", icon: MessageSquare, role: 'center' as const },
+  { to: "/class-routine", label: "Class Routine", icon: Clock, role: 'center' as const },
   { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'center' as const },
 ];
 
