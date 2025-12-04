@@ -70,14 +70,26 @@ export default function Messaging() {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("chat_conversations")
-        .select(`
-          *,
-          students:student_id(id, name, grade),
-          centers:center_id(id, name)
-        `)
+        .select("*")
         .eq("parent_user_id", user.id)
         .order("updated_at", { ascending: false });
       if (error) throw error;
+
+      if (data && data.length > 0) {
+        const studentIds = data.map((c: any) => c.student_id).filter(Boolean);
+        const centerIds = data.map((c: any) => c.center_id).filter(Boolean);
+
+        const [studentsData, centersData] = await Promise.all([
+          studentIds.length > 0 ? supabase.from("students").select("id, name, grade").in("id", studentIds) : Promise.resolve({ data: [] }),
+          centerIds.length > 0 ? supabase.from("centers").select("id, name").in("id", centerIds) : Promise.resolve({ data: [] })
+        ]);
+
+        return data.map((conv: any) => ({
+          ...conv,
+          students: (studentsData.data || []).find((s: any) => s.id === conv.student_id),
+          centers: (centersData.data || []).find((c: any) => c.id === conv.center_id)
+        }));
+      }
       return data;
     },
     enabled: !!user?.id && user?.role === "parent",
