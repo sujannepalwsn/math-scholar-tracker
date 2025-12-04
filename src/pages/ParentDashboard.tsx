@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, Calendar as CalendarIcon, BookOpen, FileText, LogOut, DollarSign, Book, Paintbrush, AlertTriangle, CheckCircle, XCircle, Clock, Star, MessageSquare, Radio } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isPast, isToday } from 'date-fns';
 import { Tables } from '@/integrations/supabase/types';
-import { safeFormatDate } from '@/lib/utils'; // Import safeFormatDate
+import { safeFormatDate } from '@/lib/utils';
 
 // Initialize QueryClient (v4 syntax)
 const queryClient = new QueryClient({
@@ -114,27 +114,52 @@ const ParentDashboardContent = () => {
   const [showMiniCalendar, setShowMiniCalendar] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [dateRange, setDateRange] = useState<{from: string, to: string}>({from: '', to: ''});
-  // Removed subjectFilter from here, it will be on dedicated pages
+
+  // NEW: State for the currently selected child
+  const [selectedChildId, setSelectedChildId] = useState<string | undefined>(user?.linked_students?.[0]?.id);
 
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
 
-  if (!user || user.role !== 'parent' || !user.student_id) {
+  if (!user || user.role !== 'parent' || !user.linked_students) {
     navigate('/login-parent');
     return null;
   }
 
-  // Fetch student details
+  if (user.linked_students.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader><CardTitle>No Children Linked</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              It looks like no students are linked to your parent account.
+              Please contact your center administrator to link your child(ren).
+            </p>
+            <Button onClick={handleLogout}>Logout</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // The currently selected student object
+  const currentStudent = user.linked_students.find(s => s.id === selectedChildId);
+
+  // Fetch student details for the selected child
   const { data: student } = useQuery({
-    queryKey: ['student', user.student_id],
+    queryKey: ['student', selectedChildId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('students').select('*').eq('id', user.student_id).single();
+      if (!selectedChildId) return null;
+      const { data, error } = await supabase.from('students').select('*').eq('id', selectedChildId).single();
       if (error) throw error;
       return data;
     },
+    enabled: !!selectedChildId, // Only enable if a child is selected
   });
 
   // Fetch latest broadcast message for this parent's conversation
+  // This query remains dependent on user.id, as broadcasts are for the parent user.
   const { data: latestBroadcastMessage } = useQuery({
     queryKey: ['latest-broadcast-message', user.id],
     queryFn: async () => {
@@ -161,71 +186,81 @@ const ParentDashboardContent = () => {
     enabled: !!user.id,
   });
 
-  // Attendance
+  // Attendance for the selected child
   const { data: attendance = [] } = useQuery({
-    queryKey: ['attendance', user.student_id],
+    queryKey: ['attendance', selectedChildId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('attendance').select('*').eq('student_id', user.student_id).order('date', { ascending: true });
+      if (!selectedChildId) return [];
+      const { data, error } = await supabase.from('attendance').select('*').eq('student_id', selectedChildId).order('date', { ascending: true });
       if (error) throw error;
       return data;
     },
+    enabled: !!selectedChildId,
   });
 
-  // Tests (for MiniCalendar tooltip)
+  // Tests (for MiniCalendar tooltip) for the selected child
   const { data: testResults = [] } = useQuery({
-    queryKey: ['test-results-mini-calendar', user.student_id],
+    queryKey: ['test-results-mini-calendar', selectedChildId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('test_results').select('*, tests(*)').eq('student_id', user.student_id).order('date_taken', { ascending: false });
+      if (!selectedChildId) return [];
+      const { data, error } = await supabase.from('test_results').select('*, tests(*)').eq('student_id', selectedChildId).order('date_taken', { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!selectedChildId,
   });
 
-  // Lesson Records (student_chapters now links to lesson_plans)
+  // Lesson Records (student_chapters now links to lesson_plans) for the selected child
   const { data: lessonRecords = [] } = useQuery({
-    queryKey: ['student-lesson-records-mini-calendar', user.student_id],
+    queryKey: ['student-lesson-records-mini-calendar', selectedChildId],
     queryFn: async () => {
+      if (!selectedChildId) return [];
       let query = supabase.from('student_chapters').select(`
         *,
         lesson_plans(id, subject, chapter, topic, lesson_date)
-      `).eq('student_id', user.student_id).order('completed_at', { ascending: false });
+      `).eq('student_id', selectedChildId).order('completed_at', { ascending: false });
       
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!selectedChildId,
   });
 
-  // Homework Records
+  // Homework Records for the selected child
   const { data: homeworkStatus = [] } = useQuery({
-    queryKey: ['student-homework-records', user.student_id],
+    queryKey: ['student-homework-records', selectedChildId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('student_homework_records').select('*, homework(*)').eq('student_id', user.student_id).order('created_at', { ascending: false });
+      if (!selectedChildId) return [];
+      const { data, error } = await supabase.from('student_homework_records').select('*, homework(*)').eq('student_id', selectedChildId).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!selectedChildId,
   });
 
-  // Discipline Issues
+  // Discipline Issues for the selected child
   const { data: disciplineIssues = [] } = useQuery({
-    queryKey: ['student-discipline-issues', user.student_id],
+    queryKey: ['student-discipline-issues', selectedChildId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('discipline_issues').select('*').eq('student_id', user.student_id).order('issue_date', { ascending: false });
+      if (!selectedChildId) return [];
+      const { data, error } = await supabase.from('discipline_issues').select('*').eq('student_id', selectedChildId).order('issue_date', { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!selectedChildId,
   });
 
-  // Fetch Invoices for Pending Fees
+  // Fetch Invoices for Pending Fees for the selected child
   const { data: invoices = [] } = useQuery({
-    queryKey: ['student-invoices-dashboard', user.student_id],
+    queryKey: ['student-invoices-dashboard', selectedChildId],
     queryFn: async () => {
-      if (!user.student_id) return [];
-      const { data, error } = await supabase.from('invoices').select('*').eq('student_id', user.student_id);
+      if (!selectedChildId) return [];
+      const { data, error } = await supabase.from('invoices').select('*').eq('student_id', selectedChildId);
       if (error) throw error;
       return data as Invoice[];
     },
-    enabled: !!user.student_id,
+    enabled: !!selectedChildId,
   });
 
   // Attendance summary
@@ -339,6 +374,32 @@ const ParentDashboardContent = () => {
           </Button>
         </div>
 
+        {/* Student Selector */}
+        {user.linked_students.length > 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Child</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={selectedChildId}
+                onValueChange={(value) => setSelectedChildId(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a child" />
+                </SelectTrigger>
+                <SelectContent>
+                  {user.linked_students.map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} (Grade {s.grade})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
+
         {/* STUDENT INFO */}
         <Card>
           <CardHeader>
@@ -367,211 +428,223 @@ const ParentDashboardContent = () => {
                 </div>
               </div>
             ) : (
-              <p className="text-muted-foreground">No student data available</p>
+              <p className="text-muted-foreground">Select a child to view their information.</p>
             )}
           </CardContent>
         </Card>
 
         {/* NEW SUMMARY CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {/* Latest Broadcast Message */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Latest Broadcast</CardTitle>
-              <Radio className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              {latestBroadcastMessage ? (
-                <>
-                  <p className="text-sm font-bold line-clamp-2">{latestBroadcastMessage.message_text}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(latestBroadcastMessage.sent_at), 'MMM d, h:mm a')}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No new messages</p>
-              )}
-            </CardContent>
-          </Card>
+        {selectedChildId && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {/* Latest Broadcast Message */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Latest Broadcast</CardTitle>
+                <Radio className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                {latestBroadcastMessage ? (
+                  <>
+                    <p className="text-sm font-bold line-clamp-2">{latestBroadcastMessage.message_text}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(latestBroadcastMessage.sent_at), 'MMM d, h:mm a')}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No new messages</p>
+                )}
+              </CardContent>
+            </Card>
 
-          {/* Today's Homework */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Homework</CardTitle>
-              <Book className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{todaysHomework.length}</div>
-              <p className="text-xs text-muted-foreground">due today</p>
-            </CardContent>
-          </Card>
+            {/* Today's Homework */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Homework</CardTitle>
+                <Book className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{todaysHomework.length}</div>
+                <p className="text-xs text-muted-foreground">due today</p>
+              </CardContent>
+            </Card>
 
-          {/* Missed/Due Homeworks */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Homework</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{missedOrDueHomeworks.length}</div>
-              <p className="text-xs text-muted-foreground">missed or upcoming</p>
-            </CardContent>
-          </Card>
+            {/* Missed or Due Homeworks */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Homework</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{missedOrDueHomeworks.length}</div>
+                <p className="text-xs text-muted-foreground">missed or upcoming</p>
+              </CardContent>
+            </Card>
 
-          {/* Pending Fees */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
-              <DollarSign className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pendingFees > 0 ? `₹${pendingFees.toFixed(2)}` : '₹0.00'}</div>
-              <p className="text-xs text-muted-foreground">outstanding</p>
-            </CardContent>
-          </Card>
+            {/* Pending Fees */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
+                <DollarSign className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{pendingFees > 0 ? `₹${pendingFees.toFixed(2)}` : '₹0.00'}</div>
+                <p className="text-xs text-muted-foreground">outstanding</p>
+              </CardContent>
+            </Card>
 
-          {/* Today's Attendance */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Attendance</CardTitle>
-              <CalendarIcon className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${todaysAttendance?.status === 'present' ? 'text-green-600' : 'text-red-600'}`}>
-                {todaysAttendance ? todaysAttendance.status.toUpperCase() : 'N/A'}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {todaysAttendance?.time_in ? `In: ${formatTimeValue(todaysAttendance.time_in, todaysAttendance.date)}` : ''}
-                {todaysAttendance?.time_out ? ` Out: ${formatTimeValue(todaysAttendance.time_out, todaysAttendance.date)}` : ''}
-              </p>
-            </CardContent>
-          </Card>
+            {/* Today's Attendance */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Attendance</CardTitle>
+                <CalendarIcon className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${todaysAttendance?.status === 'present' ? 'text-green-600' : 'text-red-600'}`}>
+                  {todaysAttendance ? todaysAttendance.status.toUpperCase() : 'N/A'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {todaysAttendance?.time_in ? `In: ${formatTimeValue(todaysAttendance.time_in, todaysAttendance.date)}` : ''}
+                  {todaysAttendance?.time_out ? ` Out: ${formatTimeValue(todaysAttendance.time_out, todaysAttendance.date)}` : ''}
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Today's Lessons Studied */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Lessons</CardTitle>
-              <BookOpen className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{todaysLessonsStudied.length}</div>
-              <p className="text-xs text-muted-foreground">chapters studied</p>
-            </CardContent>
-          </Card>
+            {/* Today's Lessons Studied */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Lessons</CardTitle>
+                <BookOpen className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{todaysLessonsStudied.length}</div>
+                <p className="text-xs text-muted-foreground">chapters studied</p>
+              </CardContent>
+            </Card>
 
-          {/* Today's Discipline Issues */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Discipline</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{todaysDisciplineIssues.length}</div>
-              <p className="text-xs text-muted-foreground">issues reported</p>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Today's Discipline Issues */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Today's Discipline</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{todaysDisciplineIssues.length}</div>
+                <p className="text-xs text-muted-foreground">issues reported</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Attendance Toggle and Mini Calendar */}
-        <div className="flex justify-between items-center gap-2">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" /> Attendance Calendar
-          </h3>
-          <Button size="sm" onClick={() => setShowMiniCalendar(prev => !prev)}>
-            {showMiniCalendar ? 'Hide Calendar' : 'Show Calendar'}
-          </Button>
-        </div>
-        {showMiniCalendar && (
-          <MiniCalendar
-            attendance={attendance}
-            lessonRecords={lessonRecords}
-            tests={testResults}
-            selectedMonth={selectedMonth}
-            setSelectedMonth={setSelectedMonth}
-          />
+        {selectedChildId && (
+          <>
+            <div className="flex justify-between items-center gap-2">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" /> Attendance Calendar
+              </h3>
+              <Button size="sm" onClick={() => setShowMiniCalendar(prev => !prev)}>
+                {showMiniCalendar ? 'Hide Calendar' : 'Show Calendar'}
+              </Button>
+            </div>
+            {showMiniCalendar && (
+              <MiniCalendar
+                attendance={attendance}
+                lessonRecords={lessonRecords}
+                tests={testResults}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+              />
+            )}
+          </>
         )}
 
         {/* Date Range Filter */}
-        <div className="flex items-center gap-2">
-          <label>From:</label>
-          <input type="date" value={dateRange.from} onChange={e => setDateRange({...dateRange, from: e.target.value})} className="border p-1 rounded"/>
-          <label>To:</label>
-          <input type="date" value={dateRange.to} onChange={e => setDateRange({...dateRange, to: e.target.value})} className="border p-1 rounded"/>
-        </div>
+        {selectedChildId && (
+          <div className="flex items-center gap-2">
+            <label>From:</label>
+            <input type="date" value={dateRange.from} onChange={e => setDateRange({...dateRange, from: e.target.value})} className="border p-1 rounded"/>
+            <label>To:</label>
+            <input type="date" value={dateRange.to} onChange={e => setDateRange({...dateRange, to: e.target.value})} className="border p-1 rounded"/>
+          </div>
+        )}
 
         {/* ATTENDANCE SUMMARY */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" /> Attendance Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-2xl font-bold text-blue-600">{totalDays}</p>
-                <p className="text-sm text-muted-foreground">Total Days</p>
+        {selectedChildId && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" /> Attendance Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-600">{totalDays}</p>
+                  <p className="text-sm text-muted-foreground">Total Days</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600">{presentDays}</p>
+                  <p className="text-sm text-muted-foreground">Present</p>
+                </div>
+                <div className="text-center p-4 bg-red-50 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600">{absentDays}</p>
+                  <p className="text-sm text-muted-foreground">Absent</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <p className="text-2xl font-bold text-purple-600">{attendancePercentage}%</p>
+                  <p className="text-sm text-muted-foreground">Attendance</p>
+                </div>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">{presentDays}</p>
-                <p className="text-sm text-muted-foreground">Present</p>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-green-600 transition-all duration-300" style={{ width: `${attendancePercentage}%` }} />
               </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <p className="text-2xl font-bold text-red-600">{absentDays}</p>
-                <p className="text-sm text-muted-foreground">Absent</p>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <p className="text-2xl font-bold text-purple-600">{attendancePercentage}%</p>
-                <p className="text-sm text-muted-foreground">Attendance</p>
-              </div>
-            </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-green-600 transition-all duration-300" style={{ width: `${attendancePercentage}%` }} />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* DAILY ATTENDANCE TABLE */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" /> Daily Attendance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto max-h-64">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Time In</TableHead>
-                    <TableHead>Time Out</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAttendance.map(a => (
-                    <TableRow key={a.id}>
-                      <TableCell>{safeFormatDate(a.date, "PPP")}</TableCell>
-                      <TableCell className={a.status === 'present' ? 'text-green-600' : 'text-red-600'}>
-                        {a.status}
-                      </TableCell>
-
-                      <TableCell>
-                        {formatTimeValue(a.time_in, a.date)}
-                      </TableCell>
-
-                      <TableCell>
-                        {formatTimeValue(a.time_out, a.date)}
-                      </TableCell>
-
+        {selectedChildId && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" /> Daily Attendance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto max-h-64">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Time In</TableHead>
+                      <TableHead>Time Out</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAttendance.map(a => (
+                      <TableRow key={a.id}>
+                        <TableCell>{safeFormatDate(a.date, "PPP")}</TableCell>
+                        <TableCell className={a.status === 'present' ? 'text-green-600' : 'text-red-600'}>
+                          {a.status}
+                        </TableCell>
+
+                        <TableCell>
+                          {formatTimeValue(a.time_in, a.date)}
+                        </TableCell>
+
+                        <TableCell>
+                          {formatTimeValue(a.time_out, a.date)}
+                        </TableCell>
+
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
