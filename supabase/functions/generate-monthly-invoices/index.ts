@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
-import { format, addDays } from "date-fns";
+import { format, addDays } from "https://esm.sh/date-fns@3.6.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,8 +47,14 @@ serve(async (req) => {
       );
     }
 
-    const generatedInvoices: any[] = [];
-    const invoiceDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd'); // First day of the selected month
+    const generatedInvoices: Array<{
+      invoiceId: string;
+      invoiceNumber: string;
+      studentId: string;
+      studentName: string;
+      totalAmount: number;
+    }> = [];
+    const invoiceDate = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
     const dueDate = format(addDays(new Date(invoiceDate), dueInDays), 'yyyy-MM-dd');
 
     for (const student of students) {
@@ -64,10 +70,10 @@ serve(async (req) => {
       if (existingInvoiceError) console.error(`Error checking existing invoice for student ${student.id}:`, existingInvoiceError);
       if (existingInvoice) {
         console.log(`Invoice already exists for student ${student.name} for ${month}/${year}. Skipping.`);
-        continue; // Skip if invoice already exists
+        continue;
       }
 
-      // Fetch fee assignments for the student's grade and academic year
+      // Fetch fee assignments for the student's grade
       const { data: feeAssignments, error: feeAssignmentsError } = await supabase
         .from('fee_structures')
         .select(`
@@ -77,7 +83,7 @@ serve(async (req) => {
           fee_headings(id, name)
         `)
         .eq('center_id', centerId)
-        .eq('class', student.grade); // Assuming fee structures are linked by 'class' (grade)
+        .eq('class', student.grade);
 
       if (feeAssignmentsError) {
         console.error(`Error fetching fee assignments for student ${student.name}:`, feeAssignmentsError);
@@ -90,15 +96,24 @@ serve(async (req) => {
       }
 
       let totalAmount = 0;
-      const invoiceItems: any[] = [];
+      const invoiceItems: Array<{
+        fee_heading_id: string | null;
+        description: string;
+        unit_amount: number;
+        quantity: number;
+        total_amount: number;
+      }> = [];
 
       for (const assignment of feeAssignments) {
-        // For simplicity, assuming monthly frequency for now, or a single charge.
-        // More complex logic for quarterly/yearly would be needed here.
         totalAmount += assignment.amount;
+        // Handle fee_headings which could be an object or array
+        const feeHeading = Array.isArray(assignment.fee_headings) 
+          ? assignment.fee_headings[0] 
+          : assignment.fee_headings;
+        
         invoiceItems.push({
-          fee_heading_id: assignment.fee_headings?.id,
-          description: assignment.fee_headings?.name,
+          fee_heading_id: feeHeading?.id || null,
+          description: feeHeading?.name || 'Fee',
           unit_amount: assignment.amount,
           quantity: 1,
           total_amount: assignment.amount,
@@ -124,7 +139,7 @@ serve(async (req) => {
           invoice_date: invoiceDate,
           invoice_month: month,
           invoice_year: year,
-          status: 'issued', // Set initial status to 'issued'
+          status: 'issued',
           notes: `Monthly fees for ${format(new Date(year, month - 1), 'MMMM yyyy')}`,
         })
         .select()
@@ -135,7 +150,7 @@ serve(async (req) => {
         continue;
       }
 
-      // Create invoice items (if any)
+      // Create invoice items
       if (invoiceItems.length > 0) {
         const itemsWithInvoiceId = invoiceItems.map(item => ({
           ...item,
@@ -144,7 +159,6 @@ serve(async (req) => {
         const { error: itemsError } = await supabase.from('invoice_items').insert(itemsWithInvoiceId);
         if (itemsError) {
           console.error(`Error creating invoice items for invoice ${newInvoice.id}:`, itemsError);
-          // Consider rolling back the invoice if items fail, or handle gracefully
         }
       }
 
@@ -166,10 +180,11 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Generate monthly invoices error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate invoices';
     return new Response(
-      JSON.stringify({ success: false, error: error.message || 'Failed to generate invoices' }),
+      JSON.stringify({ success: false, error: errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

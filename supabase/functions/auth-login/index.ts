@@ -53,7 +53,7 @@ serve(async (req) => {
     }
 
     // Build user object with related data
-    const user: any = {
+    const user: Record<string, any> = {
       id: userData.id,
       username: userData.username,
       role: userData.role,
@@ -66,16 +66,16 @@ serve(async (req) => {
     if (userData.center_id) {
       const { data: centerData } = await supabaseClient
         .from('centers')
-        .select('center_name')
+        .select('name')
         .eq('id', userData.center_id)
         .single();
       
       if (centerData) {
-        user.center_name = centerData.center_name;
+        user.center_name = centerData.name;
       }
     }
 
-    // Fetch student name if student_id exists
+    // Fetch student name if student_id exists (for single student)
     if (userData.student_id) {
       const { data: studentData } = await supabaseClient
         .from('students')
@@ -85,6 +85,22 @@ serve(async (req) => {
       
       if (studentData) {
         user.student_name = studentData.name;
+      }
+    }
+
+    // Fetch all linked students for parent (from junction table)
+    if (userData.role === 'parent') {
+      const { data: linkedStudents } = await supabaseClient
+        .from('parent_students')
+        .select('student_id, students(id, name, grade)')
+        .eq('parent_user_id', userData.id);
+      
+      if (linkedStudents && linkedStudents.length > 0) {
+        user.linked_students = linkedStudents.map((ls: any) => ({
+          id: ls.students?.id,
+          name: ls.students?.name,
+          grade: ls.students?.grade,
+        }));
       }
     }
 
@@ -105,14 +121,31 @@ serve(async (req) => {
     if (userData.role === 'center' && userData.center_id) {
       const { data: permissionsData } = await supabaseClient
         .from('center_feature_permissions')
-        .select('feature_name, is_enabled')
-        .eq('center_id', userData.center_id);
+        .select('*')
+        .eq('center_id', userData.center_id)
+        .maybeSingle();
       
       if (permissionsData) {
-        user.centerPermissions = permissionsData.reduce((acc, perm) => {
-          acc[perm.feature_name] = perm.is_enabled;
-          return acc;
-        }, {} as Record<string, boolean>);
+        // Map boolean columns to permissions object
+        user.centerPermissions = {
+          register_student: permissionsData.register_student ?? true,
+          take_attendance: permissionsData.take_attendance ?? true,
+          attendance_summary: true, // Always enabled
+          view_records: permissionsData.view_records ?? true,
+          lesson_plans: permissionsData.lesson_plans ?? true,
+          lesson_tracking: permissionsData.lesson_tracking ?? true,
+          homework: permissionsData.homework_management ?? true,
+          activities: permissionsData.preschool_activities ?? true,
+          discipline: permissionsData.discipline_issues ?? true,
+          teachers: permissionsData.teacher_management ?? true,
+          teacher_attendance: permissionsData.teacher_management ?? true,
+          tests: permissionsData.test_management ?? true,
+          student_report: true, // Always enabled
+          ai_insights: permissionsData.ai_insights ?? true,
+          summary: permissionsData.summary ?? true,
+          finance: permissionsData.finance ?? true,
+          meetings_management: permissionsData.meetings_management ?? true,
+        };
       }
     }
 
@@ -120,14 +153,21 @@ serve(async (req) => {
     if (userData.role === 'teacher' && userData.teacher_id) {
       const { data: permissionsData } = await supabaseClient
         .from('teacher_feature_permissions')
-        .select('feature_name, is_enabled')
-        .eq('teacher_id', userData.teacher_id);
+        .select('*')
+        .eq('teacher_id', userData.teacher_id)
+        .maybeSingle();
       
       if (permissionsData) {
-        user.teacherPermissions = permissionsData.reduce((acc, perm) => {
-          acc[perm.feature_name] = perm.is_enabled;
-          return acc;
-        }, {} as Record<string, boolean>);
+        user.teacherPermissions = {
+          take_attendance: permissionsData.take_attendance ?? true,
+          lesson_tracking: permissionsData.lesson_tracking ?? true,
+          homework_management: permissionsData.homework_management ?? true,
+          preschool_activities: permissionsData.preschool_activities ?? true,
+          discipline_issues: permissionsData.discipline_issues ?? true,
+          test_management: permissionsData.test_management ?? true,
+          student_report_access: permissionsData.student_report_access ?? true,
+          meetings_management: permissionsData.meetings_management ?? true,
+        };
       }
     }
 
@@ -142,10 +182,11 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
+      JSON.stringify({ success: false, error: errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

@@ -192,6 +192,54 @@ export type Database = {
           },
         ]
       }
+      broadcast_messages: {
+        Row: {
+          center_id: string
+          created_at: string | null
+          id: string
+          message_text: string
+          sender_user_id: string
+          sent_at: string | null
+          target_audience: string
+          target_grade: string | null
+        }
+        Insert: {
+          center_id: string
+          created_at?: string | null
+          id?: string
+          message_text: string
+          sender_user_id: string
+          sent_at?: string | null
+          target_audience: string
+          target_grade?: string | null
+        }
+        Update: {
+          center_id?: string
+          created_at?: string | null
+          id?: string
+          message_text?: string
+          sender_user_id?: string
+          sent_at?: string | null
+          target_audience?: string
+          target_grade?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_messages_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "broadcast_messages_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       center_feature_permissions: {
         Row: {
           ai_insights: boolean | null
@@ -746,6 +794,54 @@ export type Database = {
           },
         ]
       }
+      invoice_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          fee_heading_id: string | null
+          id: string
+          invoice_id: string
+          quantity: number
+          total_amount: number
+          unit_amount: number
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          fee_heading_id?: string | null
+          id?: string
+          invoice_id: string
+          quantity?: number
+          total_amount: number
+          unit_amount: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          fee_heading_id?: string | null
+          id?: string
+          invoice_id?: string
+          quantity?: number
+          total_amount?: number
+          unit_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_fee_heading_id_fkey"
+            columns: ["fee_heading_id"]
+            isOneToOne: false
+            referencedRelation: "fee_headings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           center_id: string
@@ -1066,6 +1162,42 @@ export type Database = {
           },
         ]
       }
+      parent_students: {
+        Row: {
+          created_at: string
+          id: string
+          parent_user_id: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parent_user_id: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parent_user_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_students_parent_user_id_fkey"
+            columns: ["parent_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parent_students_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -1313,39 +1445,39 @@ export type Database = {
           completed: boolean | null
           completed_at: string | null
           created_at: string
+          evaluation_rating: number | null
           id: string
           lesson_plan_id: string | null
           notes: string | null
+          recorded_by_teacher_id: string | null
           student_id: string
-          evaluation_rating: number | null; // NEW FIELD
-          teacher_notes: string | null; // NEW FIELD
-          recorded_by_teacher_id: string | null; // NEW FIELD
+          teacher_notes: string | null
         }
         Insert: {
           chapter_name?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
+          evaluation_rating?: number | null
           id?: string
           lesson_plan_id?: string | null
           notes?: string | null
+          recorded_by_teacher_id?: string | null
           student_id: string
-          evaluation_rating?: number | null; // NEW FIELD
-          teacher_notes?: string | null; // NEW FIELD
-          recorded_by_teacher_id?: string | null; // NEW FIELD
+          teacher_notes?: string | null
         }
         Update: {
           chapter_name?: string | null
           completed?: boolean | null
           completed_at?: string | null
           created_at?: string
+          evaluation_rating?: number | null
           id?: string
           lesson_plan_id?: string | null
           notes?: string | null
+          recorded_by_teacher_id?: string | null
           student_id?: string
-          evaluation_rating?: number | null; // NEW FIELD
-          teacher_notes?: string | null; // NEW FIELD
-          recorded_by_teacher_id?: string | null; // NEW FIELD
+          teacher_notes?: string | null
         }
         Relationships: [
           {
@@ -1356,17 +1488,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "student_chapters_recorded_by_teacher_id_fkey"
+            columns: ["recorded_by_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "student_chapters_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_chapters_recorded_by_teacher_id_fkey" // NEW FK
-            columns: ["recorded_by_teacher_id"]
-            isOneToOne: false
-            referencedRelation: "teachers"
             referencedColumns: ["id"]
           },
         ]
@@ -1378,6 +1510,7 @@ export type Database = {
           id: string
           status: string | null
           student_id: string
+          submission_date: string | null
           submitted_at: string | null
         }
         Insert: {
@@ -1386,6 +1519,7 @@ export type Database = {
           id?: string
           status?: string | null
           student_id: string
+          submission_date?: string | null
           submitted_at?: string | null
         }
         Update: {
@@ -1394,6 +1528,7 @@ export type Database = {
           id?: string
           status?: string | null
           student_id?: string
+          submission_date?: string | null
           submitted_at?: string | null
         }
         Relationships: [

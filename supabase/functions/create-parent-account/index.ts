@@ -94,7 +94,7 @@ serve(async (req) => {
         password_hash: passwordHash,
         role: 'parent',
         center_id: centerId,
-        student_id: studentId,
+        student_id: studentId, // Keep for backwards compatibility
         is_active: true
       })
       .select()
@@ -103,6 +103,19 @@ serve(async (req) => {
     if (error) {
       console.error('Failed to create parent user:', error);
       throw error;
+    }
+
+    // Also insert into parent_students junction table for multi-child support
+    const { error: junctionError } = await supabase
+      .from('parent_students')
+      .insert({
+        parent_user_id: parentUser.id,
+        student_id: studentId
+      });
+
+    if (junctionError) {
+      console.error('Failed to create parent-student link:', junctionError);
+      // Don't fail the whole operation, just log
     }
 
     console.log('Parent user created successfully:', { userId: parentUser.id, username: parentUser.username, studentId });
@@ -119,10 +132,11 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create parent account error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

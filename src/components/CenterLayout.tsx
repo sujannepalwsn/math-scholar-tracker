@@ -13,7 +13,7 @@ const navItems: Array<{
   icon: React.ElementType;
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string;
-  unreadCount?: number; // Added unreadCount
+  unreadCount?: number;
 }> = [
   { to: "/", label: "Dashboard", icon: Home, role: 'center' as const },
   { to: "/register", label: "Register Student", icon: UserPlus, role: 'center' as const, featureName: 'register_student' },
@@ -112,10 +112,18 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
     </div>
   );
 
+  // Filter nav items based on center's permissions
+  const filteredNavItems = updatedNavItems.filter(item => {
+    if (item.featureName && user?.centerPermissions) {
+      return user.centerPermissions[item.featureName] !== false;
+    }
+    return true;
+  });
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar
-        navItems={updatedNavItems}
+        navItems={filteredNavItems}
         headerContent={headerContent}
         footerContent={footerContent}
       />

@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 // Removed bcrypt import as it's now handled in the Edge Function
 
+// Define linked student interface
+interface LinkedStudent {
+  id: string;
+  name: string;
+  grade: string | null;
+}
+
 // Define the User interface based on the database schema
 interface User {
   id: string;
@@ -16,6 +23,7 @@ interface User {
   teacher_name?: string;
   centerPermissions?: Record<string, boolean>;
   teacherPermissions?: Record<string, boolean>;
+  linked_students?: LinkedStudent[];
 }
 
 interface AuthContextType {

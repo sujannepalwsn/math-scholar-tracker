@@ -40,7 +40,7 @@ serve(async (req) => {
 
     if (broadcastError) throw broadcastError;
 
-    let recipientUsers: any[] = [];
+    let recipientUsers: Array<{ id: string; student_id?: string; teacher_id?: string }> = [];
 
     if (targetAudience === 'all_parents' || targetAudience.startsWith('grade_')) {
       // Fetch students based on target audience
@@ -75,16 +75,20 @@ serve(async (req) => {
       if (teachersError) throw teachersError;
       recipientUsers = teachers || [];
     }
-    // Add other target audiences (e.g., 'all_students', 'single_student', 'single_teacher') as needed
 
-    const messagesToInsert: any[] = [];
-    const conversationUpdates: Promise<any>[] = [];
+    const messagesToInsert: Array<{
+      conversation_id: string;
+      sender_user_id: string;
+      message_text: string;
+      is_read: boolean;
+    }> = [];
+    const conversationUpdateIds: string[] = [];
 
     for (const recipient of recipientUsers) {
       let conversationId: string | null = null;
 
       // Find or create a conversation
-      if (recipient.student_id) { // Parent-student conversation
+      if (recipient.student_id) {
         const { data: existingConversation, error: convError } = await supabase
           .from('chat_conversations')
           .select('id')
@@ -110,29 +114,9 @@ serve(async (req) => {
           if (newConvError) console.error(`Error creating conversation for student ${recipient.student_id}:`, newConvError);
           conversationId = newConversation?.id || null;
         }
-      } else if (recipient.teacher_id) { // Teacher conversation (if applicable, assuming direct chat with center)
-        // For now, broadcast to teachers will create a new conversation if not exists, or use existing one with center.
-        // This part might need more specific logic depending on how teacher-center chats are structured.
-        // For simplicity, we'll assume a direct chat between the sender (center user) and the teacher user.
-        const { data: existingConversation, error: convError } = await supabase
-          .from('chat_conversations')
-          .select('id')
-          .or(`(center_id.eq.${centerId},parent_user_id.eq.${recipient.id}),(center_id.eq.${centerId},parent_user_id.eq.${senderUserId})`) // Simplified for now
-          .maybeSingle();
-
-        if (convError) console.error(`Error finding conversation for teacher ${recipient.id}:`, convError);
-
-        if (existingConversation) {
-          conversationId = existingConversation.id;
-        } else {
-          // This part needs careful design. For a broadcast to teachers, a new conversation might not be ideal.
-          // A dedicated 'broadcast' conversation type or direct messages might be better.
-          // For now, I'll skip creating new conversations for teachers in broadcast to avoid complexity.
-          // Instead, I'll assume teachers will see broadcast messages via a different mechanism or a dedicated broadcast channel.
-          // The current chat_conversations table is designed for student-parent-center.
-          console.log(`Skipping direct chat message for teacher ${recipient.id} in broadcast.`);
-          continue;
-        }
+      } else if (recipient.teacher_id) {
+        console.log(`Skipping direct chat message for teacher ${recipient.id} in broadcast.`);
+        continue;
       }
 
       if (conversationId) {
@@ -140,12 +124,9 @@ serve(async (req) => {
           conversation_id: conversationId,
           sender_user_id: senderUserId,
           message_text: messageText,
-          is_read: false, // Mark as unread for recipient
+          is_read: false,
         });
-        // Also update the conversation's updated_at timestamp
-        conversationUpdates.push(
-          supabase.from('chat_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId)
-        );
+        conversationUpdateIds.push(conversationId);
       }
     }
 
@@ -154,8 +135,13 @@ serve(async (req) => {
       if (messagesError) throw messagesError;
     }
 
-    // Execute all conversation updates concurrently
-    await Promise.all(conversationUpdates);
+    // Update conversation timestamps
+    for (const convId of conversationUpdateIds) {
+      await supabase
+        .from('chat_conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', convId);
+    }
 
     return new Response(
       JSON.stringify({
@@ -167,10 +153,11 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Send broadcast message error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send broadcast message';
     return new Response(
-      JSON.stringify({ success: false, error: error.message || 'Failed to send broadcast message' }),
+      JSON.stringify({ success: false, error: errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
