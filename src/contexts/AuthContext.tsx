@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
-// Removed bcrypt import as it's now handled in the Edge Function
+// Auth context for managing user authentication state
 
 // Define linked student interface
 interface LinkedStudent {
