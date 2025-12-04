@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from "@/co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Pencil, Trash2, Save, X, UserPlus, Upload, Download, } from "lucide-react";
+import { Pencil, Trash2, Save, X, UserPlus, Upload, Download, Link } from "lucide-react"; // Added Link icon
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
+import * as bcrypt from 'bcryptjs'; // Import bcryptjs for password hashing
 
 interface Student {
   id: string;
@@ -56,11 +57,17 @@ export default function RegisterStudent() {
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [searchFilter, setSearchFilter] = useState<string>("");
 
+  // NEW STATES FOR LINKING EXISTING PARENT
+  const [showLinkExistingParentDialog, setShowLinkExistingParentDialog] = useState(false);
+  const [selectedStudentForLink, setSelectedStudentForLink] = useState<Student | null>(null);
+  const [parentSearchTerm, setParentSearchTerm] = useState("");
+  const [selectedExistingParentUserId, setSelectedExistingParentUserId] = useState<string | null>(null);
+
   // Fetch students
   const { data: students, isLoading } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("created_at", { ascending: false, });
+      let query = supabase.from("students").select("*, users!students_id_fkey(id, username, role)").order("created_at", { ascending: false, });
       if (user?.role !== "admin" && user?.center_id) {
         query = query.eq("center_id", user.center_id);
       }
@@ -68,6 +75,28 @@ export default function RegisterStudent() {
       if (error) throw error;
       return data as Student[];
     },
+  });
+
+  // Fetch existing parent users for linking
+  const { data: existingParentUsers = [] } = useQuery({
+    queryKey: ["existing-parent-users", user?.center_id, parentSearchTerm],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+      let query = supabase
+        .from("users")
+        .select("id, username, student_id") // student_id is useful to see which student they are already linked to
+        .eq("role", "parent")
+        .eq("center_id", user.center_id)
+        .order("username");
+
+      if (parentSearchTerm) {
+        query = query.ilike("username", `%${parentSearchTerm}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id && showLinkExistingParentDialog,
   });
 
   // Filter students based on grade and search
@@ -173,32 +202,82 @@ export default function RegisterStudent() {
       setSelectedStudentForParent(null);
       setParentUsername("");
       setParentPassword("");
+      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id] }); // Refresh students to show linked parent
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to create parent account");
     },
   });
 
-  // Bulk insert
-  const bulkInsertMutation = useMutation({
-    mutationFn: async (rows: StudentInput[]) => {
-      if (!rows.length) return;
-      const rowsWithCenter = rows.map((r) => ({
-        ...r,
-        center_id: user?.center_id || null,
-      }));
-      const { error } = await supabase.from("students").insert(rowsWithCenter);
-      if (error) throw error;
+  // NEW: Link existing parent to student mutation
+  const linkExistingParentMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedStudentForLink || !selectedExistingParentUserId) {
+        throw new Error("Student and Parent User must be selected.");
+      }
+
+      // Check if this student is already linked to this parent
+      const { data: existingLink, error: checkError } = await supabase
+        .from('parent_students')
+        .select('id')
+        .eq('parent_user_id', selectedExistingParentUserId)
+        .eq('student_id', selectedStudentForLink.id)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+      if (existingLink) {
+        throw new Error("This student is already linked to the selected parent.");
+      }
+
+      // Insert new link into parent_students table
+      const { error: linkError } = await supabase
+        .from('parent_students')
+        .insert({
+          parent_user_id: selectedExistingParentUserId,
+          student_id: selectedStudentForLink.id,
+        });
+
+      if (linkError) throw linkError;
+
+      // Also update the student's parent_name and parent_phone if available from the parent user's linked student
+      const { data: parentUserData, error: parentUserFetchError } = await supabase
+        .from('users')
+        .select('student_id')
+        .eq('id', selectedExistingParentUserId)
+        .single();
+
+      if (parentUserFetchError) console.error("Error fetching parent user data for update:", parentUserFetchError);
+
+      if (parentUserData?.student_id) {
+        const { data: primaryStudentData, error: primaryStudentFetchError } = await supabase
+          .from('students')
+          .select('parent_name, parent_phone')
+          .eq('id', parentUserData.student_id)
+          .single();
+        
+        if (primaryStudentFetchError) console.error("Error fetching primary student data for update:", primaryStudentFetchError);
+
+        if (primaryStudentData) {
+          await supabase
+            .from('students')
+            .update({
+              parent_name: primaryStudentData.parent_name,
+              parent_phone: primaryStudentData.parent_phone,
+            })
+            .eq('id', selectedStudentForLink.id);
+        }
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id] });
-      toast.success("Bulk students added successfully");
-      setCsvPreviewRows([]);
-      setMultilineText("");
-      setShowPreviewDialog(false);
+      toast.success("Student linked to existing parent successfully!");
+      setShowLinkExistingParentDialog(false);
+      setSelectedStudentForLink(null);
+      setParentSearchTerm("");
+      setSelectedExistingParentUserId(null);
+      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id] }); // Refresh students to show linked parent
     },
     onError: (error: any) => {
-      toast.error(error.message || "Bulk insert failed");
+      toast.error(error.message || "Failed to link student to parent");
     },
   });
 
@@ -385,9 +464,17 @@ export default function RegisterStudent() {
 
   const handleCreateParentAccount = (student: Student) => {
     setSelectedStudentForParent(student);
-    setParentUsername("");
+    setParentUsername(student.parent_name.replace(/\s/g, '').toLowerCase() + student.contact_number.slice(-4)); // Suggest username
     setParentPassword("");
     setIsCreatingParent(true);
+  };
+
+  // NEW: Handle linking existing parent
+  const handleLinkExistingParent = (student: Student) => {
+    setSelectedStudentForLink(student);
+    setParentSearchTerm("");
+    setSelectedExistingParentUserId(null);
+    setShowLinkExistingParentDialog(true);
   };
 
   return (
@@ -590,126 +677,153 @@ export default function RegisterStudent() {
                 <TableHead>School</TableHead>
                 <TableHead>Parent</TableHead>
                 <TableHead>Contact</TableHead>
+                <TableHead>Parent Account</TableHead> {/* New column */}
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : filteredStudents && filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      {editingId === student.id ? (
-                        <Input
-                          value={editData?.name}
-                          onChange={(e) =>
-                            setEditData((prev) =>
-                              prev ? { ...prev, name: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        student.name
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === student.id ? (
-                        <Input
-                          value={editData?.grade}
-                          onChange={(e) =>
-                            setEditData((prev) =>
-                              prev ? { ...prev, grade: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        student.grade
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === student.id ? (
-                        <Input
-                          value={editData?.school_name}
-                          onChange={(e) =>
-                            setEditData((prev) =>
-                              prev ? { ...prev, school_name: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        student.school_name
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === student.id ? (
-                        <Input
-                          value={editData?.parent_name}
-                          onChange={(e) =>
-                            setEditData((prev) =>
-                              prev ? { ...prev, parent_name: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        student.parent_name
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === student.id ? (
-                        <Input
-                          value={editData?.contact_number}
-                          onChange={(e) =>
-                            setEditData((prev) =>
-                              prev ? { ...prev, contact_number: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        student.contact_number
-                      )}
-                    </TableCell>
-                    <TableCell className="flex gap-2">
-                      {editingId === student.id ? (
-                        <>
-                          <Button size="icon" onClick={handleSave}>
-                            <Save />
-                          </Button>
-                          <Button size="icon" onClick={handleCancel}>
-                            <X />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button size="icon" onClick={() => handleEdit(student)}>
-                            <Pencil />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="destructive"
-                            onClick={() => deleteMutation.mutate(student.id)}
-                          >
-                            <Trash2 />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="secondary"
-                            onClick={() => handleCreateParentAccount(student)}
-                          >
-                            <UserPlus />
-                          </Button>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
+                filteredStudents.map((student: any) => {
+                  const hasParentAccount = student.users && student.users.length > 0;
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell>
+                        {editingId === student.id ? (
+                          <Input
+                            value={editData?.name}
+                            onChange={(e) =>
+                              setEditData((prev) =>
+                                prev ? { ...prev, name: e.target.value } : null
+                              )
+                            }
+                          />
+                        ) : (
+                          student.name
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === student.id ? (
+                          <Input
+                            value={editData?.grade}
+                            onChange={(e) =>
+                              setEditData((prev) =>
+                                prev ? { ...prev, grade: e.target.value } : null
+                              )
+                            }
+                          />
+                        ) : (
+                          student.grade
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === student.id ? (
+                          <Input
+                            value={editData?.school_name}
+                            onChange={(e) =>
+                              setEditData((prev) =>
+                                prev ? { ...prev, school_name: e.target.value } : null
+                              )
+                            }
+                          />
+                        ) : (
+                          student.school_name
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === student.id ? (
+                          <Input
+                            value={editData?.parent_name}
+                            onChange={(e) =>
+                              setEditData((prev) =>
+                                prev ? { ...prev, parent_name: e.target.value } : null
+                              )
+                            }
+                          />
+                        ) : (
+                          student.parent_name
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingId === student.id ? (
+                          <Input
+                            value={editData?.contact_number}
+                            onChange={(e) =>
+                              setEditData((prev) =>
+                                prev ? { ...prev, contact_number: e.target.value } : null
+                              )
+                            }
+                          />
+                        ) : (
+                          student.contact_number
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {hasParentAccount ? (
+                          <span className="text-green-600 flex items-center gap-1">
+                            <Check /> Linked ({student.users[0].username})
+                          </span>
+                        ) : (
+                          <span className="text-red-600 flex items-center gap-1">
+                            <X /> Not Linked
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="flex gap-2">
+                        {editingId === student.id ? (
+                          <>
+                            <Button size="icon" onClick={handleSave}>
+                              <Save />
+                            </Button>
+                            <Button size="icon" onClick={handleCancel}>
+                              <X />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button size="icon" onClick={() => handleEdit(student)}>
+                              <Pencil />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="destructive"
+                              onClick={() => deleteMutation.mutate(student.id)}
+                            >
+                              <Trash2 />
+                            </Button>
+                            {!hasParentAccount && (
+                              <Button
+                                size="icon"
+                                variant="secondary"
+                                onClick={() => handleCreateParentAccount(student)}
+                                title="Create new parent account for this student"
+                              >
+                                <UserPlus />
+                              </Button>
+                            )}
+                            {/* NEW: Link Existing Parent Button */}
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              onClick={() => handleLinkExistingParent(student)}
+                              title="Link this student to an existing parent account"
+                            >
+                              <Link />
+                            </Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     No students registered yet
                   </TableCell>
                 </TableRow>
@@ -734,6 +848,7 @@ export default function RegisterStudent() {
               <Input
                 value={parentUsername}
                 onChange={(e) => setParentUsername(e.target.value)}
+                placeholder="e.g., john.doe@example.com"
               />
             </div>
             <div className="space-y-2">
@@ -742,13 +857,66 @@ export default function RegisterStudent() {
                 value={parentPassword}
                 type="password"
                 onChange={(e) => setParentPassword(e.target.value)}
+                placeholder="Enter a strong password"
               />
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" onClick={() => setIsCreatingParent(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => createParentMutation.mutate()}>Create Account</Button>
+              <Button onClick={() => createParentMutation.mutate()} disabled={!parentUsername || !parentPassword || createParentMutation.isPending}>
+                {createParentMutation.isPending ? "Creating..." : "Create Account"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* NEW: Link Existing Parent Dialog */}
+      <Dialog open={showLinkExistingParentDialog} onOpenChange={setShowLinkExistingParentDialog}>
+        <DialogContent aria-labelledby="link-parent-title" aria-describedby="link-parent-description">
+          <DialogHeader>
+            <DialogTitle id="link-parent-title">Link Existing Parent Account</DialogTitle>
+            <DialogDescription id="link-parent-description">
+              Link {selectedStudentForLink?.name} to an existing parent user.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="parentSearch">Search Parent Username</Label>
+              <Input
+                id="parentSearch"
+                value={parentSearchTerm}
+                onChange={(e) => setParentSearchTerm(e.target.value)}
+                placeholder="Search by username"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="selectParent">Select Parent User</Label>
+              <Select value={selectedExistingParentUserId || ""} onValueChange={setSelectedExistingParentUserId}>
+                <SelectTrigger id="selectParent">
+                  <SelectValue placeholder="Select an existing parent" />
+                </SelectTrigger>
+                <SelectContent>
+                  {existingParentUsers.length === 0 ? (
+                    <SelectItem value="no-parents" disabled>No parent users found</SelectItem>
+                  ) : (
+                    existingParentUsers.map((parentUser: any) => (
+                      <SelectItem key={parentUser.id} value={parentUser.id}>
+                        {parentUser.username} {parentUser.student_id ? `(Linked to: ${students?.find(s => s.id === parentUser.student_id)?.name || 'Unknown Student'})` : ''}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowLinkExistingParentDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => linkExistingParentMutation.mutate()} disabled={!selectedExistingParentUserId || linkExistingParentMutation.isPending}>
+                {linkExistingParentMutation.isPending ? "Linking..." : "Link Parent"}
+              </Button>
             </div>
           </div>
         </DialogContent>
