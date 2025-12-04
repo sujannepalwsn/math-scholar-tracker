@@ -74,18 +74,18 @@ export default function TeacherManagement() {
       }).select().single();
       if (error) throw error;
 
-      // Seed initial default permissions for the new teacher
-      const defaultTeacherFeatures = [
-        'take_attendance', 'lesson_tracking', 'homework_management',
-        'preschool_activities', 'discipline_issues', 'test_management',
-        'student_report_access'
-      ];
-      const permissionsToInsert = defaultTeacherFeatures.map(feature => ({
+      // Seed initial default permissions for the new teacher (all enabled by default)
+      const { error: permError } = await supabase.from('teacher_feature_permissions').insert({
         teacher_id: newTeacher.id,
-        feature_name: feature,
-        is_enabled: true,
-      }));
-      const { error: permError } = await supabase.from('teacher_feature_permissions').insert(permissionsToInsert);
+        take_attendance: true,
+        lesson_tracking: true,
+        homework_management: true,
+        preschool_activities: true,
+        discipline_issues: true,
+        test_management: true,
+        student_report_access: true,
+        meetings_management: true,
+      });
       if (permError) console.error('Error seeding default permissions for new teacher:', permError);
 
       return newTeacher;

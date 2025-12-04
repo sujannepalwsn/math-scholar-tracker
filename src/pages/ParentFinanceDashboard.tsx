@@ -54,14 +54,14 @@ const ParentFinanceDashboard = () => {
     }
   });
 
-  // Calculate summary
+  // Calculate summary - handle null paid_amount
   const summary = {
-    total_invoiced: invoices.reduce((sum, inv) => sum + inv.total_amount, 0),
-    total_paid: invoices.reduce((sum, inv) => sum + inv.paid_amount, 0),
-    total_outstanding: invoices.reduce((sum, inv) => sum + (inv.total_amount - inv.paid_amount), 0),
+    total_invoiced: invoices.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0),
+    total_paid: invoices.reduce((sum, inv) => sum + Number(inv.paid_amount || 0), 0),
+    total_outstanding: invoices.reduce((sum, inv) => sum + (Number(inv.total_amount || 0) - Number(inv.paid_amount || 0)), 0),
     overdue_count: invoices.filter(inv => 
       inv.status === 'overdue' || 
-      (isPast(new Date(inv.due_date)) && ['issued', 'partial'].includes(inv.status))
+      (inv.due_date && isPast(new Date(inv.due_date)) && ['issued', 'partial'].includes(inv.status || ''))
     ).length
   };
 
@@ -254,10 +254,10 @@ const ParentFinanceDashboard = () => {
                         <TableRow key={invoice.id}>
                           <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                           <TableCell>{invoice.invoice_month}/{invoice.invoice_year}</TableCell>
-                          <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
-                          <TableCell>{formatCurrency(invoice.paid_amount)}</TableCell>
+                          <TableCell>{formatCurrency(Number(invoice.total_amount || 0))}</TableCell>
+                          <TableCell>{formatCurrency(Number(invoice.paid_amount || 0))}</TableCell>
                           <TableCell className="font-semibold">
-                            {formatCurrency(invoice.total_amount - invoice.paid_amount)}
+                            {formatCurrency(Number(invoice.total_amount || 0) - Number(invoice.paid_amount || 0))}
                           </TableCell>
                           <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
                           <TableCell>
@@ -308,9 +308,9 @@ const ParentFinanceDashboard = () => {
                       {payments.map((payment: any) => (
                         <TableRow key={payment.id}>
                           <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-semibold">{formatCurrency(payment.amount_paid)}</TableCell>
+                          <TableCell className="font-semibold">{formatCurrency(Number(payment.amount || 0))}</TableCell>
                           <TableCell>
-                            {payment.payment_method.replace('_', ' ').toUpperCase()}
+                            {(payment.payment_method || 'cash').replace('_', ' ').toUpperCase()}
                           </TableCell>
                           <TableCell>{payment.reference_number || '-'}</TableCell>
                           <TableCell>
@@ -368,16 +368,16 @@ const ParentFinanceDashboard = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Total Amount</p>
-                      <p className="text-xl font-bold">{formatCurrency(selectedInvoice.total_amount)}</p>
+                      <p className="text-xl font-bold">{formatCurrency(Number(selectedInvoice.total_amount || 0))}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Amount Paid</p>
-                      <p className="text-xl font-bold text-green-600">{formatCurrency(selectedInvoice.paid_amount)}</p>
+                      <p className="text-xl font-bold text-green-600">{formatCurrency(Number(selectedInvoice.paid_amount || 0))}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Outstanding</p>
                       <p className="text-xl font-bold text-orange-600">
-                        {formatCurrency(selectedInvoice.total_amount - selectedInvoice.paid_amount)}
+                        {formatCurrency(Number(selectedInvoice.total_amount || 0) - Number(selectedInvoice.paid_amount || 0))}
                       </p>
                     </div>
                   </div>
@@ -398,7 +398,7 @@ const ParentFinanceDashboard = () => {
                     Download PDF
                   </Button>
                   {selectedInvoice.status !== 'paid' && (
-                    <Button className="flex-1" onClick={() => handleOnlinePayment(selectedInvoice.id, selectedInvoice.total_amount - selectedInvoice.paid_amount)}>
+                    <Button className="flex-1" onClick={() => handleOnlinePayment(selectedInvoice.id, Number(selectedInvoice.total_amount || 0) - Number(selectedInvoice.paid_amount || 0))}>
                       <CreditCard className="h-4 w-4 mr-2" /> Make Payment
                     </Button>
                   )}

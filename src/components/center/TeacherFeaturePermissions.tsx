@@ -27,8 +27,8 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
         .from('teacher_feature_permissions')
         .select('*')
         .eq('teacher_id', teacherId)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!teacherId,
@@ -37,12 +37,14 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
   const updatePermissionMutation = useMutation({
     mutationFn: async ({ featureName, isEnabled }: { featureName: string; isEnabled: boolean }) => {
       if (permissions) {
+        // Update existing record
         const { error } = await supabase
           .from('teacher_feature_permissions')
           .update({ [featureName]: isEnabled })
           .eq('teacher_id', teacherId);
         if (error) throw error;
       } else {
+        // Insert new record with this permission set
         const { error } = await supabase
           .from('teacher_feature_permissions')
           .insert({ teacher_id: teacherId, [featureName]: isEnabled });
@@ -84,6 +86,7 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
           </TableHeader>
           <TableBody>
             {TEACHER_FEATURES.map(feature => {
+              // Get current status from permissions, default to true if not set
               const isEnabled = permissions?.[feature.name as keyof typeof permissions] ?? true;
               return (
                 <TableRow key={feature.name}>
