@@ -151,7 +151,7 @@ export default function Tests() {
       setQuestions([]);
       setQuestionMarks([]);
     }
-  }, [selectedTest, tests]);
+  }, [selectedTest]);
 
   // Create test mutation
   const createTestMutation = useMutation({
