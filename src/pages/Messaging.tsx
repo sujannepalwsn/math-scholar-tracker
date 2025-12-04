@@ -38,14 +38,26 @@ export default function Messaging() {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("chat_conversations")
-        .select(`
-          *,
-          students:student_id(id, name, grade),
-          parent_user:parent_user_id(id, username)
-        `)
+        .select("*")
         .eq("center_id", user.center_id)
         .order("updated_at", { ascending: false });
       if (error) throw error;
+
+      if (data && data.length > 0) {
+        const studentIds = data.map((c: any) => c.student_id).filter(Boolean);
+        const userIds = data.map((c: any) => c.parent_user_id).filter(Boolean);
+
+        const [studentsData, usersData] = await Promise.all([
+          studentIds.length > 0 ? supabase.from("students").select("id, name, grade").in("id", studentIds) : Promise.resolve({ data: [] }),
+          userIds.length > 0 ? supabase.from("users").select("id, username").in("id", userIds) : Promise.resolve({ data: [] })
+        ]);
+
+        return data.map((conv: any) => ({
+          ...conv,
+          students: (studentsData.data || []).find((s: any) => s.id === conv.student_id),
+          parent_user: (usersData.data || []).find((u: any) => u.id === conv.parent_user_id)
+        }));
+      }
       return data;
     },
     enabled: !!user?.center_id && user?.role === "center",
