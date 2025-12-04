@@ -85,7 +85,7 @@ export default function RegisterStudent() {
       const studentIdsInCenter = students.map(s => s.id);
       const { data, error } = await supabase
         .from("parent_students")
-        .select("student_id, parent_user_id, users(username)") // Also fetch parent username
+        .select("student_id, parent_user_id") // Removed users(username) for debugging
         .in('student_id', studentIdsInCenter); // Only for students in this center
       if (error) throw error;
       return data;
@@ -97,8 +97,9 @@ export default function RegisterStudent() {
   const studentToParentUserMap = useMemo(() => {
     const map = new Map<string, { id: string; username: string }[]>(); // A student can have multiple parents
     parentStudentLinks.forEach(link => {
-      if (link.student_id && link.parent_user_id && link.users) {
-        const parentInfo = { id: link.parent_user_id, username: (link.users as any).username };
+      if (link.student_id && link.parent_user_id) {
+        // We no longer have username directly from the join, so we'll use a placeholder or fetch separately if needed
+        const parentInfo = { id: link.parent_user_id, username: `Parent User ${link.parent_user_id.substring(0, 4)}` };
         if (!map.has(link.student_id)) {
           map.set(link.student_id, []);
         }
