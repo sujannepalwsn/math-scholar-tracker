@@ -19,7 +19,7 @@ USING (
 ALTER TABLE public.parent_students ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies on parent_students to avoid conflicts
-DROP POLICY IF EXISTS "Center users can link parents to students within their center" ON public.parent_students;
+DROP POLICY IF EXISTS "Center users can insert parent-student links within their center" ON public.parent_students;
 DROP POLICY IF EXISTS "Center users can view parent-student links within their center" ON public.parent_students;
 
 -- Policy: Allow center users to insert parent-student links for students and parents in their center
@@ -29,11 +29,19 @@ FOR INSERT
 WITH CHECK (
     auth.role() = 'center'
     AND
-    -- Ensure the current user's center_id matches the parent_user's center_id
-    (SELECT center_id FROM public.users WHERE id = auth.uid()) = (SELECT center_id FROM public.users WHERE id = parent_user_id)
+    EXISTS (
+        SELECT 1
+        FROM public.users AS p_user
+        WHERE p_user.id = parent_user_id
+        AND p_user.center_id = (SELECT c_user.center_id FROM public.users AS c_user WHERE c_user.id = auth.uid())
+    )
     AND
-    -- Ensure the current user's center_id matches the student's center_id
-    (SELECT center_id FROM public.users WHERE id = auth.uid()) = (SELECT center_id FROM public.students WHERE id = student_id)
+    EXISTS (
+        SELECT 1
+        FROM public.students AS s_data
+        WHERE s_data.id = student_id
+        AND s_data.center_id = (SELECT c_user.center_id FROM public.users AS c_user WHERE c_user.id = auth.uid())
+    )
 );
 
 -- Policy: Allow center users to view parent-student links within their center
@@ -43,9 +51,17 @@ FOR SELECT
 USING (
     auth.role() = 'center'
     AND
-    -- Ensure the current user's center_id matches the parent_user's center_id
-    (SELECT center_id FROM public.users WHERE id = auth.uid()) = (SELECT center_id FROM public.users WHERE id = parent_user_id)
+    EXISTS (
+        SELECT 1
+        FROM public.users AS p_user
+        WHERE p_user.id = parent_user_id
+        AND p_user.center_id = (SELECT c_user.center_id FROM public.users AS c_user WHERE c_user.id = auth.uid())
+    )
     AND
-    -- Ensure the current user's center_id matches the student's center_id
-    (SELECT center_id FROM public.users WHERE id = auth.uid()) = (SELECT center_id FROM public.students WHERE id = student_id)
+    EXISTS (
+        SELECT 1
+        FROM public.students AS s_data
+        WHERE s_data.id = student_id
+        AND s_data.center_id = (SELECT c_user.center_id FROM public.users AS c_user WHERE c_user.id = auth.uid())
+    )
 );
