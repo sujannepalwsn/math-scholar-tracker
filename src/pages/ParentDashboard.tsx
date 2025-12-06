@@ -171,6 +171,25 @@ const ParentDashboardContent = () => {
     enabled: !!activeStudentId,
   });
 
+  // Fetch upcoming center events for this student's center
+  const { data: upcomingEvents = [] } = useQuery({
+    queryKey: ['parent-upcoming-events', student?.center_id],
+    queryFn: async () => {
+      if (!student?.center_id) return [];
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('center_events')
+        .select('*')
+        .eq('center_id', student.center_id)
+        .gte('event_date', today)
+        .order('event_date', { ascending: true })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!student?.center_id,
+  });
+
   // Fetch latest broadcast message for this parent's conversation
   const { data: latestBroadcastMessage } = useQuery({
     queryKey: ['latest-broadcast-message', user.id],
@@ -712,7 +731,37 @@ const ParentDashboardContent = () => {
           </CardContent>
         </Card>
 
-        {/* DAILY ATTENDANCE TABLE */}
+        {/* Upcoming Events */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" /> Upcoming Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcomingEvents.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No upcoming events.</p>
+            ) : (
+              <div className="space-y-3">
+                {upcomingEvents.map((event: any) => (
+                  <div key={event.id} className={`p-3 rounded-lg border ${event.is_holiday ? 'bg-red-50 border-red-200' : 'bg-muted/50'}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold">{event.title}</h4>
+                        <p className="text-sm text-muted-foreground">{event.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{format(new Date(event.event_date), 'PPP')}</p>
+                        {event.is_holiday && <span className="text-xs text-red-600 font-medium">Holiday</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

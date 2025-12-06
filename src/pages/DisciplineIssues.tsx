@@ -33,12 +33,14 @@ export default function DisciplineIssues() {
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
 
-  const [studentId, setStudentId] = useState("select-student"); // Changed initial state
-  const [disciplineCategoryId, setDisciplineCategoryId] = useState("select-category"); // Changed initial state
+  const [studentId, setStudentId] = useState("select-student");
+  const [disciplineCategoryId, setDisciplineCategoryId] = useState("select-category");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<DisciplineIssue['severity']>("medium");
   const [issueDate, setIssueDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [modalGradeFilter, setModalGradeFilter] = useState<string>("all"); // New state for grade filter inside modal
+  const [modalGradeFilter, setModalGradeFilter] = useState<string>("all");
+  const [resolution, setResolution] = useState("");
+  const [status, setStatus] = useState<string>("open");
 
   // Fetch students
   const { data: students = [] } = useQuery({
@@ -99,13 +101,15 @@ export default function DisciplineIssues() {
   });
 
   const resetForm = () => {
-    setStudentId("select-student"); // Reset to default placeholder value
-    setDisciplineCategoryId("select-category"); // Reset to default placeholder value
+    setStudentId("select-student");
+    setDisciplineCategoryId("select-category");
     setDescription("");
     setSeverity("medium");
     setIssueDate(format(new Date(), "yyyy-MM-dd"));
     setEditingIssue(null);
-    setModalGradeFilter("all"); // Reset modal grade filter
+    setModalGradeFilter("all");
+    setResolution("");
+    setStatus("open");
   };
 
   const createIssueMutation = useMutation({
@@ -136,7 +140,7 @@ export default function DisciplineIssues() {
 
   const updateIssueMutation = useMutation({
     mutationFn: async () => {
-      if (!editingIssue || !user?.center_id || studentId === "select-student" || disciplineCategoryId === "select-category") throw new Error("Please select a student and category."); // Validation
+      if (!editingIssue || !user?.center_id || studentId === "select-student" || disciplineCategoryId === "select-category") throw new Error("Please select a student and category.");
 
       const { error } = await supabase.from("discipline_issues").update({
         student_id: studentId,
@@ -144,6 +148,8 @@ export default function DisciplineIssues() {
         description,
         severity,
         issue_date: issueDate,
+        resolution: resolution || null,
+        status: status,
       }).eq("id", editingIssue.id);
       if (error) throw error;
     },
@@ -175,12 +181,14 @@ export default function DisciplineIssues() {
   const handleEditClick = (issue: DisciplineIssue) => {
     setEditingIssue(issue);
     setStudentId(issue.student_id);
-    setDisciplineCategoryId(issue.discipline_category_id);
+    setDisciplineCategoryId(issue.discipline_category_id || "select-category");
     setDescription(issue.description);
     setSeverity(issue.severity);
     setIssueDate(issue.issue_date);
+    setResolution(issue.resolution || "");
+    setStatus(issue.status || "open");
     const student = students.find(s => s.id === issue.student_id);
-    setModalGradeFilter(student?.grade || "all"); // Set modal grade filter to current student's grade
+    setModalGradeFilter(student?.grade || "all");
     setIsDialogOpen(true);
   };
 
@@ -317,6 +325,27 @@ export default function DisciplineIssues() {
                   <Label htmlFor="issueDate">Date *</Label>
                   <Input id="issueDate" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
                 </div>
+                {editingIssue && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={status} onValueChange={setStatus}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="open">Open</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="resolved">Resolved</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="resolution">Resolution Notes</Label>
+                      <Textarea id="resolution" value={resolution} onChange={(e) => setResolution(e.target.value)} rows={2} placeholder="How was the issue resolved?" />
+                    </div>
+                  </>
+                )}
                 <Button
                   onClick={handleSubmit}
                   disabled={studentId === "select-student" || disciplineCategoryId === "select-category" || !description || !severity || !issueDate || createIssueMutation.isPending || updateIssueMutation.isPending}

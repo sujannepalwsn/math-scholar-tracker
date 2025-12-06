@@ -187,7 +187,7 @@ export default function MeetingManagement() {
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" /> Create Meeting</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl" aria-labelledby="meeting-form-title" aria-describedby="meeting-form-description">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-labelledby="meeting-form-title" aria-describedby="meeting-form-description">
             <DialogHeader>
               <DialogTitle id="meeting-form-title">{editingMeeting ? "Edit Meeting" : "Create New Meeting"}</DialogTitle>
               <DialogDescription id="meeting-form-description">

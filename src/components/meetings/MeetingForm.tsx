@@ -32,6 +32,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   const [location, setLocation] = useState("");
   const [meetingType, setMeetingType] = useState("general");
   const [status, setStatus] = useState("scheduled");
+  const [agendaCategory, setAgendaCategory] = useState("general");
   
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentSearch, setStudentSearch] = useState("");
@@ -39,6 +40,19 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [teacherSearch, setTeacherSearch] = useState("");
 
+  // Agenda categories for meeting purposes
+  const AGENDA_CATEGORIES = [
+    { value: "general", label: "General Discussion" },
+    { value: "discipline", label: "Discipline Issue" },
+    { value: "lesson_progress", label: "Lesson Progress" },
+    { value: "chapter_performance", label: "Chapter Performance" },
+    { value: "attendance", label: "Attendance Concern" },
+    { value: "homework", label: "Homework Follow-up" },
+    { value: "test_results", label: "Test Results" },
+    { value: "activity", label: "Activity Related" },
+    { value: "fee_payment", label: "Fee/Payment" },
+    { value: "other", label: "Other" },
+  ];
   // Fetch all students for the current center
   const { data: allStudents = [], isLoading: studentsLoading } = useQuery({
     queryKey: ["all-students-for-meeting-form", user?.center_id],
@@ -94,6 +108,9 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       setLocation(meeting.location || "");
       setMeetingType(meeting.meeting_type || "general");
       setStatus(meeting.status || "scheduled");
+      // Extract agenda category from description if present
+      const agendaMatch = meeting.agenda?.match(/\[Category: (\w+)\]/);
+      setAgendaCategory(agendaMatch ? agendaMatch[1] : "general");
       
       if (meeting.meeting_attendees) {
         const initialSelectedStudentIds: string[] = [];
@@ -108,7 +125,6 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
         console.log("Pre-selected Student IDs:", initialSelectedStudentIds);
         console.log("Pre-selected Teacher IDs:", initialSelectedTeacherIds);
       } else {
-        // If no attendees are fetched for an existing meeting, ensure selections are cleared
         setSelectedStudentIds([]);
         setSelectedTeacherIds([]);
         console.log("No attendees found for existing meeting, clearing selections.");
@@ -122,10 +138,11 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       setLocation("");
       setMeetingType("general");
       setStatus("scheduled");
+      setAgendaCategory("general");
       setSelectedStudentIds([]);
       setSelectedTeacherIds([]);
     }
-  }, [meeting]); // Dependency on 'meeting' prop
+  }, [meeting]);
 
   const toggleStudentSelection = (studentId: string) => {
     setSelectedStudentIds(prev =>
@@ -167,6 +184,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
         location: location || null,
         meeting_type: meetingType,
         status,
+        agenda: `[Category: ${agendaCategory}] ${description || ''}`,
       }).select().single();
       if (error) throw error;
       return data;
@@ -191,6 +209,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
         location: location || null,
         meeting_type: meetingType,
         status,
+        agenda: `[Category: ${agendaCategory}] ${description || ''}`,
       }).eq("id", meeting.id).select().single();
       if (error) throw error;
       return data;
@@ -215,10 +234,21 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4">
+    <form onSubmit={handleSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
         <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Meeting title" required />
+      </div>
+      <div className="space-y-2">
+        <Label>Meeting Agenda/Purpose *</Label>
+        <Select value={agendaCategory} onValueChange={setAgendaCategory}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {AGENDA_CATEGORIES.map(cat => (
+              <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
