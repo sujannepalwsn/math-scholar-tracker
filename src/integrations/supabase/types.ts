@@ -240,60 +240,6 @@ export type Database = {
           },
         ]
       }
-      center_events: {
-        Row: {
-          center_id: string
-          created_at: string
-          created_by: string | null
-          description: string | null
-          event_date: string
-          event_type: string | null
-          id: string
-          is_holiday: boolean | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          center_id: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          event_date: string
-          event_type?: string | null
-          id?: string
-          is_holiday?: boolean | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          center_id?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          event_date?: string
-          event_type?: string | null
-          id?: string
-          is_holiday?: boolean | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "center_events_center_id_fkey"
-            columns: ["center_id"]
-            isOneToOne: false
-            referencedRelation: "centers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "center_events_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       center_feature_permissions: {
         Row: {
           ai_insights: boolean | null
@@ -368,38 +314,29 @@ export type Database = {
       centers: {
         Row: {
           address: string | null
-          contact_person: string | null
           created_at: string
           email: string | null
           id: string
-          logo_url: string | null
           name: string
           phone: string | null
-          theme: Json | null
           updated_at: string
         }
         Insert: {
           address?: string | null
-          contact_person?: string | null
           created_at?: string
           email?: string | null
           id?: string
-          logo_url?: string | null
           name: string
           phone?: string | null
-          theme?: Json | null
           updated_at?: string
         }
         Update: {
           address?: string | null
-          contact_person?: string | null
           created_at?: string
           email?: string | null
           id?: string
-          logo_url?: string | null
           name?: string
           phone?: string | null
-          theme?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -1802,11 +1739,8 @@ export type Database = {
           hire_date: string | null
           id: string
           is_active: boolean | null
-          monthly_salary: number | null
           name: string
           phone: string | null
-          regular_in_time: string | null
-          regular_out_time: string | null
           subject: string | null
           updated_at: string
           user_id: string | null
@@ -1819,11 +1753,8 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean | null
-          monthly_salary?: number | null
           name: string
           phone?: string | null
-          regular_in_time?: string | null
-          regular_out_time?: string | null
           subject?: string | null
           updated_at?: string
           user_id?: string | null
@@ -1836,11 +1767,8 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean | null
-          monthly_salary?: number | null
           name?: string
           phone?: string | null
-          regular_in_time?: string | null
-          regular_out_time?: string | null
           subject?: string | null
           updated_at?: string
           user_id?: string | null
@@ -2105,8 +2033,7 @@ export type Database = {
       is_same_center: { Args: { target_center_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "center" | "parent" | "teacher"
-      chat_message_status: "sent" | "delivered" | "seen"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2233,9 +2160,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "center", "parent", "teacher"],
-      chat_message_status: ["sent", "delivered", "seen"],
-    },
+    Enums: {},
   },
 } as const
