@@ -56,11 +56,22 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
     enabled: !!user?.center_id && open,
   });
 
-  // Fetch existing parent-student links
-  const { data: existingLinks = [] } = useQuery({
+  // Fetch existing parent-student links for the center
+  const { data: existingLinks = [], refetch: refetchLinks } = useQuery({
     queryKey: ["parent-student-links", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
+      
+      // Get all students in this center first
+      const { data: centerStudents } = await supabase
+        .from("students")
+        .select("id")
+        .eq("center_id", user.center_id);
+      
+      if (!centerStudents || centerStudents.length === 0) return [];
+      
+      const studentIds = centerStudents.map(s => s.id);
+      
       const { data, error } = await supabase
         .from("parent_students")
         .select(`
@@ -69,9 +80,10 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
           student_id,
           users:parent_user_id(username),
           students:student_id(name, grade)
-        `);
+        `)
+        .in("student_id", studentIds);
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!user?.center_id && open,
   });

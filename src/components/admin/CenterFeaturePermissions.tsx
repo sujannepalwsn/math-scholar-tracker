@@ -20,6 +20,9 @@ const FEATURES = [
   { name: 'finance', label: 'Finance Management' },
   { name: 'ai_insights', label: 'AI Insights' },
   { name: 'meetings_management', label: 'Meetings Management' },
+  { name: 'calendar_events', label: 'Calendar Events' },
+  { name: 'class_routine', label: 'Class Routine' },
+  { name: 'messaging', label: 'Messaging' },
 ];
 
 export default function CenterFeaturePermissions() {

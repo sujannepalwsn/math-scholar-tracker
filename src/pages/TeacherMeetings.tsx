@@ -25,11 +25,12 @@ export default function TeacherMeetings() {
     return <div className="p-6 text-center text-muted-foreground">Please log in as a teacher to view meetings.</div>;
   }
 
-  // Fetch meetings relevant to the logged-in teacher
+  // Fetch meetings relevant to the logged-in teacher - check both user_id and teacher_id
   const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["teacher-meetings", user.teacher_id],
+    queryKey: ["teacher-meetings", user.teacher_id, user.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Try fetching by teacher_id first (more reliable)
+      let { data, error } = await supabase
         .from("meeting_attendees")
         .select(`
           *,
@@ -38,13 +39,32 @@ export default function TeacherMeetings() {
             meeting_conclusions(conclusion_notes, recorded_at)
           )
         `)
-        .eq("user_id", user.id!)
+        .eq("teacher_id", user.teacher_id!)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // If no results by teacher_id, try by user_id as fallback
+      if (!data || data.length === 0) {
+        const result = await supabase
+          .from("meeting_attendees")
+          .select(`
+            *,
+            meetings(
+              id, title, description, meeting_date, meeting_type, status,
+              meeting_conclusions(conclusion_notes, recorded_at)
+            )
+          `)
+          .eq("user_id", user.id!)
+          .order("created_at", { ascending: false });
+        
+        if (result.error) throw result.error;
+        data = result.data;
+      }
+      
+      return data || [];
     },
-    enabled: !!user.id,
+    enabled: !!user.teacher_id || !!user.id,
   });
 
   const getStatusColor = (status: Meeting['status']) => {

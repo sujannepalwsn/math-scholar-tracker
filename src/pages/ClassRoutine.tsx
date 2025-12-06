@@ -383,6 +383,34 @@ export default function ClassRoutine() {
                   </div>
                 </DialogContent>
               </Dialog>
+              {/* Delete custom grades */}
+              {customGrades.length > 0 && (
+                <Select 
+                  value="" 
+                  onValueChange={(gradeToDelete) => {
+                    if (gradeToDelete) {
+                      const updatedGrades = customGrades.filter(g => g !== gradeToDelete);
+                      setCustomGrades(updatedGrades);
+                      localStorage.setItem(`custom_grades_${user?.center_id}`, JSON.stringify(updatedGrades));
+                      if (selectedGrade === gradeToDelete) {
+                        setSelectedGrade(DEFAULT_GRADES[0]);
+                      }
+                      toast.success(`Grade "${gradeToDelete}" removed!`);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Delete Grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customGrades.map(grade => (
+                      <SelectItem key={grade} value={grade}>
+                        <Trash2 className="h-3 w-3 inline mr-1" /> {grade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <Dialog open={showScheduleDialog} onOpenChange={(open) => {
