@@ -1,1 +1,34 @@
-project_id = "msekkmxlrqnolbxqgznz"
+project_id = "qrtvxzdlfurpipvtwian"
+
+[functions.auth-login]
+verify_jwt = false
+
+[functions.init-admin]
+verify_jwt = false
+
+[functions.admin-create-center]
+verify_jwt = false
+
+[functions.admin-toggle-center-feature]
+verify_jwt = false
+
+[functions.center-toggle-teacher-feature]
+verify_jwt = false
+
+[functions.create-parent-account]
+verify_jwt = false
+
+[functions.send-broadcast-message]
+verify_jwt = false
+
+[functions.generate-monthly-invoices]
+verify_jwt = false
+
+[functions.ai-generate-insights]
+verify_jwt = false
+
+[functions.ai-grade-answer]
+verify_jwt = false
+
+[functions.ai-student-summary]
+verify_jwt = false

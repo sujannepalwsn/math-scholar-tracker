@@ -240,6 +240,60 @@ export type Database = {
           },
         ]
       }
+      center_events: {
+        Row: {
+          center_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          event_date: string
+          event_type: string
+          id: string
+          is_holiday: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date: string
+          event_type?: string
+          id?: string
+          is_holiday?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          is_holiday?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "center_events_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "center_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       center_feature_permissions: {
         Row: {
           ai_insights: boolean | null
