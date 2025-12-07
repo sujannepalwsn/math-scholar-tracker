@@ -87,19 +87,24 @@ const App = () => (
             {/* Teacher Routes */}
             <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherDashboard /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/take-attendance" element={<ProtectedRoute role="teacher"><TeacherLayout><TakeAttendance /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/attendance-summary" element={<ProtectedRoute role="teacher"><TeacherLayout><AttendanceSummary /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/lesson-plans" element={<ProtectedRoute role="teacher"><TeacherLayout><LessonPlans /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/lesson-tracking" element={<ProtectedRoute role="teacher"><TeacherLayout><LessonTracking /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/homework-management" element={<ProtectedRoute role="teacher"><TeacherLayout><HomeworkManagement /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/activities" element={<ProtectedRoute role="teacher"><TeacherLayout><PreschoolActivities /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/preschool-activities" element={<ProtectedRoute role="teacher"><TeacherLayout><PreschoolActivities /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/discipline-issues" element={<ProtectedRoute role="teacher"><TeacherLayout><DisciplineIssues /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/test-management" element={<ProtectedRoute role="teacher"><TeacherLayout><Tests /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/student-report" element={<ProtectedRoute role="teacher"><TeacherLayout><StudentReport /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/chapter-performance" element={<ProtectedRoute role="teacher"><TeacherLayout><ChapterPerformanceOverview /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/ai-insights" element={<ProtectedRoute role="teacher"><TeacherLayout><AIInsights /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/view-records" element={<ProtectedRoute role="teacher"><TeacherLayout><ViewRecords /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/summary" element={<ProtectedRoute role="teacher"><TeacherLayout><Summary /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/finance" element={<ProtectedRoute role="teacher"><TeacherLayout><AdminFinance /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher-meetings" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherMeetings /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher-messages" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherMessaging /></TeacherLayout></ProtectedRoute>} />
-            <Route path="/teacher/calendar" element={<ProtectedRoute role="teacher"><TeacherLayout><CalendarEvents /></TeacherLayout></ProtectedRoute>} />
             <Route path="/teacher/class-routine" element={<ProtectedRoute role="teacher"><TeacherLayout><ClassRoutine /></TeacherLayout></ProtectedRoute>} />
-            <Route path="/teacher/ai-insights" element={<ProtectedRoute role="teacher"><TeacherLayout><AIInsights /></TeacherLayout></ProtectedRoute>} />
-            <Route path="/teacher/finance" element={<ProtectedRoute role="teacher"><TeacherLayout><AdminFinance /></TeacherLayout></ProtectedRoute>} />
+            <Route path="/teacher/calendar" element={<ProtectedRoute role="teacher"><TeacherLayout><CalendarEvents /></TeacherLayout></ProtectedRoute>} />
 
             {/* Center Routes */}
             <Route path="/" element={<ProtectedRoute role="center"><CenterLayout><Dashboard /></CenterLayout></ProtectedRoute>} />

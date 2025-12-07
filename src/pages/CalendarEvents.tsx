@@ -37,20 +37,39 @@ export default function CalendarEvents() {
   const [eventType, setEventType] = useState("holiday");
   const [isHoliday, setIsHoliday] = useState(false);
 
+  const isParent = user?.role === 'parent';
+
+  // For parents, fetch student's center_id
+  const { data: student } = useQuery({
+    queryKey: ['student-for-calendar', user?.student_id || user?.linked_students?.[0]?.id],
+    queryFn: async () => {
+      if (!isParent) return null;
+      const studentId = user?.student_id || user?.linked_students?.[0]?.id;
+      if (!studentId) return null;
+      const { data, error } = await supabase.from('students').select('center_id').eq('id', studentId).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isParent && !!(user?.student_id || user?.linked_students?.[0]?.id),
+  });
+
+  // Determine center_id: use user's center_id for center/teacher/admin, or student's center_id for parents
+  const centerId = isParent ? student?.center_id : user?.center_id;
+
   // Fetch events
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["center-events", user?.center_id],
+    queryKey: ["center-events", centerId],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!centerId) return [];
       const { data, error } = await supabase
         .from("center_events")
         .select("*")
-        .eq("center_id", user.center_id)
+        .eq("center_id", centerId)
         .order("event_date");
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id,
+    enabled: !!centerId,
   });
 
   const resetForm = () => {
@@ -160,15 +179,18 @@ export default function CalendarEvents() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Calendar & Events</h1>
-          <p className="text-muted-foreground">Manage holidays and special events</p>
+          <p className="text-muted-foreground">
+            {isParent ? "View holidays and special events" : "Manage holidays and special events"}
+          </p>
         </div>
-        <Dialog open={showEventDialog} onOpenChange={(open) => {
-          setShowEventDialog(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" /> Add Event</Button>
-          </DialogTrigger>
+        {!isParent && (
+          <Dialog open={showEventDialog} onOpenChange={(open) => {
+            setShowEventDialog(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" /> Add Event</Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingEvent ? "Edit Event" : "Add Event"}</DialogTitle>
@@ -246,6 +268,7 @@ export default function CalendarEvents() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -310,18 +333,20 @@ export default function CalendarEvents() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleEditEvent(event)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteEventMutation.mutate(event.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
+                      {!isParent && (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditEvent(event)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteEventMutation.mutate(event.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -362,13 +387,15 @@ export default function CalendarEvents() {
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteEventMutation.mutate(event.id)}
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                    {!isParent && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteEventMutation.mutate(event.id)}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 );
               })}

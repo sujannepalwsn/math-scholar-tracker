@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, Calendar as CalendarIcon, BookOpen, FileText, LogOut, DollarSign, Book, Paintbrush, AlertTriangle, CheckCircle, XCircle, Clock, Star, MessageSquare, Radio } from 'lucide-react';
+import { User, Calendar as CalendarIcon, BookOpen, FileText, LogOut, DollarSign, Book, Paintbrush, AlertTriangle, CheckCircle, XCircle, Clock, Star, MessageSquare, Radio, ClipboardCheck } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
 import { Input } from '@/components/ui/input'; // Import Input component
@@ -229,9 +229,9 @@ const ParentDashboardContent = () => {
     enabled: !!activeStudentId,
   });
 
-  // Tests (for MiniCalendar tooltip)
+  // Tests (for MiniCalendar tooltip and Test Report)
   const { data: testResults = [] } = useQuery({
-    queryKey: ['test-results-mini-calendar', activeStudentId],
+    queryKey: ['test-results-parent-dashboard', activeStudentId],
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase.from('test_results').select('*, tests(*)').eq('student_id', activeStudentId).order('date_taken', { ascending: false });
@@ -327,6 +327,32 @@ const ParentDashboardContent = () => {
     const date = new Date(a.date);
     return date >= new Date(dateRange.from) && date <= new Date(dateRange.to);
   });
+
+  // Filtered test results by date range
+  const filteredTestResults = testResults.filter((tr: any) => {
+    if (!dateRange.from || !dateRange.to) return true;
+    if (!tr.date_taken) return false;
+    const date = new Date(tr.date_taken);
+    return date >= new Date(dateRange.from) && date <= new Date(dateRange.to);
+  });
+
+  // Test statistics
+  const testStats = useMemo(() => {
+    const filtered = filteredTestResults.filter((tr: any) => tr.tests);
+    if (filtered.length === 0) {
+      return { total: 0, average: 0, highest: 0, lowest: 0 };
+    }
+    const percentages = filtered.map((tr: any) => {
+      const total = tr.tests?.total_marks || 1;
+      return (tr.marks_obtained / total) * 100;
+    });
+    return {
+      total: filtered.length,
+      average: Math.round(percentages.reduce((a, b) => a + b, 0) / percentages.length),
+      highest: Math.round(Math.max(...percentages)),
+      lowest: Math.round(Math.min(...percentages)),
+    };
+  }, [filteredTestResults]);
 
   const handleLogout = () => {
     logout();
@@ -675,6 +701,20 @@ const ParentDashboardContent = () => {
               <p className="text-xs text-muted-foreground">issues reported</p>
             </CardContent>
           </Card>
+
+          {/* Test Statistics */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Test Results</CardTitle>
+              <ClipboardCheck className="h-4 w-4 text-indigo-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{testStats.total}</div>
+              <p className="text-xs text-muted-foreground">
+                {testStats.total > 0 ? `Avg: ${testStats.average}%` : 'no tests taken'}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Attendance Toggle and Mini Calendar */}
@@ -720,7 +760,7 @@ const ParentDashboardContent = () => {
                 onChange={e => setDateRange({...dateRange, to: e.target.value})}
                 className="w-[150px]"
               />
-              <p className="text-xs text-muted-foreground ml-2">This filter applies to attendance, chapter performance, homework, tests below</p>
+              <p className="text-xs text-muted-foreground ml-2">This filter applies to attendance, chapter performance, homework, and test reports below</p>
             </div>
           </CardContent>
         </Card>
@@ -740,6 +780,196 @@ const ParentDashboardContent = () => {
               />
             ) : (
               <p className="text-muted-foreground text-center py-8">Please select a student to view chapter performance.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Test Report */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5" /> Test Report
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredTestResults.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No test results found for the selected date range.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Test Name</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Date Taken</TableHead>
+                      <TableHead>Marks Obtained</TableHead>
+                      <TableHead>Total Marks</TableHead>
+                      <TableHead>Percentage</TableHead>
+                      <TableHead>Grade</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTestResults.map((tr: any) => {
+                      const percentage = tr.tests?.total_marks 
+                        ? Math.round((tr.marks_obtained / tr.tests.total_marks) * 100)
+                        : 0;
+                      const getGradeColor = (pct: number) => {
+                        if (pct >= 90) return 'text-green-600 font-semibold';
+                        if (pct >= 75) return 'text-blue-600 font-semibold';
+                        if (pct >= 60) return 'text-yellow-600 font-semibold';
+                        if (pct >= 50) return 'text-orange-600 font-semibold';
+                        return 'text-red-600 font-semibold';
+                      };
+                      const getGrade = (pct: number) => {
+                        if (pct >= 90) return 'A+';
+                        if (pct >= 80) return 'A';
+                        if (pct >= 75) return 'B+';
+                        if (pct >= 70) return 'B';
+                        if (pct >= 60) return 'C+';
+                        if (pct >= 50) return 'C';
+                        return 'F';
+                      };
+                      return (
+                        <TableRow key={tr.id}>
+                          <TableCell className="font-medium">{tr.tests?.name || 'N/A'}</TableCell>
+                          <TableCell>{tr.tests?.subject || 'N/A'}</TableCell>
+                          <TableCell>{safeFormatDate(tr.date_taken, 'PPP')}</TableCell>
+                          <TableCell className="font-semibold">{tr.marks_obtained}</TableCell>
+                          <TableCell>{tr.tests?.total_marks || 'N/A'}</TableCell>
+                          <TableCell className={getGradeColor(percentage)}>{percentage}%</TableCell>
+                          <TableCell className={getGradeColor(percentage)}>{getGrade(percentage)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            {filteredTestResults.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Total Tests</p>
+                    <p className="font-semibold">{testStats.total}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Average Score</p>
+                    <p className="font-semibold">{testStats.average}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Highest Score</p>
+                    <p className="font-semibold text-green-600">{testStats.highest}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Lowest Score</p>
+                    <p className="font-semibold text-red-600">{testStats.lowest}%</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Missed Chapters */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-red-600" /> Missed Chapters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {missedChaptersCount === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No missed chapters. Great job!</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Chapter</TableHead>
+                      <TableHead>Topic</TableHead>
+                      <TableHead>Lesson Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allLessonPlans
+                      .filter(lp => {
+                        if (!student?.grade) return false;
+                        const studentGrade = student.grade;
+                        const completedLessonPlanIds = new Set(lessonRecords.map(sc => sc.lesson_plan_id));
+                        return (
+                          lp.grade === studentGrade &&
+                          !completedLessonPlanIds.has(lp.id) &&
+                          new Date(lp.lesson_date) <= today
+                        );
+                      })
+                      .map((lp) => (
+                        <TableRow key={lp.id}>
+                          <TableCell className="font-medium">{lp.subject || 'N/A'}</TableCell>
+                          <TableCell>{lp.chapter || 'N/A'}</TableCell>
+                          <TableCell>{lp.topic || 'N/A'}</TableCell>
+                          <TableCell>{safeFormatDate(lp.lesson_date, 'PPP')}</TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Overdue Homework */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-600" /> Overdue Homework
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {overdueHomeworksOnly.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">No overdue homework. Keep up the good work!</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Due Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {overdueHomeworksOnly.map((hs: any) => (
+                      <TableRow key={hs.id}>
+                        <TableCell className="font-medium">{hs.homework?.title || 'N/A'}</TableCell>
+                        <TableCell>{hs.homework?.subject || 'N/A'}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center gap-1 ${
+                            hs.status === 'completed' || hs.status === 'checked' 
+                              ? 'text-green-600' 
+                              : hs.status === 'in_progress' 
+                              ? 'text-yellow-600' 
+                              : 'text-red-600'
+                          }`}>
+                            {hs.status === 'completed' || hs.status === 'checked' ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : hs.status === 'in_progress' ? (
+                              <Clock className="h-4 w-4" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
+                            {hs.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-red-600 font-semibold">
+                          {hs.homework?.due_date ? safeFormatDate(hs.homework.due_date, 'PPP') : 'N/A'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
