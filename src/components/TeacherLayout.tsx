@@ -110,7 +110,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Fixed Sidebar */}
-      <div className="sticky top-0 h-screen">
+      <div className="fixed top-0 left-0 h-screen z-10">
         <Sidebar
           navItems={filteredTeacherNavItems}
           headerContent={headerContent}
@@ -119,7 +119,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       </div>
 
       {/* Main Content - Scrollable */}
-      <main className="flex-1 p-6 overflow-y-auto h-screen">
+      <main className="flex-1 p-6 overflow-y-auto h-screen ml-64">
         {children}
       </main>
     </div>
