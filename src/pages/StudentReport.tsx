@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Printer, DollarSign, BookOpen, Book, Paintbrush, AlertTriangle, FileText, CheckCircle, XCircle, Clock, Star, User } from "lucide-react";
+import { Download, Printer, DollarSign, BookOpen, Book, Paintbrush, AlertTriangle, FileText, CheckCircle, XCircle, Clock, Star, User, ClipboardCheck } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subYears, isPast } from "date-fns"; // Added subYears, isPast
 import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
@@ -775,6 +775,92 @@ export default function StudentReport() {
                     </div>
                   ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Test Report */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5" /> Test Report
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {testResults.length === 0 ? (
+                <p className="text-muted-foreground">No test results found for the selected filters.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto max-h-80 border rounded mb-4">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="border px-2 py-1">Test Name</th>
+                          <th className="border px-2 py-1">Subject</th>
+                          <th className="border px-2 py-1">Date Taken</th>
+                          <th className="border px-2 py-1">Marks Obtained</th>
+                          <th className="border px-2 py-1">Total Marks</th>
+                          <th className="border px-2 py-1">Percentage</th>
+                          <th className="border px-2 py-1">Grade</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {testResults.map((tr: any) => {
+                          const percentage = tr.tests?.total_marks 
+                            ? Math.round((tr.marks_obtained / tr.tests.total_marks) * 100)
+                            : 0;
+                          const getGradeColor = (pct: number) => {
+                            if (pct >= 90) return 'text-green-600 font-semibold';
+                            if (pct >= 75) return 'text-blue-600 font-semibold';
+                            if (pct >= 60) return 'text-yellow-600 font-semibold';
+                            if (pct >= 50) return 'text-orange-600 font-semibold';
+                            return 'text-red-600 font-semibold';
+                          };
+                          const getGrade = (pct: number) => {
+                            if (pct >= 90) return 'A+';
+                            if (pct >= 80) return 'A';
+                            if (pct >= 75) return 'B+';
+                            if (pct >= 70) return 'B';
+                            if (pct >= 60) return 'C+';
+                            if (pct >= 50) return 'C';
+                            return 'F';
+                          };
+                          return (
+                            <tr key={tr.id}>
+                              <td className="border px-2 py-1 font-medium">{tr.tests?.name || 'N/A'}</td>
+                              <td className="border px-2 py-1">{tr.tests?.subject || 'N/A'}</td>
+                              <td className="border px-2 py-1">{safeFormatDate(tr.date_taken, "PPP")}</td>
+                              <td className="border px-2 py-1 font-semibold">{tr.marks_obtained}</td>
+                              <td className="border px-2 py-1">{tr.tests?.total_marks || 'N/A'}</td>
+                              <td className={`border px-2 py-1 ${getGradeColor(percentage)}`}>{percentage}%</td>
+                              <td className={`border px-2 py-1 ${getGradeColor(percentage)}`}>{getGrade(percentage)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4 border-t">
+                    <div>
+                      <p className="text-muted-foreground">Total Tests</p>
+                      <p className="font-semibold">{totalTests}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Average Score</p>
+                      <p className="font-semibold">{averagePercentage}%</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total Marks</p>
+                      <p className="font-semibold">{totalMarksObtained}/{totalMaxMarks}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Overall Performance</p>
+                      <p className={`font-semibold ${averagePercentage >= 75 ? 'text-green-600' : averagePercentage >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {averagePercentage >= 75 ? 'Good' : averagePercentage >= 60 ? 'Average' : 'Needs Improvement'}
+                      </p>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

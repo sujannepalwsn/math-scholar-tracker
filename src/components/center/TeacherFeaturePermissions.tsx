@@ -8,19 +8,24 @@ import { DialogDescription } from '@/components/ui/dialog';
 
 const TEACHER_FEATURES = [
   { name: 'take_attendance', label: 'Take Attendance' },
+  { name: 'attendance_summary', label: 'Attendance Summary' },
+  { name: 'lesson_plans', label: 'Lesson Plans' },
   { name: 'lesson_tracking', label: 'Lesson Tracking' },
   { name: 'homework_management', label: 'Homework Management' },
+  { name: 'activities', label: 'Activities' },
   { name: 'preschool_activities', label: 'Preschool Activities' },
   { name: 'discipline_issues', label: 'Discipline Issues' },
   { name: 'test_management', label: 'Test Management' },
   { name: 'student_report_access', label: 'Student Report Access' },
-  { name: 'meetings_management', label: 'Meetings Management' },
-  { name: 'messaging', label: 'Messaging' },
-  { name: 'calendar_events', label: 'Calendar Events' },
-  { name: 'class_routine', label: 'Class Routine' },
   { name: 'chapter_performance', label: 'Chapter Performance' },
   { name: 'ai_insights', label: 'AI Insights' },
+  { name: 'view_records', label: 'View Records' },
+  { name: 'summary', label: 'Summary' },
   { name: 'finance', label: 'Finance' },
+  { name: 'meetings_management', label: 'Meetings Management' },
+  { name: 'messaging', label: 'Messaging' },
+  { name: 'class_routine', label: 'Class Routine' },
+  { name: 'calendar_events', label: 'Calendar Events' },
 ];
 
 export default function TeacherFeaturePermissions({ teacherId, teacherName }: { teacherId: string; teacherName: string }) {
