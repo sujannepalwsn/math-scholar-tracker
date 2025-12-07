@@ -63,9 +63,49 @@ export default function CenterSettings() {
           background: savedTheme.background || "#ffffff",
           sidebar: savedTheme.sidebar || "#1e293b",
         });
+        // Apply theme to CSS variables
+        applyTheme(savedTheme);
       }
     }
   }, [center]);
+
+  // Function to apply theme to CSS variables
+  const applyTheme = (themeData: CenterTheme) => {
+    const root = document.documentElement;
+    
+    // Convert hex to HSL for CSS variables
+    const hexToHSL = (hex: string) => {
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          case b: h = ((r - g) / d + 4) / 6; break;
+        }
+      }
+
+      return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+    };
+
+    if (themeData.primary) {
+      root.style.setProperty('--primary', hexToHSL(themeData.primary));
+    }
+    if (themeData.background) {
+      root.style.setProperty('--background', hexToHSL(themeData.background));
+    }
+    if (themeData.sidebar) {
+      root.style.setProperty('--sidebar-background', hexToHSL(themeData.sidebar));
+    }
+  };
 
   const updateCenterMutation = useMutation({
     mutationFn: async () => {
@@ -83,6 +123,8 @@ export default function CenterSettings() {
         } as any)
         .eq("id", user.center_id);
       if (error) throw error;
+      // Apply theme after saving
+      applyTheme(theme);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["center-details"] });

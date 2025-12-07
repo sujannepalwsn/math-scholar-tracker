@@ -15,6 +15,12 @@ const TEACHER_FEATURES = [
   { name: 'test_management', label: 'Test Management' },
   { name: 'student_report_access', label: 'Student Report Access' },
   { name: 'meetings_management', label: 'Meetings Management' },
+  { name: 'messaging', label: 'Messaging' },
+  { name: 'calendar_events', label: 'Calendar Events' },
+  { name: 'class_routine', label: 'Class Routine' },
+  { name: 'chapter_performance', label: 'Chapter Performance' },
+  { name: 'ai_insights', label: 'AI Insights' },
+  { name: 'finance', label: 'Finance' },
 ];
 
 export default function TeacherFeaturePermissions({ teacherId, teacherName }: { teacherId: string; teacherName: string }) {

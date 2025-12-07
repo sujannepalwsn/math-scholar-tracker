@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import Sidebar from "./Sidebar";
+import CenterLogo from "./CenterLogo";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -88,19 +89,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
   );
 
   const headerContent = (
-    <div className="flex items-center gap-2">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
-        <CheckSquare className="h-6 w-6 text-primary-foreground" />
-      </div>
-      <div>
-        <h1 className="text-xl font-bold text-foreground">
-          {user?.center_name || 'AttendTrack'}
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          {user?.role === 'admin' ? 'Admin Panel' : 'Tuition Center'}
-        </p>
-      </div>
-    </div>
+    <CenterLogo size="md" showName={true} />
   );
 
   const footerContent = (

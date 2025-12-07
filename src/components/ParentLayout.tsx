@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, DollarSign, LogOut, User, Book, Paintbrush, AlertTriangle, KeyRound, Video, MessageSquare, Star, BookOpen } from "lucide-react";
+import { Home, DollarSign, LogOut, User, Book, Paintbrush, AlertTriangle, KeyRound, Video, MessageSquare, Star, BookOpen, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import Sidebar from "./Sidebar"; // Import the new Sidebar component
-import { useQuery } from "@tanstack/react-query"; // Import useQuery
-import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import Sidebar from "./Sidebar";
+import CenterLogo from "./CenterLogo";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems: Array<{
   to: string;
@@ -23,6 +24,7 @@ const navItems: Array<{
   { to: "/parent-messages", label: "Messages", icon: MessageSquare, role: 'parent' as const },
   { to: "/parent-chapter-rating", label: "Chapter Rating", icon: Star, role: 'parent' as const },
   { to: "/parent-lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'parent' as const },
+  { to: "/parent-calendar", label: "Calendar", icon: Calendar, role: 'parent' as const },
   { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'parent' as const },
 ];
 
@@ -73,9 +75,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   );
 
   const headerContent = (
-    <div className="flex items-center gap-2">
-      <h1 className="text-xl font-bold text-foreground">Parent Portal</h1>
-    </div>
+    <CenterLogo size="md" showName={true} />
   );
 
   const footerContent = (

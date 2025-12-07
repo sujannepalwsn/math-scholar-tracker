@@ -368,29 +368,38 @@ export type Database = {
       centers: {
         Row: {
           address: string | null
+          contact_person: string | null
           created_at: string
           email: string | null
           id: string
+          logo_url: string | null
           name: string
           phone: string | null
+          theme: Json | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          contact_person?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           phone?: string | null
+          theme?: Json | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          contact_person?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           phone?: string | null
+          theme?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -979,6 +988,7 @@ export type Database = {
           class: string
           content: string | null
           created_at: string
+          end_date: string | null
           grade: string | null
           id: string
           lesson_date: string | null
@@ -987,6 +997,7 @@ export type Database = {
           objectives: string | null
           planned_date: string | null
           section: string | null
+          start_date: string | null
           status: string | null
           subject: string
           teacher_id: string | null
@@ -999,6 +1010,7 @@ export type Database = {
           class: string
           content?: string | null
           created_at?: string
+          end_date?: string | null
           grade?: string | null
           id?: string
           lesson_date?: string | null
@@ -1007,6 +1019,7 @@ export type Database = {
           objectives?: string | null
           planned_date?: string | null
           section?: string | null
+          start_date?: string | null
           status?: string | null
           subject: string
           teacher_id?: string | null
@@ -1019,6 +1032,7 @@ export type Database = {
           class?: string
           content?: string | null
           created_at?: string
+          end_date?: string | null
           grade?: string | null
           id?: string
           lesson_date?: string | null
@@ -1027,6 +1041,7 @@ export type Database = {
           objectives?: string | null
           planned_date?: string | null
           section?: string | null
+          start_date?: string | null
           status?: string | null
           subject?: string
           teacher_id?: string | null
@@ -1793,8 +1808,11 @@ export type Database = {
           hire_date: string | null
           id: string
           is_active: boolean | null
+          monthly_salary: number | null
           name: string
           phone: string | null
+          regular_in_time: string | null
+          regular_out_time: string | null
           subject: string | null
           updated_at: string
           user_id: string | null
@@ -1807,8 +1825,11 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean | null
+          monthly_salary?: number | null
           name: string
           phone?: string | null
+          regular_in_time?: string | null
+          regular_out_time?: string | null
           subject?: string | null
           updated_at?: string
           user_id?: string | null
@@ -1821,8 +1842,11 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean | null
+          monthly_salary?: number | null
           name?: string
           phone?: string | null
+          regular_in_time?: string | null
+          regular_out_time?: string | null
           subject?: string | null
           updated_at?: string
           user_id?: string | null
