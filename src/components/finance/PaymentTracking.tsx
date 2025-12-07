@@ -43,13 +43,25 @@ const PaymentTracking = () => {
     enabled: !!user?.center_id
   });
 
-  // Fetch payments
+  // Fetch payments - filtered by center through invoices
   const { data: payments = [], isLoading: paymentsLoading } = useQuery({
     queryKey: ['payments', user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
+      // First get invoice IDs for this center
+      const { data: centerInvoices } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('center_id', user.center_id);
+      
+      if (!centerInvoices || centerInvoices.length === 0) return [];
+      
+      const invoiceIds = centerInvoices.map(i => i.id);
+      
       const { data, error } = await supabase
         .from('payments')
-        .select('*, invoices(invoice_number, students(name))')
+        .select('*, invoices(invoice_number, center_id, students(name))')
+        .in('invoice_id', invoiceIds)
         .order('payment_date', { ascending: false })
         .limit(50);
       if (error) throw error;

@@ -502,7 +502,7 @@ export default function ClassRoutine() {
             <p>Loading schedule...</p>
           ) : (
             <div className="grid gap-4">
-              {schedulesByDay.filter(d => d.schedules.length > 0 || d.value >= 1 && d.value <= 5).map(day => (
+              {schedulesByDay.map(day => (
                 <Card key={day.value}>
                   <CardHeader className="py-3">
                     <CardTitle className="text-lg">{day.label}</CardTitle>
