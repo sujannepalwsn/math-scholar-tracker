@@ -114,14 +114,17 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar
-        navItems={filteredNavItems}
-        headerContent={headerContent}
-        footerContent={footerContent}
-      />
+      {/* Fixed Sidebar */}
+      <div className="sticky top-0 h-screen">
+        <Sidebar
+          navItems={filteredNavItems}
+          headerContent={headerContent}
+          footerContent={footerContent}
+        />
+      </div>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 overflow-y-auto">
+      {/* Main Content - Scrollable */}
+      <main className="flex-1 p-6 overflow-y-auto h-screen">
         {children}
       </main>
     </div>

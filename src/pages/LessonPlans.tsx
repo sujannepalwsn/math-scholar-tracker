@@ -103,7 +103,10 @@ export default function LessonPlans() {
     const { error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(fileName, fileToUpload);
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error(`Upload error for bucket ${bucket}:`, uploadError);
+      throw uploadError;
+    }
     return fileName;
   };
 
@@ -114,7 +117,7 @@ export default function LessonPlans() {
       let fileUrl: string | null = null;
       let mediaUrl: string | null = null;
 
-      if (file) fileUrl = await uploadFile(file, "lesson-plan-files");
+      if (file) fileUrl = await uploadFile(file, "lesson-files");
       if (media) mediaUrl = await uploadFile(media, "lesson-plan-media");
 
       const { error } = await supabase.from("lesson_plans").insert({
@@ -148,7 +151,7 @@ export default function LessonPlans() {
 
       let fileUrl: string | null = editingLessonPlan.lesson_file_url;
 
-      if (file) fileUrl = await uploadFile(file, "lesson-plan-files");
+      if (file) fileUrl = await uploadFile(file, "lesson-files");
 
       const { error } = await supabase.from("lesson_plans").update({
         subject,
@@ -329,7 +332,7 @@ export default function LessonPlans() {
                     <div className="flex gap-2 mt-2">
                       {lp.lesson_file_url && (
                         <Button variant="outline" size="sm" asChild>
-                          <a href={supabase.storage.from("lesson-plan-files").getPublicUrl(lp.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
+                          <a href={supabase.storage.from("lesson-files").getPublicUrl(lp.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
                             <FileText className="h-4 w-4 mr-1" /> File
                           </a>
                         </Button>

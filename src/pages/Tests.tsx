@@ -56,7 +56,8 @@ export default function Tests() {
   const [testDate, setTestDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [totalMarks, setTotalMarks] = useState("");
   const [grade, setGrade] = useState("");
-  const [lessonPlanId, setLessonPlanId] = useState<string | null>(null); // New state for lesson plan
+  const [selectedLessonPlanIds, setSelectedLessonPlanIds] = useState<string[]>([]); // Multi-select lesson plans
+  const [chapterSubjectFilter, setChapterSubjectFilter] = useState<string>("all"); // Filter for chapter selection
   const [questions, setQuestions] = useState<Question[]>([]); // For question-wise entry
 
   // States for entering marks
@@ -171,7 +172,10 @@ export default function Tests() {
         uploadedFileUrl = fileName;
       }
       
-      console.log("DEBUG: Attempting to create test with lessonPlanId:", lessonPlanId); // New log
+      console.log("DEBUG: Attempting to create test with lessonPlanIds:", selectedLessonPlanIds);
+
+      // Use the first selected lesson plan ID for the test (primary link)
+      const primaryLessonPlanId = selectedLessonPlanIds.length > 0 ? selectedLessonPlanIds[0] : null;
 
       const { data, error } = await supabase.from("tests").insert({
         name: testName || 'Unnamed Test',
@@ -181,7 +185,7 @@ export default function Tests() {
         total_marks: parseInt(totalMarks),
         center_id: user?.center_id!,
         questions: questions.length > 0 ? (questions as any) : null,
-        lesson_plan_id: lessonPlanId || null, // Save the selected lesson plan ID
+        lesson_plan_id: primaryLessonPlanId, // Save the primary lesson plan ID
       }).select().single();
 
       if (error) throw error;
@@ -195,7 +199,8 @@ export default function Tests() {
       setTestSubject("");
       setTotalMarks("");
       setGrade("");
-      setLessonPlanId(null); // Reset lesson plan ID
+      setSelectedLessonPlanIds([]); // Reset lesson plan IDs
+      setChapterSubjectFilter("all");
       setQuestions([]);
       setUploadedFile(null);
     },
@@ -518,22 +523,61 @@ export default function Tests() {
                   placeholder="e.g., 10th"
                 />
               </div>
-              {/* New: Select Lesson Plan */}
-              <div className="space-y-2">
-                <Label htmlFor="lessonPlan">Link to Lesson Plan (Optional)</Label>
-                <Select value={lessonPlanId || "none"} onValueChange={(value) => setLessonPlanId(value === "none" ? null : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a lesson plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Lesson Plan</SelectItem>
-                    {lessonPlans.map((lp) => (
-                      <SelectItem key={lp.id} value={lp.id}>
-                        {lp.subject}: {lp.chapter} - {lp.topic} ({lp.grade})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Multi-select Lesson Plans/Chapters */}
+              <div className="space-y-3 border p-4 rounded-lg">
+                <Label className="text-base font-semibold">Link to Chapters (Optional - Multi-select)</Label>
+                
+                {/* Subject filter for chapters */}
+                <div className="flex gap-2 items-center">
+                  <Label className="text-sm">Filter by Subject:</Label>
+                  <Select value={chapterSubjectFilter} onValueChange={setChapterSubjectFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All Subjects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Subjects</SelectItem>
+                      {Array.from(new Set(lessonPlans.map(lp => lp.subject))).map((subject) => (
+                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Chapter checkboxes */}
+                <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-2">
+                  {lessonPlans
+                    .filter(lp => chapterSubjectFilter === "all" || lp.subject === chapterSubjectFilter)
+                    .map((lp) => {
+                      const isSelected = selectedLessonPlanIds.includes(lp.id);
+                      return (
+                        <div key={lp.id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`lp-${lp.id}`}
+                            checked={isSelected}
+                            onChange={() => {
+                              if (isSelected) {
+                                setSelectedLessonPlanIds(prev => prev.filter(id => id !== lp.id));
+                              } else {
+                                setSelectedLessonPlanIds(prev => [...prev, lp.id]);
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <label htmlFor={`lp-${lp.id}`} className="text-sm cursor-pointer">
+                            <span className="font-medium">{lp.subject}:</span> {lp.chapter} - {lp.topic} 
+                            {lp.grade && <span className="text-muted-foreground"> ({lp.grade})</span>}
+                          </label>
+                        </div>
+                      );
+                    })}
+                  {lessonPlans.filter(lp => chapterSubjectFilter === "all" || lp.subject === chapterSubjectFilter).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No lesson plans found.</p>
+                  )}
+                </div>
+                {selectedLessonPlanIds.length > 0 && (
+                  <p className="text-sm text-muted-foreground">{selectedLessonPlanIds.length} chapter(s) selected</p>
+                )}
               </div>
               <div>
                 <Label>Upload Test File (Optional)</Label>

@@ -75,14 +75,14 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
   }
 
   return (
-    <Card>
+    <Card className="max-h-[70vh] overflow-hidden flex flex-col">
       <CardHeader>
         <CardTitle id="teacher-permissions-title">Manage Features for {teacherName}</CardTitle>
         <DialogDescription id="teacher-permissions-description">
           Enable or disable specific features for this teacher.
         </DialogDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-y-auto flex-1">
         <Table>
           <TableHeader>
             <TableRow>

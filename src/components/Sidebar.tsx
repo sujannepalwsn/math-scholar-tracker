@@ -79,7 +79,8 @@ export default function Sidebar({ navItems, headerContent, footerContent }: Side
     <TooltipProvider>
       <div
         className={cn(
-          "flex flex-col h-screen border-r bg-card transition-all duration-300",
+          "flex flex-col h-full border-r transition-all duration-300",
+          "bg-sidebar text-sidebar-foreground",
           isCollapsed ? "w-20" : "w-64"
         )}
       >

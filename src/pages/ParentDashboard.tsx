@@ -697,6 +697,35 @@ const ParentDashboardContent = () => {
         )}
 
         {/* Date Range Filter for Chapter Performance */}
+        {/* Date Range Filter - Global */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" /> Date Range Filter
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="text-sm font-medium">From:</label>
+              <Input
+                type="date"
+                value={dateRange.from}
+                onChange={e => setDateRange({...dateRange, from: e.target.value})}
+                className="w-[150px]"
+              />
+              <label className="text-sm font-medium">To:</label>
+              <Input
+                type="date"
+                value={dateRange.to}
+                onChange={e => setDateRange({...dateRange, to: e.target.value})}
+                className="w-[150px]"
+              />
+              <p className="text-xs text-muted-foreground ml-2">This filter applies to attendance, chapter performance, homework, tests below</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Chapter-wise Performance */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -704,22 +733,6 @@ const ParentDashboardContent = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 mb-4">
-              <label className="text-sm font-medium">Filter by Date:</label>
-              <Input
-                type="date"
-                value={dateRange.from}
-                onChange={e => setDateRange({...dateRange, from: e.target.value})}
-                className="w-[150px]"
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="date"
-                value={dateRange.to}
-                onChange={e => setDateRange({...dateRange, to: e.target.value})}
-                className="w-[150px]"
-              />
-            </div>
             {activeStudentId ? (
               <ParentChapterPerformanceTable
                 chapterPerformanceData={chapterPerformanceData}
