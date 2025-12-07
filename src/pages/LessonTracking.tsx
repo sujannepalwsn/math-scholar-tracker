@@ -493,7 +493,7 @@ export default function LessonTracking() {
                     {group.lessonPlan.notes && <p className="text-sm">Lesson Notes: {group.lessonPlan.notes}</p>}
                     {group.lessonPlan.lesson_file_url && (
                       <Button variant="outline" size="sm" asChild className="mt-2">
-                        <a href={supabase.storage.from("lesson-plan-files").getPublicUrl(group.lessonPlan.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
+                        <a href={supabase.storage.from("lesson-files").getPublicUrl(group.lessonPlan.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
                           <BookOpen className="h-4 w-4 mr-1" /> Lesson File
                         </a>
                       </Button>

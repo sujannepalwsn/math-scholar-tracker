@@ -13,6 +13,9 @@ interface CenterTheme {
   primary: string;
   background: string;
   sidebar: string;
+  foreground: string;
+  cardBackground: string;
+  mutedForeground: string;
 }
 
 export default function CenterSettings() {
@@ -29,6 +32,9 @@ export default function CenterSettings() {
     primary: "#6366f1",
     background: "#ffffff",
     sidebar: "#1e293b",
+    foreground: "#1e293b",
+    cardBackground: "#ffffff",
+    mutedForeground: "#64748b",
   });
 
   // Fetch center details
@@ -62,6 +68,9 @@ export default function CenterSettings() {
           primary: savedTheme.primary || "#6366f1",
           background: savedTheme.background || "#ffffff",
           sidebar: savedTheme.sidebar || "#1e293b",
+          foreground: savedTheme.foreground || "#1e293b",
+          cardBackground: savedTheme.cardBackground || "#ffffff",
+          mutedForeground: savedTheme.mutedForeground || "#64748b",
         });
         // Apply theme to CSS variables
         applyTheme(savedTheme);
@@ -75,6 +84,7 @@ export default function CenterSettings() {
     
     // Convert hex to HSL for CSS variables
     const hexToHSL = (hex: string) => {
+      if (!hex || !hex.startsWith('#')) return null;
       const r = parseInt(hex.slice(1, 3), 16) / 255;
       const g = parseInt(hex.slice(3, 5), 16) / 255;
       const b = parseInt(hex.slice(5, 7), 16) / 255;
@@ -97,13 +107,31 @@ export default function CenterSettings() {
     };
 
     if (themeData.primary) {
-      root.style.setProperty('--primary', hexToHSL(themeData.primary));
+      const hsl = hexToHSL(themeData.primary);
+      if (hsl) root.style.setProperty('--primary', hsl);
     }
     if (themeData.background) {
-      root.style.setProperty('--background', hexToHSL(themeData.background));
+      const hsl = hexToHSL(themeData.background);
+      if (hsl) root.style.setProperty('--background', hsl);
     }
     if (themeData.sidebar) {
-      root.style.setProperty('--sidebar-background', hexToHSL(themeData.sidebar));
+      const hsl = hexToHSL(themeData.sidebar);
+      if (hsl) {
+        root.style.setProperty('--sidebar-background', hsl);
+        root.style.setProperty('--sidebar-foreground', '0 0% 98%'); // Light text for dark sidebar
+      }
+    }
+    if (themeData.foreground) {
+      const hsl = hexToHSL(themeData.foreground);
+      if (hsl) root.style.setProperty('--foreground', hsl);
+    }
+    if (themeData.cardBackground) {
+      const hsl = hexToHSL(themeData.cardBackground);
+      if (hsl) root.style.setProperty('--card', hsl);
+    }
+    if (themeData.mutedForeground) {
+      const hsl = hexToHSL(themeData.mutedForeground);
+      if (hsl) root.style.setProperty('--muted-foreground', hsl);
     }
   };
 
@@ -276,7 +304,7 @@ export default function CenterSettings() {
             <CardDescription>Choose colors for your dashboard</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="primaryColor">Primary Color</Label>
                 <div className="flex gap-2 items-center">
@@ -294,7 +322,7 @@ export default function CenterSettings() {
                     className="flex-1"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Used for buttons, links, accents</p>
+                <p className="text-xs text-muted-foreground">Buttons, links, accents</p>
               </div>
 
               <div className="space-y-2">
@@ -314,7 +342,7 @@ export default function CenterSettings() {
                     className="flex-1"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Main content background</p>
+                <p className="text-xs text-muted-foreground">Main page background</p>
               </div>
 
               <div className="space-y-2">
@@ -335,6 +363,66 @@ export default function CenterSettings() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">Sidebar background</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="foregroundColor">Text Color</Label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    id="foregroundColor"
+                    value={theme.foreground}
+                    onChange={(e) => setTheme({ ...theme, foreground: e.target.value })}
+                    className="w-12 h-10 rounded border cursor-pointer"
+                  />
+                  <Input
+                    value={theme.foreground}
+                    onChange={(e) => setTheme({ ...theme, foreground: e.target.value })}
+                    placeholder="#1e293b"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Main text, headings</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cardBackground">Card Background</Label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    id="cardBackground"
+                    value={theme.cardBackground}
+                    onChange={(e) => setTheme({ ...theme, cardBackground: e.target.value })}
+                    className="w-12 h-10 rounded border cursor-pointer"
+                  />
+                  <Input
+                    value={theme.cardBackground}
+                    onChange={(e) => setTheme({ ...theme, cardBackground: e.target.value })}
+                    placeholder="#ffffff"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Cards, panels background</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mutedForeground">Secondary Text</Label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    id="mutedForeground"
+                    value={theme.mutedForeground}
+                    onChange={(e) => setTheme({ ...theme, mutedForeground: e.target.value })}
+                    className="w-12 h-10 rounded border cursor-pointer"
+                  />
+                  <Input
+                    value={theme.mutedForeground}
+                    onChange={(e) => setTheme({ ...theme, mutedForeground: e.target.value })}
+                    placeholder="#64748b"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Muted text, descriptions</p>
               </div>
             </div>
 
