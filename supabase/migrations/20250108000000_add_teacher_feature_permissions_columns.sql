@@ -12,3 +12,4 @@ ALTER TABLE public.teacher_feature_permissions
   ADD COLUMN IF NOT EXISTS class_routine BOOLEAN DEFAULT true,
   ADD COLUMN IF NOT EXISTS calendar_events BOOLEAN DEFAULT true;
 
+
