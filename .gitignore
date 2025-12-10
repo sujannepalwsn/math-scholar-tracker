@@ -26,4 +26,3 @@ dist-ssr
 # Supabase
 supabase/.temp/
 supabase_project_backup/ # Add this line
-.env

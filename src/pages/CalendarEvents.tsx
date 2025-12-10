@@ -83,25 +83,20 @@ export default function CalendarEvents() {
 
   const createEventMutation = useMutation({
     mutationFn: async () => {
-      if (!centerId) throw new Error("Center ID not found");
+      if (!user?.center_id) throw new Error("Center ID not found");
       const { error } = await supabase.from("center_events").insert({
-        center_id: centerId,
+        center_id: user.center_id,
         title,
         description: description || null,
         event_date: eventDate,
         event_type: eventType,
         is_holiday: isHoliday,
-        created_by: user?.id,
+        created_by: user.id,
       } as any);
-      if (error) {
-        if (error.message?.includes('row-level security')) {
-          throw new Error("You don't have permission to create events. Please ensure you have the correct role and center access.");
-        }
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["center-events", centerId] });
+      queryClient.invalidateQueries({ queryKey: ["center-events"] });
       toast.success("Event created successfully!");
       resetForm();
       setShowEventDialog(false);
@@ -121,15 +116,10 @@ export default function CalendarEvents() {
         event_type: eventType,
         is_holiday: isHoliday,
       } as any).eq("id", editingEvent.id);
-      if (error) {
-        if (error.message?.includes('row-level security')) {
-          throw new Error("You don't have permission to update this event.");
-        }
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["center-events", centerId] });
+      queryClient.invalidateQueries({ queryKey: ["center-events"] });
       toast.success("Event updated successfully!");
       resetForm();
       setShowEventDialog(false);
@@ -142,15 +132,10 @@ export default function CalendarEvents() {
   const deleteEventMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("center_events").delete().eq("id", id);
-      if (error) {
-        if (error.message?.includes('row-level security')) {
-          throw new Error("You don't have permission to delete this event.");
-        }
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["center-events", centerId] });
+      queryClient.invalidateQueries({ queryKey: ["center-events"] });
       toast.success("Event deleted successfully!");
     },
     onError: (error: any) => {
