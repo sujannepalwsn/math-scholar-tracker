@@ -33,7 +33,12 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
         .eq("role", "parent")
         .eq("is_active", true)
         .order("username");
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('row-level security')) {
+          throw new Error("You don't have permission to view parent users");
+        }
+        throw error;
+      }
       return data;
     },
     enabled: !!user?.center_id && open,
@@ -50,7 +55,12 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
         .eq("center_id", user.center_id)
         .eq("is_active", true)
         .order("name");
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('row-level security')) {
+          throw new Error("You don't have permission to view students");
+        }
+        throw error;
+      }
       return data;
     },
     enabled: !!user?.center_id && open,
@@ -61,17 +71,17 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
     queryKey: ["parent-student-links", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      
+
       // Get all students in this center first
       const { data: centerStudents } = await supabase
         .from("students")
         .select("id")
         .eq("center_id", user.center_id);
-      
+
       if (!centerStudents || centerStudents.length === 0) return [];
-      
+
       const studentIds = centerStudents.map(s => s.id);
-      
+
       const { data, error } = await supabase
         .from("parent_students")
         .select(`
@@ -82,7 +92,12 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
           students:student_id(name, grade)
         `)
         .in("student_id", studentIds);
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('row-level security')) {
+          throw new Error("You don't have permission to view parent-student links");
+        }
+        throw error;
+      }
       return data || [];
     },
     enabled: !!user?.center_id && open,
@@ -108,6 +123,10 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
 
   const linkMutation = useMutation({
     mutationFn: async () => {
+      if (!user?.center_id) {
+        throw new Error("Center information not found");
+      }
+
       if (!selectedParentId || !selectedStudentId) {
         throw new Error("Please select both parent and student");
       }
@@ -120,10 +139,15 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
         parent_user_id: selectedParentId,
         student_id: selectedStudentId,
       });
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('row-level security')) {
+          throw new Error("You don't have permission to link children to parents. Ensure both the parent and student belong to your center.");
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
+      queryClient.invalidateQueries({ queryKey: ["parent-student-links", user?.center_id] });
       toast.success("Child linked to parent successfully!");
       setSelectedParentId("");
       setSelectedStudentId("");
@@ -140,10 +164,15 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
         .delete()
         .eq("parent_user_id", parentId)
         .eq("student_id", studentId);
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('row-level security')) {
+          throw new Error("You don't have permission to unlink this child from the parent.");
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["parent-student-links"] });
+      queryClient.invalidateQueries({ queryKey: ["parent-student-links", user?.center_id] });
       toast.success("Child unlinked from parent");
     },
     onError: (error: any) => {

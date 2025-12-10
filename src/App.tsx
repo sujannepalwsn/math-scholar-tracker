@@ -54,7 +54,32 @@ import CenterSettings from "./pages/CenterSettings";
 import ChangePassword from "./pages/ChangePassword";
 import ChapterPerformanceOverview from "./pages/ChapterPerformanceOverview";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: true,
+      retry: (failureCount, error: any) => {
+        if (error?.message?.includes('RLS') || error?.message?.includes('row-level security')) {
+          return false;
+        }
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+    mutations: {
+      retry: (failureCount, error: any) => {
+        if (error?.message?.includes('RLS') || error?.message?.includes('row-level security')) {
+          return false;
+        }
+        return failureCount < 1;
+      },
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
