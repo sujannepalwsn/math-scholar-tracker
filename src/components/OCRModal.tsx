@@ -1,13 +1,13 @@
 "use client";
-
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+
 import Tesseract from "tesseract.js";
 import * as pdfjsLib from "pdfjs-dist";
 

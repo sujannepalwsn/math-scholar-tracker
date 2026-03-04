@@ -1,28 +1,27 @@
-import { BookOpen, Bot, CalendarIcon, Edit, FileText, FileUp, Plus, SquarePen, Trash2, Users, X } from "lucide-react";
+"use client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+import { cn } from "@/lib/utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { BookOpen, Bot, CalendarIcon, Edit, FileText, FileUp, Plus, SquarePen, Trash2, Users, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
 import OCRModal from "@/components/OCRModal";
 import BulkMarksEntry from "@/components/BulkMarksEntry";
 import QuestionPaperViewer from "@/components/QuestionPaperViewer";
-import { Tables } from "@/integrations/supabase/types";
-import { cn } from "@/lib/utils";
-"use client";
-
-
-
 type Test = Tables<'tests'>;
 type TestResult = Tables<'test_results'>;
 type Student = Tables<'students'>;

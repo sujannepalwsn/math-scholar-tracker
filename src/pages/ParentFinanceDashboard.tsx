@@ -1,19 +1,18 @@
-import { AlertCircle, ArrowLeft, Check, CreditCard, DollarSign, Download, Eye, FileText, TrendingUp } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Invoice, Payment } from '@/integrations/supabase/finance-types';
-import { isPast } from 'date-fns';
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Invoice, Payment } from "@/integrations/supabase/finance-types";
 import { cn } from "@/lib/utils";
-
+import { useQuery } from "@tanstack/react-query";
+import { isPast } from "date-fns";
+import { ArrowLeft, Check, DollarSign, Eye, FileText, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const ParentFinanceDashboard = () => {
   const { user } = useAuth();

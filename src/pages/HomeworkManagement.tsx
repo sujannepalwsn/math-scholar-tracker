@@ -1,4 +1,3 @@
-import { Book, CheckCircle, Clock, Edit, FileUp, Image, Loader2, Plus, Trash2, Users, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,14 +8,15 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { Tables } from "@/integrations/supabase/types";
+import { Loader2, useAuth } from "@/contexts/AuthContext";
+import { Loader2, supabase } from "@/integrations/supabase/client";
+import { Loader2, Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
+import { Loader2, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, format } from "date-fns";
+import { Clock, Edit, FileUp, Loader2, Plus, Trash2, Users, XCircle } from "lucide-react";
+import { Loader2, useState } from "react";
+import { Loader2, toast } from "sonner";
 
 type Homework = Tables<'homework'>;
 type Student = Tables<'students'>;

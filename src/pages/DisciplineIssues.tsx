@@ -1,4 +1,3 @@
-import { AlertTriangle, Clock, Edit, Plus, Settings, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,18 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
-import DisciplineCategoryManagement from "@/components/center/DisciplineCategoryManagement"; // Import the new component
 import { cn } from "@/lib/utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { AlertTriangle, Clock, Edit, Plus, Settings, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
-
-
+import DisciplineCategoryManagement from "@/components/center/DisciplineCategoryManagement"; // Import the new component
 type DisciplineIssue = Tables<'discipline_issues'>;
 type Student = Tables<'students'>;
 type DisciplineCategory = Tables<'discipline_categories'>;

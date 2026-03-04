@@ -1,11 +1,11 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tables } from "@/integrations/supabase/types";
+import { safeFormatDate } from "@/lib/utils";
+import { Eye, Star } from "lucide-react";
 
 import React from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Eye, Star } from "lucide-react";
-import { safeFormatDate } from "@/lib/utils";
-import { Tables } from "@/integrations/supabase/types";
 
 type LessonPlan = Tables<'lesson_plans'>;
 type StudentChapter = Tables<'student_chapters'>;

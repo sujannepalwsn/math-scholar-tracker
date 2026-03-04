@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Camera, Video, Star, Paintbrush } from 'lucide-react';
-import { format } from 'date-fns';
-import { Tables } from '@/integrations/supabase/types';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Camera, Paintbrush, Star, Video } from "lucide-react";
+import { useState } from "react";
 
 type Activity = Tables<'activities'>;
 

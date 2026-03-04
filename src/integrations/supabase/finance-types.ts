@@ -1,3 +1,4 @@
+
 // Finance types aligned with database schema
 
 export type FeeHeading = {

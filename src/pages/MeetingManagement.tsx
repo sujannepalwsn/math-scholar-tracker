@@ -1,14 +1,15 @@
-import { CalendarDays, CheckCircle2, Edit, Eye, FileText, Loader2, Plus, Trash2, Users, XCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+"use client";
+
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Plus, Edit, Trash2, CalendarDays, Users, FileText, CheckCircle2, XCircle, Eye, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Tables, TablesInsert } from "@/integrations/supabase/types";
 import MeetingForm from "@/components/meetings/MeetingForm";
@@ -16,8 +17,6 @@ import MeetingAttendanceRecorder from "@/components/meetings/MeetingAttendanceRe
 import MeetingConclusionForm from "@/components/meetings/MeetingConclusionForm";
 import MeetingConclusionViewer from "@/components/meetings/MeetingConclusionViewer";
 import MeetingAttendeesViewer from "@/components/meetings/MeetingAttendeesViewer";
-"use client";
-
 
 type Meeting = Tables<'meetings'>;
 type MeetingConclusion = Tables<'meeting_conclusions'>;

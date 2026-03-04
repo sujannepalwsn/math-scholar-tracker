@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Brain, Loader2, AlertCircle, TrendingUp, Users } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useMutation } from "@tanstack/react-query";
+import { Brain, Loader2, TrendingUp, Users } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export default function AIInsights() {
   const [insights, setInsights] = useState<any>(null);

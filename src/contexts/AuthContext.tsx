@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 import { User } from "lucide-react";
+
+import React, { createContext, useContext, useState, useEffect } from 'react'
+
 ;
-import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
 // Auth context for managing user authentication state
 
 // Define linked student interface

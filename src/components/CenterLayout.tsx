@@ -1,13 +1,15 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, UserPlus, CheckSquare, FileText, BarChart3, BookOpen, ClipboardCheck, User, Brain, LogOut, Shield, Calendar, DollarSign, LayoutList, Book, Paintbrush, AlertTriangle, Users, UserCheck, KeyRound, Video, MessageSquare, Clock, TrendingUp, Settings, CalendarDays, Menu } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Sidebar } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, BookOpen, BrainDays, ClipboardCheck, Clock, DollarSign, FileText, Home, KeyRound, LayoutList, LogOut, Menu, MessageSquare, Paintbrush, Settings, Shield, TrendingUp, User, UserCheck, UserPlus, Users, Video } from "lucide-react";
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+
 import Sidebar from "./Sidebar";
 import CenterLogo from "./CenterLogo";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
 
 const navItems: Array<{
   to: string;

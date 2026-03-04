@@ -1,18 +1,17 @@
 "use client";
-
-import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BookOpen, Check, FileText, Star, User } from "lucide-react"; // Added FileText for tests
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
-import { safeFormatDate } from '@/lib/utils';
-import { Progress } from "@/components/ui/progress";
+import { safeFormatDate } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, Check, FileText, Star, User } from "lucide-react";
 
-
+import React, { useState, useMemo } from "react";
+// Added FileText for tests
 // Re-using types from ParentChapterDetailModal for consistency
 type LessonPlan = Tables<'lesson_plans'>;
 type Student = Tables<'students'>;

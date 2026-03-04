@@ -1,18 +1,20 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, Book, BookOpen, CheckCircle, ClipboardCheck, Clock, DollarSign, Download, FileText, Paintbrush, Printer, Star, User, Video, XCircle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subYears, isPast } from "date-fns"; // Added subYears, isPast
-import { toast } from "sonner";
-import { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Invoice, Payment } from "@/integrations/supabase/finance-types";
-import { safeFormatDate } from '@/lib/utils'; // Import safeFormatDate
+import { Tables } from "@/integrations/supabase/types";
+import { safeFormatDate } from "@/lib/utils";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { endOfMonth, format, isPast, startOfMonth, subYears } from "date-fns";
+import { AlertTriangle, BookOpen, ClipboardCheck, Clock, DollarSign, FileText, Paintbrush, Star, User, Video, XCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+// Import safeFormatDate
 
 type LessonPlan = Tables<'lesson_plans'>;
 type StudentHomeworkRecord = Tables<'student_homework_records'>;

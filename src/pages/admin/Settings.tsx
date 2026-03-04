@@ -1,3 +1,5 @@
+import { Settings } from "lucide-react";
+
 const Settings = () => (
   <div className="space-y-8 animate-in fade-in duration-700">
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

@@ -1,41 +1,14 @@
 "use client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Sidebar } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { AlertTriangle, BookOpen, Brain, ChevronLeft, ChevronRight, ClipboardCheck, Clock, DollarSign, FileText, Home, KeyRound, LayoutList, Menu, MessageSquare, Paintbrush, Settings, Star, User, UserCheck, UserPlus, Users, Video, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import {
-  Home,
-  UserPlus,
-  CheckSquare,
-  FileText,
-  BarChart3,
-  BookOpen,
-  ClipboardCheck,
-  User,
-  Brain,
-  Calendar,
-  DollarSign,
-  LayoutList,
-  Book,
-  Paintbrush,
-  AlertTriangle,
-  Users,
-  UserCheck,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-  KeyRound,
-  MessageSquare,
-  Video,
-  Clock,
-  Star,
-  Menu,
-  X,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   to: string;

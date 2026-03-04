@@ -1,20 +1,20 @@
-import { AlertCircle, ArrowLeft, DollarSign, FileText, TrendingUp, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/integrations/supabase/finance-types";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, DollarSign, FileText, TrendingUp, Wallet } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import FeeManagement from '@/components/finance/FeeManagement';
 import InvoiceManagement from '@/components/finance/InvoiceManagement';
 import PaymentTracking from '@/components/finance/PaymentTracking';
 import ExpenseManagement from '@/components/finance/ExpenseManagement';
 import FinanceReports from '@/components/finance/FinanceReports';
-import { formatCurrency } from '@/integrations/supabase/finance-types';
-import { cn } from "@/lib/utils";
-
 const AdminFinance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();

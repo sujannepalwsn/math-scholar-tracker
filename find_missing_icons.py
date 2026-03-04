@@ -7,7 +7,7 @@ icons = [
     'Trash2', 'Edit', 'Bot', 'SquarePen', 'ChevronDown', 'Star', 'LayoutList',
     'Video', 'MessageSquare', 'Bell', 'Shield', 'KeyRound', 'LogOut', 'Settings',
     'CalendarDays', 'Menu', 'X', 'ChevronLeft', 'ChevronRight', 'AlertTriangle',
-    'Check', 'ClipboardCheck', 'User', 'UserPlus', 'UserCheck', 'Calendar'
+    'Check', 'ClipboardCheck', 'User', 'UserPlus', 'UserCheck', 'Calendar', 'Loader2'
 ]
 
 def check_files():
@@ -20,7 +20,7 @@ def check_files():
                     content = f.read()
                     for icon in icons:
                         if re.search(r'\b' + icon + r'\b', content):
-                            # Check if it's imported from lucide-react (handling multiline)
+                            # Check if it's imported from lucide-react
                             if not re.search(r'import\s*\{[^}]*\b' + icon + r'\b[^}]*\}\s*from\s*["\']lucide-react["\']', content, re.MULTILINE | re.DOTALL):
                                 # Check if it's defined in the file
                                 if f'const {icon} =' not in content and f'function {icon}' not in content:

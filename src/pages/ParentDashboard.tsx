@@ -1,18 +1,21 @@
-import { AlertTriangle, Book, BookOpen, Calendar as CalendarIcon, CheckCircle, ClipboardCheck, Clock, DollarSign, FileText, LogOut, MessageSquare, Paintbrush, Radio, Star, User, Video, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useState, useMemo, useEffect } from 'react';
-import { useQuery, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isPast, isToday, isFuture } from 'date-fns';
-import { Tables } from '@/integrations/supabase/types';
-import { safeFormatDate, cn } from '@/lib/utils'; // Import safeFormatDate
+import { Toggle } from "@/components/ui/toggle";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+import { cn, safeFormatDate } from "@/lib/utils";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { addMonths, eachDayOfInterval, endOfMonth, format, isFuture, isPast, isToday, startOfMonth, subMonths } from "date-fns";
+import { AlertTriangle, BookOpenIcon, ClipboardCheck, Clock, DollarSign, FileText, LogOut, MessageSquare, Paintbrush, Radio, Star, User, Video, XCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+// Import safeFormatDate
 import ParentChapterPerformanceTable from '@/components/parent/ParentChapterPerformanceTable'; // NEW
 import ParentChapterDetailModal from '@/components/parent/ParentChapterDetailModal'; // NEW
 

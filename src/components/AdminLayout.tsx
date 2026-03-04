@@ -1,10 +1,12 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, DollarSign, Settings, LogOut, User, Shield, KeyRound, Menu } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import Sidebar from "./Sidebar";
+import { Sidebar } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { DollarSign, Home, KeyRound, LogOut, Menu, Settings, Shield, User } from "lucide-react";
 import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+
+import Sidebar from "./Sidebar";
 
 const navItems: Array<{
   to: string;
