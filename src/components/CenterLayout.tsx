@@ -130,7 +130,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
       />
 
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-md border-b z-20 flex items-center justify-between px-4">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background border-b z-20 flex items-center justify-between px-4">
         <div className="flex-1">
           <CenterLogo size="sm" showName={true} />
         </div>
@@ -139,7 +139,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
             variant="ghost"
             size="icon"
             onClick={handleLogout}
-            className="md:hidden hover:bg-muted"
+            className="md:hidden"
           >
             <LogOut className="h-5 w-5" />
           </Button>
@@ -148,10 +148,10 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-300",
+        "flex-1 overflow-y-auto bg-background transition-all duration-200",
         "md:h-screen",
-        "pt-20 md:pt-0",
-        "px-4 pb-20 md:p-8",
+        "pt-16 md:pt-0",
+        "px-4 pb-20 md:p-6",
         sidebarCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
         {children}

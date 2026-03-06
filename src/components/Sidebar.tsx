@@ -214,14 +214,14 @@ export default function Sidebar({
       <div
         className={cn(
           "fixed top-0 left-0 h-screen z-20 hidden md:flex flex-col border-r print:hidden",
-          "bg-white/40 backdrop-blur-xl text-card-foreground shadow-soft",
-          mounted ? "transition-all duration-300" : "",
+          "bg-card text-card-foreground",
+          mounted ? "transition-all duration-200" : "",
           isCollapsed ? "w-20" : "w-64"
         )}
       >
-        <div className="flex items-center justify-between h-20 px-4">
-          {!isCollapsed && <div className="flex-1 animate-in fade-in slide-in-from-left-4">{headerContent}</div>}
-          <Button variant="ghost" size="icon" onClick={handleCollapseToggle} className="h-8 w-8 hover:bg-muted">
+        <div className="flex items-center justify-between h-16 px-4 border-b">
+          {!isCollapsed && <div className="flex-1">{headerContent}</div>}
+          <Button variant="ghost" size="icon" onClick={handleCollapseToggle} className="h-8 w-8">
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
@@ -240,14 +240,14 @@ export default function Sidebar({
     <div
       className={cn(
         "fixed inset-0 z-40 md:hidden transition-opacity duration-200",
-        isMobileOpen ? "bg-black/50 backdrop-blur-sm" : "pointer-events-none opacity-0"
+        isMobileOpen ? "bg-black/50" : "pointer-events-none opacity-0"
       )}
       onClick={handleMobileClose}
     >
       {isMobileOpen && <style>{`body { overflow: hidden; }`}</style>}
       <div
         className={cn(
-          "fixed top-0 left-0 h-screen w-72 bg-white/90 backdrop-blur-2xl text-card-foreground shadow-lg flex flex-col transition-transform duration-300 ease-out z-50",
+          "fixed top-0 left-0 h-screen w-72 bg-card text-card-foreground shadow-lg flex flex-col transition-transform duration-300 ease-out z-50",
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
         onClick={(e) => e.stopPropagation()}

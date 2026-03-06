@@ -104,7 +104,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       />
 
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-16 bg-background/80 backdrop-blur-md border-b z-20 flex items-center justify-between px-4">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background border-b z-20 flex items-center justify-between px-4">
         <div className="flex-1">
           <CenterLogo size="sm" showName={true} />
         </div>
@@ -113,7 +113,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             variant="ghost"
             size="icon"
             onClick={handleLogout}
-            className="md:hidden hover:bg-muted"
+            className="md:hidden"
           >
             <LogOut className="h-5 w-5" />
           </Button>
@@ -121,7 +121,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             variant="ghost"
             size="icon"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden hover:bg-muted"
+            className="md:hidden"
           >
             <Menu className="h-5 w-5" />
           </Button>

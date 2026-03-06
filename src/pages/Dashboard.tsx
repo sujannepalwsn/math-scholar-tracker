@@ -225,18 +225,17 @@ export default function Dashboard() {
   const StatCard = ({ title, value, icon: Icon, description, colorClass, path }: any) => (
     <Card
       onClick={() => handleCardClick(path)}
-      className="group relative border-none shadow-strong overflow-hidden transition-all duration-500 cursor-pointer hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] rounded-[2rem] bg-white/40 backdrop-blur-md border border-white/20"
+      className="cursor-pointer hover:shadow-md transition-shadow"
     >
-      <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary/5 via-transparent to-transparent")} />
-      <CardContent className="p-6 relative z-10">
+      <CardContent className="p-6">
         <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{title}</p>
-            <h3 className="text-3xl font-black tracking-tighter group-hover:text-primary transition-colors duration-300">{value}</h3>
-            {description && <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-70">{description}</p>}
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <h3 className="text-2xl font-bold">{value}</h3>
+            {description && <p className="text-xs text-muted-foreground">{description}</p>}
           </div>
-          <div className={cn("p-3 rounded-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-soft", colorClass)}>
-            <Icon className="h-6 w-6 text-primary" />
+          <div className={cn("p-2.5 rounded-lg", colorClass)}>
+            <Icon className="h-5 w-5" />
           </div>
         </div>
       </CardContent>
@@ -244,175 +243,171 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-1000">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-primary to-violet-600 uppercase">
-            Command Center
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Dashboard
           </h1>
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <p className="text-muted-foreground text-sm font-bold uppercase tracking-[0.2em] opacity-70">Institutional Performance Oversight</p>
-          </div>
+          <p className="text-muted-foreground">
+            Overview of your institution's performance
+          </p>
         </div>
-        <div className="bg-white/40 backdrop-blur-md px-6 py-3 rounded-[2rem] border border-white/40 shadow-soft flex items-center gap-4">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <CalendarIcon className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Fiscal/Temporal Marker</span>
-            <span className="font-black text-slate-700 text-sm">{format(new Date(), "EEEE, MMM do, yyyy")}</span>
-          </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-lg">
+          <CalendarIcon className="h-4 w-4" />
+          <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           {[...Array(8)].map((_, i) => (
-            <Card key={i} className="border-none shadow-soft p-4 md:p-6 rounded-2xl">
+            <Card key={i} className="p-6">
               <div className="flex justify-between items-start">
                 <div className="space-y-2">
-                  <Skeleton className="h-3 w-16 md:h-4 md:w-24 rounded-full" />
-                  <Skeleton className="h-6 w-12 md:h-8 md:w-16 rounded-lg" />
-                  <Skeleton className="h-2 w-20 md:h-3 md:w-32 rounded-full" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-3 w-32" />
                 </div>
-                <Skeleton className="h-8 w-8 md:h-12 md:w-12 rounded-lg md:rounded-2xl" />
+                <Skeleton className="h-10 w-10 rounded-lg" />
               </div>
             </Card>
           ))}
         </div>
       ) : (
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Students Attendance"
+          title="Student Attendance"
           value={`${totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0}%`}
           icon={Users}
-          colorClass="bg-blue-500/10"
-          description={`Present: ${presentCount} / Total: ${totalStudents}`}
+          colorClass="bg-blue-100 text-blue-600"
+          description={`${presentCount} of ${totalStudents} present`}
           path="/attendance-summary"
         />
         <StatCard
-          title="Teachers Attendance"
+          title="Teacher Attendance"
           value={`${teacherAttendanceRate}%`}
           icon={Clock}
-          colorClass="bg-green-500/10"
-          description={`Present: ${teacherPresentCount} / Total: ${teachers.length}`}
+          colorClass="bg-green-100 text-green-600"
+          description={`${teacherPresentCount} of ${teachers.length} present`}
           path="/teacher-attendance"
         />
         <StatCard
-          title="Homework Completion"
+          title="Homework"
           value={`${homeworkRate}%`}
           icon={Book}
-          colorClass="bg-orange-500/10"
-          description="Global completion rate"
+          colorClass="bg-orange-100 text-orange-600"
+          description="Completion rate"
           path="/homework"
         />
         <StatCard
-          title="Evaluation Rate"
+          title="Evaluations"
           value={`${evaluationRate}%`}
           icon={CheckCircle2}
-          colorClass="bg-yellow-500/10"
+          colorClass="bg-yellow-100 text-yellow-600"
           description="Syllabus coverage"
           path="/lesson-tracking"
         />
         <StatCard
-          title="Test Performance"
+          title="Test Scores"
           value={`${avgTestScore}%`}
           icon={TrendingUp}
-          colorClass="bg-purple-500/10"
-          description="Average student score"
+          colorClass="bg-purple-100 text-purple-600"
+          description="Average score"
           path="/tests"
         />
         <StatCard
           title="Activities"
           value={allActivities.length}
           icon={BookOpen}
-          colorClass="bg-pink-500/10"
-          description="Total activities conducted"
+          colorClass="bg-pink-100 text-pink-600"
+          description="Total conducted"
           path="/activities"
         />
         <StatCard
-          title="Discipline Issues"
+          title="Discipline"
           value={recentDiscipline.length}
           icon={AlertTriangle}
-          colorClass="bg-red-500/10"
-          description="Open discipline cases"
+          colorClass="bg-red-100 text-red-600"
+          description="Open cases"
           path="/discipline"
         />
         <StatCard
-          title="Upcoming Lessons"
+          title="Lessons"
           value={upcomingLessons.length}
           icon={FileText}
-          colorClass="bg-indigo-500/10"
-          description="Planned for this week"
+          colorClass="bg-indigo-100 text-indigo-600"
+          description="Upcoming this week"
           path="/lesson-plans"
         />
       </div>
       )}
 
       <Select value={gradeFilter} onValueChange={setGradeFilter}>
-        <SelectTrigger className="w-[140px]"><SelectValue placeholder="All Grades" /></SelectTrigger>
+        <SelectTrigger className="w-[160px]"><SelectValue placeholder="All Grades" /></SelectTrigger>
         <SelectContent><SelectItem value="all">All Grades</SelectItem>{grades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
       </Select>
 
-      <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
-        <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-white/40 backdrop-blur-md border border-white/20 transition-all hover:shadow-xl group" onClick={() => handleCardClick("/attendance-summary")}>
-          <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
-            <CardTitle className="text-lg font-bold flex items-center justify-between">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleCardClick("/attendance-summary")}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-red-500/10">
-                  <Users className="h-5 w-5 text-red-600" />
+                <div className="p-1.5 rounded-md bg-red-100">
+                  <Users className="h-4 w-4 text-red-600" />
                 </div>
                 Absent Today
               </div>
-              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest">{absentToday.length} students</Badge>
+              <Badge variant="secondary">{absentToday.length} students</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 max-h-[350px] overflow-y-auto">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="text-[10px] uppercase font-bold tracking-widest py-2">Name</TableHead>
-                  <TableHead className="text-[10px] uppercase font-bold tracking-widest py-2">Grade</TableHead>
-                  <TableHead className="text-right text-[10px] uppercase font-bold tracking-widest py-2">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {absentToday.filter(s => gradeFilter === "all" || s.grade === gradeFilter).length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-12 text-muted-foreground italic text-sm">Everyone is present!</TableCell></TableRow>
-                ) : (
-                  absentToday.filter(s => gradeFilter === "all" || s.grade === gradeFilter).map((s) => (
-                    <TableRow key={s.id} className="group/row hover:bg-primary/5 transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedStudent(s); }}>
-                      <TableCell className="font-bold text-sm py-3">{s.name}</TableCell>
-                      <TableCell><Badge variant="secondary" className="text-[10px]">{s.grade}</Badge></TableCell>
-                      <TableCell className="text-right text-[10px] font-bold text-primary group-hover/row:underline">View Profile</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <CardContent className="pt-0">
+            <div className="max-h-[280px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs font-medium">Name</TableHead>
+                    <TableHead className="text-xs font-medium">Grade</TableHead>
+                    <TableHead className="text-right text-xs font-medium">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {absentToday.filter(s => gradeFilter === "all" || s.grade === gradeFilter).length === 0 ? (
+                    <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground text-sm">Everyone is present!</TableCell></TableRow>
+                  ) : (
+                    absentToday.filter(s => gradeFilter === "all" || s.grade === gradeFilter).map((s) => (
+                      <TableRow key={s.id} className="hover:bg-muted/50 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedStudent(s); }}>
+                        <TableCell className="font-medium text-sm">{s.name}</TableCell>
+                        <TableCell><Badge variant="secondary" className="text-xs">{s.grade}</Badge></TableCell>
+                        <TableCell className="text-right text-xs text-primary hover:underline">View</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Pending Homework */}
-        <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-white/40 backdrop-blur-md border border-white/20 transition-all hover:shadow-xl" onClick={() => handleCardClick("/homework")}>
-          <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
-            <CardTitle className="text-lg font-bold flex items-center justify-between">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleCardClick("/homework")}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-orange-500/10">
-                  <Book className="h-5 w-5 text-orange-600" />
+                <div className="p-1.5 rounded-md bg-orange-100">
+                  <Book className="h-4 w-4 text-orange-600" />
                 </div>
                 Pending Homework
               </div>
-              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-orange-600 border-orange-600/20">{homeworkDefaulters.length} pending</Badge>
+              <Badge variant="secondary">{homeworkDefaulters.length} pending</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 max-h-[350px] overflow-y-auto">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="text-[10px] uppercase font-bold tracking-widest py-2">Student</TableHead>
-                  <TableHead className="text-[10px] uppercase font-bold tracking-widest py-2">Task</TableHead>
+          <CardContent className="pt-0">
+            <div className="max-h-[280px] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs font-medium">Student</TableHead>
+                    <TableHead className="text-xs font-medium py-2">Task</TableHead>
                   <TableHead className="text-right text-[10px] uppercase font-bold tracking-widest py-2">Due</TableHead>
                 </TableRow>
               </TableHeader>

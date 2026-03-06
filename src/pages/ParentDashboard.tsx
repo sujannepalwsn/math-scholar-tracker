@@ -57,23 +57,23 @@ const MiniCalendar = ({ attendance, lessonRecords, tests, selectedMonth, setSele
     return { dayLessons, dayTests };
   };
 
-  const colors = { present: 'bg-emerald-500', absent: 'bg-rose-500', none: 'bg-slate-100' };
+  const colors = { present: 'bg-green-500', absent: 'bg-red-500', none: 'bg-muted' };
 
   return (
-    <Card className="w-full border-none shadow-strong rounded-[2rem] bg-white/80 backdrop-blur-md overflow-hidden animate-in zoom-in-95 duration-500">
-      <CardHeader className="p-6 border-b border-slate-100">
+    <Card>
+      <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <Button variant="ghost" size="icon" onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))} className="rounded-xl h-8 w-8">‹</Button>
-          <span className="font-black text-xs uppercase tracking-[0.2em] text-slate-800">{format(selectedMonth, 'MMMM yyyy')}</span>
-          <Button variant="ghost" size="icon" onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))} className="rounded-xl h-8 w-8">›</Button>
+          <Button variant="ghost" size="icon" onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))} className="h-8 w-8">{"<"}</Button>
+          <span className="font-semibold text-sm">{format(selectedMonth, 'MMMM yyyy')}</span>
+          <Button variant="ghost" size="icon" onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))} className="h-8 w-8">{">"}</Button>
         </div>
       </CardHeader>
-      <CardContent className="p-6">
-        <div className="grid grid-cols-7 gap-2 mb-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+      <CardContent className="pt-2">
+        <div className="grid grid-cols-7 gap-1 mb-2 text-center text-xs font-medium text-muted-foreground">
           {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d}>{d}</div>)}
         </div>
 
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1">
           {daysInMonth.map(day => {
             const dateStr = safeFormatDate(day, 'yyyy-MM-dd');
             const status = getAttendanceStatus(dateStr);
@@ -83,32 +83,32 @@ const MiniCalendar = ({ attendance, lessonRecords, tests, selectedMonth, setSele
               <div key={dateStr} className="relative group">
                 <div
                   className={cn(
-                    "aspect-square rounded-xl flex items-center justify-center text-[10px] font-black transition-all duration-300",
+                    "aspect-square rounded-md flex items-center justify-center text-xs font-medium transition-colors",
                     colors[status],
-                    status !== 'none' ? 'text-white shadow-lg' : 'text-slate-400 hover:bg-slate-200'
+                    status !== 'none' ? 'text-white' : 'text-muted-foreground hover:bg-muted/80'
                   )}
                 >
                   {day.getDate()}
                 </div>
 
                 {(tooltipData.dayLessons.length > 0 || tooltipData.dayTests.length > 0) && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 p-4 bg-white/95 backdrop-blur-xl border border-white/20 rounded-2xl shadow-strong opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 pointer-events-none scale-95 group-hover:scale-100 origin-bottom">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-popover border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
                     {tooltipData.dayLessons.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-primary mb-2 border-b border-primary/10 pb-1">Modules Synthesis</p>
+                      <div className="mb-2">
+                        <p className="text-xs font-semibold text-primary mb-1">Lessons Completed</p>
                         {tooltipData.dayLessons.map((lr: any) => (
-                          <p key={lr.id} className="text-[10px] font-medium text-slate-600 mb-1">
-                            <span className="font-black text-slate-800">{lr.lesson_plans?.chapter}</span> • {lr.lesson_plans?.topic || 'General'}
+                          <p key={lr.id} className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">{lr.lesson_plans?.chapter}</span> - {lr.lesson_plans?.topic || 'General'}
                           </p>
                         ))}
                       </div>
                     )}
                     {tooltipData.dayTests.length > 0 && (
                       <div>
-                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-rose-500 mb-2 border-b border-rose-500/10 pb-1">Evaluation Matrix</p>
+                        <p className="text-xs font-semibold text-orange-600 mb-1">Test Results</p>
                         {tooltipData.dayTests.map(t => (
-                          <p key={t.id} className="text-[10px] font-black text-slate-700">
-                            {t.tests?.name}: <span className="text-emerald-600">{t.marks_obtained}/{t.tests?.total_marks}</span>
+                          <p key={t.id} className="text-xs text-muted-foreground">
+                            {t.tests?.name}: <span className="font-medium text-green-600">{t.marks_obtained}/{t.tests?.total_marks}</span>
                           </p>
                         ))}
                       </div>
@@ -325,20 +325,20 @@ const ParentDashboardContent = () => {
   }, [lessonRecords, dateRange]);
 
   const StatCard = ({ title, value, icon: Icon, description, bgColor, content, isAlert }: any) => (
-    <Card className={cn("group border-none shadow-soft overflow-hidden transition-all duration-500 hover:shadow-strong hover:-translate-y-1 bg-white/40 backdrop-blur-md rounded-3xl border border-white/20", isAlert && value > 0 && "bg-rose-50/80 border-rose-100")}>
-      <CardContent className="p-6">
+    <Card className={cn(isAlert && value > 0 && "border-red-200 bg-red-50")}>
+      <CardContent className="p-4">
         <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{title}</p>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
             {value !== undefined ? (
-              <h3 className={cn("text-2xl font-black tracking-tight", isAlert && value > 0 ? "text-rose-600" : "text-slate-800")}>{value}</h3>
+              <h3 className={cn("text-xl font-bold", isAlert && value > 0 ? "text-red-600" : "text-foreground")}>{value}</h3>
             ) : (
               <div className="mt-1">{content}</div>
             )}
-            {description && <p className="text-[10px] font-bold text-slate-400 italic opacity-60">{description}</p>}
+            {description && <p className="text-xs text-muted-foreground">{description}</p>}
           </div>
-          <div className={cn("p-3 rounded-2xl transition-all duration-500 group-hover:scale-110", bgColor)}>
-            <Icon className={cn("h-5 w-5 text-primary", isAlert && value > 0 && "text-rose-600")} />
+          <div className={cn("p-2 rounded-lg", bgColor)}>
+            <Icon className="h-4 w-4" />
           </div>
         </div>
       </CardContent>
@@ -346,85 +346,73 @@ const ParentDashboardContent = () => {
   );
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
-      {/* HUB HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="flex items-center gap-6">
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-violet-600 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000" />
-            <div className="relative h-20 w-20 rounded-[2rem] bg-white shadow-strong border border-white/40 flex items-center justify-center">
-              <LayoutDashboard className="h-10 w-10 text-primary" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-primary to-violet-600">
-              Learning Odyssey
-            </h1>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <p className="text-muted-foreground text-xs font-black uppercase tracking-[0.2em] opacity-60">Guardian Command Terminal</p>
-            </div>
-          </div>
+    <div className="space-y-6 pb-20">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Parent Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Monitor your child's academic progress
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-           <div className="bg-white/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
-              <Zap className="h-4 w-4 text-amber-500" />
-              <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{student?.name || "Initializing..."}</span>
-           </div>
-           <Button variant="outline" onClick={() => navigate('/login-parent')} className="rounded-2xl border-2 h-12 px-6 font-black uppercase text-xs tracking-widest hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all shadow-soft bg-white/40 backdrop-blur-md">
-              <LogOut className="h-4 w-4 mr-2" /> DISCONNECT
-           </Button>
+        <div className="flex items-center gap-3">
+          <div className="bg-muted/50 px-4 py-2 rounded-lg flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{student?.name || "Loading..."}</span>
+          </div>
         </div>
       </div>
 
-      {/* IDENTITY MATRIX */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <Card className="lg:col-span-3 border-none shadow-strong bg-white/40 backdrop-blur-xl rounded-[2.5rem] overflow-hidden border border-white/20">
-          <CardHeader className="p-8 pb-4 border-b border-slate-100/50">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-primary" /> Institutional Identity Matrix
+      {/* Student Info Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <Card className="lg:col-span-3">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-primary" /> Student Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-8">
+          <CardContent>
             {student ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Academic Year</p>
-                  <p className="font-black text-2xl text-slate-800 tracking-tighter">2024-25</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Academic Year</p>
+                  <p className="font-semibold">2024-25</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Grade Level</p>
-                  <Badge className="bg-primary/10 text-primary border-none rounded-lg px-3 py-1 font-black text-sm uppercase tracking-widest">Grade {student.grade}</Badge>
+                <div>
+                  <p className="text-xs text-muted-foreground">Grade</p>
+                  <Badge variant="secondary">{student.grade}</Badge>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Enrollment ID</p>
-                  <p className="font-bold text-sm text-slate-600 uppercase tracking-widest">{activeStudentId?.slice(0, 8)}</p>
+                <div>
+                  <p className="text-xs text-muted-foreground">Student ID</p>
+                  <p className="font-medium text-sm">{activeStudentId?.slice(0, 8)}</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Institution</p>
-                  <p className="font-black text-sm text-indigo-600 truncate">{student.school_name || "Academy Central"}</p>
+                <div>
+                  <p className="text-xs text-muted-foreground">School</p>
+                  <p className="font-medium text-sm truncate">{student.school_name || "Not specified"}</p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center py-8 opacity-40 italic font-medium">Synchronizing student data...</div>
+              <div className="flex items-center justify-center py-6 text-muted-foreground text-sm">Loading student data...</div>
             )}
           </CardContent>
         </Card>
 
         {hasMultipleChildren && (
-          <Card className="border-none shadow-strong bg-white/40 backdrop-blur-xl rounded-[2.5rem] overflow-hidden border border-white/20">
-            <CardHeader className="p-8 pb-4">
-              <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Child Selector</CardTitle>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">Select Child</CardTitle>
             </CardHeader>
-            <CardContent className="p-8 pt-0">
+            <CardContent>
               <Select value={selectedStudentId || ''} onValueChange={setSelectedStudentId}>
-                <SelectTrigger className="w-full h-14 bg-white/50 border-none focus:ring-primary/20 rounded-2xl shadow-soft font-black text-slate-700">
-                  <SelectValue placeholder="Select Profile" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select child" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-none rounded-2xl shadow-strong">
+                <SelectContent>
                   {linkedStudents.map((child) => (
-                    <SelectItem key={child.id} value={child.id} className="font-black text-xs py-3">{child.name}</SelectItem>
+                    <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -433,12 +421,12 @@ const ParentDashboardContent = () => {
         )}
       </div>
 
-      {/* QUICK STATS HUB */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <StatCard title="Communications" icon={Radio} bgColor="bg-blue-500/10" content={latestBroadcastMessage ? <p className="text-xs font-bold line-clamp-2">{latestBroadcastMessage.message_text}</p> : <p className="text-xs italic text-slate-400">No new alerts</p>} />
-        <StatCard title="Today's Load" value={todaysHomework.length} icon={Book} bgColor="bg-orange-500/10" description="active assignments" />
-        <StatCard title="Protocols Breached" value={overdueHomeworksOnly.length} icon={AlertTriangle} bgColor="bg-rose-500/10" description="past due date" isAlert />
-        <StatCard title="Net Liabilities" value={pendingFees > 0 ? `₹${pendingFees.toFixed(0)}` : '₹0'} icon={Wallet} bgColor="bg-purple-500/10" description="outstanding fees" />
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard title="Messages" icon={Radio} bgColor="bg-blue-100 text-blue-600" content={latestBroadcastMessage ? <p className="text-xs line-clamp-2">{latestBroadcastMessage.message_text}</p> : <p className="text-xs text-muted-foreground">No new messages</p>} />
+        <StatCard title="Today's Homework" value={todaysHomework.length} icon={Book} bgColor="bg-orange-100 text-orange-600" description="assignments" />
+        <StatCard title="Overdue" value={overdueHomeworksOnly.length} icon={AlertTriangle} bgColor="bg-red-100 text-red-600" description="past due" isAlert />
+        <StatCard title="Pending Fees" value={pendingFees > 0 ? `Rs.${pendingFees.toFixed(0)}` : 'Rs.0'} icon={Wallet} bgColor="bg-purple-100 text-purple-600" description="outstanding" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
