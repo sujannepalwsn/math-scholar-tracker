@@ -1,7 +1,8 @@
-import React from "react";
-import * as RechartsPrimitive from "recharts";
+import React from 'react';
+import { cn } from '@/lib/utils';
+import * as React from 'react';
+import * as RechartsPrimitive from 'recharts';
 
-import { cn } from "@/lib/utils"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
@@ -40,7 +41,7 @@ const ChartContainer = React.forwardRef<
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
 
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={ config  }>
       <div
         data-chart={chartId}
         ref={ref}
@@ -256,8 +257,7 @@ const ChartLegendContent = React.forwardRef<
             ) : (
               <div
                 className="h-2 w-2 shrink-0 rounded-[2px]"
-                style={{
-                  backgroundColor: item.color }}
+                style={{ backgroundColor: item.color  }
               />
             )}
             {itemConfig?.label}

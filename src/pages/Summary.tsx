@@ -1,16 +1,16 @@
-import React, { useState } from "react";
-import { Download, Users } from "lucide-react";
-import { cn } from "@/lib/utils"
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { endOfMonth, format, isWithinInterval, parseISO, startOfMonth } from "date-fns"
-import { cn, safeFormatDate } from "@/lib/utils" // Import safeFormatDate and cn
+import React from 'react';
+import { cn, safeFormatDate } from '@/lib/utils';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Download, Users } from 'lucide-react';
+import { endOfMonth, format, isWithinInterval, parseISO, startOfMonth } from 'date-fns';
 
 interface StudentSummary {
   id: string;

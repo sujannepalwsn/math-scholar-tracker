@@ -1,16 +1,17 @@
+import React from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { BookOpen } from 'lucide-react';
+import { Tables } from '@/integrations/supabase/types';
+import { safeFormatDate } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 "use client";
-import React, { useMemo, useState } from "react";
-import { BookOpen } from "lucide-react";
 
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tables } from "@/integrations/supabase/types"
-import { safeFormatDate } from "@/lib/utils"
-import { Progress } from "@/components/ui/progress"
 
 
 // Re-using types from ParentChapterDetailModal for consistency

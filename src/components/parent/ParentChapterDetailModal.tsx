@@ -1,13 +1,14 @@
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Book, BookOpen, Calendar, CheckCircle, Clock, ExternalLink, FileText, Info, Star, Target, User, XCircle } from 'lucide-react';
+import { cn, safeFormatDate } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+import React from 'react';
 "use client";
-import { Book, BookOpen, Calendar, CheckCircle, Clock, FileText, Info, Star, Target, User, XCircle } from "lucide-react";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { cn, safeFormatDate } from "@/lib/utils"
-import { supabase } from "@/integrations/supabase/client"
-import { Tables } from "@/integrations/supabase/types"
 
 type LessonPlan = Tables<'lesson_plans'>;
 type StudentChapter = Tables<'student_chapters'>;

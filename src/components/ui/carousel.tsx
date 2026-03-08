@@ -1,9 +1,10 @@
-import React from "react";
-import { ArrowRight } from "lucide-react";
-import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
+import React from 'react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import * as React from 'react';
+import useEmblaCarousel, { type UseEmblaCarouselType } from 'embla-carousel-react';
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 
 type CarouselApi = UseEmblaCarouselType[1];
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
@@ -103,15 +104,14 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
 
     return (
       <CarouselContext.Provider
-        value={{
-          carouselRef,
+        value={ carouselRef,
           api: api,
           opts,
           orientation: orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
           scrollPrev,
           scrollNext,
           canScrollPrev,
-          canScrollNext }}
+          canScrollNext  }
       >
         <div
           ref={ref}

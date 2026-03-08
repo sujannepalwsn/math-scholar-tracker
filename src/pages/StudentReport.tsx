@@ -1,22 +1,22 @@
-import React, { useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Book, BookOpen, CheckCircle, ClipboardCheck, Clock, Download, FileText, Paintbrush, Printer, Star, Users, XCircle } from "lucide-react";
-import { cn } from "@/lib/utils"
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { endOfMonth, format, isPast, startOfMonth, subYears } from "date-fns" // Added subYears, isPast
-import { Badge } from "@/components/ui/badge"
-import { toast } from "sonner"
-import { Tables } from "@/integrations/supabase/types"
-import { Invoice, Payment } from "@/integrations/supabase/finance-types"
-import { formatCurrency, safeFormatDate } from "@/lib/utils" // Import safeFormatDate, formatCurrency
+import React from 'react';
+import { cn, formatCurrency, safeFormatDate } from '@/lib/utils';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertTriangle, BarChart3, Book, BookOpen, CheckCircle, ClipboardCheck, Clock, DollarSign, Download, FileText, Paintbrush, Printer, Star, Users, XCircle } from 'lucide-react';
+import { endOfMonth, format, isPast, startOfMonth, subYears } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
+import { Invoice, Payment } from '@/integrations/supabase/finance-types';
 
 type LessonPlan = Tables<'lesson_plans'>;
 type StudentHomeworkRecord = Tables<'student_homework_records'>;

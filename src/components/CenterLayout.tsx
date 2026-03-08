@@ -1,14 +1,14 @@
-import React, { useState } from "react";
-import { AlertTriangle, BarChart3, Book, BookOpen, Brain, Calendar, CheckSquare, ClipboardCheck, Clock, FileText, Home, LogOut, MessageSquare, Paintbrush, Settings, TrendingUp, User, Users, Video } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom"
-import { cn } from "@/lib/utils"
-import { useAuth } from "@/contexts/AuthContext"
-import { Button } from "@/components/ui/button"
-import Sidebar from "./Sidebar";
-import BottomNav from "./BottomNav";
-import CenterLogo from "./CenterLogo";
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AlertTriangle, BarChart3, Book, BookOpen, Brain, Calendar, CalendarDays, CheckSquare, ClipboardCheck, Clock, DollarSign, FileText, Home, KeyRound, LayoutList, LogOut, MessageSquare, Paintbrush, Settings, Shield, TrendingUp, User, UserCheck, UserPlus, Users, Video } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import Sidebar from './Sidebar';
+import BottomNav from './BottomNav';
+import CenterLogo from './CenterLogo';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import React, { useState } from 'react';
 
 const navItems: Array<{
   to: string;

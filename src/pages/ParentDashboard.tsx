@@ -1,21 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle2, Clock, FileText, GraduationCap, Home, TrendingUp, Users, Wallet } from "lucide-react";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
-import { eachDayOfInterval, format, isFuture, isPast, isToday, startOfDay, subDays } from "date-fns"
-import { cn } from "@/lib/utils"
-import { KPICard } from "@/components/dashboard/KPICard"
-import { AlertList } from "@/components/dashboard/AlertList"
-import CenterLogo from "@/components/CenterLogo";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tables } from "@/integrations/supabase/types"
+import React from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle2, Clock, FileText, GraduationCap, Home, TrendingUp, Users, Wallet } from 'lucide-react';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { eachDayOfInterval, format, isFuture, isPast, isToday, startOfDay, subDays } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { KPICard } from '@/components/dashboard/KPICard';
+import { AlertList } from '@/components/dashboard/AlertList';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tables } from '@/integrations/supabase/types';
+import CenterLogo from '@/components/CenterLogo';
 import ParentChapterPerformanceTable from '@/components/parent/ParentChapterPerformanceTable';
 import ParentChapterDetailModal from '@/components/parent/ParentChapterDetailModal';
 

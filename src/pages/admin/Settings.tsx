@@ -1,6 +1,7 @@
-import { Bell, Settings2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import React from 'react';
+import { Bell, Cpu, Database, Globe, Settings2, Shield } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const Settings = () => (
   <div className="space-y-8 animate-in fade-in duration-1000">

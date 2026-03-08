@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "./AuthContext"
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
 
 interface CenterTheme {
   primary: string;
@@ -135,7 +135,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, logoUrl, loading, refreshTheme: fetchTheme }}>
+    <ThemeContext.Provider value={ theme, logoUrl, loading, refreshTheme: fetchTheme  }>
       {children}
     </ThemeContext.Provider>
   );

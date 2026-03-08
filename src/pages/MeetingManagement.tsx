@@ -1,23 +1,24 @@
-import React, { useState } from "react";
-import { CheckCircle2, Edit, Eye, FileText, Loader2, Plus, Trash2, Users, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { toast } from "sonner"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { Tables, TablesInsert } from "@/integrations/supabase/types"
-import MeetingForm from "@/components/meetings/MeetingForm";
-import MeetingAttendanceRecorder from "@/components/meetings/MeetingAttendanceRecorder";
-import MeetingConclusionForm from "@/components/meetings/MeetingConclusionForm";
-import MeetingConclusionViewer from "@/components/meetings/MeetingConclusionViewer";
-import MeetingAttendeesViewer from "@/components/meetings/MeetingAttendeesViewer";
+import React from 'react';
+import { CalendarDays, CheckCircle2, Edit, Eye, FileText, Loader2, Plus, Trash2, Users, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Tables, TablesInsert } from '@/integrations/supabase/types';
+import MeetingForm from '@/components/meetings/MeetingForm';
+import MeetingAttendanceRecorder from '@/components/meetings/MeetingAttendanceRecorder';
+import MeetingConclusionForm from '@/components/meetings/MeetingConclusionForm';
+import MeetingConclusionViewer from '@/components/meetings/MeetingConclusionViewer';
+import MeetingAttendeesViewer from '@/components/meetings/MeetingAttendeesViewer';
 "use client";
 
 

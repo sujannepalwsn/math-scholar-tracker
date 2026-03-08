@@ -1,14 +1,15 @@
-import React, { useState } from "react";
-import { Calendar, Camera, Info, Paintbrush, Star, Video } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { format } from "date-fns"
-import { Tables } from "@/integrations/supabase/types"
-import { cn } from "@/lib/utils"
+import React from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Camera, ExternalLink, Info, Paintbrush, Star, Video } from 'lucide-react';
+import { format } from 'date-fns';
+import { Tables } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 type Activity = Tables<'activities'>;
 

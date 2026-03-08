@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { User } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client"
-import { Tables } from "@/integrations/supabase/types"
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 // Auth context for managing user authentication state
 
 // Define linked student interface
@@ -105,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={ user, loading, login, logout  }>
       {children}
     </AuthContext.Provider>
   );

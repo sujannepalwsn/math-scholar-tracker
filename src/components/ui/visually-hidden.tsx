@@ -1,5 +1,5 @@
-import React from "react";
-import React, { Slot } from "@radix-ui/react-slot";
+import * as React from 'react';
+import React, { Slot } from '@radix-ui/react-slot';
 
 interface VisuallyHiddenProps extends React.HTMLAttributes<HTMLSpanElement> {
   asChild?: boolean;
@@ -11,8 +11,7 @@ const VisuallyHidden = React.forwardRef<HTMLSpanElement, VisuallyHiddenProps>(
     return (
       <Comp
         ref={ref}
-        style={{
-          position: "absolute",
+        style={{ position: "absolute",
           width: "1px",
           height: "1px",
           padding: "0",
@@ -20,7 +19,7 @@ const VisuallyHidden = React.forwardRef<HTMLSpanElement, VisuallyHiddenProps>(
           overflow: "hidden",
           clip: "rect(0, 0, 0, 0)",
           whiteSpace: "nowrap",
-          borderWidth: "0" }}
+          borderWidth: "0"  }
         {...props}
       />
     );

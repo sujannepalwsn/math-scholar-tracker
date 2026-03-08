@@ -1,22 +1,49 @@
-import React, { useMemo, useState } from "react";
-import { AlertTriangle, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Search, TrendingUp, Users, Wallet } from "lucide-react";
-import { cn } from "@/lib/utils"
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
-import { eachDayOfInterval, format, isFuture, isToday, startOfDay, subDays } from "date-fns"
-import { formatCurrency } from "@/lib/utils"
-import { KPICard } from "@/components/dashboard/KPICard"
-import { AlertList } from "@/components/dashboard/AlertList"
-import { ClassSchedule } from "@/components/dashboard/ClassSchedule"
-import CenterLogo from "@/components/CenterLogo";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import React from 'react';
+import { cn, formatCurrency } from '@/lib/utils';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Search, TrendingUp, Users, Wallet, import CenterLogo from "@/components/CenterLogo";
+  BookOpen } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { eachDayOfInterval, format, isFuture, isToday, startOfDay, subDays } from 'date-fns';
+import { KPICard } from '@/components/dashboard/KPICard';
+import { AlertList } from '@/components/dashboard/AlertList';
+import { ClassSchedule } from '@/components/dashboard/ClassSchedule';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  BookOpen,
+  CalendarIcon,
+  CheckCircle2,
+  Clock,
+  FileText,
+  TrendingUp,
+  Users,
+  AlertTriangle,
+  Book,
+  Bell,
+  Search,
+  ChevronDown,
+  Calendar,
+  Home,
+  Wallet
+} from "lucide-react";
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart
+} from "recharts";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -548,18 +575,18 @@ export default function Dashboard() {
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
-                      tick={{fontSize: 12, fontWeight: 600, fill: '#94a3b8'}}
+                      tick={ fontSize: 12, fontWeight: 600, fill: '#94a3b8' }
                       dy={10}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{fontSize: 12, fontWeight: 600, fill: '#94a3b8'}}
+                      tick={ fontSize: 12, fontWeight: 600, fill: '#94a3b8' }
                       domain={[0, 100]}
                       tickFormatter={(value) => `${value}%`}
                     />
                     <Tooltip
-                      contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                      contentStyle={ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }
                     />
                     <Area
                       type="monotone"

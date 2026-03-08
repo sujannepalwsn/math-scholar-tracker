@@ -1,20 +1,20 @@
-import React, { useState } from "react";
-import { Calendar, Edit, GraduationCap, Plus, Trash2, Users } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar } from "@/components/ui/calendar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { toast } from "sonner"
-import { format, isSameDay, parseISO } from "date-fns"
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { CalendarDays, Edit, GraduationCap, PartyPopper, Plus, Trash2, Users } from 'lucide-react';
+import { format, isSameDay, parseISO } from 'date-fns';
 
 const EVENT_TYPES = [
   { value: "holiday", label: "Holiday", icon: PartyPopper, color: "bg-red-100 text-red-800" },
@@ -287,8 +287,7 @@ export default function CalendarEvents() {
               selected={selectedDate}
               onSelect={setSelectedDate}
               className="rounded-3xl border border-white/40 bg-white/30 backdrop-blur-sm p-4 shadow-soft mx-auto"
-              modifiers={{
-                hasEvent: eventDates }}
+              modifiers={ hasEvent: eventDates  }
               modifiersStyles={{
                 hasEvent: {
                   backgroundColor: 'hsl(var(--primary) / 0.2)',

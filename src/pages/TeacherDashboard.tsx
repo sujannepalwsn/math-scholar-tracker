@@ -1,20 +1,34 @@
-import React, { useMemo, useState } from "react";
-import { AlertTriangle, Bell, Book, BookOpen, Calendar, CalendarIcon, Clock, Home, MessageSquare, TrendingUp, Users } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
-import { eachDayOfInterval, format, isFuture, isToday, startOfDay, subDays } from "date-fns"
-import { cn } from "@/lib/utils"
-import { KPICard } from "@/components/dashboard/KPICard"
-import { AlertList } from "@/components/dashboard/AlertList"
-import { ClassSchedule } from "@/components/dashboard/ClassSchedule"
-import CenterLogo from "@/components/CenterLogo";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import React from 'react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Bell, Book, BookOpen, Calendar, CalendarIcon, Clock, Home, MessageSquare, TrendingUp, Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { eachDayOfInterval, format, isFuture, isToday, startOfDay, subDays } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { KPICard } from '@/components/dashboard/KPICard';
+import { AlertList } from '@/components/dashboard/AlertList';
+import { ClassSchedule } from '@/components/dashboard/ClassSchedule';
+import CenterLogo from '@/components/CenterLogo';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  BookOpen,
+  CalendarIcon,
+  Clock,
+  TrendingUp,
+  Users,
+  AlertTriangle,
+  Book,
+  Bell,
+  Calendar,
+  Home,
+  MessageSquare
+} from "lucide-react";
 
 export default function TeacherDashboard() {
   const { user } = useAuth();

@@ -1,15 +1,16 @@
+import React from 'react';
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
+import { CheckCircle2, Filter, XCircle } from 'lucide-react';
+import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 "use client";
-import React, { useEffect, useState } from "react";
-import { CheckCircle2, XCircle } from "lucide-react";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { toast } from "sonner"
-import { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types"
 
 interface MeetingAttendanceRecorderProps {
   meetingId: string;

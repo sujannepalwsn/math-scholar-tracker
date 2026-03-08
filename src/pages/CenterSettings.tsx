@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { Settings, User } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
+import React, { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
+import { Building, Image, MapPin, Palette, Phone, Save, Settings, User } from 'lucide-react';
 
 interface CenterTheme {
   primary: string;
@@ -435,20 +435,20 @@ export default function CenterSettings() {
               <div className="flex rounded-lg overflow-hidden h-32 border">
                 <div
                   className="w-16 p-2"
-                  style={{ backgroundColor: theme.sidebar }}
+                  style={{  backgroundColor: theme.sidebar  }}
                 >
-                  <div className="w-full h-3 rounded mb-2" style={{ backgroundColor: theme.primary }} />
+                  <div className="w-full h-3 rounded mb-2" style={{  backgroundColor: theme.primary  }} />
                   <div className="w-full h-2 rounded mb-1 bg-white/20" />
                   <div className="w-full h-2 rounded mb-1 bg-white/20" />
                   <div className="w-full h-2 rounded bg-white/20" />
                 </div>
                 <div
                   className="flex-1 p-3"
-                  style={{ backgroundColor: theme.background }}
+                  style={{  backgroundColor: theme.background  }}
                 >
                   <div
                     className="w-20 h-6 rounded mb-2"
-                    style={{ backgroundColor: theme.primary }}
+                    style={{  backgroundColor: theme.primary  }}
                   />
                   <div className="w-full h-2 rounded mb-1 bg-gray-200" />
                   <div className="w-3/4 h-2 rounded bg-gray-200" />

@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import { Calendar, TrendingUp } from "lucide-react";
-import { useQuery } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
+import React from 'react';
+import { Calendar, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { eachDayOfInterval, endOfMonth, format, startOfMonth } from 'date-fns';
 
 interface AttendanceStats {
   studentId: string;
@@ -205,9 +206,8 @@ export default function AttendanceSummary() {
                   <div
                     key={dateStr}
                     className="aspect-square rounded-lg flex items-center justify-center text-sm font-medium"
-                    style={{
-                      backgroundColor: status === 'present' ? colors.present : status === 'absent' ? colors.absent : colors.none,
-                      color: status !== 'none' ? 'white' : 'inherit' }}
+                    style={{ backgroundColor: status === 'present' ? colors.present : status === 'absent' ? colors.absent : colors.none,
+                      color: status !== 'none' ? 'white' : 'inherit'  }
                   >
                     {format(date, 'd')}
                   </div>

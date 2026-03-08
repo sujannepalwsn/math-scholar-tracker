@@ -1,20 +1,20 @@
-import React, { useState } from "react";
-import { AlertTriangle, Download, GraduationCap, Search, Trash2, User, Users, X } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { useAuth } from "@/contexts/AuthContext"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "sonner"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import LinkChildToParent from "@/components/center/LinkChildToParent";
-import { cn } from "@/lib/utils"
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import { AlertTriangle, Download, GraduationCap, Pencil, Phone, Save, School, Search, Trash2, Upload, User as UserIcon, UserPlus, Users, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import React, { useState } from 'react';
+import LinkChildToParent from '@/components/center/LinkChildToParent';
 
 interface Student {
   id: string;
@@ -506,7 +506,7 @@ export default function RegisterStudent() {
             </div>
 
             {/* Multiline paste */}
-            <div id="multiline-area" style={{ display: "none" }} className="mt-8 space-y-4 animate-in slide-in-from-top-2 duration-300">
+            <div id="multiline-area" style={{ display: "none"  } className="mt-8 space-y-4 animate-in slide-in-from-top-2 duration-300">
               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syntax Format: name, grade, school_name, parent_name, contact_number</Label>
               <Textarea
                 value={multilineText}

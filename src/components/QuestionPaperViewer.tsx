@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { AlertCircle, Download, Eye, FileText, Loader2 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import React from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { AlertCircle, Download, Eye, FileText, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+
 "use client";
 
-import { supabase } from "@/integrations/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { format } from "date-fns"
 
 interface QuestionPaperViewerProps {
   testId: string;
