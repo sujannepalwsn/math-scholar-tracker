@@ -8,7 +8,9 @@ import { eachDayOfInterval, endOfMonth, format, isFuture, isPast, isToday, start
 import { cn, formatCurrency, safeFormatDate } from "@/lib/utils"
 import { KPICard } from "@/components/dashboard/KPICard"
 import { AlertList } from "@/components/dashboard/AlertList"
+import { ClassSchedule } from "@/components/dashboard/ClassSchedule"
 import CenterLogo from "@/components/CenterLogo";
+import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -220,6 +222,23 @@ const ParentDashboardContent = () => {
     },
     enabled: !!user?.center_id });
 
+  // Fetch today's classes for the student's grade
+  const { data: periodSchedules = [] } = useQuery({
+    queryKey: ["period-schedules-parent", student?.grade, user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id || !student?.grade) return [];
+      const dayOfWeek = new Date().getDay();
+      const { data, error } = await supabase
+        .from("period_schedules")
+        .select("*, teachers(name), class_periods(*)")
+        .eq("center_id", user.center_id)
+        .eq("grade", student.grade)
+        .eq("day_of_week", dayOfWeek);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.center_id && !!student?.grade });
+
   const attendanceTrend = useMemo(() => {
     const range = eachDayOfInterval({ start: new Date(dateRange.from), end: new Date(dateRange.to) });
     return range.map(day => {
@@ -301,6 +320,28 @@ const ParentDashboardContent = () => {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  const todayClasses = useMemo(() => {
+    return periodSchedules.map((ps: any) => ({
+      id: ps.id,
+      time: ps.class_periods ? `${ps.class_periods.start_time?.slice(0, 5)} – ${ps.class_periods.end_time?.slice(0, 5)}` : "N/A",
+      grade: ps.grade,
+      teacher: ps.teachers?.name || "Unassigned",
+      subject: ps.subject,
+      status: (() => {
+        if (!ps.class_periods) return "upcoming" as const;
+        const now = new Date();
+        const [sh, sm] = (ps.class_periods.start_time || "").split(":").map(Number);
+        const [eh, em] = (ps.class_periods.end_time || "").split(":").map(Number);
+        const startMin = sh * 60 + sm;
+        const endMin = eh * 60 + em;
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        if (nowMin >= endMin) return "completed" as const;
+        if (nowMin >= startMin) return "running" as const;
+        return "upcoming" as const;
+      })(),
+    })).sort((a: any, b: any) => a.time.localeCompare(b.time));
+  }, [periodSchedules]);
 
   const parentAlerts = [
     ...homeworkStatus.filter(hs => hs.homework?.due_date && isPast(new Date(hs.homework.due_date)) && !['completed', 'checked'].includes(hs.status)).map(hs => ({
@@ -430,137 +471,228 @@ const ParentDashboardContent = () => {
         </div>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <KPICard title="Attendance Rate" value={`${attendanceRate}%`} description="Presence Index" icon={Clock} color="green" trendData={attendanceTrend} onClick={() => scrollToSection("attendance-section")} />
-        <KPICard title="Avg Performance" value={`${avgPerformance}%`} description="Evaluation Synthesis" icon={TrendingUp} color="purple" trendData={performanceTrend} onClick={() => scrollToSection("tests-section")} />
-        <KPICard title="Homework Pending" value={homeworkPendingCount} description="Active Assignments" icon={Book} color="orange" onClick={() => scrollToSection("overdue-homework-section")} />
-        <KPICard title="Fees Payable" value={`₹${outstandingDues}`} description="Outstanding Liability" icon={Wallet} color="rose" onClick={() => scrollToSection("finance-section")} />
-      </div>
-
-      {/* Subject Wise Performance Cards */}
-      {subjectPerformance.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">Subject Performance</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* KPI Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <KPICard title="Attendance Rate" value={`${attendanceRate}%`} description="Presence Index" icon={Clock} color="green" trendData={attendanceTrend} onClick={() => scrollToSection("attendance-section")} />
+            <KPICard title="Avg Performance" value={`${avgPerformance}%`} description="Evaluation Synthesis" icon={TrendingUp} color="purple" trendData={performanceTrend} onClick={() => scrollToSection("tests-section")} />
+            <KPICard title="Homework Pending" value={homeworkPendingCount} description="Active Assignments" icon={Book} color="orange" onClick={() => scrollToSection("overdue-homework-section")} />
+            <KPICard title="Fees Payable" value={`₹${outstandingDues}`} description="Outstanding Liability" icon={Wallet} color="rose" onClick={() => scrollToSection("finance-section")} />
           </div>
-          <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
-            {subjectPerformance.map((sp) => (
-              <Card key={sp.name} className="border-none shadow-soft bg-white/60 backdrop-blur-sm overflow-hidden group hover:shadow-medium transition-all duration-300">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-[80px] md:max-w-none">{sp.name}</p>
-                      <p className="text-xl font-black group-hover:text-primary transition-colors">{sp.percentage}%</p>
-                    </div>
-                    <div className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
-                    )} />
-                  </div>
-                  <div className="mt-2 w-full h-1 bg-muted/30 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full transition-all duration-1000",
-                        sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
-                      )}
-                      style={{ width: `${sp.percentage}%` }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Middle Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border border-white/20 overflow-hidden">
-            <CardHeader className="bg-primary/5 border-b border-slate-100 p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Attendance Overview Chart */}
+          <Card className="border shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border-white/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-black flex items-center gap-3">
+                 <div className="p-2 rounded-xl bg-green-500/10"><TrendingUp className="h-5 w-5 text-green-600" /></div>
+                 Attendance Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={attendanceTrend}>
+                    <defs>
+                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip contentStyle={{ borderRadius: "16px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontWeight: "bold" }} />
+                    <Area type="monotone" dataKey="value" name="Presence" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Subject Wise Performance Cards */}
+          {subjectPerformance.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">Subject Performance</h3>
+              </div>
+              <div className="grid grid-cols-3 lg:grid-cols-4 gap-4">
+                {subjectPerformance.map((sp) => (
+                  <Card key={sp.name} className="border-none shadow-soft bg-white/60 backdrop-blur-sm overflow-hidden group hover:shadow-medium transition-all duration-300">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-[80px] md:max-w-none">{sp.name}</p>
+                          <p className="text-xl font-black group-hover:text-primary transition-colors">{sp.percentage}%</p>
+                        </div>
+                        <div className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
+                        )} />
+                      </div>
+                      <div className="mt-2 w-full h-1 bg-muted/30 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all duration-1000",
+                            sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
+                          )}
+                          style={{ width: `${sp.percentage}%` }}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Card className="border-none shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border border-white/20 overflow-hidden">
+              <CardHeader className="bg-primary/5 border-b border-slate-100 p-6">
                 <CardTitle className="text-lg font-black flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-primary/10"><BookOpen className="h-6 w-6 text-primary" /></div>
                   Academic Progress Matrix
                 </CardTitle>
-                <div className="flex items-center gap-2 bg-white/60 p-1 rounded-xl border border-white/40 shadow-soft">
-                   <Input type="date" value={dateRange.from} onChange={e => setDateRange({...dateRange, from: e.target.value})} className="h-8 w-32 border-none bg-transparent text-[10px] font-black uppercase" />
-                   <span className="text-[10px] font-black text-slate-300">TO</span>
-                   <Input type="date" value={dateRange.to} onChange={e => setDateRange({...dateRange, to: e.target.value})} className="h-8 w-32 border-none bg-transparent text-[10px] font-black uppercase" />
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="max-h-[500px] overflow-auto custom-scrollbar">
+                  <table className="w-full text-sm text-left min-w-[700px]">
+                    <thead className="bg-muted/50 border-b sticky top-0 z-10 shadow-sm">
+                      <tr>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
+                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {chapterPerformanceData.map((chapterGroup) => {
+                        const evaluation = chapterGroup.studentChapters[0];
+                        const testResult = chapterGroup.testResults[0];
+                        const homework = chapterGroup.homeworkRecords[0];
+
+                        const avgPct = chapterGroup.testResults.length > 0
+                          ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
+                          : null;
+
+                        return (
+                          <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
+                            <td className="px-6 py-4">
+                              <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
+                              <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
+                            </td>
+                            <td className="px-6 py-4">
+                              {homework ? (
+                                <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
+                                  {homework.status}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground italic text-xs">N/A</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 font-bold">
+                              {avgPct !== null ? (
+                                <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
+                                  {avgPct}%
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground italic text-xs">N/A</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
+                                onClick={() => setSelectedChapterDetail(chapterGroup)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="max-h-[400px] overflow-auto custom-scrollbar">
-                <table className="w-full text-sm text-left min-w-[700px]">
-                  <thead className="bg-muted/50 border-b sticky top-0 z-10 shadow-sm">
-                    <tr>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {chapterPerformanceData.map((chapterGroup) => {
-                      const evaluation = chapterGroup.studentChapters[0];
-                      const testResult = chapterGroup.testResults[0];
-                      const homework = chapterGroup.homeworkRecords[0];
+              </CardContent>
+            </Card>
 
-                      const avgPct = chapterGroup.testResults.length > 0
-                        ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
-                        : null;
+          {/* Activity & Discipline Previews */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border-white/20 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <Paintbrush className="h-5 w-5 text-primary" /> Activities
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="text-xs text-primary font-bold h-7" onClick={() => navigate("/parent-activities")}>
+                  VIEW ALL
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                {preschoolActivities.length === 0 ? (
+                  <p className="p-8 text-center text-xs italic text-muted-foreground">No recent activities recorded</p>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {preschoolActivities.slice(0, 5).map((pa: any) => (
+                      <div key={pa.id} className="p-4 hover:bg-white/40 transition-colors">
+                        <p className="text-sm font-bold text-slate-800">{pa.activities?.title}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
+                          {pa.activities?.activity_types?.name} • {safeFormatDate(pa.activities?.activity_date, "MMM d")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-                      return (
-                        <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
-                          <td className="px-6 py-4">
-                            <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
-                            <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
-                          </td>
-                          <td className="px-6 py-4">
-                            {homework ? (
-                              <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
-                                {homework.status}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground italic text-xs">N/A</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 font-bold">
-                            {avgPct !== null ? (
-                              <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
-                                {avgPct}%
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground italic text-xs">N/A</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
-                              onClick={() => setSelectedChapterDetail(chapterGroup)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        <AlertList alerts={parentAlerts} onViewAll={() => navigate("/parent-messages")} />
+            <Card className="border shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border-white/20 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-rose-600" /> Discipline
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="text-xs text-rose-600 font-bold h-7" onClick={() => navigate("/parent-discipline")}>
+                  VIEW ALL
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                {disciplineIssues.length === 0 ? (
+                  <p className="p-8 text-center text-xs italic text-muted-foreground">No discipline incidents logged</p>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {disciplineIssues.slice(0, 5).map((di: any) => (
+                      <div key={di.id} className="p-4 hover:bg-white/40 transition-colors">
+                        <p className="text-sm font-bold text-slate-800 line-clamp-1">{di.description}</p>
+                        <div className="flex justify-between items-center mt-1">
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">{safeFormatDate(di.issue_date, "MMM d")}</p>
+                          <Badge variant="outline" className={cn("text-[8px] font-black uppercase px-1.5 py-0", di.severity === 'high' ? 'text-rose-600 border-rose-100 bg-rose-50' : 'text-slate-400')}>{di.severity}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="lg:col-span-4 space-y-8">
+          <AlertList alerts={parentAlerts} onViewAll={() => navigate("/parent-messages")} />
+          <ClassSchedule
+            classes={todayClasses}
+            title="Learning Routine"
+            onViewRoutine={() => navigate("/parent-lesson-tracking")}
+          />
+        </div>
       </div>
 
       <div className="flex justify-center py-4">
