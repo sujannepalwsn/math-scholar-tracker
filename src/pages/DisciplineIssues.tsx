@@ -235,10 +235,10 @@ export default function DisciplineIssues() {
         </div>
         <div className="flex flex-wrap gap-3">
           <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="w-[140px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-[140px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+            <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
               <SelectItem value="all">All Grades</SelectItem>
               {uniqueGrades.map((g) => (
                 <SelectItem key={g} value={g}>{g}</SelectItem>
@@ -385,7 +385,7 @@ export default function DisciplineIssues() {
         </div>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -423,7 +423,7 @@ export default function DisciplineIssues() {
                     <TableRow key={issue.id} className="group border-muted/5 hover:bg-primary/5 transition-colors">
                       <TableCell className="pl-6 py-4">
                         <div className="space-y-1">
-                          <p className="font-bold text-slate-800 leading-none">{issue.students?.name}</p>
+                          <p className="font-bold text-foreground/90 leading-none">{issue.students?.name}</p>
                           <p className="text-xs text-muted-foreground italic line-clamp-1">"{issue.description}"</p>
                         </div>
                       </TableCell>

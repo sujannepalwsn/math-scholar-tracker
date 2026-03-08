@@ -468,7 +468,7 @@ export default function Dashboard() {
             <KPICard title="Test Performance" value={`${avgTestScore}%`} description="Average Score" icon={TrendingUp} color="purple" trendData={performanceTrend} onClick={() => navigate("/tests")} secondaryIcon={TrendingUp} secondaryIconColor="text-purple-500" />
             <KPICard title="Homework Completion" value={`${homeworkRate}%`} description="Global completion rate" icon={Book} color="orange" onClick={() => navigate("/homework")} secondaryIcon={BookOpen} secondaryIconColor="text-orange-500" />
             <KPICard title="Evaluation Rate" value={`${evaluationRate}%`} description="Syllabus coverage" icon={CheckCircle2} color="rose" onClick={() => navigate("/lesson-tracking")} secondaryIcon={CheckCircle2} secondaryIconColor="text-rose-500" />
-            <KPICard title="Upcoming Lessons" value={upcomingLessons.length} description="Planned for this week" icon={FileText} color="indigo" onClick={() => navigate("/lesson-plans")} secondaryIcon={CalendarIcon} secondaryIconColor="text-indigo-500" />
+            <KPICard title="Upcoming Lessons" value={upcomingLessons.length} description="Planned for this week" icon={FileText} color="indigo" onClick={() => navigate("/lesson-plans")} secondaryIcon={CalendarIcon} secondaryIconColor="text-primary" />
           </div>
 
           {/* Attendance Overview Chart with functional selectors */}

@@ -213,7 +213,7 @@ export default function MeetingManagement() {
         </Dialog>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -247,7 +247,7 @@ export default function MeetingManagement() {
                     <TableRow key={meeting.id} className="group transition-all duration-300">
                       <TableCell className="font-black text-slate-700 group-hover:text-primary transition-colors">{meeting.title}</TableCell>
                       <TableCell className="font-medium text-slate-600">{format(new Date(meeting.meeting_date), "MMM d, yyyy")}</TableCell>
-                      <TableCell className="font-bold text-indigo-600">{meeting.meeting_time || format(new Date(meeting.meeting_date), "p")}</TableCell>
+                      <TableCell className="font-bold text-primary">{meeting.meeting_time || format(new Date(meeting.meeting_date), "p")}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-none font-bold uppercase text-[9px] tracking-widest px-2 py-0.5">
                           {meeting.meeting_type}

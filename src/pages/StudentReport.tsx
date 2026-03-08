@@ -867,7 +867,7 @@ export default function StudentReport() {
           title={reportLevel === "student" ? "Financial Status" : "Total Students"}
           value={reportLevel === "student" ? formatCurrency(outstandingDues) : dashboardStats.totalStudents}
           icon={reportLevel === "student" ? DollarSign : Users}
-          colorClass="bg-blue-500/10"
+          colorClass="bg-primary/10"
           targetId="finance-section"
           description={reportLevel === "student" ? "Outstanding Balance" : ""}
         />
@@ -875,7 +875,7 @@ export default function StudentReport() {
           title="Attendance"
           value={`${dashboardStats.attendancePercentage}%`}
           icon={Clock}
-          colorClass="bg-green-500/10"
+          colorClass="bg-success/10"
           description="Average student attendance"
           targetId="attendance-section"
         />
@@ -883,7 +883,7 @@ export default function StudentReport() {
           title="Homework Completion"
           value={`${dashboardStats.homeworkCompletionRate}%`}
           icon={Book}
-          colorClass="bg-orange-500/10"
+          colorClass="bg-warning/10"
           description="Assigned vs Completed"
           targetId="overdue-homework-section"
         />
@@ -891,7 +891,7 @@ export default function StudentReport() {
           title="Evaluation Completion"
           value={`${dashboardStats.evaluationCompletionRate}%`}
           icon={Star}
-          colorClass="bg-yellow-500/10"
+          colorClass="bg-primary/10"
           description="Lesson evaluations"
           targetId="milestones-section"
         />
@@ -899,7 +899,7 @@ export default function StudentReport() {
           title="Test Performance"
           value={`${dashboardStats.testPerformance}%`}
           icon={ClipboardCheck}
-          colorClass="bg-purple-500/10"
+          colorClass="bg-primary/10"
           description="Average score across tests"
           targetId="tests-section"
         />
@@ -907,7 +907,7 @@ export default function StudentReport() {
           title="Activities"
           value={dashboardStats.totalActivities}
           icon={Paintbrush}
-          colorClass="bg-pink-500/10"
+          colorClass="bg-primary/10"
           description="Total activities conducted"
           targetId="activities-section"
         />
@@ -915,7 +915,7 @@ export default function StudentReport() {
           title="Discipline Records"
           value={dashboardStats.totalDiscipline}
           icon={AlertTriangle}
-          colorClass="bg-red-500/10"
+          colorClass="bg-destructive/10"
           description="Total incidents reported"
           targetId="discipline-section"
         />
@@ -924,7 +924,7 @@ export default function StudentReport() {
             title="Lessons Covered"
             value={studentChapters.length}
             icon={BookOpen}
-            colorClass="bg-indigo-500/10"
+            colorClass="bg-primary/10"
           />
         )}
       </div>
@@ -969,7 +969,7 @@ export default function StudentReport() {
       {/* Aggregate Tables for Grade/Subject */}
       {(reportLevel === "grade" || reportLevel === "subject" || reportLevel === "grade-subject" || reportLevel === "school") && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-white/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-card/40 backdrop-blur-md border border-border/20">
             <CardHeader className="border-b border-muted/20 bg-muted/5">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-purple-500/10">
@@ -991,7 +991,7 @@ export default function StudentReport() {
                   {testResults.slice(0, 5).map((tr: any) => {
                     const pct = Math.round((tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100);
                     return (
-                      <div key={tr.id} className="group p-4 rounded-xl bg-white/50 border border-transparent hover:border-primary/10 hover:shadow-soft transition-all duration-300">
+                      <div key={tr.id} className="group p-4 rounded-xl bg-card/50 border border-transparent hover:border-primary/10 hover:shadow-soft transition-all duration-300">
                         <div className="flex justify-between items-start mb-2">
                           <div className="space-y-1">
                             <p className="font-bold text-sm group-hover:text-primary transition-colors">{tr.tests?.name}</p>
@@ -1021,7 +1021,7 @@ export default function StudentReport() {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-white/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-card/40 backdrop-blur-md border border-border/20">
             <CardHeader className="border-b border-muted/20 bg-muted/5">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-red-500/10">
@@ -1041,7 +1041,7 @@ export default function StudentReport() {
               ) : (
                 <div className="space-y-4">
                   {disciplineIssues.slice(0, 5).map((di: any) => (
-                    <div key={di.id} className="p-4 rounded-xl bg-white/50 border border-transparent hover:border-red-500/10 hover:shadow-soft transition-all duration-300">
+                    <div key={di.id} className="p-4 rounded-xl bg-card/50 border border-transparent hover:border-red-500/10 hover:shadow-soft transition-all duration-300">
                       <div className="flex justify-between items-start mb-1">
                         <div className="space-y-1">
                           <p className="font-bold text-sm">{di.discipline_categories?.name}</p>
@@ -1118,15 +1118,15 @@ export default function StudentReport() {
       {/* Filters */}
       <div className={cn("relative group transition-all duration-700", isLoading ? "opacity-50 grayscale pointer-events-none" : "opacity-100")}>
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-        <Card className="relative border-none shadow-medium p-8 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-8 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="flex flex-wrap gap-8 items-end">
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
           <Select value={gradeFilter} onValueChange={(val) => { setGradeFilter(val); setSelectedStudentId("none"); }}>
-            <SelectTrigger className="w-[160px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+            <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
               <SelectItem value="all">All Grades</SelectItem>
               {Array.from(new Set(students.map(s => s.grade))).map((g) => (
                 <SelectItem key={g} value={g}>{g}</SelectItem>
@@ -1139,7 +1139,7 @@ export default function StudentReport() {
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">From Date</label>
           <Input
             type="date"
-            className="w-[160px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
+            className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
             value={safeFormatDate(dateRange.from, "yyyy-MM-dd")}
             onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
           />
@@ -1149,7 +1149,7 @@ export default function StudentReport() {
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">To Date</label>
           <Input
             type="date"
-            className="w-[160px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
+            className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
             value={safeFormatDate(dateRange.to, "yyyy-MM-dd")}
             onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
           />
@@ -1158,10 +1158,10 @@ export default function StudentReport() {
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</label>
           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-[160px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+            <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
               <SelectItem value="all">All Subjects</SelectItem>
               {subjects.map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -1173,10 +1173,10 @@ export default function StudentReport() {
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</label>
           <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-            <SelectTrigger className="w-[220px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-[220px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Select Student" />
             </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+            <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
               <SelectItem value="none">All Students</SelectItem>
               {filteredStudents.map((student) => (
                 <SelectItem key={student.id} value={student.id}>

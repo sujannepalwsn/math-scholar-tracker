@@ -29,7 +29,7 @@ const navItems: Array<{
   { to: "/parent-messages", label: "Messages", icon: MessageSquare, role: 'parent' as const, category: 'Reports and Communications' },
   { to: "/parent-chapter-rating", label: "Chapter Rating", icon: Star, role: 'parent' as const, category: 'Reports and Communications' },
   { to: "/parent-calendar", label: "Calendar", icon: Calendar, role: 'parent' as const, category: 'Reports and Communications' },
-  { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'parent' as const },
+  { to: "/parent-settings", label: "Settings", icon: Settings, role: 'parent' as const, category: 'Administration' },
 ];
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {

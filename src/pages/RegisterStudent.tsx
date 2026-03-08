@@ -392,7 +392,7 @@ export default function RegisterStudent() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="sm" onClick={downloadTemplate} className="rounded-xl h-11 border-2 font-black uppercase text-[10px] tracking-widest hover:bg-white/60 shadow-soft">
+          <Button variant="outline" size="sm" onClick={downloadTemplate} className="rounded-xl h-11 border-2 font-black uppercase text-[10px] tracking-widest hover:bg-card/60 shadow-soft">
             <Download className="mr-2 h-4 w-4" /> Template
           </Button>
           <input
@@ -403,7 +403,7 @@ export default function RegisterStudent() {
             onChange={(e) => handleCsvFile(e.target.files?.[0] ?? null)}
           />
           <label htmlFor="csv-upload">
-            <Button variant="outline" size="sm" asChild className="rounded-xl h-11 border-2 cursor-pointer font-black uppercase text-[10px] tracking-widest hover:bg-white/60 shadow-soft">
+            <Button variant="outline" size="sm" asChild className="rounded-xl h-11 border-2 cursor-pointer font-black uppercase text-[10px] tracking-widest hover:bg-card/60 shadow-soft">
               <span>
                 <Upload className="inline-block mr-2 h-4 w-4" /> Import CSV
               </span>
@@ -413,7 +413,7 @@ export default function RegisterStudent() {
       </div>
 
       {/* Single Student Form */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 group hover:shadow-xl transition-all duration-500">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 group hover:shadow-xl transition-all duration-500">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 group-hover:scale-110 transition-transform">
@@ -433,7 +433,7 @@ export default function RegisterStudent() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   placeholder="Enter full name"
-                  className="h-12 rounded-2xl bg-white/50 border-none shadow-soft focus-visible:ring-primary/20"
+                  className="h-12 rounded-2xl bg-card/50 border-none shadow-soft focus-visible:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
@@ -444,7 +444,7 @@ export default function RegisterStudent() {
                   onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
                   required
                   placeholder="e.g. 5, 10, XII"
-                  className="h-12 rounded-2xl bg-white/50 border-none shadow-soft focus-visible:ring-primary/20"
+                  className="h-12 rounded-2xl bg-card/50 border-none shadow-soft focus-visible:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
@@ -455,7 +455,7 @@ export default function RegisterStudent() {
                   onChange={(e) => setFormData({ ...formData, school_name: e.target.value })}
                   required
                   placeholder="School name"
-                  className="h-12 rounded-2xl bg-white/50 border-none shadow-soft focus-visible:ring-primary/20"
+                  className="h-12 rounded-2xl bg-card/50 border-none shadow-soft focus-visible:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
@@ -466,7 +466,7 @@ export default function RegisterStudent() {
                   onChange={(e) => setFormData({ ...formData, parent_name: e.target.value })}
                   required
                   placeholder="Parent/Guardian"
-                  className="h-12 rounded-2xl bg-white/50 border-none shadow-soft focus-visible:ring-primary/20"
+                  className="h-12 rounded-2xl bg-card/50 border-none shadow-soft focus-visible:ring-primary/20"
                 />
               </div>
               <div className="space-y-2">
@@ -477,7 +477,7 @@ export default function RegisterStudent() {
                   onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
                   required
                   placeholder="Phone number"
-                  className="h-12 rounded-2xl bg-white/50 border-none shadow-soft focus-visible:ring-primary/20"
+                  className="h-12 rounded-2xl bg-card/50 border-none shadow-soft focus-visible:ring-primary/20"
                 />
               </div>
             </div>
@@ -487,7 +487,7 @@ export default function RegisterStudent() {
               <Button type="submit" className="h-12 rounded-2xl px-8 font-black uppercase text-xs tracking-widest bg-gradient-to-r from-primary to-violet-600 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
                 ENROL STUDENT
               </Button>
-              <Button type="button" variant="outline" onClick={() => setShowLinkChildDialog(true)} className="h-12 rounded-2xl font-black uppercase text-xs tracking-widest border-2 shadow-soft hover:bg-white/60">
+              <Button type="button" variant="outline" onClick={() => setShowLinkChildDialog(true)} className="h-12 rounded-2xl font-black uppercase text-xs tracking-widest border-2 shadow-soft hover:bg-card/60">
                 <Users className="h-4 w-4 mr-2" /> LINK GUARDIAN
               </Button>
               <div className="flex-1" />
@@ -529,7 +529,7 @@ export default function RegisterStudent() {
       </Card>
 
       {/* Students Table */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-8 px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
             <div className="space-y-1">
@@ -547,12 +547,12 @@ export default function RegisterStudent() {
               </div>
             </div>
             <div className="flex flex-wrap gap-4 items-center">
-              <div className="flex items-center gap-2 bg-white/60 p-1.5 rounded-2xl border border-white/40 shadow-soft">
+              <div className="flex items-center gap-2 bg-card/60 p-1.5 rounded-2xl border border-border/40 shadow-soft">
                   <Select value={gradeFilter} onValueChange={setGradeFilter}>
                     <SelectTrigger className="w-[140px] h-10 border-none bg-transparent shadow-none font-black text-[10px] uppercase tracking-widest focus:ring-0">
                       <SelectValue placeholder="Grade" />
                     </SelectTrigger>
-                    <SelectContent className="backdrop-blur-xl bg-white/90 border-none rounded-2xl shadow-strong">
+                    <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
                       <SelectItem value="all" className="font-black text-[10px] uppercase tracking-widest">All Grades</SelectItem>
                       {uniqueGrades.map((g) => (
                         <SelectItem key={g} value={g} className="font-black text-[10px] uppercase tracking-widest">Grade {g}</SelectItem>
@@ -593,7 +593,7 @@ export default function RegisterStudent() {
                   </TableRow>
                 ) : filteredStudents && filteredStudents.length > 0 ? (
                   filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="group transition-all duration-300 hover:bg-white/60">
+                    <TableRow key={student.id} className="group transition-all duration-300 hover:bg-card/60">
                       <TableCell className="px-8 py-5">
                         {editingId === student.id ? (
                           <Input
@@ -626,7 +626,7 @@ export default function RegisterStudent() {
                             }
                           />
                         ) : (
-                          <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-none rounded-lg text-[10px] font-black uppercase tracking-tighter">Grade {student.grade}</Badge>
+                          <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[10px] font-black uppercase tracking-tighter">Grade {student.grade}</Badge>
                         )}
                       </TableCell>
                       <TableCell className="px-8 py-5">
@@ -671,7 +671,7 @@ export default function RegisterStudent() {
                             }
                           />
                         ) : (
-                          <p className="text-xs font-black text-indigo-600">{student.contact_number}</p>
+                          <p className="text-xs font-black text-primary">{student.contact_number}</p>
                         )}
                       </TableCell>
                       <TableCell className="px-8 py-5 text-right">
@@ -690,7 +690,7 @@ export default function RegisterStudent() {
                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleEdit(student)}>
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-indigo-600 hover:bg-indigo-50" onClick={() => handleCreateParentAccount(student)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleCreateParentAccount(student)}>
                                 <UserPlus className="h-3.5 w-3.5" />
                               </Button>
                               <Button
@@ -720,7 +720,7 @@ export default function RegisterStudent() {
 
       {/* CSV Preview Dialog */}
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle id="csv-preview-title" className="text-2xl font-black tracking-tight">Bulk Import Matrix</DialogTitle>
             <DialogDescription id="csv-preview-description" className="text-[10px] font-black uppercase tracking-widest text-primary/60">
@@ -755,7 +755,7 @@ export default function RegisterStudent() {
                     <TableCell className="text-xs font-bold"><Badge variant="outline" className="text-[9px] font-black">{row.grade}</Badge></TableCell>
                     <TableCell className="text-[10px] font-medium text-slate-500">{row.school_name}</TableCell>
                     <TableCell className="text-xs font-black uppercase text-slate-600">{row.parent_name}</TableCell>
-                    <TableCell className="text-xs font-black text-indigo-600">{row.contact_number}</TableCell>
+                    <TableCell className="text-xs font-black text-primary">{row.contact_number}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -774,10 +774,10 @@ export default function RegisterStudent() {
 
       {/* Create Parent Dialog */}
       <Dialog open={isCreatingParent} onOpenChange={setIsCreatingParent}>
-        <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl" aria-labelledby="create-parent-title" aria-describedby="create-parent-description">
+        <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl" aria-labelledby="create-parent-title" aria-describedby="create-parent-description">
           <DialogHeader>
             <DialogTitle id="create-parent-title" className="text-2xl font-black tracking-tight">Access Protocol Setup</DialogTitle>
-            <DialogDescription id="create-parent-description" className="text-[10px] font-black uppercase tracking-widest text-indigo-500">
+            <DialogDescription id="create-parent-description" className="text-[10px] font-black uppercase tracking-widest text-primary">
               Generating secure guardian link for {selectedStudentForParent?.name}
             </DialogDescription>
           </DialogHeader>

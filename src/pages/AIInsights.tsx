@@ -76,14 +76,14 @@ export default function AIInsights() {
       </div>
 
       {!insights && !generateInsightsMutation.isPending && (
-        <Card className="border-none shadow-strong rounded-[2.5rem] bg-white/40 backdrop-blur-md border border-white/20 p-12 text-center overflow-hidden relative">
+        <Card className="border-none shadow-strong rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 p-12 text-center overflow-hidden relative">
            <div className="absolute top-0 right-0 -mr-20 -mt-20 h-64 w-64 bg-primary/5 rounded-full blur-3xl" />
            <div className="relative z-10 space-y-6">
               <div className="h-20 w-20 rounded-[2rem] bg-primary/10 mx-auto flex items-center justify-center border border-primary/20">
                  <Brain className="h-10 w-10 text-primary" />
               </div>
               <div className="space-y-2">
-                 <h3 className="text-2xl font-black text-slate-800 tracking-tight">Intelligence Engine Standby</h3>
+                 <h3 className="text-2xl font-black text-foreground/90 tracking-tight">Intelligence Engine Standby</h3>
                  <p className="text-slate-500 max-w-lg mx-auto font-medium leading-relaxed">
                     Trigger the synthesis protocol to evaluate multi-dimensional student performance data and generate actionable pedagogical recommendations.
                  </p>
@@ -96,9 +96,9 @@ export default function AIInsights() {
       {insights && (
         <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-700">
           {/* Overall Insights */}
-          <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-white/40 backdrop-blur-md border border-white/20 group">
+          <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 group">
             <CardHeader className="border-b border-slate-100 bg-primary/5 py-8 px-8">
-              <CardTitle className="text-xl font-black flex items-center gap-4 text-slate-800">
+              <CardTitle className="text-xl font-black flex items-center gap-4 text-foreground/90">
                 <div className="p-3 rounded-[1.5rem] bg-primary/10 group-hover:scale-110 transition-transform">
                   <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
@@ -107,7 +107,7 @@ export default function AIInsights() {
             </CardHeader>
             <CardContent className="p-10">
               <div className="relative">
-                 <div className="absolute -left-6 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary via-violet-500 to-indigo-500 rounded-full opacity-30" />
+                 <div className="absolute -left-6 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary via-violet-500 to-primary rounded-full opacity-30" />
                  <p className="text-slate-700 leading-relaxed font-black text-2xl tracking-tight italic">
                    "{insights.overallInsights}"
                  </p>
@@ -125,11 +125,11 @@ export default function AIInsights() {
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                  {insights.studentsNeedingAttention.map((student: any, idx: number) => (
-                   <Card key={idx} className="border-none shadow-strong rounded-[2.5rem] bg-white/60 backdrop-blur-md border border-white/20 overflow-hidden hover:shadow-xl transition-all duration-500 group">
+                   <Card key={idx} className="border-none shadow-strong rounded-[2.5rem] bg-card/60 backdrop-blur-md border border-border/20 overflow-hidden hover:shadow-xl transition-all duration-500 group">
                      <CardHeader className="pb-4 pt-8 px-8 flex-row items-center justify-between">
                         <div className="space-y-1">
                            <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Enrolled Student</p>
-                           <CardTitle className="text-2xl font-black text-slate-800 tracking-tight group-hover:text-primary transition-colors">{student.name}</CardTitle>
+                           <CardTitle className="text-2xl font-black text-foreground/90 tracking-tight group-hover:text-primary transition-colors">{student.name}</CardTitle>
                         </div>
                         <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-600">
                            <AlertCircle className="h-6 w-6" />
@@ -148,11 +148,11 @@ export default function AIInsights() {
                          </div>
                        </div>
 
-                       <div className="p-6 rounded-[1.5rem] bg-indigo-50 border border-indigo-100/60 relative overflow-hidden">
+                       <div className="p-6 rounded-[1.5rem] bg-primary/5 border border-primary/10/60 relative overflow-hidden">
                          <div className="absolute top-0 right-0 p-4 opacity-5">
-                            <Brain className="h-12 w-12 text-indigo-600" />
+                            <Brain className="h-12 w-12 text-primary" />
                          </div>
-                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 mb-3 flex items-center gap-2">
+                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-3 flex items-center gap-2">
                            <Target className="h-3.5 w-3.5" /> Neural Strategy
                          </p>
                          <p className="text-sm font-medium text-slate-700 leading-relaxed italic relative z-10">
@@ -213,14 +213,14 @@ export default function AIInsights() {
              {insights.actionableRecommendations && insights.actionableRecommendations.length > 0 && (
                <Card className="border-none shadow-strong rounded-[2rem] bg-white border border-slate-100">
                  <CardHeader className="pb-4 border-b border-slate-50 bg-slate-50/50 rounded-t-[2rem]">
-                   <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-600">Operational Directives</CardTitle>
+                   <CardTitle className="text-sm font-black uppercase tracking-widest text-primary">Operational Directives</CardTitle>
                  </CardHeader>
                  <CardContent className="p-6">
                    <ul className="space-y-4">
                      {insights.actionableRecommendations.map((rec: string, idx: number) => (
                        <li key={idx} className="flex items-start gap-3">
-                         <div className="h-5 w-5 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
-                            <Zap className="h-3 w-3 text-indigo-600" />
+                         <div className="h-5 w-5 rounded-full bg-primary/5 flex items-center justify-center shrink-0 mt-0.5">
+                            <Zap className="h-3 w-3 text-primary" />
                          </div>
                          <span className="text-xs font-bold text-slate-600 leading-relaxed italic">"{rec}"</span>
                        </li>

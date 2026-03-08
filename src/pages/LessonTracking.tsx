@@ -98,6 +98,10 @@ export default function LessonTracking() {
         query = query.eq('teacher_id', user.teacher_id);
       }
 
+      if (user?.role === 'teacher') {
+        query = query.eq('teacher_id', user.teacher_id);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -479,13 +483,13 @@ export default function LessonTracking() {
       </div>
 
       {/* LESSON RECORDS LIST */}
-      <Card className="border-none shadow-medium bg-white/60 backdrop-blur-2xl rounded-3xl overflow-hidden border border-white/30 p-8">
+      <Card className="border-none shadow-medium bg-card/60 backdrop-blur-2xl rounded-3xl overflow-hidden border border-white/30 p-8">
         <div className="flex flex-wrap gap-6">
             {/* Filters */}
             <div className="flex-1 min-w-[150px]">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</Label>
               <Select value={filterSubject} onValueChange={setFilterSubject}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -497,7 +501,7 @@ export default function LessonTracking() {
             <div className="flex-1 min-w-[150px]">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</Label>
               <Select value={filterStudent} onValueChange={setFilterStudent}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -509,7 +513,7 @@ export default function LessonTracking() {
             <div className="flex-1 min-w-[150px]">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</Label>
               <Select value={filterGrade} onValueChange={setFilterGrade}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -521,7 +525,7 @@ export default function LessonTracking() {
           </div>
       </Card>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -547,7 +551,7 @@ export default function LessonTracking() {
                     <TableRow className="group border-muted/5 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => toggleShowStudents(group.lessonPlan.id)}>
                       <TableCell className="pl-6 py-4">
                         <div className="space-y-1">
-                          <p className="font-bold text-slate-800 leading-none">{group.lessonPlan.chapter}</p>
+                          <p className="font-bold text-foreground/90 leading-none">{group.lessonPlan.chapter}</p>
                           <p className="text-xs text-muted-foreground italic">{group.lessonPlan.topic}</p>
                           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
                              <Clock className="h-3 w-3" />
@@ -561,7 +565,7 @@ export default function LessonTracking() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                         <div className="inline-flex items-center gap-1.5 bg-indigo-500/10 text-indigo-600 px-3 py-1 rounded-full text-xs font-black">
+                         <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-black">
                             <Users className="h-3 w-3" />
                             {group.students.length}
                          </div>
@@ -638,7 +642,7 @@ export default function LessonTracking() {
                        </div>
                     </div>
 
-                    <div className="overflow-x-auto border border-white/40 rounded-2xl bg-white/20 backdrop-blur-sm">
+                    <div className="overflow-x-auto border border-border/40 rounded-2xl bg-white/20 backdrop-blur-sm">
                       <Table>
                         <TableHeader>
                           <TableRow className="hover:bg-transparent border-muted/10">
@@ -659,7 +663,7 @@ export default function LessonTracking() {
                         </TableHeader>
                         <TableBody>
                           {group.students.map((record) => (
-                            <TableRow key={record.id} className="group/row border-muted/5 hover:bg-white/40 transition-colors">
+                            <TableRow key={record.id} className="group/row border-muted/5 hover:bg-card/40 transition-colors">
                               <TableCell className="text-center">
                                  <Checkbox
                                    checked={bulkEvaluationSelected.includes(record.id)}

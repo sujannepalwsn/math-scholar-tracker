@@ -101,7 +101,7 @@ export default function ParentChapterRating() {
           </div>
         </div>
 
-        <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+        <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <Target className="h-5 w-5 text-primary" />
           </div>
@@ -114,7 +114,7 @@ export default function ParentChapterRating() {
 
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-[2rem]">
+        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-[2rem]">
           <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
             <div className="space-y-1">
                 <h3 className="font-black text-slate-700 uppercase tracking-tight text-sm">Intelligence Filter</h3>
@@ -122,10 +122,10 @@ export default function ParentChapterRating() {
             </div>
             <div className="w-full md:w-[250px]">
               <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-                <SelectTrigger className="h-12 bg-white/50 border-none shadow-soft focus:ring-primary/20 rounded-2xl font-bold text-xs">
+                <SelectTrigger className="h-12 bg-card/50 border-none shadow-soft focus:ring-primary/20 rounded-2xl font-bold text-xs">
                   <SelectValue placeholder="All Academic Domains" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-none shadow-strong rounded-2xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-none shadow-strong rounded-2xl">
                   <SelectItem value="all" className="font-bold text-xs">All Domains</SelectItem>
                   {allSubjects.map((s: any) => <SelectItem key={s} value={s} className="font-bold text-xs">{s}</SelectItem>)}
                 </SelectContent>
@@ -138,16 +138,16 @@ export default function ParentChapterRating() {
       {isLoading ? (
         <div className="flex justify-center py-20"><div className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" /></div>
       ) : chapterRatingsBySubject.length === 0 ? (
-        <div className="text-center py-20 bg-white/40 backdrop-blur-md rounded-[2.5rem] border border-white/20 shadow-strong">
+        <div className="text-center py-20 bg-card/40 backdrop-blur-md rounded-[2.5rem] border border-border/20 shadow-strong">
             <p className="text-muted-foreground font-medium italic">No proficiency data identified for the selected parameters.</p>
         </div>
       ) : (
         <div className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {chapterRatingsBySubject.map((subjectData) => (
-              <Card key={subjectData.subject} className="border-none shadow-strong rounded-[2.5rem] bg-white/40 backdrop-blur-md border border-white/20 overflow-hidden group hover:translate-y-[-4px] transition-all duration-300">
+              <Card key={subjectData.subject} className="border-none shadow-strong rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden group hover:translate-y-[-4px] transition-all duration-300">
                 <CardHeader className="p-6 pb-0">
-                   <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-none rounded-lg text-[9px] font-black uppercase tracking-widest px-2.5 w-fit">
+                   <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[9px] font-black uppercase tracking-widest px-2.5 w-fit">
                       {subjectData.subject}
                    </Badge>
                 </CardHeader>
@@ -156,7 +156,7 @@ export default function ParentChapterRating() {
                      <div className="space-y-1">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Synthesis</p>
                         <div className="flex items-baseline gap-1">
-                           <span className="text-5xl font-black text-slate-800 tracking-tighter">{subjectData.averageRating}</span>
+                           <span className="text-5xl font-black text-foreground/90 tracking-tighter">{subjectData.averageRating}</span>
                            <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
                         </div>
                      </div>
@@ -175,7 +175,7 @@ export default function ParentChapterRating() {
             ))}
           </div>
 
-          <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-white/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
             <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
               <CardTitle className="text-xl font-black flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-primary/10">
@@ -199,7 +199,7 @@ export default function ParentChapterRating() {
                   <TableBody>
                     {chapterRatingsBySubject.flatMap(subjectData =>
                       subjectData.chapters.map((record: any) => (
-                        <TableRow key={record.id} className="group transition-all duration-300 hover:bg-white/60">
+                        <TableRow key={record.id} className="group transition-all duration-300 hover:bg-card/60">
                           <TableCell className="px-6 py-4">
                             <div className="space-y-0.5">
                                 <p className="font-black text-slate-700 text-xs leading-none">{record.lesson_plans?.chapter || 'Untitled'}</p>

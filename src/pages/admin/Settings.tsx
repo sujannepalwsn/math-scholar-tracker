@@ -1,6 +1,7 @@
-import { Bell, Cpu, Database, Globe, Settings2, Shield } from "lucide-react";
+import { Bell, Cpu, Database, Globe, Palette, Settings2, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import ThemeSelector from "@/components/ThemeSelector";
 
 const Settings = () => (
   <div className="space-y-8 animate-in fade-in duration-1000">
@@ -18,7 +19,21 @@ const Settings = () => (
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-       <Card className="md:col-span-2 border-none shadow-strong rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 overflow-hidden">
+       <Card className="md:col-span-2 border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden">
+          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+            <CardTitle className="text-xl font-black flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Palette className="h-6 w-6 text-primary" />
+              </div>
+              Appearance Matrix
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-8">
+            <ThemeSelector />
+          </CardContent>
+       </Card>
+
+       <Card className="md:col-span-2 border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -36,7 +51,7 @@ const Settings = () => (
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Kernel Under Synthesis</h3>
+                <h3 className="text-2xl font-black text-foreground/90 tracking-tight">Kernel Under Synthesis</h3>
                 <p className="text-muted-foreground max-w-sm text-sm font-medium leading-relaxed">
                   We are currently architecting granular institutional controls. Advanced configuration matrices will be deployed in the next cycle.
                 </p>
@@ -63,7 +78,7 @@ const Settings = () => (
                   <h4 className="font-black text-lg">Core Security</h4>
                   <p className="text-slate-400 text-xs font-medium">Global authentication protocols are active and monitoring.</p>
                </div>
-               <div className="pt-4 border-t border-white/10 space-y-4">
+               <div className="pt-4 border-t border-border/10 space-y-4">
                   <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-500">
                     <span>SSL Status</span>
                     <span className="text-emerald-500">ACTIVE</span>
@@ -76,11 +91,11 @@ const Settings = () => (
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-strong rounded-3xl bg-white/80 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong rounded-3xl bg-card/80 backdrop-blur-md border border-border/20">
             <CardContent className="p-6 space-y-4">
                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-                    <Globe className="h-5 w-5 text-indigo-600" />
+                  <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Localization</p>

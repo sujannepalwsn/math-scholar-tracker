@@ -45,7 +45,7 @@ export const AlertList = ({
     error: "bg-rose-500/10 text-rose-600 border-rose-600/20" };
 
   return (
-    <Card className={cn("overflow-hidden border-none shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border border-white/20", className)}>
+    <Card className={cn("overflow-hidden border-none shadow-soft bg-card/60 backdrop-blur-md rounded-2xl border border-border/20", className)}>
       <CardHeader className="py-4 border-b border-muted/20 flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           {title}
@@ -63,10 +63,10 @@ export const AlertList = ({
               </Button>
             )}
           </DialogTrigger>
-          <DialogContent className="max-w-2xl bg-white/90 backdrop-blur-xl border-none shadow-strong rounded-[2rem] p-0 overflow-hidden">
+          <DialogContent className="max-w-2xl bg-card/90 backdrop-blur-xl border-none shadow-strong rounded-[2rem] p-0 overflow-hidden">
             <DialogHeader className="p-8 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center justify-between">
-                <DialogTitle className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                <DialogTitle className="text-2xl font-black text-foreground/90 tracking-tight flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-primary/10">
                     <Bell className="h-6 w-6 text-primary" />
                   </div>
@@ -85,7 +85,7 @@ export const AlertList = ({
                     <Bell className="h-5 w-5" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-base font-bold text-slate-800">{alert.title}</h4>
+                    <h4 className="text-base font-bold text-foreground/90">{alert.title}</h4>
                     {alert.description && (
                       <p className="text-sm text-slate-500 font-medium">{alert.description}</p>
                     )}
@@ -132,7 +132,7 @@ export const AlertList = ({
                   <Bell className="h-4 w-4" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-800 leading-none">{alert.title}</h4>
+                  <h4 className="text-sm font-bold text-foreground/90 leading-none">{alert.title}</h4>
                   {alert.description && (
                     <p className="text-xs text-muted-foreground leading-tight">{alert.description}</p>
                   )}

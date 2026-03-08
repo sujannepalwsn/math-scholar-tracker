@@ -143,15 +143,15 @@ export default function Summary() {
       {/* Filters */}
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="flex flex-wrap gap-6 items-end">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger className="w-[160px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Grades</SelectItem>
                   {grades.map((grade) => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
@@ -166,7 +166,7 @@ export default function Summary() {
                 type="month"
                 value={monthFilter}
                 onChange={(e) => setMonthFilter(e.target.value)}
-                className="flex h-11 w-[180px] rounded-xl border border-white/20 bg-white/50 backdrop-blur-sm px-4 py-2 text-sm ring-offset-background transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-sm hover:border-primary/30"
+                className="flex h-11 w-[180px] rounded-xl border border-border/20 bg-card/50 backdrop-blur-sm px-4 py-2 text-sm ring-offset-background transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-sm hover:border-primary/30"
               />
             </div>
           </div>
@@ -174,7 +174,7 @@ export default function Summary() {
       </div>
 
       {/* Table */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -203,7 +203,7 @@ export default function Summary() {
                     <TableRow key={student.id} className="group transition-all duration-300">
                       <TableCell className="font-black text-slate-700 group-hover:text-primary transition-colors">{student.name}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-600 border-none rounded-lg font-bold">
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-lg font-bold">
                           {student.grade}
                         </Badge>
                       </TableCell>

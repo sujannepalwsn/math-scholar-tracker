@@ -417,7 +417,7 @@ const ParentDashboardContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8faff] p-4 md:p-8 space-y-8 pb-24 md:pb-8">
+    <div className="min-h-screen bg-background p-4 md:p-8 space-y-8 pb-24 md:pb-8">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <CenterLogo size="lg" />
@@ -439,11 +439,11 @@ const ParentDashboardContent = () => {
             <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full border-2 border-white" />
           </Button>
           <div className="flex items-center gap-3 bg-white p-1.5 pr-4 rounded-2xl shadow-soft">
-            <div className="h-9 w-9 bg-indigo-100 rounded-xl flex items-center justify-center overflow-hidden">
-               <Users className="h-5 w-5 text-indigo-600" />
+            <div className="h-9 w-9 bg-primary/10 rounded-xl flex items-center justify-center overflow-hidden">
+               <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-800 leading-none">{user?.username?.split('@')[0]}</p>
+              <p className="text-xs font-black text-foreground/90 leading-none">{user?.username?.split('@')[0]}</p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parent</p>
             </div>
           </div>
@@ -451,17 +451,17 @@ const ParentDashboardContent = () => {
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-white/40">
-          <div className="p-2 bg-indigo-500 text-white rounded-lg">
+        <div className="flex items-center gap-2 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
+          <div className="p-2 bg-primary text-white rounded-lg">
             <GraduationCap className="h-4 w-4" />
           </div>
-          <Badge variant="outline" className="text-xs font-black text-indigo-600 tracking-tight uppercase">{student?.name || "Learning Odyssey"}</Badge>
+          <Badge variant="outline" className="text-xs font-black text-primary tracking-tight uppercase">{student?.name || "Learning Odyssey"}</Badge>
           <div className="flex items-center gap-2 px-3 border-l border-slate-200 ml-2">
              <Calendar className="h-4 w-4 text-slate-400" />
              <span className="text-xs font-bold text-slate-600">{format(new Date(), "eee, MMM d")}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-white/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-white/40">
+        <div className="flex items-center gap-3 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
            <Input
              type="date"
              value={dateRange.to}

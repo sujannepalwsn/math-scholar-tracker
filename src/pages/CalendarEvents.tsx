@@ -277,7 +277,7 @@ export default function CalendarEvents() {
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Calendar */}
-        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -291,7 +291,7 @@ export default function CalendarEvents() {
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-3xl border border-white/40 bg-white/30 backdrop-blur-sm p-4 shadow-soft mx-auto"
+              className="rounded-3xl border border-border/40 bg-white/30 backdrop-blur-sm p-4 shadow-soft mx-auto"
               modifiers={{
                 hasEvent: eventDates }}
               modifiersStyles={{
@@ -303,7 +303,7 @@ export default function CalendarEvents() {
         </Card>
 
         {/* Events for Selected Date */}
-        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 h-fit">
+        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 h-fit">
           <CardHeader className="bg-gradient-to-r from-primary to-violet-600 text-primary-foreground py-6 shadow-strong">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-white/20 backdrop-blur-md">

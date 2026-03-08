@@ -78,7 +78,7 @@ const ExpenseManagement = () => {
       materials: 'bg-blue-100 text-blue-800',
       maintenance: 'bg-purple-100 text-purple-800',
       transport: 'bg-green-100 text-green-800',
-      admin: 'bg-slate-100 text-slate-800',
+      admin: 'bg-slate-100 text-foreground/90',
       other: 'bg-gray-100 text-gray-800'
     };
     return colors[category] || 'bg-gray-100 text-gray-800';

@@ -437,7 +437,7 @@ export default function TeacherAttendancePage() {
             <p className="text-muted-foreground text-sm font-medium">Monitor staff presence and punctuality trends.</p>
           </div>
         </div>
-        <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+        <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <Clock className="h-5 w-5 text-primary" />
           </div>
@@ -480,13 +480,13 @@ export default function TeacherAttendancePage() {
       {/* Date Picker Card */}
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="flex flex-wrap gap-6 items-end">
             <div className="flex-1 min-w-[200px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Select Attendance Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl", !selectedDate && "text-muted-foreground")}>
+                  <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl", !selectedDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? safeFormatDate(selectedDate, "PPP") : "Pick a date"}
                   </Button>
@@ -504,7 +504,7 @@ export default function TeacherAttendancePage() {
         </Card>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -541,7 +541,7 @@ export default function TeacherAttendancePage() {
                               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
                                 {teacher.name.substring(0, 2).toUpperCase()}
                               </div>
-                              <span className="font-bold text-slate-800">{teacher.name}</span>
+                              <span className="font-bold text-foreground/90">{teacher.name}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -552,7 +552,7 @@ export default function TeacherAttendancePage() {
                               <SelectTrigger className="w-[120px] h-9 bg-white shadow-soft border-none focus:ring-primary/20 rounded-xl font-bold text-xs">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl font-bold">
+                              <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl font-bold">
                                 <SelectItem value="present">Present</SelectItem>
                                 <SelectItem value="absent">Absent</SelectItem>
                                 <SelectItem value="leave">Leave</SelectItem>
@@ -565,7 +565,7 @@ export default function TeacherAttendancePage() {
                               value={record?.time_in || ''}
                               onChange={(e) => handleTimeChange(teacher.id, 'time_in', e.target.value)}
                               disabled={record?.status !== 'present'}
-                              className="h-9 w-32 bg-white/80 border-none shadow-soft rounded-xl text-xs font-bold"
+                              className="h-9 w-32 bg-card/80 border-none shadow-soft rounded-xl text-xs font-bold"
                             />
                           </TableCell>
                           <TableCell>
@@ -574,7 +574,7 @@ export default function TeacherAttendancePage() {
                               value={record?.time_out || ''}
                               onChange={(e) => handleTimeChange(teacher.id, 'time_out', e.target.value)}
                               disabled={record?.status !== 'present'}
-                              className="h-9 w-32 bg-white/80 border-none shadow-soft rounded-xl text-xs font-bold"
+                              className="h-9 w-32 bg-card/80 border-none shadow-soft rounded-xl text-xs font-bold"
                             />
                           </TableCell>
                           <TableCell className="pr-6">
@@ -589,7 +589,7 @@ export default function TeacherAttendancePage() {
                                 }
                               }))}
                               placeholder="Add observation..."
-                              className="h-9 bg-white/80 border-none shadow-soft rounded-xl text-xs font-medium"
+                              className="h-9 bg-card/80 border-none shadow-soft rounded-xl text-xs font-medium"
                             />
                           </TableCell>
                         </TableRow>
@@ -620,7 +620,7 @@ export default function TeacherAttendancePage() {
       </Card>
 
       {/* Attendance Report Section */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 h-fit mt-12">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 h-fit mt-12">
         <CardHeader className="bg-gradient-to-r from-primary to-violet-600 text-primary-foreground py-6 shadow-strong">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <CardTitle className="text-2xl font-black flex items-center gap-3">
@@ -630,10 +630,10 @@ export default function TeacherAttendancePage() {
               Monthly Efficiency Matrix
             </CardTitle>
             <div className="flex gap-3">
-              <Button variant="outline" size="sm" onClick={exportReportToCSV} className="rounded-xl border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold h-10 px-4">
+              <Button variant="outline" size="sm" onClick={exportReportToCSV} className="rounded-xl border-border/20 bg-white/10 hover:bg-white/20 text-white font-bold h-10 px-4">
                 <Download className="mr-2 h-4 w-4" /> CSV EXPORT
               </Button>
-              <Button variant="outline" size="sm" onClick={handlePrintReport} className="rounded-xl border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold h-10 px-4">
+              <Button variant="outline" size="sm" onClick={handlePrintReport} className="rounded-xl border-border/20 bg-white/10 hover:bg-white/20 text-white font-bold h-10 px-4">
                 <Printer className="mr-2 h-4 w-4" /> PRINT RECORD
               </Button>
             </div>
@@ -648,13 +648,13 @@ export default function TeacherAttendancePage() {
                 type="month"
                 value={reportMonthFilter}
                 onChange={(e) => setReportMonthFilter(e.target.value)}
-                className="w-[200px] h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl font-bold"
+                className="w-[200px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl font-bold"
               />
             </div>
             <div className="flex gap-6">
                <div className="text-center">
                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Staff</p>
-                 <p className="text-2xl font-black text-slate-800">{reportData.length}</p>
+                 <p className="text-2xl font-black text-foreground/90">{reportData.length}</p>
                </div>
                <div className="text-center">
                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Avg Efficiency</p>
@@ -687,7 +687,7 @@ export default function TeacherAttendancePage() {
                 </TableHeader>
                 <TableBody>
                   {reportData.map(summary => (
-                    <TableRow key={summary.id} className="group border-muted/5 hover:bg-white/40 transition-colors">
+                    <TableRow key={summary.id} className="group border-muted/5 hover:bg-card/40 transition-colors">
                       <TableCell className="pl-6 py-4">
                         <span className="font-bold text-slate-700">{summary.name}</span>
                       </TableCell>

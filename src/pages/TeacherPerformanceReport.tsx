@@ -158,15 +158,15 @@ export default function TeacherPerformanceReport() {
 
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="flex flex-wrap gap-6 items-end">
             <div className="flex-1 min-w-[200px] space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Faculty Member</Label>
               <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="All Faculty" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Faculty Members</SelectItem>
                   {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
@@ -175,10 +175,10 @@ export default function TeacherPerformanceReport() {
             <div className="w-[180px] space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Analysis Period</Label>
               <Select value={dateRange} onValueChange={(v: any) => setDateRange(v)}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="daily">Daily Pulse</SelectItem>
                   <SelectItem value="weekly">Weekly Cycle</SelectItem>
                   <SelectItem value="monthly">Monthly Audit</SelectItem>
@@ -196,9 +196,9 @@ export default function TeacherPerformanceReport() {
           { title: "Staff Attendance", value: `${Math.round(teacherStats.reduce((s, t) => s + t.attendancePct, 0) / (teacherStats.length || 1))}%`, icon: Users, colorClass: "bg-green-500/10 text-green-600", desc: "Average presence" },
           { title: "Lesson Output", value: teacherStats.reduce((s, t) => s + t.lessonPlans, 0), icon: BookOpen, colorClass: "bg-primary/10 text-primary", desc: "Modules developed" },
           { title: "Homework Flow", value: teacherStats.reduce((s, t) => s + t.homework, 0), icon: ClipboardCheck, colorClass: "bg-orange-500/10 text-orange-600", desc: "Assignments dispatched" },
-          { title: "Evaluation Rate", value: teacherStats.reduce((s, t) => s + t.evaluations, 0), icon: CheckCircle, colorClass: "bg-indigo-500/10 text-indigo-600", desc: "Milestones verified" },
+          { title: "Evaluation Rate", value: teacherStats.reduce((s, t) => s + t.evaluations, 0), icon: CheckCircle, colorClass: "bg-primary/10 text-primary", desc: "Milestones verified" },
         ].map(s => (
-          <Card key={s.title} className="border-none shadow-strong rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 group hover:-translate-y-1 transition-all duration-500">
+          <Card key={s.title} className="border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 group hover:-translate-y-1 transition-all duration-500">
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className={cn("p-3 rounded-2xl transition-transform group-hover:rotate-6", s.colorClass)}>
@@ -218,7 +218,7 @@ export default function TeacherPerformanceReport() {
       </div>
 
       {/* Detailed Table */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -247,7 +247,7 @@ export default function TeacherPerformanceReport() {
                     </TableCell>
                   </TableRow>
                 ) : teacherStats.map(t => (
-                  <TableRow key={t.id} className="group transition-all duration-300 hover:bg-white/60">
+                  <TableRow key={t.id} className="group transition-all duration-300 hover:bg-card/60">
                     <TableCell className="px-6 py-4">
                       <div className="space-y-0.5">
                         <p className="font-black text-slate-700 group-hover:text-primary transition-colors leading-none">{t.name}</p>

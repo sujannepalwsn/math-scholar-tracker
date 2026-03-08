@@ -59,18 +59,18 @@ export default function ParentChapterDetailModal({ open, onOpenChange, chapterGr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl p-0">
-        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md p-8 border-b border-slate-100 shrink-0">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl p-0">
+        <div className="sticky top-0 z-10 bg-card/80 backdrop-blur-md p-8 border-b border-slate-100 shrink-0">
           <DialogHeader>
             <div className="flex items-center gap-4 mb-2">
-               <div className="h-12 w-12 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+               <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
                   <BookOpen className="h-6 w-6 text-white" />
                </div>
                <div>
-                  <DialogTitle id="chapter-detail-title" className="text-2xl font-black tracking-tight text-slate-800">
+                  <DialogTitle id="chapter-detail-title" className="text-2xl font-black tracking-tight text-foreground/90">
                     {lessonPlan.chapter}
                   </DialogTitle>
-                  <DialogDescription id="chapter-detail-description" className="text-xs font-bold uppercase tracking-widest text-indigo-500">
+                  <DialogDescription id="chapter-detail-description" className="text-xs font-bold uppercase tracking-widest text-primary">
                     Academic Analytics • {lessonPlan.subject}
                   </DialogDescription>
                </div>
@@ -84,7 +84,7 @@ export default function ParentChapterDetailModal({ open, onOpenChange, chapterGr
             <Card className="md:col-span-2 border-none shadow-soft rounded-[2rem] bg-slate-50 border border-slate-100 overflow-hidden">
                <CardContent className="p-6 space-y-4">
                   <div className="flex items-center gap-3">
-                     <Info className="h-4 w-4 text-indigo-400" />
+                     <Info className="h-4 w-4 text-primary/80" />
                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lesson Context</p>
                   </div>
                   <h4 className="text-lg font-black text-slate-700 leading-tight">{lessonPlan.topic || "Instructional Objective Specified"}</h4>
@@ -101,7 +101,7 @@ export default function ParentChapterDetailModal({ open, onOpenChange, chapterGr
                      </div>
                   </div>
                   {lessonPlan.lesson_file_url && (
-                    <Button variant="ghost" size="sm" className="w-full mt-4 h-10 rounded-xl bg-indigo-50 text-indigo-600 font-black text-[10px] uppercase tracking-widest shadow-soft" asChild>
+                    <Button variant="ghost" size="sm" className="w-full mt-4 h-10 rounded-xl bg-primary/5 text-primary font-black text-[10px] uppercase tracking-widest shadow-soft" asChild>
                       <a href={supabase.storage.from("lesson-plan-files").getPublicUrl(lessonPlan.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-3 w-3 mr-2" /> View Asset
                       </a>
@@ -164,7 +164,7 @@ export default function ParentChapterDetailModal({ open, onOpenChange, chapterGr
                         {testResults.map(tr => (
                           <div key={tr.id} className="flex items-center justify-between p-4 rounded-2xl bg-rose-50/50 border border-rose-100">
                             <div className="space-y-1">
-                               <p className="text-xs font-black text-slate-800">{tr.tests?.name}</p>
+                               <p className="text-xs font-black text-foreground/90">{tr.tests?.name}</p>
                                <p className="text-[10px] font-bold text-slate-400">{safeFormatDate(tr.date_taken, "MMM dd")}</p>
                             </div>
                             <div className="text-right">
@@ -183,7 +183,7 @@ export default function ParentChapterDetailModal({ open, onOpenChange, chapterGr
             <Card className="border-none shadow-soft rounded-[2.5rem] bg-white border border-slate-100 overflow-hidden">
                <CardHeader className="bg-slate-50/50 p-6 border-b border-slate-100">
                   <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                     <Book className="h-4 w-4 text-indigo-500" /> Operational Directives (Homework)
+                     <Book className="h-4 w-4 text-primary" /> Operational Directives (Homework)
                   </CardTitle>
                </CardHeader>
                <CardContent className="p-6">
@@ -195,7 +195,7 @@ export default function ParentChapterDetailModal({ open, onOpenChange, chapterGr
                         <div key={hr.id} className="p-5 rounded-3xl border border-slate-100 bg-slate-50/50 flex flex-col justify-between gap-4">
                            <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                 <p className="text-sm font-black text-slate-800 leading-tight">{hr.homework?.title}</p>
+                                 <p className="text-sm font-black text-foreground/90 leading-tight">{hr.homework?.title}</p>
                                  <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter", getHomeworkStatusStyles(hr.status))}>
                                     {hr.status}
                                  </Badge>

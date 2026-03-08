@@ -232,7 +232,7 @@ export default function ViewRecords() {
             <p className="text-muted-foreground text-sm font-medium">Historical audit of institutional presence and punctuality.</p>
           </div>
         </div>
-        <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+        <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <CalendarIcon className="h-5 w-5 text-primary" />
           </div>
@@ -243,15 +243,15 @@ export default function ViewRecords() {
       {/* Filters Row */}
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="flex flex-wrap gap-6 items-end">
             <div className="w-[140px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Grades</SelectItem>
                   {Array.from(new Set(students.map(s => s.grade))).map(g => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
@@ -267,7 +267,7 @@ export default function ViewRecords() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-11 justify-start text-left font-normal bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl shadow-sm",
+                      "w-full h-11 justify-start text-left font-normal bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl shadow-sm",
                       !selectedDate && "text-muted-foreground"
                     )}
                   >
@@ -298,7 +298,7 @@ export default function ViewRecords() {
       </div>
 
       {/* Attendance Table */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
@@ -340,10 +340,10 @@ export default function ViewRecords() {
                 </TableHeader>
                 <TableBody>
                   {records.map(r => (
-                    <TableRow key={r.id} className="group transition-all duration-300 hover:bg-white/60">
+                    <TableRow key={r.id} className="group transition-all duration-300 hover:bg-card/60">
                       <TableCell className="px-6 py-4 font-black text-slate-700 group-hover:text-primary transition-colors">{r.students.name}</TableCell>
                       <TableCell className="px-6 py-4">
-                        <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-600 border-none rounded-lg px-2 py-0.5 text-[10px] font-bold">
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-lg px-2 py-0.5 text-[10px] font-bold">
                           Grade {r.students.grade}
                         </Badge>
                       </TableCell>
@@ -356,8 +356,8 @@ export default function ViewRecords() {
                           {r.status}
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4 font-bold text-indigo-600 text-xs">{r.time_in || "-"}</TableCell>
-                      <TableCell className="px-6 py-4 font-bold text-indigo-400 text-xs">{r.time_out || "-"}</TableCell>
+                      <TableCell className="px-6 py-4 font-bold text-primary text-xs">{r.time_in || "-"}</TableCell>
+                      <TableCell className="px-6 py-4 font-bold text-primary/80 text-xs">{r.time_out || "-"}</TableCell>
                       <TableCell className="px-6 py-4 text-right">
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-soft group-hover:scale-105 transition-all" onClick={() => handleStudentClick(r.student_id, r.students.name, r.students.grade)}>
                           <User className="h-4 w-4 text-slate-500" />

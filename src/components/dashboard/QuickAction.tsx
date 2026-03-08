@@ -22,7 +22,7 @@ export const QuickAction = ({
       variant={variant}
       onClick={onClick}
       className={cn(
-        "flex items-center justify-start gap-3 h-12 px-6 rounded-xl font-bold text-sm tracking-tight transition-all duration-300 hover:scale-105 active:scale-95 shadow-soft border-white/20 bg-white/60 backdrop-blur-md",
+        "flex items-center justify-start gap-3 h-12 px-6 rounded-xl font-bold text-sm tracking-tight transition-all duration-300 hover:scale-105 active:scale-95 shadow-soft border-border/20 bg-card/60 backdrop-blur-md",
         className
       )}
     >

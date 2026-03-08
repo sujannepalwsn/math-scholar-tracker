@@ -205,7 +205,7 @@ const AdminDashboard = () => {
           </DialogContent>
         </Dialog>
 
-        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -240,10 +240,10 @@ const AdminDashboard = () => {
                     {centers.map((center: any) => {
                       const centerUser = center.users?.[0];
                       return (
-                        <TableRow key={center.id} className="group transition-all duration-300 hover:bg-white/60">
+                        <TableRow key={center.id} className="group transition-all duration-300 hover:bg-card/60">
                           <TableCell className="px-6 py-4 font-black text-slate-700 group-hover:text-primary transition-colors">{center.name}</TableCell>
                           <TableCell className="px-6 py-4 font-medium text-slate-500 text-xs truncate max-w-[200px]">{center.address || '-'}</TableCell>
-                          <TableCell className="px-6 py-4 font-bold text-indigo-600 text-xs">{center.phone || '-'}</TableCell>
+                          <TableCell className="px-6 py-4 font-bold text-primary text-xs">{center.phone || '-'}</TableCell>
                           <TableCell className="px-6 py-4">
                             <code className="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-700">{centerUser?.username || '-'}</code>
                           </TableCell>

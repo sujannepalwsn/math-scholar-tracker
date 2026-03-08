@@ -153,7 +153,7 @@ const InvoiceManagement = () => {
       partial: 'bg-orange-100 text-orange-800',
       paid: 'bg-green-100 text-green-800',
       overdue: 'bg-red-100 text-red-800',
-      cancelled: 'bg-slate-100 text-slate-800'
+      cancelled: 'bg-slate-100 text-foreground/90'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };

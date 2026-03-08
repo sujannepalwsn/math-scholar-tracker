@@ -418,7 +418,7 @@ export default function Tests() {
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
       {testsWithFiles.length > 0 && (
-        <Card className="border-none shadow-medium overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="border-none shadow-medium overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="bg-muted/30 pb-4">
             <CardTitle className="text-xl flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
@@ -442,7 +442,7 @@ export default function Tests() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                           <FileText className="h-4 w-4" />
                         </div>
-                        <span className="font-bold text-slate-800">{test.name}</span>
+                        <span className="font-bold text-foreground/90">{test.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -662,7 +662,7 @@ export default function Tests() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 h-fit">
+        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 h-fit">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -692,7 +692,7 @@ export default function Tests() {
                   >
                     <TableCell className="pl-6 py-4">
                       <div className="space-y-1">
-                        <p className="font-bold text-slate-800 leading-none">{test.name}</p>
+                        <p className="font-bold text-foreground/90 leading-none">{test.name}</p>
                         <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                           <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {test.subject}</span>
                           <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {format(new Date(test.date), "MMM d")}</span>

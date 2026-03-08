@@ -54,7 +54,7 @@ export default function ParentActivities() {
         </div>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3 px-2">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -81,7 +81,7 @@ export default function ParentActivities() {
                 const activity = sa.activities;
                 if (!activity) return null;
                 return (
-                  <Card key={sa.id} className="overflow-hidden border border-white/40 bg-white/60 shadow-soft hover:shadow-strong hover:-translate-y-2 transition-all duration-500 rounded-[2rem] group">
+                  <Card key={sa.id} className="overflow-hidden border border-border/40 bg-card/60 shadow-soft hover:shadow-strong hover:-translate-y-2 transition-all duration-500 rounded-[2rem] group">
                     <div className="relative aspect-video overflow-hidden">
                       {activity.photo_url ? (
                         <img
@@ -100,7 +100,7 @@ export default function ParentActivities() {
                       )}
 
                       <div className="absolute top-4 left-4">
-                         <Badge className="bg-white/80 backdrop-blur-md text-slate-900 border-none text-[9px] font-black uppercase tracking-widest px-2.5 py-1 shadow-soft">
+                         <Badge className="bg-card/80 backdrop-blur-md text-foreground border-none text-[9px] font-black uppercase tracking-widest px-2.5 py-1 shadow-soft">
                             <Calendar className="h-2.5 w-2.5 mr-1.5 inline text-primary" />
                             {format(new Date(activity.activity_date), "MMM d, yyyy")}
                          </Badge>
@@ -115,7 +115,7 @@ export default function ParentActivities() {
 
                     <CardContent className="p-6 space-y-4">
                       <div className="space-y-1">
-                        <h3 className="font-black text-xl text-slate-800 leading-tight group-hover:text-primary transition-colors line-clamp-1">{activity.title}</h3>
+                        <h3 className="font-black text-xl text-foreground/90 leading-tight group-hover:text-primary transition-colors line-clamp-1">{activity.title}</h3>
                         <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Creative Milestones</p>
                       </div>
 
@@ -142,7 +142,7 @@ export default function ParentActivities() {
                             </Button>
                           )}
                           {activity.video_url && (
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white shadow-soft hover:bg-indigo-50 hover:text-indigo-600 transition-all" asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white shadow-soft hover:bg-primary/5 hover:text-primary transition-all" asChild>
                               <a href={supabase.storage.from("activity-videos").getPublicUrl(activity.video_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
                                 <Video className="h-4 w-4" />
                               </a>

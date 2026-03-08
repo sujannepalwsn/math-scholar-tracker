@@ -29,7 +29,7 @@ export const KPICard = ({
   secondaryIconColor
 }: KPICardProps) => {
   const colorVariants: Record<string, string> = {
-    indigo: "bg-indigo-500/10 text-indigo-600",
+    indigo: "bg-primary/10 text-primary",
     green: "bg-green-500/10 text-green-600",
     orange: "bg-orange-500/10 text-orange-600",
     blue: "bg-blue-500/10 text-blue-600",
@@ -39,7 +39,7 @@ export const KPICard = ({
     pink: "bg-pink-500/10 text-pink-600" };
 
   const chartColors: Record<string, string> = {
-    indigo: "#6366f1",
+    indigo: "hsl(var(--primary))",
     green: "#22c55e",
     orange: "#f97316",
     blue: "#3b82f6",
@@ -52,7 +52,7 @@ export const KPICard = ({
     <Card
       onClick={onClick}
       className={cn(
-        "group overflow-hidden border-none shadow-soft transition-all duration-300 hover:shadow-medium hover:-translate-y-1 bg-white/60 backdrop-blur-md rounded-2xl border border-white/20",
+        "group overflow-hidden border-none shadow-soft transition-all duration-300 hover:shadow-medium hover:-translate-y-1 bg-card/60 backdrop-blur-md rounded-2xl border border-border/20",
         onClick && "cursor-pointer",
         className
       )}
@@ -63,7 +63,7 @@ export const KPICard = ({
             <Icon className="h-5 w-5" />
           </div>
           {SecondaryIcon && (
-            <div className={cn("p-2 rounded-lg bg-white shadow-sm", secondaryIconColor)}>
+            <div className={cn("p-2 rounded-lg bg-card shadow-sm", secondaryIconColor)}>
                <SecondaryIcon className="h-4 w-4" />
             </div>
           )}
@@ -72,7 +72,7 @@ export const KPICard = ({
         <div className="space-y-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</p>
           <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black tracking-tight text-slate-900">{value}</h3>
+            <h3 className="text-3xl font-black tracking-tight text-foreground">{value}</h3>
           </div>
           {description && (
             <p className="text-[10px] font-bold text-muted-foreground/70">{description}</p>
@@ -85,14 +85,14 @@ export const KPICard = ({
               <AreaChart data={trendData}>
                 <defs>
                   <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={chartColors[color]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={chartColors[color]} stopOpacity={0} />
+                    <stop offset="5%" stopColor={color === 'indigo' ? 'var(--primary-hex, #6366f1)' : chartColors[color]} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={color === 'indigo' ? 'var(--primary-hex, #6366f1)' : chartColors[color]} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke={chartColors[color]}
+                  stroke={color === 'indigo' ? 'hsl(var(--primary))' : chartColors[color]}
                   strokeWidth={2}
                   fillOpacity={1}
                   fill={`url(#gradient-${color})`}

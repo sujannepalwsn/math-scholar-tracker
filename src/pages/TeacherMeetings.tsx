@@ -100,9 +100,9 @@ export default function TeacherMeetings() {
         </div>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-          <CardTitle className="text-xl font-black flex items-center gap-3 text-slate-800">
+          <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90">
             <div className="p-2 rounded-xl bg-primary/10">
               <CalendarDays className="h-6 w-6 text-primary" />
             </div>

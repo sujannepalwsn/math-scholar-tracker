@@ -142,7 +142,7 @@ const AdminFinance = () => {
             { title: "Risk Exposure", value: formatCurrency(outstanding), icon: AlertCircle, color: "text-orange-600", bgColor: "bg-orange-500/10", valueClass: "text-orange-600", desc: `${unpaidCount} Pending Receivables` },
             { title: "Net Liquidity", value: formatCurrency(netBalance), icon: Wallet, color: "text-purple-600", bgColor: "bg-purple-500/10", valueClass: netBalance >= 0 ? 'text-green-600' : 'text-red-600', desc: "Post-Expenditure Balance" },
           ].map((stat) => (
-            <Card key={stat.title} className="border-none shadow-strong hover:-translate-y-1 transition-all duration-500 group rounded-[2rem] bg-white/40 backdrop-blur-md border border-white/20">
+            <Card key={stat.title} className="border-none shadow-strong hover:-translate-y-1 transition-all duration-500 group rounded-[2rem] bg-card/40 backdrop-blur-md border border-border/20">
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                    <div className={cn("p-3 rounded-2xl transition-transform group-hover:rotate-6", stat.bgColor)}>
@@ -174,7 +174,7 @@ const AdminFinance = () => {
         )}
 
         <Tabs defaultValue="invoices" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-5 h-14 bg-white/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-white/40 shadow-soft">
+          <TabsList className="grid w-full grid-cols-5 h-14 bg-card/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-border/40 shadow-soft">
             <TabsTrigger value="invoices" className="rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Invoices</TabsTrigger>
             <TabsTrigger value="fees" className="rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Fees</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Payments</TabsTrigger>

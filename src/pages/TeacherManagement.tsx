@@ -246,7 +246,7 @@ export default function TeacherManagement() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+          <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
             <div className="p-2 rounded-xl bg-green-500/10">
               <DollarSign className="h-5 w-5 text-green-600" />
             </div>
@@ -327,7 +327,7 @@ export default function TeacherManagement() {
       </div>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -363,14 +363,14 @@ export default function TeacherManagement() {
                   {teachers.map((teacher: any) => {
                     const ctGrades = getClassTeacherGrades(teacher.id);
                     return (
-                      <TableRow key={teacher.id} className="group transition-all duration-300 hover:bg-white/60">
+                      <TableRow key={teacher.id} className="group transition-all duration-300 hover:bg-card/60">
                         <TableCell className="px-6 py-4">
                           <div className="space-y-1">
                             <p className="font-black text-slate-700 group-hover:text-primary transition-colors leading-none">{teacher.name}</p>
                             <p className="text-[10px] font-medium text-slate-400 truncate max-w-[150px]">{teacher.email || 'No email registered'}</p>
                           </div>
                         </TableCell>
-                        <TableCell className="px-6 py-4 font-bold text-indigo-600 text-xs">{teacher.contact_number || teacher.phone || '-'}</TableCell>
+                        <TableCell className="px-6 py-4 font-bold text-primary text-xs">{teacher.contact_number || teacher.phone || '-'}</TableCell>
                         <TableCell className="hidden sm:table-cell px-6 py-4">
                           <span className="font-black text-slate-600 text-xs">{teacher.monthly_salary ? `₹${teacher.monthly_salary.toLocaleString()}` : '-'}</span>
                         </TableCell>
@@ -413,7 +413,7 @@ export default function TeacherManagement() {
                               <Edit className="h-3.5 w-3.5 text-primary" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleClassTeacherClick(teacher)} title="Assign Grade Oversight">
-                              <GraduationCap className="h-3.5 w-3.5 text-indigo-600" />
+                              <GraduationCap className="h-3.5 w-3.5 text-primary" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleManagePermissionsClick(teacher)}>
                               <Settings className="h-3.5 w-3.5 text-slate-500" />

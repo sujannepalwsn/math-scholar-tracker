@@ -191,9 +191,9 @@ export default function CenterSettings() {
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Basic Information */}
-        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-slate-800 uppercase tracking-widest">
+            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
               <div className="p-2 rounded-xl bg-primary/10">
                 <Building className="h-6 w-6 text-primary" />
               </div>
@@ -265,9 +265,9 @@ export default function CenterSettings() {
         </Card>
 
         {/* Logo & Branding */}
-        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-slate-800 uppercase tracking-widest">
+            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
               <div className="p-2 rounded-xl bg-primary/10">
               <ImageIcon className="h-6 w-6 text-primary" />
               </div>
@@ -299,16 +299,34 @@ export default function CenterSettings() {
           </CardContent>
         </Card>
 
-        {/* Theme Customization */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
-              Dashboard Theme
+        {/* Personal Appearance Settings */}
+        <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Palette className="h-6 w-6 text-primary" />
+              </div>
+              Personal Appearance
             </CardTitle>
-            <CardDescription>Choose colors for your dashboard</CardDescription>
+            <CardDescription className="font-medium">Customize your own viewing experience</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
+            <ThemeSelector />
+          </CardContent>
+        </Card>
+
+        {/* Global Institution Theme (Admin Only) */}
+        <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Settings className="h-6 w-6 text-primary" />
+              </div>
+              Institutional Branding Override
+            </CardTitle>
+            <CardDescription className="font-medium">Set the default color palette for all institutional users</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="primaryColor">Primary Color</Label>
@@ -369,91 +387,31 @@ export default function CenterSettings() {
                 </div>
                 <p className="text-xs text-muted-foreground">Sidebar background</p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="foregroundColor">Text Color</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    id="foregroundColor"
-                    value={theme.foreground}
-                    onChange={(e) => setTheme({ ...theme, foreground: e.target.value })}
-                    className="w-12 h-10 rounded border cursor-pointer"
-                  />
-                  <Input
-                    value={theme.foreground}
-                    onChange={(e) => setTheme({ ...theme, foreground: e.target.value })}
-                    placeholder="#1e293b"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Main text, headings</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cardBackground">Card Background</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    id="cardBackground"
-                    value={theme.cardBackground}
-                    onChange={(e) => setTheme({ ...theme, cardBackground: e.target.value })}
-                    className="w-12 h-10 rounded border cursor-pointer"
-                  />
-                  <Input
-                    value={theme.cardBackground}
-                    onChange={(e) => setTheme({ ...theme, cardBackground: e.target.value })}
-                    placeholder="#ffffff"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Cards, panels background</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="mutedForeground">Secondary Text</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    id="mutedForeground"
-                    value={theme.mutedForeground}
-                    onChange={(e) => setTheme({ ...theme, mutedForeground: e.target.value })}
-                    className="w-12 h-10 rounded border cursor-pointer"
-                  />
-                  <Input
-                    value={theme.mutedForeground}
-                    onChange={(e) => setTheme({ ...theme, mutedForeground: e.target.value })}
-                    placeholder="#64748b"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Muted text, descriptions</p>
-              </div>
             </div>
 
             {/* Theme Preview */}
-            <div className="mt-6 p-4 border rounded-lg">
-              <p className="text-sm font-medium mb-3">Preview:</p>
-              <div className="flex rounded-lg overflow-hidden h-32 border">
+            <div className="mt-8 p-6 border-2 border-dashed rounded-2xl bg-slate-50/50">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Preview Synthesis</p>
+              <div className="flex rounded-2xl overflow-hidden h-32 shadow-soft border border-white">
                 <div
-                  className="w-16 p-2"
+                  className="w-20 p-3"
                   style={{ backgroundColor: theme.sidebar }}
                 >
-                  <div className="w-full h-3 rounded mb-2" style={{ backgroundColor: theme.primary }} />
-                  <div className="w-full h-2 rounded mb-1 bg-white/20" />
-                  <div className="w-full h-2 rounded mb-1 bg-white/20" />
-                  <div className="w-full h-2 rounded bg-white/20" />
+                  <div className="w-full h-4 rounded-lg mb-3" style={{ backgroundColor: theme.primary }} />
+                  <div className="w-full h-2 rounded-full mb-2 bg-white/20" />
+                  <div className="w-full h-2 rounded-full mb-2 bg-white/20" />
+                  <div className="w-full h-2 rounded-full bg-white/20" />
                 </div>
                 <div
-                  className="flex-1 p-3"
+                  className="flex-1 p-4"
                   style={{ backgroundColor: theme.background }}
                 >
                   <div
-                    className="w-20 h-6 rounded mb-2"
+                    className="w-24 h-8 rounded-xl mb-3"
                     style={{ backgroundColor: theme.primary }}
                   />
-                  <div className="w-full h-2 rounded mb-1 bg-gray-200" />
-                  <div className="w-3/4 h-2 rounded bg-gray-200" />
+                  <div className="w-full h-3 rounded-full mb-2 bg-slate-200" />
+                  <div className="w-3/4 h-3 rounded-full bg-slate-200" />
                 </div>
               </div>
             </div>

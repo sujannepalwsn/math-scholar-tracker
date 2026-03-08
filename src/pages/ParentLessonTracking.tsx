@@ -69,7 +69,7 @@ export default function ParentLessonTracking() {
           </div>
         </div>
 
-        <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+        <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <GraduationCap className="h-5 w-5 text-primary" />
           </div>
@@ -82,7 +82,7 @@ export default function ParentLessonTracking() {
 
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="flex flex-col md:flex-row gap-6 md:items-center justify-between">
             <div className="space-y-1">
                 <h3 className="font-black text-slate-700 uppercase tracking-tight text-sm">Curriculum Navigation</h3>
@@ -90,10 +90,10 @@ export default function ParentLessonTracking() {
             </div>
             <div className="w-full md:w-[250px]">
               <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-                <SelectTrigger className="h-12 bg-white/50 border-none shadow-soft focus:ring-primary/20 rounded-2xl font-bold text-xs">
+                <SelectTrigger className="h-12 bg-card/50 border-none shadow-soft focus:ring-primary/20 rounded-2xl font-bold text-xs">
                   <SelectValue placeholder="All Academic Domains" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-none shadow-strong rounded-2xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-none shadow-strong rounded-2xl">
                   <SelectItem value="all" className="font-bold text-xs">All Domains</SelectItem>
                   {allSubjects.map((s: any) => <SelectItem key={s} value={s} className="font-bold text-xs">{s}</SelectItem>)}
                 </SelectContent>
@@ -103,7 +103,7 @@ export default function ParentLessonTracking() {
         </Card>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -135,9 +135,9 @@ export default function ParentLessonTracking() {
                 </TableHeader>
                 <tbody>
                   {lessonRecords.map((lr: any) => (
-                    <TableRow key={lr.id} className="group transition-all duration-300 hover:bg-white/60">
+                    <TableRow key={lr.id} className="group transition-all duration-300 hover:bg-card/60">
                       <TableCell className="px-6 py-4">
-                        <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-none rounded-lg text-[9px] font-black uppercase tracking-tighter">
+                        <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[9px] font-black uppercase tracking-tighter">
                           {lr.lesson_plans?.subject || 'Domain N/A'}
                         </Badge>
                       </TableCell>

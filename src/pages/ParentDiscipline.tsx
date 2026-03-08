@@ -66,7 +66,7 @@ export default function ParentDiscipline() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+          <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
               <ShieldCheck className="h-5 w-5 text-primary" />
             </div>
@@ -79,7 +79,7 @@ export default function ParentDiscipline() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="md:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -114,7 +114,7 @@ export default function ParentDiscipline() {
                   </TableHeader>
                   <TableBody>
                     {issues.map((issue: any) => (
-                      <TableRow key={issue.id} className="group transition-all duration-300 hover:bg-white/60">
+                      <TableRow key={issue.id} className="group transition-all duration-300 hover:bg-card/60">
                         <TableCell className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
@@ -122,7 +122,7 @@ export default function ParentDiscipline() {
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-4">
-                          <span className="font-black text-indigo-600 text-[10px] uppercase tracking-tighter">
+                          <span className="font-black text-primary text-[10px] uppercase tracking-tighter">
                             {issue.discipline_categories?.name || 'Standard'}
                           </span>
                         </TableCell>
@@ -152,7 +152,7 @@ export default function ParentDiscipline() {
         </Card>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-strong rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white overflow-hidden">
+          <Card className="border-none shadow-strong rounded-3xl bg-gradient-to-br from-primary to-violet-700 text-white overflow-hidden">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-2 rounded-xl bg-white/20 backdrop-blur-md">
@@ -161,10 +161,10 @@ export default function ParentDiscipline() {
                 <Badge className="bg-white/20 text-white border-none text-[10px] font-black">SYSTEM SECURE</Badge>
               </div>
               <h3 className="text-xl font-black mb-1">Behavioral Integrity</h3>
-              <p className="text-indigo-100 text-xs font-medium leading-relaxed opacity-80">
+              <p className="text-primary/10 text-xs font-medium leading-relaxed opacity-80">
                 Institutional standards ensure a conducive learning environment for every student.
               </p>
-              <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 gap-4">
+              <div className="mt-6 pt-6 border-t border-border/10 grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-widest text-indigo-200">Critical Issues</p>
                   <p className="text-2xl font-black">{highSeverityCount}</p>
@@ -177,7 +177,7 @@ export default function ParentDiscipline() {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-strong rounded-3xl bg-white/80 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong rounded-3xl bg-card/80 backdrop-blur-md border border-border/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" /> Policy Advisory

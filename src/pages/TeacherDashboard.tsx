@@ -397,7 +397,7 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8faff] p-4 md:p-8 space-y-8 pb-24 md:pb-8">
+    <div className="min-h-screen bg-background p-4 md:p-8 space-y-8 pb-24 md:pb-8">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <CenterLogo size="lg" />
@@ -407,11 +407,11 @@ export default function TeacherDashboard() {
             <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full border-2 border-white" />
           </Button>
           <div className="flex items-center gap-3 bg-white p-1.5 pr-4 rounded-2xl shadow-soft">
-            <div className="h-9 w-9 bg-indigo-100 rounded-xl flex items-center justify-center overflow-hidden">
-               <Users className="h-5 w-5 text-indigo-600" />
+            <div className="h-9 w-9 bg-primary/10 rounded-xl flex items-center justify-center overflow-hidden">
+               <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-800 leading-none">{user?.username?.split('@')[0]}</p>
+              <p className="text-xs font-black text-foreground/90 leading-none">{user?.username?.split('@')[0]}</p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Teacher</p>
             </div>
           </div>
@@ -419,8 +419,8 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-2 bg-white/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-white/40">
-          <div className="p-2 bg-indigo-500 text-white rounded-lg">
+        <div className="flex items-center gap-2 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
+          <div className="p-2 bg-primary text-white rounded-lg">
             <Home className="h-4 w-4" />
           </div>
           <div className="flex items-center gap-2 px-3 border-l border-slate-200 ml-2">
@@ -428,7 +428,7 @@ export default function TeacherDashboard() {
              <span className="text-xs font-bold text-slate-600">{format(new Date(), "eee, MMM d")}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-white/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-white/40">
+        <div className="flex items-center gap-3 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
            <Input
              type="date"
              value={dateRange.to}
@@ -487,7 +487,7 @@ export default function TeacherDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
 
-           <Card className="border-none shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border border-white/20 overflow-hidden">
+           <Card className="border-none shadow-soft bg-card/60 backdrop-blur-md rounded-2xl border border-border/20 overflow-hidden">
               <CardHeader className="bg-primary/5 border-b border-primary/10">
                  <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
                     <TrendingUp className="h-4 w-4" /> Academic Leaders
@@ -505,10 +505,10 @@ export default function TeacherDashboard() {
                             onClick={() => navigate(`/teacher/student-report?studentId=${r.student_id}`)}
                           >
                              <div>
-                                <p className="text-sm font-bold text-slate-800">{r.students?.name}</p>
+                                <p className="text-sm font-bold text-foreground/90">{r.students?.name}</p>
                                 <p className="text-[10px] text-slate-400 font-medium">Grade {r.students?.grade} • {r.tests?.name}</p>
                              </div>
-                             <Badge className="bg-indigo-500 text-white font-black text-[10px]">{Math.round((r.marks_obtained / (r.tests?.total_marks || 100)) * 100)}%</Badge>
+                             <Badge className="bg-primary text-white font-black text-[10px]">{Math.round((r.marks_obtained / (r.tests?.total_marks || 100)) * 100)}%</Badge>
                           </div>
                        ))
                     )}
@@ -525,7 +525,7 @@ export default function TeacherDashboard() {
           classes={todayClasses}
           onViewRoutine={() => navigate("/teacher/class-routine")}
         />
-        <Card className="lg:col-span-2 border-none shadow-soft bg-white/60 backdrop-blur-md rounded-2xl border border-white/20">
+        <Card className="lg:col-span-2 border-none shadow-soft bg-card/60 backdrop-blur-md rounded-2xl border border-border/20">
            <CardHeader><CardTitle className="text-lg font-bold">Upcoming Professional Milestones</CardTitle></CardHeader>
            <CardContent>
               {upcomingMeetings.length === 0 ? (
@@ -539,8 +539,8 @@ export default function TeacherDashboard() {
                         onClick={() => navigate("/teacher/meetings")}
                      >
                         <div className="space-y-1">
-                           <p className="text-sm font-bold text-slate-800">{att.meetings?.title}</p>
-                           <p className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">{att.meetings?.meeting_type}</p>
+                           <p className="text-sm font-bold text-foreground/90">{att.meetings?.title}</p>
+                           <p className="text-[10px] font-black uppercase text-primary tracking-widest">{att.meetings?.meeting_type}</p>
                         </div>
                         <Badge variant="secondary" className="font-bold">{format(new Date(att.meetings?.meeting_date), "MMM d, p")}</Badge>
                      </div>

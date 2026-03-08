@@ -79,7 +79,7 @@ export default function ParentHomework() {
           </TableHeader>
           <TableBody>
             {data.map((hs: any) => (
-              <TableRow key={hs.id} className="group transition-all duration-300 hover:bg-white/60">
+              <TableRow key={hs.id} className="group transition-all duration-300 hover:bg-card/60">
                 <TableCell className="px-6 py-4">
                   <div className="space-y-0.5">
                     <p className="font-black text-slate-700 text-xs leading-none">{hs.homework?.title || 'Untitled'}</p>
@@ -136,7 +136,7 @@ export default function ParentHomework() {
       </div>
 
       <Tabs defaultValue="today" className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto md:h-14 bg-white/40 backdrop-blur-md rounded-2xl md:rounded-[2rem] p-1.5 border border-white/40 shadow-soft gap-1">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto md:h-14 bg-card/40 backdrop-blur-md rounded-2xl md:rounded-[2rem] p-1.5 border border-border/40 shadow-soft gap-1">
           <TabsTrigger value="today" className="rounded-xl md:rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[9px] md:text-[10px] tracking-widest py-2 md:py-0">Today</TabsTrigger>
           <TabsTrigger value="upcoming" className="rounded-xl md:rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[9px] md:text-[10px] tracking-widest py-2 md:py-0">Upcoming</TabsTrigger>
           <TabsTrigger value="completed" className="rounded-xl md:rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[9px] md:text-[10px] tracking-widest py-2 md:py-0">Settled</TabsTrigger>
@@ -144,7 +144,7 @@ export default function ParentHomework() {
         </TabsList>
 
         <TabsContent value="today" className="mt-8">
-          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
             <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
               <CardTitle className="text-xl font-black flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-primary/10">
@@ -164,7 +164,7 @@ export default function ParentHomework() {
         </TabsContent>
 
         <TabsContent value="upcoming" className="mt-8">
-          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
             <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
               <CardTitle className="text-xl font-black flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-primary/10">
@@ -184,7 +184,7 @@ export default function ParentHomework() {
         </TabsContent>
 
         <TabsContent value="completed" className="mt-8">
-          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
             <CardHeader className="border-b border-muted/20 bg-emerald-500/5 py-6">
               <CardTitle className="text-xl font-black flex items-center gap-3 text-emerald-700">
                 <div className="p-2 rounded-xl bg-emerald-500/10">
@@ -204,7 +204,7 @@ export default function ParentHomework() {
         </TabsContent>
 
         <TabsContent value="overdue" className="mt-8">
-          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
             <CardHeader className="border-b border-muted/20 bg-rose-500/5 py-6">
               <CardTitle className="text-xl font-black flex items-center gap-3 text-rose-700">
                 <div className="p-2 rounded-xl bg-rose-500/10">

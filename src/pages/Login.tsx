@@ -48,7 +48,7 @@ const CenterLogin = () => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-violet-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      <Card className="w-full max-w-md border border-white/40 shadow-strong bg-white/70 backdrop-blur-3xl animate-in zoom-in-95 duration-700 rounded-[2.5rem]">
+      <Card className="w-full max-w-md border border-border/40 shadow-strong bg-white/70 backdrop-blur-3xl animate-in zoom-in-95 duration-700 rounded-[2.5rem]">
         <CardHeader className="space-y-6 pt-12">
           <div className="mx-auto relative">
              <div className="absolute -inset-1 bg-gradient-to-r from-primary to-violet-600 rounded-2xl blur opacity-25" />
@@ -73,7 +73,7 @@ const CenterLogin = () => {
                 id="username"
                 type="text"
                 placeholder="TOKEN_ID"
-                className="h-14 rounded-2xl border-white/20 bg-white/50 backdrop-blur-sm px-6 font-bold"
+                className="h-14 rounded-2xl border-border/20 bg-card/50 backdrop-blur-sm px-6 font-bold"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -86,7 +86,7 @@ const CenterLogin = () => {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                className="h-14 rounded-2xl border-white/20 bg-white/50 backdrop-blur-sm px-6 font-bold"
+                className="h-14 rounded-2xl border-border/20 bg-card/50 backdrop-blur-sm px-6 font-bold"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

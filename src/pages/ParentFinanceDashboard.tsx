@@ -105,7 +105,7 @@ const ParentFinanceDashboard = () => {
       paid: 'bg-emerald-50 text-emerald-700 border-emerald-100',
       partial: 'bg-amber-50 text-amber-700 border-amber-100',
       overdue: 'bg-rose-50 text-rose-700 border-rose-100',
-      issued: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+      issued: 'bg-primary/5 text-primary/70 border-primary/10',
       cancelled: 'bg-slate-50 text-slate-700 border-slate-100'
     };
     return styles[status] || 'bg-slate-50 text-slate-700 border-slate-100';
@@ -147,10 +147,10 @@ const ParentFinanceDashboard = () => {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button variant="ghost" onClick={() => navigate('/parent-dashboard')} className="rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/60">
+          <Button variant="ghost" onClick={() => navigate('/parent-dashboard')} className="rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-card/60">
             <ArrowLeft className="h-4 w-4 mr-2" /> EXIT TO HUB
           </Button>
-          <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+          <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
               <Wallet className="h-5 w-5 text-primary" />
             </div>
@@ -183,7 +183,7 @@ const ParentFinanceDashboard = () => {
           { title: "Outstanding", value: formatCurrency(summary.total_outstanding), icon: Wallet, color: "text-orange-600", bgColor: "bg-orange-500/10" },
           { title: "Liquidity Index", value: summary.total_invoiced > 0 ? `${Math.round((summary.total_paid / summary.total_invoiced) * 100)}%` : '100%', icon: PieChart, color: "text-violet-600", bgColor: "bg-violet-500/10" },
         ].map((stat) => (
-          <Card key={stat.title} className="border-none shadow-strong rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 group hover:translate-y-[-4px] transition-all duration-300">
+          <Card key={stat.title} className="border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 group hover:translate-y-[-4px] transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={cn("p-2.5 rounded-2xl transition-transform group-hover:rotate-12", stat.bgColor)}>
@@ -201,7 +201,7 @@ const ParentFinanceDashboard = () => {
       </div>
 
       {/* Main Ledger */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <Tabs defaultValue="invoices" className="w-full">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -239,7 +239,7 @@ const ParentFinanceDashboard = () => {
                       <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground font-medium italic">No financial documents identified.</TableCell></TableRow>
                     ) : (
                       invoices.map((invoice) => (
-                        <TableRow key={invoice.id} className="group transition-all duration-300 hover:bg-white/60">
+                        <TableRow key={invoice.id} className="group transition-all duration-300 hover:bg-card/60">
                           <TableCell className="px-6 py-4 font-black text-slate-700 text-xs">#{invoice.invoice_number}</TableCell>
                           <TableCell className="px-6 py-4 text-xs font-bold text-slate-500">{format(new Date(invoice.invoice_year, invoice.invoice_month - 1), "MMMM yyyy")}</TableCell>
                           <TableCell className="px-6 py-4 font-black text-slate-700 text-xs">{formatCurrency(Number(invoice.total_amount))}</TableCell>
@@ -286,12 +286,12 @@ const ParentFinanceDashboard = () => {
                       <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground font-medium italic">No transaction history found.</TableCell></TableRow>
                     ) : (
                       payments.map((payment: any) => (
-                        <TableRow key={payment.id} className="group transition-all duration-300 hover:bg-white/60">
+                        <TableRow key={payment.id} className="group transition-all duration-300 hover:bg-card/60">
                           <TableCell className="px-6 py-4 text-xs font-bold text-slate-700">{format(new Date(payment.payment_date), "MMM dd, yyyy")}</TableCell>
                           <TableCell className="px-6 py-4 font-black text-emerald-600 text-sm">{formatCurrency(Number(payment.amount))}</TableCell>
                           <TableCell className="px-6 py-4">
                             <div className="flex items-center gap-2">
-                              <CreditCard className="h-3.5 w-3.5 text-indigo-500" />
+                              <CreditCard className="h-3.5 w-3.5 text-primary" />
                               <span className="font-black text-[10px] uppercase tracking-widest text-slate-500">{(payment.payment_method || 'cash').replace('_', ' ')}</span>
                             </div>
                           </TableCell>
@@ -314,10 +314,10 @@ const ParentFinanceDashboard = () => {
 
       {/* Invoice Details Dialog */}
       <Dialog open={showInvoiceDialog} onOpenChange={setShowInvoiceDialog}>
-        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl">
+        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
           <DialogHeader className="pb-4 border-b border-slate-100">
-            <DialogTitle className="text-2xl font-black tracking-tight text-slate-800">Financial Document</DialogTitle>
-            <DialogDescription className="text-xs font-bold uppercase tracking-widest text-indigo-500">Official Institutional Record</DialogDescription>
+            <DialogTitle className="text-2xl font-black tracking-tight text-foreground/90">Financial Document</DialogTitle>
+            <DialogDescription className="text-xs font-bold uppercase tracking-widest text-primary">Official Institutional Record</DialogDescription>
           </DialogHeader>
           {selectedInvoice && (
             <div className="space-y-8 pt-4">
@@ -345,23 +345,23 @@ const ParentFinanceDashboard = () => {
               <div className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
                   <span className="text-xs font-black uppercase tracking-widest text-slate-500">Gross Liability</span>
-                  <span className="text-xl font-black text-slate-800">{formatCurrency(Number(selectedInvoice.total_amount))}</span>
+                  <span className="text-xl font-black text-foreground/90">{formatCurrency(Number(selectedInvoice.total_amount))}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
                   <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Liquidated</span>
                   <span className="text-xl font-black text-emerald-600">{formatCurrency(Number(selectedInvoice.paid_amount))}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2">
-                  <span className="text-xs font-black uppercase tracking-widest text-indigo-600">Net Outstanding</span>
-                  <span className="text-3xl font-black text-slate-900 tracking-tighter">
+                  <span className="text-xs font-black uppercase tracking-widest text-primary">Net Outstanding</span>
+                  <span className="text-3xl font-black text-foreground tracking-tighter">
                     {formatCurrency(Number(selectedInvoice.total_amount) - Number(selectedInvoice.paid_amount))}
                   </span>
                 </div>
               </div>
 
               {selectedInvoice.notes && (
-                <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1 flex items-center gap-2">
+                <div className="p-4 rounded-2xl bg-primary/5/50 border border-primary/10">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-primary/80 mb-1 flex items-center gap-2">
                     <Info className="h-3 w-3" /> Institutional Notes
                   </p>
                   <p className="text-xs font-medium text-slate-600 leading-relaxed italic">"{selectedInvoice.notes}"</p>

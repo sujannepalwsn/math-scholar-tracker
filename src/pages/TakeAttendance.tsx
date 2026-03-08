@@ -203,7 +203,7 @@ export default function TakeAttendance() {
             <p className="text-muted-foreground text-sm font-medium">Manage daily presence and tracking.</p>
           </div>
         </div>
-        <div className="bg-white/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/40 shadow-soft flex items-center gap-3">
+        <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10">
             <CalendarIcon className="h-5 w-5 text-primary" />
           </div>
@@ -223,13 +223,13 @@ export default function TakeAttendance() {
       {/* Filters/Settings */}
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="flex flex-wrap gap-6 items-end">
             <div className="flex-1 min-w-[200px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Select Date</label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl", !selectedDate && "text-muted-foreground")}>
+                  <Button variant="outline" className={cn("w-full h-11 justify-start text-left font-normal bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl", !selectedDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                   </Button>
@@ -242,10 +242,10 @@ export default function TakeAttendance() {
             <div className="w-[160px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Filter Grade</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="All Grades" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   {isTeacher && classTeacherGrades.length > 0 ? null : <SelectItem value="all">All Grades</SelectItem>}
                   {allowedGrades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                 </SelectContent>
@@ -255,7 +255,7 @@ export default function TakeAttendance() {
         </Card>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
@@ -297,7 +297,7 @@ export default function TakeAttendance() {
                       "rounded-3xl border transition-all duration-500 p-6 flex flex-col gap-4",
                       attendance[student.id]?.present
                         ? "border-green-500/20 bg-green-500/5 shadow-medium"
-                        : "border-white/40 bg-white/30 backdrop-blur-sm shadow-soft grayscale-[0.5] opacity-80"
+                        : "border-border/40 bg-white/30 backdrop-blur-sm shadow-soft grayscale-[0.5] opacity-80"
                     )}
                   >
                     <div className="flex items-center justify-between">
@@ -311,11 +311,11 @@ export default function TakeAttendance() {
                         <div className="space-y-0.5">
                           <Label
                             htmlFor={student.id}
-                            className="text-lg font-black text-slate-800 cursor-pointer"
+                            className="text-lg font-black text-foreground/90 cursor-pointer"
                           >
                             {student.name}
                           </Label>
-                          <Badge variant="secondary" className="bg-indigo-500/10 text-indigo-600 border-none rounded-lg px-2 py-0.5 text-[10px] font-bold">
+                          <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-lg px-2 py-0.5 text-[10px] font-bold">
                             Grade {student.grade}
                           </Badge>
                         </div>
@@ -337,7 +337,7 @@ export default function TakeAttendance() {
                           value={attendance[student.id]?.timeIn || ""}
                           onChange={(e) => handleTimeChange(student.id, "timeIn", e.target.value)}
                           disabled={isLocked && !canEdit}
-                          className="h-10 bg-white/40 rounded-xl text-xs font-bold"
+                          className="h-10 bg-card/40 rounded-xl text-xs font-bold"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -347,7 +347,7 @@ export default function TakeAttendance() {
                           value={attendance[student.id]?.timeOut || ""}
                           onChange={(e) => handleTimeChange(student.id, "timeOut", e.target.value)}
                           disabled={isLocked && !canEdit}
-                          className="h-10 bg-white/40 rounded-xl text-xs font-bold"
+                          className="h-10 bg-card/40 rounded-xl text-xs font-bold"
                         />
                       </div>
                     </div>

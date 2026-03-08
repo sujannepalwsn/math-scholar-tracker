@@ -63,9 +63,9 @@ export default function ParentChapterPerformanceTable({ chapterPerformanceData, 
               };
 
               return (
-                <TableRow key={group.lessonPlan.id} className="group transition-all duration-300 hover:bg-white/60">
+                <TableRow key={group.lessonPlan.id} className="group transition-all duration-300 hover:bg-card/60">
                   <TableCell className="px-6 py-4">
-                    <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-none rounded-lg text-[9px] font-black uppercase tracking-tighter">
+                    <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[9px] font-black uppercase tracking-tighter">
                         {group.lessonPlan.subject}
                     </Badge>
                   </TableCell>

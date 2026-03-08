@@ -193,7 +193,7 @@ export default function ClassRoutine() {
       </div>
 
       <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-14 bg-white/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-white/40 shadow-soft">
+        <TabsList className="grid w-full grid-cols-2 h-14 bg-card/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-border/40 shadow-soft">
           <TabsTrigger value="schedule" className="rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium flex items-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all duration-300">
             Institutional Schedule
           </TabsTrigger>
@@ -298,9 +298,9 @@ export default function ClassRoutine() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {schedulesByDay.map(day => (
-                <Card key={day.value} className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+                <Card key={day.value} className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
                   <CardHeader className="border-b border-muted/20 bg-primary/5 py-4">
-                    <CardTitle className="text-base font-black flex items-center gap-3 text-slate-800 uppercase tracking-widest">
+                    <CardTitle className="text-base font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
                       <div className="p-1.5 rounded-lg bg-primary/10">
                         <CalendarIcon className="h-4 w-4 text-primary" />
                       </div>
@@ -315,11 +315,11 @@ export default function ClassRoutine() {
                     ) : (
                       <div className="divide-y divide-muted/10">
                         {day.schedules.map((schedule: any) => (
-                          <div key={schedule.id} className="group flex items-center justify-between p-4 transition-all duration-300 hover:bg-white/60">
+                          <div key={schedule.id} className="group flex items-center justify-between p-4 transition-all duration-300 hover:bg-card/60">
                             <div className="min-w-0 flex-1 space-y-1">
-                              <div className="font-black text-slate-800 text-sm group-hover:text-primary transition-colors truncate">{schedule.subject}</div>
+                              <div className="font-black text-foreground/90 text-sm group-hover:text-primary transition-colors truncate">{schedule.subject}</div>
                               <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 text-[10px] font-black uppercase">Slot {schedule.class_periods?.period_number}</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-black uppercase">Slot {schedule.class_periods?.period_number}</span>
                                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{schedule.class_periods?.start_time} - {schedule.class_periods?.end_time}</span>
                               </div>
                               {schedule.teachers?.name && (

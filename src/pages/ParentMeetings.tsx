@@ -56,7 +56,7 @@ export default function ParentMeetings() {
 
   const getStatusStyles = (status: Meeting['status']) => {
     switch (status) {
-      case 'scheduled': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
+      case 'scheduled': return 'bg-primary/5 text-primary/70 border-primary/10';
       case 'completed': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
       case 'cancelled': return 'bg-rose-50 text-rose-700 border-rose-100';
       default: return 'bg-slate-50 text-slate-700 border-slate-100';
@@ -92,7 +92,7 @@ export default function ParentMeetings() {
         </div>
       </div>
 
-      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-white/40 backdrop-blur-md border border-white/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <CardTitle className="text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
@@ -131,7 +131,7 @@ export default function ParentMeetings() {
                     const meeting = attendee.meetings;
                     const conclusion = meeting.meeting_conclusions?.[0];
                     return (
-                      <TableRow key={attendee.id} className="group transition-all duration-300 hover:bg-white/60">
+                      <TableRow key={attendee.id} className="group transition-all duration-300 hover:bg-card/60">
                         <TableCell className="px-6 py-4">
                           <div className="space-y-1">
                             <p className="font-black text-slate-700 text-xs leading-none">{meeting.title}</p>
@@ -153,7 +153,7 @@ export default function ParentMeetings() {
                         <TableCell className="px-6 py-4">
                           <div className="flex items-center gap-2">
                              {meeting.location?.toLowerCase().includes('zoom') || meeting.location?.toLowerCase().includes('google') ? (
-                               <Video className="h-3.5 w-3.5 text-indigo-500" />
+                               <Video className="h-3.5 w-3.5 text-primary" />
                              ) : (
                                <MapPin className="h-3.5 w-3.5 text-slate-400" />
                              )}
@@ -191,16 +191,16 @@ export default function ParentMeetings() {
 
       {/* Conclusion View Dialog */}
       <Dialog open={showConclusionDialog} onOpenChange={setShowConclusionDialog}>
-        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-strong bg-white/95 backdrop-blur-xl">
+        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
           <DialogHeader className="pb-4 border-b border-slate-100">
-            <DialogTitle className="text-2xl font-black tracking-tight text-slate-800">Meeting Conclusion</DialogTitle>
-            <DialogDescription className="text-xs font-bold uppercase tracking-widest text-indigo-500">Official Institutional Summary</DialogDescription>
+            <DialogTitle className="text-2xl font-black tracking-tight text-foreground/90">Meeting Conclusion</DialogTitle>
+            <DialogDescription className="text-xs font-bold uppercase tracking-widest text-primary">Official Institutional Summary</DialogDescription>
           </DialogHeader>
           {selectedMeetingConclusion && (
             <div className="space-y-6 pt-4">
               <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="h-10 w-10 rounded-xl bg-white shadow-soft flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-indigo-500" />
+                  <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Recorded At</p>
@@ -208,8 +208,8 @@ export default function ParentMeetings() {
                 </div>
               </div>
 
-              <div className="p-6 rounded-[2rem] bg-indigo-50/50 border border-indigo-100/50">
-                 <p className="text-[10px] font-black uppercase tracking-[0.1em] text-indigo-400 mb-4 flex items-center gap-2">
+              <div className="p-6 rounded-[2rem] bg-primary/5/50 border border-primary/10/50">
+                 <p className="text-[10px] font-black uppercase tracking-[0.1em] text-primary/80 mb-4 flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" /> Synthesis & Notes
                  </p>
                  <p className="text-sm font-medium text-slate-700 whitespace-pre-wrap leading-relaxed italic">

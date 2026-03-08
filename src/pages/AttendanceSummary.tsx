@@ -144,7 +144,7 @@ export default function AttendanceSummary() {
 
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-8 overflow-hidden bg-white/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
+        <Card className="relative border-none shadow-medium p-8 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Month</Label>
@@ -155,16 +155,16 @@ export default function AttendanceSummary() {
                   const [year, month] = e.target.value.split('-');
                   setSelectedMonth(new Date(parseInt(year), parseInt(month) - 1));
                 }}
-                className="flex h-11 w-full rounded-xl border border-white/20 bg-white/50 backdrop-blur-sm px-4 py-2 text-sm ring-offset-background transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-sm hover:border-primary/30"
+                className="flex h-11 w-full rounded-xl border border-border/20 bg-card/50 backdrop-blur-sm px-4 py-2 text-sm ring-offset-background transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-sm hover:border-primary/30"
               />
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Class / Grade</Label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="All Classes" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Classes</SelectItem>
                   {classes.map((c) => <SelectItem key={c} value={c!}>{c}</SelectItem>)}
                 </SelectContent>
@@ -173,10 +173,10 @@ export default function AttendanceSummary() {
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</Label>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-                <SelectTrigger className="h-11 bg-white/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="All Students" />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-white/90 border-muted-foreground/10 rounded-xl">
+                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Students</SelectItem>
                   {filteredStudents.map((student) => (
                     <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>
@@ -189,7 +189,7 @@ export default function AttendanceSummary() {
       </div>
 
       {selectedStudent !== 'all' && (
-        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -224,7 +224,7 @@ export default function AttendanceSummary() {
       )}
 
       {stats.length > 0 && (
-        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-white/40 backdrop-blur-md border border-white/20">
+        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -238,11 +238,11 @@ export default function AttendanceSummary() {
               {stats.map((stat) => (
                 <div
                   key={stat.studentId}
-                  className="rounded-3xl border border-white/40 bg-white/50 p-6 shadow-medium group relative hover:shadow-strong transition-all duration-300 backdrop-blur-sm"
+                  className="rounded-3xl border border-border/40 bg-card/50 p-6 shadow-medium group relative hover:shadow-strong transition-all duration-300 backdrop-blur-sm"
                 >
                   <div className="flex items-center justify-between mb-6">
                     <div className="space-y-1">
-                      <h3 className="font-black text-xl leading-tight text-slate-800 group-hover:text-primary transition-colors">{stat.studentName}</h3>
+                      <h3 className="font-black text-xl leading-tight text-foreground/90 group-hover:text-primary transition-colors">{stat.studentName}</h3>
                       <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Statistical Insight</p>
                     </div>
                     <div className="text-right bg-white p-2.5 rounded-2xl shadow-soft min-w-[90px] border border-primary/5">
@@ -257,9 +257,9 @@ export default function AttendanceSummary() {
                         <span>Presence Log</span>
                         <span className="text-primary">{stat.presentDays} / {stat.totalDays} Days</span>
                       </div>
-                      <div className="w-full h-2.5 bg-muted/40 rounded-full overflow-hidden shadow-inner border border-white/40">
+                      <div className="w-full h-2.5 bg-muted/40 rounded-full overflow-hidden shadow-inner border border-border/40">
                         <div
-                          className="h-full bg-gradient-to-r from-primary to-indigo-400 transition-all duration-1000 ease-out rounded-full shadow-soft"
+                          className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-1000 ease-out rounded-full shadow-soft"
                           style={{ width: `${stat.attendancePercentage}%` }}
                         />
                       </div>
