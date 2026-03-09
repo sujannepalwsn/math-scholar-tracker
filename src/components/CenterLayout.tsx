@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertTriangle, Award, BarChart3, Bell, Book, BookOpen, Brain, Calendar, CalendarDays, CheckSquare, ClipboardCheck, Clock, CreditCard, DollarSign, FileText, GraduationCap, Home, IdCard, KeyRound, LayoutList, LogOut, MessageSquare, Paintbrush, PenTool, Settings, TrendingUp, User, UserCheck, UserPlus, Users, Video } from "lucide-react";
+import { AlertTriangle, BarChart3, Book, BookOpen, Brain, Calendar, CalendarDays, CheckSquare, ClipboardCheck, Clock, DollarSign, FileText, Home, KeyRound, LayoutList, LogOut, MessageSquare, Paintbrush, Settings, TrendingUp, User, UserCheck, UserPlus, Users, Video } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
@@ -27,7 +27,6 @@ const navItems: Array<{
   { to: "/lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'center' as const, featureName: 'lesson_tracking', category: 'Academics' },
   { to: "/homework", label: "Homework", icon: Book, role: 'center' as const, featureName: 'homework_management', category: 'Academics' },
   { to: "/tests", label: "Tests", icon: ClipboardCheck, role: 'center' as const, featureName: 'test_management', category: 'Academics' },
-  { to: "/exams", label: "Exams & Results", icon: GraduationCap, role: 'center' as const, featureName: 'test_management', category: 'Academics' },
   { to: "/activities", label: "Activities", icon: Paintbrush, role: 'center' as const, featureName: 'preschool_activities', category: 'Academics' },
   { to: "/discipline", label: "Discipline", icon: AlertTriangle, role: 'center' as const, featureName: 'discipline_issues', category: 'Academics' },
 
@@ -37,7 +36,6 @@ const navItems: Array<{
   { to: "/teacher-attendance", label: "Teachers' Attendance", icon: UserCheck, role: 'center' as const, featureName: 'teacher_management', category: 'Administration' },
   { to: "/chapter-performance-overview", label: "Chapter Performance", icon: TrendingUp, role: 'center' as const, featureName: 'lesson_tracking', category: 'Administration' },
   { to: "/teacher-performance", label: "Teacher Reports", icon: BarChart3, role: 'center' as const, category: 'Administration' },
-  { to: "/student-id-cards", label: "Student ID Cards", icon: IdCard, role: 'center' as const, category: 'Administration' },
   { to: "/settings", label: "Settings", icon: Settings, role: 'center' as const, category: 'Administration' },
 
   // Reports and Communications Group

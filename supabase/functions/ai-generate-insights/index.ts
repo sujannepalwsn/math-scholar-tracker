@@ -22,10 +22,32 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch all students with their data
-    const { data: students, error: studentsError } = await supabase
-      .from("students")
-      .select("*");
+    const { teacherId } = await req.json();
+    let assignedGrades = [];
+
+    if (teacherId) {
+      const { data: assignments } = await supabase
+        .from("class_teacher_assignments")
+        .select("grade")
+        .eq("teacher_id", teacherId);
+      assignedGrades = assignments?.map(a => a.grade) || [];
+    }
+
+    // Fetch students with their data
+    let studentsQuery = supabase.from("students").select("*");
+    if (teacherId && assignedGrades.length > 0) {
+      studentsQuery = studentsQuery.in("grade", assignedGrades);
+    } else if (teacherId) {
+      return new Response(JSON.stringify({
+        overallInsights: "No assigned grades found for this teacher.",
+        studentsNeedingAttention: [],
+        highPerformers: [],
+        commonChallenges: [],
+        actionableRecommendations: []
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const { data: students, error: studentsError } = await studentsQuery;
 
     if (studentsError) throw studentsError;
 

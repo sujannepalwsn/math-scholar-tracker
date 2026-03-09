@@ -758,166 +758,6 @@ export type Database = {
           },
         ]
       }
-      exam_marks: {
-        Row: {
-          center_id: string
-          created_at: string
-          entered_by: string | null
-          exam_id: string
-          exam_subject_id: string
-          id: string
-          marks_obtained: number | null
-          remarks: string | null
-          student_id: string
-          updated_at: string
-        }
-        Insert: {
-          center_id: string
-          created_at?: string
-          entered_by?: string | null
-          exam_id: string
-          exam_subject_id: string
-          id?: string
-          marks_obtained?: number | null
-          remarks?: string | null
-          student_id: string
-          updated_at?: string
-        }
-        Update: {
-          center_id?: string
-          created_at?: string
-          entered_by?: string | null
-          exam_id?: string
-          exam_subject_id?: string
-          id?: string
-          marks_obtained?: number | null
-          remarks?: string | null
-          student_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "exam_marks_center_id_fkey"
-            columns: ["center_id"]
-            isOneToOne: false
-            referencedRelation: "centers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_marks_exam_id_fkey"
-            columns: ["exam_id"]
-            isOneToOne: false
-            referencedRelation: "exams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_marks_exam_subject_id_fkey"
-            columns: ["exam_subject_id"]
-            isOneToOne: false
-            referencedRelation: "exam_subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_marks_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      exam_subjects: {
-        Row: {
-          center_id: string
-          created_at: string
-          exam_id: string
-          full_marks: number
-          id: string
-          pass_marks: number
-          subject_name: string
-        }
-        Insert: {
-          center_id: string
-          created_at?: string
-          exam_id: string
-          full_marks?: number
-          id?: string
-          pass_marks?: number
-          subject_name: string
-        }
-        Update: {
-          center_id?: string
-          created_at?: string
-          exam_id?: string
-          full_marks?: number
-          id?: string
-          pass_marks?: number
-          subject_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "exam_subjects_center_id_fkey"
-            columns: ["center_id"]
-            isOneToOne: false
-            referencedRelation: "centers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exam_subjects_exam_id_fkey"
-            columns: ["exam_id"]
-            isOneToOne: false
-            referencedRelation: "exams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      exams: {
-        Row: {
-          academic_year: string
-          center_id: string
-          created_at: string
-          created_by: string | null
-          exam_date: string | null
-          grade: string
-          id: string
-          name: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          academic_year?: string
-          center_id: string
-          created_at?: string
-          created_by?: string | null
-          exam_date?: string | null
-          grade: string
-          id?: string
-          name: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          academic_year?: string
-          center_id?: string
-          created_at?: string
-          created_by?: string | null
-          exam_date?: string | null
-          grade?: string
-          id?: string
-          name?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "exams_center_id_fkey"
-            columns: ["center_id"]
-            isOneToOne: false
-            referencedRelation: "centers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       expenses: {
         Row: {
           amount: number
@@ -2010,13 +1850,10 @@ export type Database = {
       students: {
         Row: {
           address: string | null
-          admission_date: string | null
-          blood_group: string | null
           center_id: string
           contact_number: string | null
           created_at: string
           date_of_birth: string | null
-          gender: string | null
           grade: string | null
           id: string
           is_active: boolean | null
@@ -2024,22 +1861,17 @@ export type Database = {
           parent_email: string | null
           parent_name: string | null
           parent_phone: string | null
-          photo_url: string | null
           roll_number: string | null
           school_name: string | null
           section: string | null
-          student_id_number: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
-          admission_date?: string | null
-          blood_group?: string | null
           center_id: string
           contact_number?: string | null
           created_at?: string
           date_of_birth?: string | null
-          gender?: string | null
           grade?: string | null
           id?: string
           is_active?: boolean | null
@@ -2047,22 +1879,17 @@ export type Database = {
           parent_email?: string | null
           parent_name?: string | null
           parent_phone?: string | null
-          photo_url?: string | null
           roll_number?: string | null
           school_name?: string | null
           section?: string | null
-          student_id_number?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
-          admission_date?: string | null
-          blood_group?: string | null
           center_id?: string
           contact_number?: string | null
           created_at?: string
           date_of_birth?: string | null
-          gender?: string | null
           grade?: string | null
           id?: string
           is_active?: boolean | null
@@ -2070,11 +1897,9 @@ export type Database = {
           parent_email?: string | null
           parent_name?: string | null
           parent_phone?: string | null
-          photo_url?: string | null
           roll_number?: string | null
           school_name?: string | null
           section?: string | null
-          student_id_number?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2482,7 +2307,6 @@ export type Database = {
           is_active: boolean | null
           last_login: string | null
           password_hash: string
-          preferences: Json | null
           role: string
           student_id: string | null
           teacher_id: string | null
@@ -2496,7 +2320,6 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           password_hash: string
-          preferences?: Json | null
           role: string
           student_id?: string | null
           teacher_id?: string | null
@@ -2510,7 +2333,6 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           password_hash?: string
-          preferences?: Json | null
           role?: string
           student_id?: string | null
           teacher_id?: string | null

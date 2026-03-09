@@ -57,19 +57,15 @@ export default function CalendarEvents() {
 
   // Fetch events
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["center-events", centerId, user?.role, user?.id],
+    queryKey: ["center-events", centerId, user?.role],
     queryFn: async () => {
       if (!centerId) return [];
-      let query = supabase
+      const { data, error } = await supabase
         .from("center_events")
         .select("*")
-        .eq("center_id", centerId);
+        .eq("center_id", centerId)
+        .order("event_date");
 
-      if (user?.role === 'teacher') {
-        query = query.eq('created_by', user.id);
-      }
-
-      const { data, error } = await query.order("event_date");
       if (error) throw error;
       return data;
     },

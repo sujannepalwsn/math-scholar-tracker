@@ -75,6 +75,10 @@ export default function TeacherDashboard() {
       if (!teacherId) return [];
       let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
 
+      if (user?.role === 'teacher' && assignedGrades.length > 0) {
+        query = query.in('grade', assignedGrades);
+      } else if (user?.role === 'teacher') {
+        return []; // No assignments, no students
       }
 
       const { data, error } = await query;

@@ -19,9 +19,23 @@ const AdminFinance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const { data: assignedGrades = [] } = useQuery({
+    queryKey: ["teacher-assigned-grades-finance", user?.teacher_id],
+    queryFn: async () => {
+      if (!user?.teacher_id) return [];
+      const { data, error } = await supabase
+        .from("class_teacher_assignments")
+        .select("grade")
+        .eq("teacher_id", user.teacher_id);
+      if (error) throw error;
+      return data.map(d => d.grade);
+    },
+    enabled: !!user?.teacher_id && user?.role === 'teacher'
+  });
+
   // Fetch invoices summary
   const { data: invoices = [] } = useQuery({
-    queryKey: ['invoices-summary', user?.center_id, user?.role, user?.teacher_id],
+    queryKey: ['invoices-summary', user?.center_id, user?.role, user?.teacher_id, assignedGrades],
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase
@@ -29,14 +43,13 @@ const AdminFinance = () => {
         .select('total_amount, status, student_id')
         .eq('center_id', user.center_id);
 
-      if (user?.role === 'teacher' && user?.teacher_id) {
-        // Teachers only see invoices for their assigned grades
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
-        const grades = assignments?.map(a => a.grade) || [];
-        if (grades.length > 0) {
-          const { data: gradeStudents } = await supabase.from('students').select('id').in('grade', grades);
-          const studentIds = gradeStudents?.map(s => s.id) || [];
+      if (user?.role === 'teacher') {
+        if (assignedGrades.length > 0) {
+          const { data: students } = await supabase.from('students').select('id').in('grade', assignedGrades);
+          const studentIds = students?.map(s => s.id) || [];
           query = query.in('student_id', studentIds);
+        } else {
+          return [];
         }
       }
 
@@ -49,7 +62,7 @@ const AdminFinance = () => {
 
   // Fetch payments - CORRECTED to filter by invoices belonging to the center
   const { data: payments = [] } = useQuery({
-    queryKey: ['payments-total', user?.center_id, user?.role, user?.teacher_id],
+    queryKey: ['payments-total', user?.center_id, user?.role, user?.teacher_id, assignedGrades],
     queryFn: async () => {
       if (!user?.center_id) return [];
       
@@ -59,13 +72,13 @@ const AdminFinance = () => {
         .select('id, student_id')
         .eq('center_id', user.center_id);
 
-      if (user?.role === 'teacher' && user?.teacher_id) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
-        const grades = assignments?.map(a => a.grade) || [];
-        if (grades.length > 0) {
-          const { data: gradeStudents } = await supabase.from('students').select('id').in('grade', grades);
-          const studentIds = gradeStudents?.map(s => s.id) || [];
+      if (user?.role === 'teacher') {
+        if (assignedGrades.length > 0) {
+          const { data: students } = await supabase.from('students').select('id').in('grade', assignedGrades);
+          const studentIds = students?.map(s => s.id) || [];
           invQuery = invQuery.in('student_id', studentIds);
+        } else {
+          return [];
         }
       }
 
