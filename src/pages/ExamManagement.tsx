@@ -22,6 +22,7 @@ const MarksEntryGrid = ({ exam, centerId, user, queryClient }: { exam: any, cent
   const { data: entrySubjects = [] } = useQuery({
     queryKey: ["exam-subjects-entry", exam?.id, user?.role, user?.teacher_id],
     queryFn: async () => {
+      if (!exam?.id) return [];
       let query = supabase
         .from("exam_subjects")
         .select("*")
@@ -80,6 +81,7 @@ const MarksEntryGrid = ({ exam, centerId, user, queryClient }: { exam: any, cent
   const { data: existingMarks = [] } = useQuery({
     queryKey: ["existing-marks", exam?.id],
     queryFn: async () => {
+      if (!exam?.id) return [];
       const { data, error } = await supabase
         .from("exam_marks")
         .select("*")
@@ -103,7 +105,7 @@ const MarksEntryGrid = ({ exam, centerId, user, queryClient }: { exam: any, cent
 
   const saveMarks = useMutation({
     mutationFn: async () => {
-      if (!centerId) return;
+      if (!centerId || !exam?.id) return;
       const records: any[] = [];
       Object.entries(marksData).forEach(([studentId, subjectMarks]) => {
         Object.entries(subjectMarks).forEach(([subjectId, marks]) => {
@@ -220,7 +222,7 @@ const MarksEntryGrid = ({ exam, centerId, user, queryClient }: { exam: any, cent
             ) : (
               <TableRow>
                 <TableCell colSpan={entrySubjects.length + 3} className="h-24 text-center text-muted-foreground">
-                  No active students found for Grade {exam?.grade}.
+                  No students found for Grade {exam?.grade}.
                 </TableCell>
               </TableRow>
             )}

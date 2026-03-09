@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/ui/page-header";
-import { cn, formatCurrency, safeFormatDate, getGrade } from "@/lib/utils";
+import { cn, safeFormatDate, getGrade } from "@/lib/utils";
 
 export default function ParentResults() {
   const { user } = useAuth();
