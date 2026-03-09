@@ -433,7 +433,7 @@ const ParentDashboardContent = () => {
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <KPICard title="Attendance Rate" value={`${attendanceRate}%`} description="Presence Index" icon={Clock} color="green" trendData={attendanceTrend} onClick={() => scrollToSection("attendance-section")} />
-        <KPICard title="Avg Performance" value={`${avgPerformance}%`} description="Evaluation Synthesis" icon={TrendingUp} color="purple" trendData={performanceTrend} onClick={() => scrollToSection("tests-section")} />
+        <KPICard title="Exam Results" value="View" description="Latest Reports" icon={GraduationCap} color="purple" onClick={() => navigate("/parent-results")} />
         <KPICard title="Homework Pending" value={homeworkPendingCount} description="Active Assignments" icon={Book} color="orange" onClick={() => scrollToSection("overdue-homework-section")} />
         <KPICard title="Fees Payable" value={`₹${outstandingDues}`} description="Outstanding Liability" icon={Wallet} color="rose" onClick={() => scrollToSection("finance-section")} />
       </div>

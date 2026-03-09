@@ -441,7 +441,7 @@ export default function TeacherDashboard() {
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <KPICard title="Class Attendance" value={`${attendanceRate}%`} description="Presence Index" icon={Users} color="indigo" onClick={() => scrollToSection("attendance-section")} />
-        <KPICard title="Today's Classes" value={todayClasses.length} description="Instruction Units" icon={Clock} color="blue" onClick={() => navigate("/teacher/class-routine")} />
+        <KPICard title="Published Results" value="View" description="Exam Performance" icon={GraduationCap} color="blue" onClick={() => navigate("/teacher/results-dashboard")} />
         <KPICard title="Pending Homework" value={homeworkToGrade.length} description="Active Submissions" icon={Book} color="orange" onClick={() => navigate("/teacher/homework-management")} />
         <KPICard title="Class Proficiency" value={`${avgPerformance}%`} description="Score Synthesis" icon={TrendingUp} color="purple" trendData={attendanceTrend} onClick={() => scrollToSection("tests-section")} />
       </div>
