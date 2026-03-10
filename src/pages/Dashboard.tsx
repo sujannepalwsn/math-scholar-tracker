@@ -556,14 +556,17 @@ export default function Dashboard() {
       console.log("Assigning substitution:", { centerId, selectedVacantClass, teacherId, today });
       if (!centerId || !selectedVacantClass) throw new Error("Missing center ID or class selection");
 
-      const { error } = await supabase.from('class_substitutions').insert({
+      const existingSub = substitutions.find((s: any) => s.period_schedule_id === selectedVacantClass.id);
+
+      const { error } = await supabase.from('class_substitutions').upsert({
+        id: existingSub?.id,
         center_id: centerId,
         period_schedule_id: selectedVacantClass.id,
         date: today,
         substitute_teacher_id: teacherId,
         original_teacher_id: selectedVacantClass.teacher_id || null,
         status: 'assigned'
-      });
+      }, { onConflict: 'period_schedule_id,date' });
       if (error) throw error;
 
       // Create notification for the substitute teacher
@@ -984,7 +987,7 @@ export default function Dashboard() {
             }
           }} />
           <ClassSchedule classes={todayClasses} title="Today's Classes" onViewRoutine={() => navigate("/class-routine")} onItemClick={(item) => {
-            if (item.isVacant) setSelectedVacantClass(item);
+            if (item.isVacant || item.isSubstitution) setSelectedVacantClass(item);
           }} />
         </div>
       </div>

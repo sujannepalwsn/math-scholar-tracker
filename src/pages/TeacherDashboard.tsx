@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle, CheckCircle2, ClipboardCheck, Clock, DollarSign, Download, Eye, FileText, GraduationCap, Home, Info, MessageSquare, Paintbrush, Printer, Star, Target, TrendingUp, User, Users, Wallet, XCircle } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
@@ -36,6 +36,7 @@ interface ChapterPerformanceGroup {
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
   const teacherId = user?.teacher_id;
@@ -54,6 +55,8 @@ export default function TeacherDashboard() {
   const [selectedChapterDetail, setSelectedChapterDetail] = useState<ChapterPerformanceGroup | null>(null);
   const [viewingLessonPlan, setViewingLessonPlan] = useState<LessonPlan | null>(null);
   const [selectedDisciplineIssue, setSelectedDisciplineIssue] = useState<any>(null);
+  const [showCorrectionDialog, setShowCorrectionDialog] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   // Data Fetching
   const { data: teacherStudents = [], isLoading: isStudentsLoading } = useQuery({
@@ -252,6 +255,28 @@ export default function TeacherDashboard() {
     },
     enabled: !!centerId && !!user?.id });
 
+  const { data: teacherData = null } = useQuery({
+    queryKey: ["teacher-info", teacherId],
+    queryFn: async () => {
+      if (!teacherId) return null;
+      const { data, error } = await supabase.from('teachers').select('*').eq('id', teacherId).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!teacherId
+  });
+
+  const { data: myAttendanceToday = null } = useQuery({
+    queryKey: ["my-attendance-today", teacherId, today],
+    queryFn: async () => {
+      if (!teacherId) return null;
+      const { data, error } = await supabase.from('teacher_attendance').select('*').eq('teacher_id', teacherId).eq('date', today).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!teacherId
+  });
+
   const { data: preschoolActivities = [] } = useQuery({
     queryKey: ["teacher-activities", user?.id, dateRange],
     queryFn: async () => {
@@ -427,6 +452,81 @@ export default function TeacherDashboard() {
     }))
   ];
 
+  const selfAttendanceMutation = useMutation({
+    mutationFn: async (type: 'in' | 'out') => {
+      if (!teacherId || !centerId) throw new Error("Missing credentials");
+      const now = new Date();
+      const timeStr = format(now, "HH:mm:ss");
+
+      if (type === 'in') {
+        const { error } = await supabase.from('teacher_attendance').upsert({
+          teacher_id: teacherId,
+          center_id: centerId,
+          date: today,
+          status: 'present',
+          time_in: timeStr
+        }, { onConflict: 'teacher_id,date' });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('teacher_attendance').update({
+          time_out: timeStr
+        }).eq('teacher_id', teacherId).eq('date', today);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-attendance-today"] });
+      toast.success("Attendance marked successfully!");
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
+  const correctionRequestMutation = useMutation({
+    mutationFn: async () => {
+      if (!teacherId || !centerId || !user?.id) throw new Error("Missing credentials");
+      const { error } = await supabase.from('leave_applications').insert({
+        center_id: centerId,
+        user_id: user.id,
+        teacher_id: teacherId,
+        start_date: today,
+        end_date: today,
+        reason: `Attendance Correction Request: ${correctionReason}`,
+        status: 'pending'
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Correction request submitted!");
+      setShowCorrectionDialog(false);
+      setCorrectionReason("");
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
+  const checkInWindow = useMemo(() => {
+    if (!teacherData?.expected_check_in) return { canMark: false, missed: false };
+    const [h, m] = teacherData.expected_check_in.split(':').map(Number);
+    const expected = new Date(); expected.setHours(h, m, 0);
+    const now = new Date();
+    const diff = Math.abs(now.getTime() - expected.getTime()) / (1000 * 60);
+
+    if (diff <= 15) return { canMark: true, missed: false };
+    if (now > expected) return { canMark: false, missed: true };
+    return { canMark: false, missed: false };
+  }, [teacherData]);
+
+  const checkOutWindow = useMemo(() => {
+    if (!teacherData?.expected_check_out) return { canMark: false, missed: false };
+    const [h, m] = teacherData.expected_check_out.split(':').map(Number);
+    const expected = new Date(); expected.setHours(h, m, 0);
+    const now = new Date();
+    const diff = Math.abs(now.getTime() - expected.getTime()) / (1000 * 60);
+
+    if (diff <= 15) return { canMark: true, missed: false };
+    if (now > expected) return { canMark: false, missed: true };
+    return { canMark: false, missed: false };
+  }, [teacherData]);
+
   const isLoading = isStudentsLoading || isClassResultsLoading || isScheduleLoading || isMeetingsLoading || isHomeworkLoading;
 
   if (isLoading) {
@@ -435,6 +535,34 @@ export default function TeacherDashboard() {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 space-y-8 pb-24 md:pb-8">
+      {/* Attendance Correction Dialog */}
+      <Dialog open={showCorrectionDialog} onOpenChange={setShowCorrectionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">Request Attendance Correction</DialogTitle>
+            <DialogDescription>
+              Submit a request to the center admin if you missed your attendance window.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Reason for Request</Label>
+              <Input
+                placeholder="e.g., Technical issue, Late arrival due to traffic"
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+              />
+            </div>
+            <Button
+              className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px]"
+              onClick={() => correctionRequestMutation.mutate()}
+              disabled={!correctionReason || correctionRequestMutation.isPending}
+            >
+              {correctionRequestMutation.isPending ? "Submitting..." : "Submit Request"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <CenterLogo size="lg" />
@@ -474,6 +602,115 @@ export default function TeacherDashboard() {
            />
         </div>
       </div>
+
+      {/* Attendance Matrix */}
+      <Card className="border-none shadow-strong bg-card/60 backdrop-blur-md rounded-2xl border border-border/20 overflow-hidden mb-8">
+        <CardHeader className="bg-primary/5 border-b border-primary/10 py-4">
+          <CardTitle className="text-lg font-black flex items-center gap-3">
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <ClipboardCheck className="h-5 w-5 text-primary" />
+            </div>
+            Daily Presence Matrix
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Check-in Card */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Check-in Protocol</p>
+                  <p className="text-2xl font-black text-slate-700">
+                    {myAttendanceToday?.time_in ? format(new Date(`2000-01-01T${myAttendanceToday.time_in}`), "hh:mm a") : "--:--"}
+                  </p>
+                </div>
+                <Badge variant="outline" className="font-bold text-[9px] uppercase tracking-tighter">
+                  Expected: {teacherData?.expected_check_in ? format(new Date(`2000-01-01T${teacherData.expected_check_in}`), "hh:mm a") : "N/A"}
+                </Badge>
+              </div>
+
+              {!myAttendanceToday?.time_in ? (
+                checkInWindow.canMark ? (
+                  <Button
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px] bg-green-600 hover:bg-green-700"
+                    onClick={() => selfAttendanceMutation.mutate('in')}
+                    disabled={selfAttendanceMutation.isPending}
+                  >
+                    Mark Arrival Now
+                  </Button>
+                ) : checkInWindow.missed ? (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px] text-rose-600 border-rose-200 bg-rose-50"
+                    onClick={() => setShowCorrectionDialog(true)}
+                  >
+                    Missed Window - Request Correction
+                  </Button>
+                ) : (
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px] opacity-50"
+                  >
+                    Window Not Yet Open
+                  </Button>
+                )
+              ) : (
+                <div className="h-12 flex items-center justify-center rounded-xl bg-green-50 border border-green-100 text-green-700 font-black text-[10px] uppercase tracking-widest gap-2">
+                  <CheckCircle2 className="h-4 w-4" /> Arrival Verified
+                </div>
+              )}
+            </div>
+
+            {/* Check-out Card */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Check-out Protocol</p>
+                  <p className="text-2xl font-black text-slate-700">
+                    {myAttendanceToday?.time_out ? format(new Date(`2000-01-01T${myAttendanceToday.time_out}`), "hh:mm a") : "--:--"}
+                  </p>
+                </div>
+                <Badge variant="outline" className="font-bold text-[9px] uppercase tracking-tighter">
+                  Expected: {teacherData?.expected_check_out ? format(new Date(`2000-01-01T${teacherData.expected_check_out}`), "hh:mm a") : "N/A"}
+                </Badge>
+              </div>
+
+              {!myAttendanceToday?.time_out ? (
+                checkOutWindow.canMark ? (
+                  <Button
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px] bg-indigo-600 hover:bg-indigo-700"
+                    onClick={() => selfAttendanceMutation.mutate('out')}
+                    disabled={selfAttendanceMutation.isPending || !myAttendanceToday?.time_in}
+                  >
+                    Mark Departure Now
+                  </Button>
+                ) : checkOutWindow.missed ? (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px] text-rose-600 border-rose-200 bg-rose-50"
+                    onClick={() => setShowCorrectionDialog(true)}
+                  >
+                    Missed Window - Request Correction
+                  </Button>
+                ) : (
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px] opacity-50"
+                  >
+                    {myAttendanceToday?.time_in ? "Departure Window Not Open" : "Arrival Required First"}
+                  </Button>
+                )
+              ) : (
+                <div className="h-12 flex items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-[10px] uppercase tracking-widest gap-2">
+                  <CheckCircle2 className="h-4 w-4" /> Departure Verified
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">

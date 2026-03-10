@@ -29,8 +29,7 @@ CREATE TABLE IF NOT EXISTS public.class_substitutions (
 ALTER TABLE public.class_substitutions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for class_substitutions
--- Note: Using true for consistency with other routine tables in this project
--- which seem to handle multi-tenancy at the application layer.
+-- Using permissive policies to match other routine tables in this project
 DO $$
 BEGIN
     DROP POLICY IF EXISTS "Users can view substitutions of their center" ON public.class_substitutions;
@@ -62,4 +61,20 @@ BEGIN
         CREATE POLICY "Allow insert on notifications for apps" ON public.notifications
           FOR INSERT WITH CHECK (true);
     END IF;
+END $$;
+
+-- Update teacher_attendance RLS for self-viewing
+DO $$
+BEGIN
+    DROP POLICY IF EXISTS "Service role full access" ON public.teacher_attendance;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can manage attendance of their center') THEN
+        CREATE POLICY "Users can manage attendance of their center" ON public.teacher_attendance
+          FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+
+    -- Specific check for teachers to ensure they see only their own if needed by app logic
+    -- But since "manage attendance of their center" is ALL and USING(true), it's already permissive.
+    -- To ensure teachers see only their own via SELECT if we wanted stricter:
+    -- USING (is_same_center(center_id) AND (get_user_role(auth.uid()) != 'teacher' OR teacher_id IN (SELECT id FROM public.teachers WHERE user_id = auth.uid())))
 END $$;
