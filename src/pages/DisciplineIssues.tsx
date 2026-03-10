@@ -18,7 +18,7 @@ import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
 import DisciplineCategoryManagement from "@/components/center/DisciplineCategoryManagement"; // Import the new component
-import { cn } from "@/lib/utils"
+import { normalizeGrade, cn } from "@/lib/utils"
 
 
 
@@ -33,6 +33,8 @@ const severityLevels = [
 ];
 
 export default function DisciplineIssues() {
+
+
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -65,7 +67,11 @@ export default function DisciplineIssues() {
     enabled: !!user?.center_id });
 
   // Filtered students for the modal's student select dropdown
-  const filteredStudentsForModal = students.filter(s => modalGradeFilter === "all" || s.grade === modalGradeFilter);
+  const filteredStudentsForModal = (students || []).filter(s => {
+    const target = normalizeGrade(modalGradeFilter);
+    if (!target) return true;
+    return normalizeGrade(s.grade) === target;
+  });
 
   // Fetch discipline categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
@@ -137,8 +143,7 @@ export default function DisciplineIssues() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["discipline-issues"] });
-      toast.success("Discipline issue logged successfully!");
+      queryClient.invalidateQueries({ queryKey: ["discipline-issues"] }); toast.success("Discipline issue logged successfully!");
       setIsDialogOpen(false);
       resetForm();
     },
@@ -161,8 +166,7 @@ export default function DisciplineIssues() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["discipline-issues"] });
-      toast.success("Discipline issue updated successfully!");
+      queryClient.invalidateQueries({ queryKey: ["discipline-issues"] }); toast.success("Discipline issue updated successfully!");
       setIsDialogOpen(false);
       resetForm();
     },
@@ -176,8 +180,7 @@ export default function DisciplineIssues() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["discipline-issues"] });
-      toast.success("Discipline issue deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["discipline-issues"] }); toast.success("Discipline issue deleted successfully!");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to delete issue");

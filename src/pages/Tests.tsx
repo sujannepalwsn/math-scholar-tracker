@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { BookOpen, Bot, CalendarIcon, ClipboardCheck, Edit, Eye, FileText, FileUp, Plus, SquarePen, Trash2, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ import OCRModal from "@/components/OCRModal";
 import BulkMarksEntry from "@/components/BulkMarksEntry";
 import QuestionPaperViewer from "@/components/QuestionPaperViewer";
 import { Tables } from "@/integrations/supabase/types"
-import { cn } from "@/lib/utils"
+import { normalizeGrade, cn } from "@/lib/utils"
 "use client";
 
 
@@ -71,7 +71,6 @@ export default function Tests() {
   const [questionMarks, setQuestionMarks] = useState<QuestionMark[]>([]); // Question-wise marks
   const [studentAnswer, setStudentAnswer] = useState(""); // For AI grading
   const [resultDate, setResultDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  // Removed resultNotes state
 
   // Fetch tests
   const { data: tests = [] } = useQuery({
@@ -91,7 +90,8 @@ export default function Tests() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
-    } });
+    }
+  });
 
   // Fetch lesson plans for the dropdown
   const { data: lessonPlans = [] } = useQuery({
@@ -130,7 +130,8 @@ export default function Tests() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
-    } });
+    }
+  });
 
   // Fetch test results for selected test
   const { data: testResults = [], isLoading: testResultsLoading } = useQuery({
@@ -194,8 +195,6 @@ export default function Tests() {
         uploadedFileUrl = fileName;
       }
       
-      console.log("DEBUG: Attempting to create test with lessonPlanIds:", selectedLessonPlanIds);
-
       const { data, error } = await supabase.from("tests").insert({
         name: testName || 'Unnamed Test',
         subject: testSubject,
@@ -227,7 +226,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("Error creating test:", error);
       toast.error("Failed to create test");
-    } });
+    }
+  });
 
   // Add test result mutation
   const addResultMutation = useMutation({
@@ -239,18 +239,14 @@ export default function Tests() {
         student_id: selectedStudentId,
         marks_obtained: questions.length > 0 ? totalMarksObtainedFromQuestions : parseInt(marksObtained), // Use sum of question marks or overall marks
         date_taken: resultDate,
-        // Removed notes field
         question_marks: questions.length > 0 ? (questionMarks as any) : null, // Save question-wise marks as Json
       };
-
-      console.log("Attempting to save test result with data:", resultData);
 
       const { data, error } = await supabase.from("test_results").insert(resultData);
       if (error) {
         console.error("Supabase error saving test result:", error);
         throw error;
       }
-      console.log("Test result saved successfully:", data);
       return data;
     },
     onSuccess: () => {
@@ -259,8 +255,6 @@ export default function Tests() {
       setSelectedStudentId("");
       setMarksObtained("");
       setQuestionMarks([]);
-      setStudentAnswer("");
-      // Removed resultNotes reset
     },
     onError: (error: any) => {
       console.error("Error in addResultMutation:", error);
@@ -269,13 +263,12 @@ export default function Tests() {
       } else {
         toast.error(error.message || "Failed to record marks");
       }
-    } });
+    }
+  });
 
   // Bulk marks entry mutation
   const bulkMarksMutation = useMutation({
     mutationFn: async (marks: Array<{ studentId: string; marks: number }>) => {
-      console.log("Attempting bulk marks save for test:", selectedTest, "with marks:", marks);
-
       // Delete existing records for these students in this test to prevent unique constraint errors
       const studentIdsInBatch = marks.map((m) => m.studentId);
       const { error: deleteError } = await supabase
@@ -288,7 +281,6 @@ export default function Tests() {
         console.error("Supabase error deleting existing bulk marks:", deleteError);
         throw deleteError;
       }
-      console.log("Existing bulk marks deleted for selected students.");
 
       const records = marks.map((m) => ({
         test_id: selectedTest,
@@ -298,13 +290,11 @@ export default function Tests() {
         question_marks: null, // Bulk entry doesn't support question-wise for now
       }));
 
-      console.log("Inserting new bulk marks records:", records);
       const { error } = await supabase.from("test_results").insert(records);
       if (error) {
         console.error("Supabase error inserting bulk marks:", error);
         throw error;
       }
-      console.log("Bulk marks saved successfully.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["test-results"] });
@@ -313,7 +303,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("Error in bulkMarksMutation:", error);
       toast.error(error.message || "Failed to save bulk marks");
-    } });
+    }
+  });
 
   // Delete test result
   const deleteResultMutation = useMutation({
@@ -331,7 +322,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("Error deleting test result:", error);
       toast.error(error.message || "Failed to delete result");
-    } });
+    }
+  });
 
   // Delete test mutation
   const deleteTestMutation = useMutation({
@@ -342,8 +334,6 @@ export default function Tests() {
       if (user?.role !== 'admin' && test.center_id !== user?.center_id) {
         throw new Error("You don't have permission to delete this test");
       }
-
-      // Note: uploaded_file_url not in schema, skipping file deletion
 
       await supabase
         .from("test_results")
@@ -364,7 +354,8 @@ export default function Tests() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to delete test");
-    } });
+    }
+  });
 
   // AI Grade Answer Mutation
   const aiGradeAnswerMutation = useMutation({
@@ -389,7 +380,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("AI grading error:", error);
       toast.error(error.message || "Failed to get AI grade");
-    } });
+    }
+  });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -398,10 +390,8 @@ export default function Tests() {
   };
 
   const addQuestion = () => {
-    console.log("Attempting to add new question. Current questions length:", questions.length);
     setQuestions(prev => {
       const newQuestions = [...prev, { id: crypto.randomUUID(), questionText: '', maxMarks: 0, correctAnswer: '' }];
-      console.log("Questions after adding:", newQuestions.length, newQuestions);
       return newQuestions;
     });
   };
@@ -414,14 +404,7 @@ export default function Tests() {
     setQuestions(prev => prev.filter(q => q.id !== id));
   };
 
-  const normalizeGrade = (g: any) => {
-    if (g === null || g === undefined) return '';
-    let s = String(g).trim().toLowerCase();
-    if (s === 'general' || s === 'all' || s === 'select-grade' || s === 'none' || s === '') return '';
-    s = s.replace(/^(grade|class)\s+/, '');
-    s = s.replace(/(\d+)(st|nd|rd|th)$/, '$1');
-    return s.trim();
-  };
+
 
   const updateQuestionMark = (questionId: string, field: keyof QuestionMark, value: any) => {
     setQuestionMarks(prev => prev.map(qm => qm.questionId === questionId ? { ...qm, [field]: value } : qm));
@@ -435,24 +418,27 @@ export default function Tests() {
     if (!selectedTestData) return [];
 
     const getRelation = (data: any) => Array.isArray(data) ? data[0] : data;
+
+    // 1. Get the grade from the test record
     const testGrade = normalizeGrade(selectedTestData.class);
 
-    // Explicitly check for 'general' to show all students
-    const rawClass = String(selectedTestData.class || '').trim().toLowerCase();
-    if (rawClass === 'general' || rawClass === '') {
-        // Even if it's general, if there's a linked lesson plan with a specific grade, maybe we should filter?
-        // User says: "Students are displayed but it should display only the students of the grades to which exam was taken"
-        // If they took the exam for a specific grade, we must filter.
-        const linkedLp = getRelation((selectedTestData as any).lesson_plans);
-        const lpGrade = normalizeGrade(linkedLp?.grade || linkedLp?.class);
-        if (lpGrade) {
-            return students.filter((s: Student) => normalizeGrade(s.grade) === lpGrade);
-        }
-        return students;
+    // 2. Get the grade from the linked lesson plan if it exists
+    const linkedLp = getRelation((selectedTestData as any).lesson_plans);
+    const lpGrade = normalizeGrade(linkedLp?.grade || linkedLp?.class);
+
+    // 3. Priority: Filter by test grade, then by linked lesson plan grade
+    const targetGrade = testGrade || lpGrade;
+
+    if (targetGrade) {
+      return (students || []).filter((s: Student) => normalizeGrade(s.grade) === targetGrade);
     }
 
-    if (testGrade) {
-      return students.filter((s: Student) => normalizeGrade(s.grade) === testGrade);
+    // 4. If no grade info found, and the class is "General", show ALL students.
+    // However, if the user explicitly says only students of specific grades,
+    // we assume they entered the grade in 'class' or linked it to a LP.
+    const rawClass = String(selectedTestData.class || '').trim().toLowerCase();
+    if (rawClass === 'general' || rawClass === '') {
+        return students || [];
     }
 
     return [];
@@ -678,7 +664,6 @@ export default function Tests() {
                 <p className="text-sm text-muted-foreground">
                   Add individual questions for detailed mark entry. Total marks for questions will override overall total marks.
                 </p>
-                {/* DEBUG: Display current number of questions */}
                 <p className="text-sm text-muted-foreground">Current questions: {questions.length}</p>
                 {questions.map((q, index) => (
                   <div key={q.id} className="flex flex-col gap-2 border p-3 rounded-xl bg-muted/20">
@@ -760,7 +745,7 @@ export default function Tests() {
                         <p className="font-bold text-foreground/90 leading-none">{test.name}</p>
                         <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                           <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {test.subject}</span>
-                          <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {format(new Date(test.date), "MMM d")}</span>
+                          <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {format(new Date(test.date || test.created_at), "MMM d")}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -1020,8 +1005,6 @@ export default function Tests() {
         )}
       </div>
 
-      {/* Question paper section removed - uploaded_file_url not in schema */}
-
       <OCRModal
         open={showOCRModal}
         onOpenChange={setShowOCRModal}
@@ -1054,7 +1037,7 @@ export default function Tests() {
                 </div>
                 <div>
                   <Label className="text-[10px] uppercase font-bold text-muted-foreground">Date</Label>
-                  <p className="font-medium">{format(new Date(viewingTestDetails.date), "PPP")}</p>
+                  <p className="font-medium">{format(new Date(viewingTestDetails.date || viewingTestDetails.created_at), "PPP")}</p>
                 </div>
               </div>
 

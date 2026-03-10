@@ -18,6 +18,15 @@ export function safeFormatDate(dateInput: string | Date | null | undefined, form
   return dateFnsFormat(date, formatString);
 }
 
+export const normalizeGrade = (g: any) => {
+  if (g === null || g === undefined) return '';
+  let s = String(g).trim().toLowerCase();
+  if (s === 'general' || s === 'all' || s === 'select-grade' || s === 'none' || s === '') return '';
+  s = s.replace(/^(grade|class)\s+/, '');
+  s = s.replace(/(\d+)(st|nd|rd|th)$/, '$1');
+  return s.trim();
+};
+
 export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',

@@ -1,3 +1,4 @@
+import { normalizeGrade } from "@/lib/utils";
 import React, { useState } from "react";
 import { CalendarIcon, Camera, CheckSquare, Edit, Plus, Settings, Star, Trash2, Users, Video } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -25,6 +26,8 @@ type Student = Tables<'students'>;
 type ActivityType = Tables<'activity_types'>;
 
 export default function PreschoolActivities() {
+
+
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -58,7 +61,11 @@ export default function PreschoolActivities() {
     enabled: !!user?.center_id });
 
   // Filtered students for the modal's student select dropdown
-  const filteredStudentsForModal = students.filter(s => modalGradeFilter === "all" || s.grade === modalGradeFilter);
+  const filteredStudentsForModal = (students || []).filter(s => {
+    const target = normalizeGrade(modalGradeFilter);
+    if (!target) return true;
+    return normalizeGrade(s.grade) === target;
+  });
 
   // Fetch activity types for the center
   const { data: activityTypesFromDb = [], isLoading: activityTypesLoading } = useQuery({

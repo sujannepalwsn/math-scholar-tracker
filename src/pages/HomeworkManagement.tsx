@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
-import { cn } from "@/lib/utils"
+import { normalizeGrade, cn } from "@/lib/utils"
 
 type Homework = Tables<'homework'>;
 type Student = Tables<'students'>;
@@ -126,6 +126,8 @@ export default function HomeworkManagement() {
     return fileName;
   };
 
+
+
   const createHomeworkMutation = useMutation({
     mutationFn: async () => {
       if (!user?.center_id) throw new Error("Center ID not found");
@@ -139,7 +141,10 @@ export default function HomeworkManagement() {
         due_date: dueDate, attachment_url: fileUrl || imageUrl, attachment_name: file?.name || image?.name || null,
         teacher_id: user.teacher_id || null, lesson_plan_id: lessonPlanId }).select().single();
       if (error) throw error;
-      const studentsInGrade = students.filter(s => s.grade?.trim() === grade?.trim());
+
+      const targetGrade = normalizeGrade(grade);
+      const studentsInGrade = students.filter(s => normalizeGrade(s.grade) === targetGrade);
+
       if (studentsInGrade.length > 0) {
         const studentHomeworkRecords = studentsInGrade.map(s => ({ student_id: s.id, homework_id: newHomework.id, status: 'assigned' as const }));
         const { error: assignError } = await supabase.from("student_homework_records").insert(studentHomeworkRecords);

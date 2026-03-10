@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Book, BookOpen, CheckCircle, ChevronDown, ChevronUp, Clock, Edit, Eye, FileText, Plus, Star, Trash2, User, Users, XCircle } from "lucide-react";
-import { cn } from "@/lib/utils"
+import { normalizeGrade, cn } from "@/lib/utils"
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -70,14 +70,7 @@ export default function LessonTracking() {
   // Helper for Supabase relations
   const getRelation = (data: any) => Array.isArray(data) ? data[0] : data;
 
-  const normalizeGrade = (g: any) => {
-    if (g === null || g === undefined) return '';
-    let s = String(g).trim().toLowerCase();
-    if (s === 'general' || s === 'all' || s === 'select-grade' || s === 'none' || s === '') return '';
-    s = s.replace(/^(grade|class)\s+/, '');
-    s = s.replace(/(\d+)(st|nd|rd|th)$/, '$1');
-    return s.trim();
-  };
+
 
   // Fetch students
   const { data: students = [] } = useQuery({
@@ -273,8 +266,7 @@ export default function LessonTracking() {
       return true;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] });
-      toast.success("Lesson recorded for selected students!");
+      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] }); toast.success("Lesson recorded for selected students!");
       setSelectedStudentIds([]);
       setSelectedLessonPlanId("none");
       setGeneralLessonNotes(""); // Reset general notes
@@ -290,12 +282,12 @@ export default function LessonTracking() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] });
-      toast.success("Student lesson record deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] }); toast.success("Student lesson record deleted successfully!");
     },
     onError: () => {
       toast.error("Failed to delete student lesson record");
-    } });
+    }
+  });
 
   const bulkEvaluateMutation = useMutation({
     mutationFn: async () => {
@@ -309,11 +301,11 @@ export default function LessonTracking() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] });
-      toast.success(`Evaluated ${bulkEvaluationSelected.length} students`);
+      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] }); toast.success(`Evaluated ${bulkEvaluationSelected.length} students`);
       setBulkEvaluationSelected([]);
       setBulkTeacherNotes("");
-    } });
+    }
+  });
 
   // Helpers
   const toggleStudentSelection = (studentId: string) => {
@@ -324,15 +316,21 @@ export default function LessonTracking() {
 
   const filteredStudentsForModal = useMemo(() => {
     if (selectedLessonPlanId !== "none") {
-      const lp = allAvailableLessonPlans.find((l: any) => l.id === selectedLessonPlanId);
+      const lp = (allAvailableLessonPlans || []).find((l: any) => l.id === selectedLessonPlanId);
       const lpGrade = normalizeGrade(lp?.grade || lp?.class);
 
       if (lpGrade) {
         return (students || []).filter((s: any) => normalizeGrade(s.grade) === lpGrade);
       }
 
-      // If it's a 'General' lesson plan, we show all students
-      return students;
+      // If it's a 'General' lesson plan, or grade is blank, we might show all,
+      // but if the teacher is recording for a specific grade, it should filter.
+      const rawClass = String(lp?.grade || lp?.class || '').trim().toLowerCase();
+      if (rawClass === 'general' || rawClass === '') {
+          return students || [];
+      }
+
+      return [];
     }
     return (students || []).filter((s: any) => {
       const targetGrade = normalizeGrade(filterGrade);
@@ -352,11 +350,23 @@ export default function LessonTracking() {
   }, [attendanceForDate]);
 
   useEffect(() => {
-    if (!students) return;
+    if (!students || !attendanceForDate) return;
+
+    // Only auto-select if a lesson plan is actually selected
+    if (selectedLessonPlanId === "none") {
+      setSelectedStudentIds([]);
+      return;
+    }
+
     const currentFilteredIds = filteredStudentsForModal.map((s: any) => s.id);
+
+    // Auto-select students who are:
+    // 1. In the current filtered list (correct grade for the lesson plan)
+    // 2. Marked as "present" for the selected date
     const autoSelect = presentStudentIdsForDate.filter((id) => currentFilteredIds.includes(id));
+
     setSelectedStudentIds(autoSelect);
-  }, [filterGrade, date, attendanceForDate, students, filteredStudentsForModal]);
+  }, [selectedLessonPlanId, date, attendanceForDate, students, filteredStudentsForModal]);
 
   const subjectsList = Array.from(new Set(allAvailableLessonPlans.map((lp: any) => lp.subject).filter(Boolean)));
   const gradesList = Array.from(new Set(students.map((s: any) => s.grade).filter(Boolean)));
