@@ -428,6 +428,8 @@ export default function Tests() {
     ? students.filter((s: Student) => s.grade === selectedTestData.class)
     : students;
 
+  const uniqueGrades = Array.from(new Set(students.map(s => s.grade).filter(Boolean))).sort();
+
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
       {testsWithFiles.length > 0 && (
@@ -541,11 +543,17 @@ export default function Tests() {
               </div>
               <div>
                 <Label>Grade (Optional)</Label>
-                <Input
-                  value={grade}
-                  onChange={(e) => setGrade(e.target.value)}
-                  placeholder="e.g., 10th"
-                />
+                <Select value={grade || "none"} onValueChange={(v) => setGrade(v === "none" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">General / No Grade</SelectItem>
+                    {uniqueGrades.map(g => (
+                      <SelectItem key={g} value={g!}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {/* Multi-select Lesson Plans/Chapters */}
               <div className="space-y-3 border p-4 rounded-lg">
@@ -584,6 +592,9 @@ export default function Tests() {
                                 setSelectedLessonPlanIds(prev => prev.filter(id => id !== lp.id));
                               } else {
                                 setSelectedLessonPlanIds(prev => [...prev, lp.id]);
+                                if (!grade && lp.grade) {
+                                  setGrade(lp.grade);
+                                }
                               }
                             }}
                             className="h-4 w-4"

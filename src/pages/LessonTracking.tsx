@@ -317,8 +317,14 @@ export default function LessonTracking() {
   };
 
   const filteredStudentsForModal = useMemo(() => {
+    if (selectedLessonPlanId !== "none") {
+      const lp = lessonPlans.find((l: any) => l.id === selectedLessonPlanId);
+      if (lp?.grade) {
+        return (students || []).filter((s: any) => s.grade === lp.grade);
+      }
+    }
     return (students || []).filter((s: any) => (filterGrade === "all" ? true : s.grade === filterGrade));
-  }, [students, filterGrade]);
+  }, [students, filterGrade, selectedLessonPlanId, lessonPlans]);
 
   const selectAllStudents = () => {
     setSelectedStudentIds(filteredStudentsForModal.map((s: any) => s.id));
@@ -398,7 +404,15 @@ export default function LessonTracking() {
               {/* SELECT LESSON PLAN */}
               <div className="space-y-3 border rounded-lg p-4">
                 <Label className="text-base font-semibold">Select Lesson Plan *</Label>
-                <Select value={selectedLessonPlanId} onValueChange={setSelectedLessonPlanId}>
+                <Select value={selectedLessonPlanId} onValueChange={(val) => {
+                  setSelectedLessonPlanId(val);
+                  if (val !== "none") {
+                    const lp = lessonPlans.find(l => l.id === val);
+                    if (lp?.grade) {
+                      setFilterGrade(lp.grade);
+                    }
+                  }
+                }}>
                   <SelectTrigger><SelectValue placeholder="Choose a lesson plan..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Choose a lesson plan...</SelectItem>
@@ -427,17 +441,19 @@ export default function LessonTracking() {
                   </div>
                 </div>
 
-                {/* Grade Filter */}
-                <div className="mt-2">
-                  <Label>Filter by Grade</Label>
-                  <Select value={filterGrade} onValueChange={setFilterGrade}>
-                    <SelectTrigger><SelectValue placeholder="All Grades" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Grades</SelectItem>
-                      {grades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Grade Filter - Only show if no lesson plan is selected or if lesson plan has no grade */}
+                {selectedLessonPlanId === "none" && (
+                  <div className="mt-2">
+                    <Label>Filter by Grade</Label>
+                    <Select value={filterGrade} onValueChange={setFilterGrade}>
+                      <SelectTrigger><SelectValue placeholder="All Grades" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Grades</SelectItem>
+                        {grades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Student List */}
                 <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
