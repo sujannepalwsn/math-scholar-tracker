@@ -191,10 +191,17 @@ export default function Tests() {
       // Use the first selected lesson plan ID for the test (primary link)
       const primaryLessonPlanId = selectedLessonPlanIds.length > 0 ? selectedLessonPlanIds[0] : null;
 
+      // Infer grade from lesson plan if not provided
+      let inferredGrade = grade;
+      if (!inferredGrade && primaryLessonPlanId) {
+        const lp = lessonPlans.find(l => l.id === primaryLessonPlanId);
+        if (lp?.grade) inferredGrade = lp.grade;
+      }
+
       const { data, error } = await supabase.from("tests").insert({
         name: testName || 'Unnamed Test',
         subject: testSubject,
-        class: grade || 'General',
+        class: inferredGrade || 'General',
         date: testDate,
         total_marks: parseInt(totalMarks),
         center_id: user?.center_id!,
@@ -417,7 +424,7 @@ export default function Tests() {
 
   const testsWithFiles: typeof tests = []; // No uploaded_file_url in schema
 
-  const filteredStudents = selectedTestData?.class
+  const filteredStudents = selectedTestData?.class && selectedTestData.class !== 'General'
     ? students.filter((s: Student) => s.grade === selectedTestData.class)
     : students;
 
