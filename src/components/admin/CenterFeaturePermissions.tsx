@@ -26,6 +26,11 @@ const FEATURES = [
   { name: 'calendar_events', label: 'Calendar Events' },
   { name: 'class_routine', label: 'Class Routine' },
   { name: 'messaging', label: 'Messaging' },
+  { name: 'leave_management', label: 'Leave Management' },
+  { name: 'published_results', label: 'Published Results' },
+  { name: 'student_id_cards', label: 'Student ID Cards' },
+  { name: 'teacher_performance', label: 'Teacher Performance' },
+  { name: 'chapter_performance', label: 'Chapter Performance' },
 ];
 
 export default function CenterFeaturePermissions() {

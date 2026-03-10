@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import CenterLogo from "./CenterLogo";
+import { Footer } from "./Footer";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 
@@ -28,7 +29,7 @@ const navItems: Array<{
   { to: "/homework", label: "Homework", icon: Book, role: 'center' as const, featureName: 'homework_management', category: 'Academics' },
   { to: "/tests", label: "Tests", icon: ClipboardCheck, role: 'center' as const, featureName: 'test_management', category: 'Academics' },
   { to: "/exams", label: "Exams & Results", icon: GraduationCap, role: 'center' as const, featureName: 'test_management', category: 'Academics' },
-  { to: "/published-results", label: "Published Results", icon: Award, role: 'center' as const, category: 'Academics' },
+  { to: "/published-results", label: "Published Results", icon: Award, role: 'center' as const, featureName: 'published_results', category: 'Academics' },
   { to: "/activities", label: "Activities", icon: Paintbrush, role: 'center' as const, featureName: 'preschool_activities', category: 'Academics' },
   { to: "/discipline", label: "Discipline", icon: AlertTriangle, role: 'center' as const, featureName: 'discipline_issues', category: 'Academics' },
 
@@ -36,10 +37,10 @@ const navItems: Array<{
   { to: "/register", label: "Students Registration", icon: UserPlus, role: 'center' as const, featureName: 'register_student', category: 'Administration' },
   { to: "/teachers", label: "Teachers Registration", icon: Users, role: 'center' as const, featureName: 'teacher_management', category: 'Administration' },
   { to: "/teacher-attendance", label: "Teachers' Attendance", icon: UserCheck, role: 'center' as const, featureName: 'teacher_management', category: 'Administration' },
-  { to: "/leave-management", label: "Leave Management", icon: Plane, role: 'center' as const, category: 'Administration' },
-  { to: "/chapter-performance-overview", label: "Chapter Performance", icon: TrendingUp, role: 'center' as const, featureName: 'lesson_tracking', category: 'Administration' },
-  { to: "/teacher-performance", label: "Teacher Reports", icon: BarChart3, role: 'center' as const, category: 'Administration' },
-  { to: "/student-id-cards", label: "Student ID Cards", icon: IdCard, role: 'center' as const, category: 'Administration' },
+  { to: "/leave-management", label: "Leave Management", icon: Plane, role: 'center' as const, featureName: 'leave_management', category: 'Administration' },
+  { to: "/chapter-performance-overview", label: "Chapter Performance", icon: TrendingUp, role: 'center' as const, featureName: 'chapter_performance', category: 'Administration' },
+  { to: "/teacher-performance", label: "Teacher Reports", icon: BarChart3, role: 'center' as const, featureName: 'teacher_performance', category: 'Administration' },
+  { to: "/student-id-cards", label: "Student ID Cards", icon: IdCard, role: 'center' as const, featureName: 'student_id_cards', category: 'Administration' },
   { to: "/settings", label: "Settings", icon: Settings, role: 'center' as const, category: 'Administration' },
 
   // Reports and Communications Group
@@ -139,14 +140,18 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-200",
+        "flex-1 overflow-y-auto bg-background transition-all duration-200 flex flex-col",
         "md:h-screen",
         "pt-16 md:pt-0",
-        "px-4 pb-20 md:p-6 lg:p-8",
         sidebarCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
-        <div className="page-enter max-w-7xl mx-auto">
-          {children}
+        <div className="flex-1 px-4 pb-20 md:p-6 lg:p-8">
+          <div className="page-enter max-w-7xl mx-auto">
+            {children}
+          </div>
+        </div>
+        <div className="px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
+          <Footer />
         </div>
       </main>
 

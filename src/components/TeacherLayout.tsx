@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import CenterLogo from "./CenterLogo";
+import { Footer } from "./Footer";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 
@@ -26,9 +27,10 @@ const navItems: Array<{
   { to: "/teacher/homework-management", label: "Homework", icon: Book, role: 'teacher' as const, featureName: 'homework_management', category: 'Academics' },
   { to: "/teacher/test-management", label: "Tests", icon: ClipboardCheck, role: 'teacher' as const, featureName: 'test_management', category: 'Academics' },
   { to: "/teacher/exams", label: "Exams & Results", icon: GraduationCap, role: 'teacher' as const, featureName: 'test_management', category: 'Academics' },
-  { to: "/teacher/published-results", label: "Published Results", icon: Award, role: 'teacher' as const, category: 'Academics' },
+  { to: "/teacher/published-results", label: "Published Results", icon: Award, role: 'teacher' as const, featureName: 'published_results', category: 'Academics' },
   { to: "/teacher/marks-entry", label: "Marks Entry", icon: PenTool, role: 'teacher' as const, featureName: 'test_management', category: 'Academics' },
-  { to: "/teacher/activities", label: "Activities", icon: Paintbrush, role: 'teacher' as const, featureName: 'activities', category: 'Academics' },
+  { to: "/teacher/activities", label: "Activities", icon: Paintbrush, role: 'teacher' as const, featureName: 'preschool_activities', category: 'Academics' },
+  { to: "/teacher/preschool-activities", label: "Preschool Activities", icon: Paintbrush, role: 'teacher' as const, featureName: 'preschool_activities', category: 'Academics' },
   { to: "/teacher/discipline-issues", label: "Discipline", icon: AlertTriangle, role: 'teacher' as const, featureName: 'discipline_issues', category: 'Academics' },
   { to: "/teacher/chapter-performance", label: "Chapter Performance", icon: TrendingUp, role: 'teacher' as const, featureName: 'chapter_performance', category: 'Administration' },
   { to: "/teacher/settings", label: "Settings", icon: Settings, role: 'teacher' as const, category: 'Administration' },
@@ -41,7 +43,7 @@ const navItems: Array<{
   { to: "/teacher-messages", label: "Messages", icon: MessageSquare, role: 'teacher' as const, featureName: 'messaging', category: 'Reports and Communications' },
   { to: "/teacher/class-routine", label: "Class Routine", icon: Clock, role: 'teacher' as const, featureName: 'class_routine', category: 'Reports and Communications' },
   { to: "/teacher/calendar", label: "Calendar", icon: Calendar, role: 'teacher' as const, featureName: 'calendar_events', category: 'Reports and Communications' },
-  { to: "/teacher/leave", label: "Leave Applications", icon: Plane, role: 'teacher' as const, category: 'Reports and Communications' },
+  { to: "/teacher/leave", label: "Leave Applications", icon: Plane, role: 'teacher' as const, featureName: 'leave_management', category: 'Reports and Communications' },
   { to: "/teacher/attendance-summary", label: "Attendance Summary", icon: CalendarDays, role: 'teacher' as const, featureName: 'attendance_summary', category: 'Reports and Communications' },
   { to: "/teacher/student-report", label: "Student Report", icon: User, role: 'teacher' as const, featureName: 'student_report_access', category: 'Reports and Communications' },
 ];
@@ -103,9 +105,14 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   );
 
   const filteredTeacherNavItems = updatedNavItems.filter(item => {
-    if (item.featureName && user?.teacherPermissions) {
-      const permission = user.teacherPermissions[item.featureName];
-      return permission !== false;
+    // Teachers must respect both their individual permissions AND the center's permissions
+    if (item.featureName) {
+      if (user?.centerPermissions && user.centerPermissions[item.featureName] === false) {
+        return false;
+      }
+      if (user?.teacherPermissions && user.teacherPermissions[item.featureName] === false) {
+        return false;
+      }
     }
     return true;
   });
@@ -129,14 +136,18 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       </header>
 
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-200",
+        "flex-1 overflow-y-auto bg-background transition-all duration-200 flex flex-col",
         "md:h-screen",
         "pt-16 md:pt-0",
-        "px-4 pb-20 md:p-6 lg:p-8",
         sidebarCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
-        <div className="page-enter max-w-7xl mx-auto">
-          {children}
+        <div className="flex-1 px-4 pb-20 md:p-6 lg:p-8">
+          <div className="page-enter max-w-7xl mx-auto">
+            {children}
+          </div>
+        </div>
+        <div className="px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
+          <Footer />
         </div>
       </main>
 
