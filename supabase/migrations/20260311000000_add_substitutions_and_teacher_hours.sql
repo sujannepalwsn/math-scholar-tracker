@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS public.class_substitutions (
 ALTER TABLE public.class_substitutions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for class_substitutions
--- Using permissive policies to match other routine tables in this project
+-- Note: Using true for consistency with other routine tables in this project
+-- which seem to handle multi-tenancy at the application layer.
 DO $$
 BEGIN
     DROP POLICY IF EXISTS "Users can view substitutions of their center" ON public.class_substitutions;
@@ -37,11 +38,8 @@ BEGIN
     DROP POLICY IF EXISTS "Teachers can view substitutions assigned to them" ON public.class_substitutions;
     DROP POLICY IF EXISTS "Service role full access on class_substitutions" ON public.class_substitutions;
 
-    CREATE POLICY "Service role full access on class_substitutions"
-    ON public.class_substitutions
-    FOR ALL
-    USING (true)
-    WITH CHECK (true);
+    CREATE POLICY "Service role full access on class_substitutions" ON public.class_substitutions
+      FOR ALL USING (true) WITH CHECK (true);
 END $$;
 
 -- Add updated_at trigger
@@ -60,8 +58,8 @@ BEGIN
     DROP POLICY IF EXISTS "Allow any user to insert notifications" ON public.notifications;
     DROP POLICY IF EXISTS "Authenticated users can insert notifications" ON public.notifications;
 
-    CREATE POLICY "Allow any user to insert notifications"
-    ON public.notifications
-    FOR INSERT
-    WITH CHECK (true);
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow insert on notifications for apps') THEN
+        CREATE POLICY "Allow insert on notifications for apps" ON public.notifications
+          FOR INSERT WITH CHECK (true);
+    END IF;
 END $$;

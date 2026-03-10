@@ -526,17 +526,17 @@ export default function Dashboard() {
   const availableTeachers = useMemo(() => {
     if (!selectedVacantClass) return [];
 
-    // 1. Get all present teachers today
-    const presentTeachers = teacherAttendance
-      .filter(a => a.status === 'present')
+    // 1. Get teachers who are NOT available (absent or on leave)
+    const unavailableTeachers = teacherAttendance
+      .filter(a => a.status === 'absent' || a.status === 'leave')
       .map(a => a.teacher_id);
 
-    // 2. Filter out those who have a class in THIS period in period_schedules
+    // 2. Get teachers who have a class in THIS period in period_schedules
     const busyTeachers = periodSchedules
       .filter(ps => ps.class_period_id === selectedVacantClass.class_period_id)
       .map(ps => ps.teacher_id);
 
-    // 3. Filter out those who have a substitution in THIS period today
+    // 3. Get teachers who have a substitution in THIS period today
     const busyBySub = substitutions
       .filter(s => {
         const ps = periodSchedules.find(p => p.id === s.period_schedule_id);
@@ -545,7 +545,7 @@ export default function Dashboard() {
       .map(s => s.substitute_teacher_id);
 
     return teachers.filter(t =>
-      presentTeachers.includes(t.id) &&
+      !unavailableTeachers.includes(t.id) &&
       !busyTeachers.includes(t.id) &&
       !busyBySub.includes(t.id)
     );
@@ -553,6 +553,7 @@ export default function Dashboard() {
 
   const assignSubstitutionMutation = useMutation({
     mutationFn: async (teacherId: string) => {
+      console.log("Assigning substitution:", { centerId, selectedVacantClass, teacherId, today });
       if (!centerId || !selectedVacantClass) throw new Error("Missing center ID or class selection");
 
       const { error } = await supabase.from('class_substitutions').insert({
