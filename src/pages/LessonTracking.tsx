@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Book, BookOpen, CheckCircle, ChevronDown, ChevronUp, Clock, Edit, Eye, FileText, Plus, Star, Trash2, User, Users, XCircle } from "lucide-react";
-import { cn } from "@/lib/utils"
+import { normalizeGrade, cn } from "@/lib/utils"
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -67,14 +67,17 @@ export default function LessonTracking() {
   // Track which lesson plans have students shown
   const [showStudentsMap, setShowStudentsMap] = useState<{ [lessonPlanId: string]: boolean }>({});
 
+  // Helper for Supabase relations
+  const getRelation = (data: any) => Array.isArray(data) ? data[0] : data;
+
+
+
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students", user?.center_id],
+    queryKey: ["students", user?.center_id, user?.role],
     queryFn: async () => {
-      let query = supabase.from("students").select("id, name, grade").order("name");
-      if (user?.role !== "admin" && user?.center_id) {
-        query = query.eq("center_id", user.center_id);
-      }
+      if (!user?.center_id) return [];
+      let query = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).order("name");
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -82,17 +85,16 @@ export default function LessonTracking() {
     enabled: !!user?.center_id, // Ensure this is enabled for center users
   });
 
-  // Fetch lesson plans for dropdown and listing
-  const { data: lessonPlans = [] } = useQuery({
-    queryKey: ["lesson-plans-for-tracking", user?.center_id, filterSubject, user?.teacher_id],
+  // Fetch all lesson plans for the recording dropdown (ignores filters)
+  const { data: allAvailableLessonPlans = [] } = useQuery({
+    queryKey: ["all-available-lesson-plans", user?.center_id, user?.teacher_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase
         .from("lesson_plans")
-        .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
-        .eq("center_id", user?.center_id!)
+        .select("id, subject, chapter, topic, grade, class, lesson_date")
+        .eq("center_id", user.center_id)
         .order("lesson_date", { ascending: false });
-
-      if (filterSubject !== "all") query = query.eq("subject", filterSubject);
 
       if (user?.role === 'teacher') {
         query = query.eq('teacher_id', user.teacher_id);
@@ -102,19 +104,20 @@ export default function LessonTracking() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id, // Ensure this is enabled for center users
-  });
+    enabled: !!user?.center_id });
+
+  const lessonPlans = allAvailableLessonPlans;
 
   // Fetch student_chapters (now linked to lesson_plans)
   const { data: studentLessonRecordsRaw = [] } = useQuery({
-    queryKey: ["student-lesson-records", user?.center_id, filterSubject, filterStudent, filterGrade, user?.teacher_id],
+    queryKey: ["student-lesson-records", user?.center_id, filterSubject, filterStudent, filterGrade, user?.teacher_id, user?.role],
     queryFn: async () => {
       let query = supabase
         .from("student_chapters")
         .select(`
           *,
           students(id, name, grade, center_id),
-          lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
+          lesson_plans(id, chapter, subject, topic, grade, class, lesson_date, lesson_file_url),
           recorded_by_teacher:recorded_by_teacher_id(name)
         `)
         .eq("students.center_id", user?.center_id!);
@@ -179,7 +182,7 @@ export default function LessonTracking() {
     const groups = new Map<string, GroupedLessonRecord>();
 
     studentLessonRecordsRaw.forEach((record: any) => {
-      const lessonPlan = record.lesson_plans;
+      const lessonPlan = getRelation(record.lesson_plans);
       if (!lessonPlan) {
         return;
       }
@@ -193,33 +196,30 @@ export default function LessonTracking() {
       // Filter relevant test results for this specific student and lesson plan
       const linkedTestResults = allTestResults.filter(tr => {
         const testLessonPlanId = (tr.tests as Test)?.lesson_plan_id;
-        const recordStudentId = record.students?.id;
+        const recordStudentId = getRelation(record.students)?.id;
         const recordLessonPlanId = record.lesson_plan_id;
 
         const isStudentMatch = recordStudentId && tr.student_id === recordStudentId;
         const isLessonPlanMatch = recordLessonPlanId && testLessonPlanId === recordLessonPlanId;
 
-        // console.log(`DEBUG: Checking test result ${tr.id} for student ${recordStudentId} (match: ${isStudentMatch}) and lesson plan ${recordLessonPlanId} (match: ${isLessonPlanMatch}). Test's LP ID: ${testLessonPlanId}`);
         return isStudentMatch && isLessonPlanMatch;
       });
 
       // Filter relevant homework records for this student and lesson plan
       const linkedHomeworkRecords = allHomeworkRecords.filter(hr => {
         const homeworkLessonPlanId = (hr.homework as Homework)?.lesson_plan_id;
-        const recordStudentId = record.students?.id;
+        const recordStudentId = getRelation(record.students)?.id;
         const recordLessonPlanId = record.lesson_plan_id;
 
         const isStudentMatch = recordStudentId && hr.student_id === recordStudentId;
         const isLessonPlanMatch = recordLessonPlanId && homeworkLessonPlanId === recordLessonPlanId;
 
-        // console.log(`DEBUG: Checking homework record ${hr.id} for student ${recordStudentId} (match: ${isStudentMatch}) and lesson plan ${recordLessonPlanId} (match: ${isLessonPlanMatch}). Homework's LP ID: ${homeworkLessonPlanId}`);
         return isStudentMatch && isLessonPlanMatch;
       });
 
-      // console.log(`DEBUG: For lesson plan ${lessonPlan.id}, student ${record.students?.name}: Found ${linkedTestResults.length} linked tests and ${linkedHomeworkRecords.length} linked homeworks.`);
-
       groups.get(lessonPlan.id)?.students.push({
         ...record,
+        students: getRelation(record.students),
         linked_test_results: linkedTestResults,
         linked_homework_records: linkedHomeworkRecords });
     });
@@ -250,9 +250,6 @@ export default function LessonTracking() {
       if (!user?.center_id || selectedLessonPlanId === "none" || selectedStudentIds.length === 0) {
         throw new Error("Select a lesson plan and at least one student.");
       }
-      // Allow center users to record. If user.role is 'center', user.teacher_id will be null,
-      // which is fine for the nullable recorded_by_teacher_id foreign key.
-      // No explicit check for user.role === 'teacher' is needed here.
 
       const studentLessonRecordsToInsert = selectedStudentIds.map((studentId) => ({
         student_id: studentId,
@@ -269,8 +266,7 @@ export default function LessonTracking() {
       return true;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] });
-      toast.success("Lesson recorded for selected students!");
+      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] }); toast.success("Lesson recorded for selected students!");
       setSelectedStudentIds([]);
       setSelectedLessonPlanId("none");
       setGeneralLessonNotes(""); // Reset general notes
@@ -286,12 +282,12 @@ export default function LessonTracking() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] });
-      toast.success("Student lesson record deleted successfully!");
+      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] }); toast.success("Student lesson record deleted successfully!");
     },
     onError: () => {
       toast.error("Failed to delete student lesson record");
-    } });
+    }
+  });
 
   const bulkEvaluateMutation = useMutation({
     mutationFn: async () => {
@@ -305,11 +301,11 @@ export default function LessonTracking() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] });
-      toast.success(`Evaluated ${bulkEvaluationSelected.length} students`);
+      queryClient.invalidateQueries({ queryKey: ["student-lesson-records"] }); toast.success(`Evaluated ${bulkEvaluationSelected.length} students`);
       setBulkEvaluationSelected([]);
       setBulkTeacherNotes("");
-    } });
+    }
+  });
 
   // Helpers
   const toggleStudentSelection = (studentId: string) => {
@@ -319,8 +315,29 @@ export default function LessonTracking() {
   };
 
   const filteredStudentsForModal = useMemo(() => {
-    return (students || []).filter((s: any) => (filterGrade === "all" ? true : s.grade === filterGrade));
-  }, [students, filterGrade]);
+    if (selectedLessonPlanId !== "none") {
+      const lp = (allAvailableLessonPlans || []).find((l: any) => l.id === selectedLessonPlanId);
+      const lpGrade = normalizeGrade(lp?.grade || lp?.class);
+
+      if (lpGrade) {
+        return (students || []).filter((s: any) => normalizeGrade(s.grade) === lpGrade);
+      }
+
+      // If it's a 'General' lesson plan, or grade is blank, we might show all,
+      // but if the teacher is recording for a specific grade, it should filter.
+      const rawClass = String(lp?.grade || lp?.class || '').trim().toLowerCase();
+      if (rawClass === 'general' || rawClass === '') {
+          return students || [];
+      }
+
+      return [];
+    }
+    return (students || []).filter((s: any) => {
+      const targetGrade = normalizeGrade(filterGrade);
+      if (!targetGrade) return true; // 'all' or 'general'
+      return normalizeGrade(s.grade) === targetGrade;
+    });
+  }, [students, filterGrade, selectedLessonPlanId, allAvailableLessonPlans]);
 
   const selectAllStudents = () => {
     setSelectedStudentIds(filteredStudentsForModal.map((s: any) => s.id));
@@ -333,14 +350,26 @@ export default function LessonTracking() {
   }, [attendanceForDate]);
 
   useEffect(() => {
-    if (!students) return;
-    const currentFilteredIds = filteredStudentsForModal.map((s: any) => s.id);
-    const autoSelect = presentStudentIdsForDate.filter((id) => currentFilteredIds.includes(id));
-    setSelectedStudentIds(autoSelect);
-  }, [filterGrade, date, attendanceForDate, students, filteredStudentsForModal]);
+    if (!students || !attendanceForDate) return;
 
-  const subjects = Array.from(new Set(lessonPlans.map((lp: any) => lp.subject).filter(Boolean)));
-  const grades = Array.from(new Set(students.map((s: any) => s.grade).filter(Boolean)));
+    // Only auto-select if a lesson plan is actually selected
+    if (selectedLessonPlanId === "none") {
+      setSelectedStudentIds([]);
+      return;
+    }
+
+    const currentFilteredIds = filteredStudentsForModal.map((s: any) => s.id);
+
+    // Auto-select students who are:
+    // 1. In the current filtered list (correct grade for the lesson plan)
+    // 2. Marked as "present" for the selected date
+    const autoSelect = presentStudentIdsForDate.filter((id) => currentFilteredIds.includes(id));
+
+    setSelectedStudentIds(autoSelect);
+  }, [selectedLessonPlanId, date, attendanceForDate, students, filteredStudentsForModal]);
+
+  const subjectsList = Array.from(new Set(allAvailableLessonPlans.map((lp: any) => lp.subject).filter(Boolean)));
+  const gradesList = Array.from(new Set(students.map((s: any) => s.grade).filter(Boolean)));
 
   const toggleShowStudents = (lessonPlanId: string) => {
     setShowStudentsMap((prev) => ({ ...prev, [lessonPlanId]: !prev[lessonPlanId] }));
@@ -349,19 +378,6 @@ export default function LessonTracking() {
   const getRatingStars = (rating: number | null) => {
     if (rating === null) return "N/A";
     return Array(rating).fill("⭐").join("");
-  };
-
-  const getHomeworkStatusIcon = (status: StudentHomeworkRecord['status']) => {
-    switch (status) {
-      case 'completed':
-      case 'checked':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'in_progress':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'assigned':
-      default:
-        return <XCircle className="h-4 w-4 text-red-600" />;
-    }
   };
 
   return (
@@ -400,11 +416,22 @@ export default function LessonTracking() {
               {/* SELECT LESSON PLAN */}
               <div className="space-y-3 border rounded-lg p-4">
                 <Label className="text-base font-semibold">Select Lesson Plan *</Label>
-                <Select value={selectedLessonPlanId} onValueChange={setSelectedLessonPlanId}>
+                <Select value={selectedLessonPlanId} onValueChange={(val) => {
+                  setSelectedLessonPlanId(val);
+                  if (val !== "none") {
+                    const lp = allAvailableLessonPlans.find(l => l.id === val);
+                    const lpGrade = lp?.grade || (lp?.class !== 'General' ? lp?.class : null);
+                    if (lpGrade) {
+                      setFilterGrade(lpGrade);
+                    }
+                  } else {
+                    setFilterGrade("all");
+                  }
+                }}>
                   <SelectTrigger><SelectValue placeholder="Choose a lesson plan..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Choose a lesson plan...</SelectItem>
-                    {lessonPlans.map((lp: any) => (
+                    {allAvailableLessonPlans.map((lp: any) => (
                       <SelectItem key={lp.id} value={lp.id}>
                         {lp.subject} - {lp.chapter} - {lp.topic} ({format(new Date(lp.lesson_date), "MMM d")})
                       </SelectItem>
@@ -429,17 +456,19 @@ export default function LessonTracking() {
                   </div>
                 </div>
 
-                {/* Grade Filter */}
-                <div className="mt-2">
-                  <Label>Filter by Grade</Label>
-                  <Select value={filterGrade} onValueChange={setFilterGrade}>
-                    <SelectTrigger><SelectValue placeholder="All Grades" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Grades</SelectItem>
-                      {grades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Grade Filter - Only show if no lesson plan is selected or if lesson plan has no grade */}
+                {selectedLessonPlanId === "none" && (
+                  <div className="mt-2">
+                    <Label>Filter by Grade</Label>
+                    <Select value={filterGrade} onValueChange={setFilterGrade}>
+                      <SelectTrigger><SelectValue placeholder="All Grades" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Grades</SelectItem>
+                        {gradesList.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Student List */}
                 <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
@@ -490,7 +519,7 @@ export default function LessonTracking() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Subjects</SelectItem>
-                  {subjects.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {subjectsList.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -514,7 +543,7 @@ export default function LessonTracking() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Grades</SelectItem>
-                  {grades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  {gradesList.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -696,7 +725,7 @@ export default function LessonTracking() {
                                     </Badge>
                                   ))}
                                   {record.linked_homework_records?.map(hr => (
-                                    <Badge key={hr.id} variant="outline" className="bg-orange-500/5 border-orange-500/10 text-orange-600 text-[8px] font-black uppercase">
+                                    <Badge key={hr.id} variant="outline" className="bg-orange-50/5 border-orange-500/10 text-orange-600 text-[8px] font-black uppercase">
                                       {hr.status}
                                     </Badge>
                                   ))}

@@ -1,3 +1,4 @@
+import { normalizeGrade } from "@/lib/utils";
 import React, { useState } from "react";
 import { CalendarIcon, Camera, CheckSquare, Edit, Plus, Settings, Star, Trash2, Users, Video } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -25,6 +26,8 @@ type Student = Tables<'students'>;
 type ActivityType = Tables<'activity_types'>;
 
 export default function PreschoolActivities() {
+
+
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -44,7 +47,7 @@ export default function PreschoolActivities() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-activities", user?.center_id],
+    queryKey: ["students-for-activities", user?.center_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
@@ -58,7 +61,11 @@ export default function PreschoolActivities() {
     enabled: !!user?.center_id });
 
   // Filtered students for the modal's student select dropdown
-  const filteredStudentsForModal = students.filter(s => modalGradeFilter === "all" || s.grade === modalGradeFilter);
+  const filteredStudentsForModal = (students || []).filter(s => {
+    const target = normalizeGrade(modalGradeFilter);
+    if (!target) return true;
+    return normalizeGrade(s.grade) === target;
+  });
 
   // Fetch activity types for the center
   const { data: activityTypesFromDb = [], isLoading: activityTypesLoading } = useQuery({
@@ -77,7 +84,7 @@ export default function PreschoolActivities() {
 
   // Fetch activities - now properly filtered by center and teacher
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id],
+    queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       // First get student IDs for this center

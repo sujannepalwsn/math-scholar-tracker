@@ -36,12 +36,17 @@ export default function MarksEntry() {
     queryKey: ["exams-entry-list", centerId],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("exams")
         .select("*")
         .eq("center_id", centerId)
-        .in("status", ["draft", "published"])
-        .order("created_at", { ascending: false });
+        .in("status", ["draft", "published"]);
+
+      if (user?.role === "teacher") {
+        query = query.eq("created_by", user.id);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },

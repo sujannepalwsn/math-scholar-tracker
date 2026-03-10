@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { BookOpen, Bot, CalendarIcon, ClipboardCheck, Edit, Eye, FileText, FileUp, Plus, SquarePen, Trash2, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ import OCRModal from "@/components/OCRModal";
 import BulkMarksEntry from "@/components/BulkMarksEntry";
 import QuestionPaperViewer from "@/components/QuestionPaperViewer";
 import { Tables } from "@/integrations/supabase/types"
-import { cn } from "@/lib/utils"
+import { normalizeGrade, cn } from "@/lib/utils"
 "use client";
 
 
@@ -71,7 +71,6 @@ export default function Tests() {
   const [questionMarks, setQuestionMarks] = useState<QuestionMark[]>([]); // Question-wise marks
   const [studentAnswer, setStudentAnswer] = useState(""); // For AI grading
   const [resultDate, setResultDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  // Removed resultNotes state
 
   // Fetch tests
   const { data: tests = [] } = useQuery({
@@ -79,7 +78,7 @@ export default function Tests() {
     queryFn: async () => {
       let query = supabase
         .from("tests")
-        .select("*, lesson_plans(id, subject, chapter, topic, grade)") // Fetch lesson_plans details
+        .select("*, lesson_plans(id, subject, chapter, topic, grade, class)") // Fetch lesson_plans details
         .order("date", { ascending: false });
       
       if (user?.role === 'teacher') {
@@ -91,18 +90,25 @@ export default function Tests() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
-    } });
+    }
+  });
 
   // Fetch lesson plans for the dropdown
   const { data: lessonPlans = [] } = useQuery({
-    queryKey: ["lesson-plans-for-tests", user?.center_id],
+    queryKey: ["lesson-plans-for-tests", user?.center_id, user?.teacher_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("lesson_plans")
-        .select("id, subject, chapter, topic, grade")
+        .select("id, subject, chapter, topic, grade, class")
         .eq("center_id", user.center_id)
         .order("lesson_date", { ascending: false });
+
+      if (user?.role === 'teacher') {
+        query = query.eq('teacher_id', user.teacher_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as LessonPlan[];
     },
@@ -124,7 +130,8 @@ export default function Tests() {
       const { data, error } = await query;
       if (error) throw error;
       return data;
-    } });
+    }
+  });
 
   // Fetch test results for selected test
   const { data: testResults = [], isLoading: testResultsLoading } = useQuery({
@@ -169,6 +176,14 @@ export default function Tests() {
     mutationFn: async () => {
       let uploadedFileUrl = null;
 
+      const primaryLessonPlanId = selectedLessonPlanIds.length > 0 ? selectedLessonPlanIds[0] : null;
+      let inferredGrade = grade;
+      if (!inferredGrade && primaryLessonPlanId) {
+        const lp = lessonPlans.find(l => l.id === primaryLessonPlanId);
+        const lpGrade = lp?.grade || (lp?.class && lp.class !== 'General' ? lp.class : null);
+        if (lpGrade) inferredGrade = lpGrade;
+      }
+
       if (uploadedFile) {
         const fileExt = uploadedFile.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -180,15 +195,10 @@ export default function Tests() {
         uploadedFileUrl = fileName;
       }
       
-      console.log("DEBUG: Attempting to create test with lessonPlanIds:", selectedLessonPlanIds);
-
-      // Use the first selected lesson plan ID for the test (primary link)
-      const primaryLessonPlanId = selectedLessonPlanIds.length > 0 ? selectedLessonPlanIds[0] : null;
-
       const { data, error } = await supabase.from("tests").insert({
         name: testName || 'Unnamed Test',
         subject: testSubject,
-        class: grade || 'General',
+        class: inferredGrade || 'General',
         date: testDate,
         total_marks: parseInt(totalMarks),
         center_id: user?.center_id!,
@@ -216,7 +226,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("Error creating test:", error);
       toast.error("Failed to create test");
-    } });
+    }
+  });
 
   // Add test result mutation
   const addResultMutation = useMutation({
@@ -228,18 +239,14 @@ export default function Tests() {
         student_id: selectedStudentId,
         marks_obtained: questions.length > 0 ? totalMarksObtainedFromQuestions : parseInt(marksObtained), // Use sum of question marks or overall marks
         date_taken: resultDate,
-        // Removed notes field
         question_marks: questions.length > 0 ? (questionMarks as any) : null, // Save question-wise marks as Json
       };
-
-      console.log("Attempting to save test result with data:", resultData);
 
       const { data, error } = await supabase.from("test_results").insert(resultData);
       if (error) {
         console.error("Supabase error saving test result:", error);
         throw error;
       }
-      console.log("Test result saved successfully:", data);
       return data;
     },
     onSuccess: () => {
@@ -248,8 +255,6 @@ export default function Tests() {
       setSelectedStudentId("");
       setMarksObtained("");
       setQuestionMarks([]);
-      setStudentAnswer("");
-      // Removed resultNotes reset
     },
     onError: (error: any) => {
       console.error("Error in addResultMutation:", error);
@@ -258,13 +263,12 @@ export default function Tests() {
       } else {
         toast.error(error.message || "Failed to record marks");
       }
-    } });
+    }
+  });
 
   // Bulk marks entry mutation
   const bulkMarksMutation = useMutation({
     mutationFn: async (marks: Array<{ studentId: string; marks: number }>) => {
-      console.log("Attempting bulk marks save for test:", selectedTest, "with marks:", marks);
-
       // Delete existing records for these students in this test to prevent unique constraint errors
       const studentIdsInBatch = marks.map((m) => m.studentId);
       const { error: deleteError } = await supabase
@@ -277,7 +281,6 @@ export default function Tests() {
         console.error("Supabase error deleting existing bulk marks:", deleteError);
         throw deleteError;
       }
-      console.log("Existing bulk marks deleted for selected students.");
 
       const records = marks.map((m) => ({
         test_id: selectedTest,
@@ -287,13 +290,11 @@ export default function Tests() {
         question_marks: null, // Bulk entry doesn't support question-wise for now
       }));
 
-      console.log("Inserting new bulk marks records:", records);
       const { error } = await supabase.from("test_results").insert(records);
       if (error) {
         console.error("Supabase error inserting bulk marks:", error);
         throw error;
       }
-      console.log("Bulk marks saved successfully.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["test-results"] });
@@ -302,7 +303,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("Error in bulkMarksMutation:", error);
       toast.error(error.message || "Failed to save bulk marks");
-    } });
+    }
+  });
 
   // Delete test result
   const deleteResultMutation = useMutation({
@@ -320,7 +322,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("Error deleting test result:", error);
       toast.error(error.message || "Failed to delete result");
-    } });
+    }
+  });
 
   // Delete test mutation
   const deleteTestMutation = useMutation({
@@ -331,8 +334,6 @@ export default function Tests() {
       if (user?.role !== 'admin' && test.center_id !== user?.center_id) {
         throw new Error("You don't have permission to delete this test");
       }
-
-      // Note: uploaded_file_url not in schema, skipping file deletion
 
       await supabase
         .from("test_results")
@@ -353,7 +354,8 @@ export default function Tests() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to delete test");
-    } });
+    }
+  });
 
   // AI Grade Answer Mutation
   const aiGradeAnswerMutation = useMutation({
@@ -378,7 +380,8 @@ export default function Tests() {
     onError: (error: any) => {
       console.error("AI grading error:", error);
       toast.error(error.message || "Failed to get AI grade");
-    } });
+    }
+  });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -387,10 +390,8 @@ export default function Tests() {
   };
 
   const addQuestion = () => {
-    console.log("Attempting to add new question. Current questions length:", questions.length);
     setQuestions(prev => {
       const newQuestions = [...prev, { id: crypto.randomUUID(), questionText: '', maxMarks: 0, correctAnswer: '' }];
-      console.log("Questions after adding:", newQuestions.length, newQuestions);
       return newQuestions;
     });
   };
@@ -403,6 +404,8 @@ export default function Tests() {
     setQuestions(prev => prev.filter(q => q.id !== id));
   };
 
+
+
   const updateQuestionMark = (questionId: string, field: keyof QuestionMark, value: any) => {
     setQuestionMarks(prev => prev.map(qm => qm.questionId === questionId ? { ...qm, [field]: value } : qm));
   };
@@ -411,9 +414,47 @@ export default function Tests() {
 
   const testsWithFiles: typeof tests = []; // No uploaded_file_url in schema
 
-  const filteredStudents = selectedTestData?.class
-    ? students.filter((s: Student) => s.grade === selectedTestData.class)
-    : students;
+  const filteredStudents = useMemo(() => {
+    if (!selectedTestData) return [];
+
+    const getRelation = (data: any) => Array.isArray(data) ? data[0] : data;
+
+    // 1. Get the grade from the test record
+    const testGrade = normalizeGrade(selectedTestData.class);
+
+    // 2. Get the grade from the linked lesson plan if it exists
+    const linkedLp = getRelation((selectedTestData as any).lesson_plans);
+    const lpGrade = normalizeGrade(linkedLp?.grade || linkedLp?.class);
+
+    // 3. Priority: Filter by test grade, then by linked lesson plan grade
+    const targetGrade = testGrade || lpGrade;
+
+    if (targetGrade) {
+      return (students || []).filter((s: Student) => normalizeGrade(s.grade) === targetGrade);
+    }
+
+    // 4. If no grade info found, and the class is "General", show ALL students.
+    // However, if the user explicitly says only students of specific grades,
+    // we assume they entered the grade in 'class' or linked it to a LP.
+    const rawClass = String(selectedTestData.class || '').trim().toLowerCase();
+    if (rawClass === 'general' || rawClass === '') {
+        return students || [];
+    }
+
+    return [];
+  }, [selectedTestData, students]);
+
+  const PREDEFINED_GRADES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "LKG", "UKG", "Playgroup"];
+  const uniqueGrades = useMemo(() => {
+    const fromStudents = students.map(s => String(s.grade || '').trim()).filter(Boolean);
+    const combined = Array.from(new Set([...PREDEFINED_GRADES, ...fromStudents]));
+    return combined.sort((a, b) => {
+      const na = parseInt(a);
+      const nb = parseInt(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b);
+    });
+  }, [students]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
@@ -528,11 +569,17 @@ export default function Tests() {
               </div>
               <div>
                 <Label>Grade (Optional)</Label>
-                <Input
-                  value={grade}
-                  onChange={(e) => setGrade(e.target.value)}
-                  placeholder="e.g., 10th"
-                />
+                <Select value={grade || "none"} onValueChange={(v) => setGrade(v === "none" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">General / No Grade</SelectItem>
+                    {uniqueGrades.map(g => (
+                      <SelectItem key={g} value={g!}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {/* Multi-select Lesson Plans/Chapters */}
               <div className="space-y-3 border p-4 rounded-lg">
@@ -571,6 +618,10 @@ export default function Tests() {
                                 setSelectedLessonPlanIds(prev => prev.filter(id => id !== lp.id));
                               } else {
                                 setSelectedLessonPlanIds(prev => [...prev, lp.id]);
+                                const lpGrade = lp.grade || (lp.class !== 'General' ? lp.class : '');
+                                if (!grade && lpGrade) {
+                                  setGrade(lpGrade);
+                                }
                               }
                             }}
                             className="h-4 w-4"
@@ -613,7 +664,6 @@ export default function Tests() {
                 <p className="text-sm text-muted-foreground">
                   Add individual questions for detailed mark entry. Total marks for questions will override overall total marks.
                 </p>
-                {/* DEBUG: Display current number of questions */}
                 <p className="text-sm text-muted-foreground">Current questions: {questions.length}</p>
                 {questions.map((q, index) => (
                   <div key={q.id} className="flex flex-col gap-2 border p-3 rounded-xl bg-muted/20">
@@ -695,7 +745,7 @@ export default function Tests() {
                         <p className="font-bold text-foreground/90 leading-none">{test.name}</p>
                         <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                           <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {test.subject}</span>
-                          <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {format(new Date(test.date), "MMM d")}</span>
+                          <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {format(new Date(test.date || test.created_at), "MMM d")}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -766,14 +816,20 @@ export default function Tests() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Display Linked Lesson Plan if available */}
-              {(selectedTestData as any).lesson_plans?.chapter && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  <span>
-                    Linked Lesson: {(selectedTestData as any).lesson_plans.subject}: {(selectedTestData as any).lesson_plans.chapter} - {(selectedTestData as any).lesson_plans.topic}
-                  </span>
-                </div>
-              )}
+              {(() => {
+                const lp = Array.isArray((selectedTestData as any).lesson_plans)
+                  ? (selectedTestData as any).lesson_plans[0]
+                  : (selectedTestData as any).lesson_plans;
+                if (!lp?.chapter) return null;
+                return (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    <span>
+                      Linked Lesson: {lp.subject}: {lp.chapter} - {lp.topic}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div>
                 <Label>Select Student</Label>
@@ -949,8 +1005,6 @@ export default function Tests() {
         )}
       </div>
 
-      {/* Question paper section removed - uploaded_file_url not in schema */}
-
       <OCRModal
         open={showOCRModal}
         onOpenChange={setShowOCRModal}
@@ -983,18 +1037,24 @@ export default function Tests() {
                 </div>
                 <div>
                   <Label className="text-[10px] uppercase font-bold text-muted-foreground">Date</Label>
-                  <p className="font-medium">{format(new Date(viewingTestDetails.date), "PPP")}</p>
+                  <p className="font-medium">{format(new Date(viewingTestDetails.date || viewingTestDetails.created_at), "PPP")}</p>
                 </div>
               </div>
 
-              {viewingTestDetails.lesson_plans && (
-                <div className="border-l-4 border-primary pl-4 py-1">
-                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Linked Lesson/Chapter</Label>
-                  <p className="text-sm font-semibold">
-                    {viewingTestDetails.lesson_plans.subject}: {viewingTestDetails.lesson_plans.chapter} - {viewingTestDetails.lesson_plans.topic}
-                  </p>
-                </div>
-              )}
+              {(() => {
+                const lp = Array.isArray(viewingTestDetails.lesson_plans)
+                  ? viewingTestDetails.lesson_plans[0]
+                  : viewingTestDetails.lesson_plans;
+                if (!lp?.chapter) return null;
+                return (
+                  <div className="border-l-4 border-primary pl-4 py-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Linked Lesson/Chapter</Label>
+                    <p className="text-sm font-semibold">
+                      {lp.subject}: {lp.chapter} - {lp.topic}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {viewingTestDetails.questions && (viewingTestDetails.questions as any).length > 0 && (
                 <div className="space-y-3">

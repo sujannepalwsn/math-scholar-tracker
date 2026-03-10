@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
-import { cn } from "@/lib/utils"
+import { normalizeGrade, cn } from "@/lib/utils"
 
 type Homework = Tables<'homework'>;
 type Student = Tables<'students'>;
@@ -48,7 +48,7 @@ export default function HomeworkManagement() {
   const [bulkRemarks, setBulkRemarks] = useState("");
 
   const { data: homeworkList = [], isLoading } = useQuery({
-    queryKey: ["homework", user?.center_id, gradeFilter, subjectFilter, user?.teacher_id],
+    queryKey: ["homework", user?.center_id, gradeFilter, subjectFilter, user?.teacher_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase.from("homework").select("*, lesson_plans(*)").eq("center_id", user.center_id).order("due_date", { ascending: false });
@@ -66,7 +66,7 @@ export default function HomeworkManagement() {
     enabled: !!user?.center_id });
 
   const { data: lessonPlans = [] } = useQuery({
-    queryKey: ["lesson-plans-for-homework", user?.center_id, user?.teacher_id],
+    queryKey: ["lesson-plans-for-homework", user?.center_id, user?.teacher_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase.from("lesson_plans").select("*").eq("center_id", user.center_id).order("lesson_date", { ascending: false });
@@ -82,10 +82,14 @@ export default function HomeworkManagement() {
     enabled: !!user?.center_id });
 
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-homework", user?.center_id],
+    queryKey: ["students-for-homework", user?.center_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", user.center_id).order("name");
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -122,6 +126,8 @@ export default function HomeworkManagement() {
     return fileName;
   };
 
+
+
   const createHomeworkMutation = useMutation({
     mutationFn: async () => {
       if (!user?.center_id) throw new Error("Center ID not found");
@@ -135,7 +141,10 @@ export default function HomeworkManagement() {
         due_date: dueDate, attachment_url: fileUrl || imageUrl, attachment_name: file?.name || image?.name || null,
         teacher_id: user.teacher_id || null, lesson_plan_id: lessonPlanId }).select().single();
       if (error) throw error;
-      const studentsInGrade = students.filter(s => s.grade === grade);
+
+      const targetGrade = normalizeGrade(grade);
+      const studentsInGrade = students.filter(s => normalizeGrade(s.grade) === targetGrade);
+
       if (studentsInGrade.length > 0) {
         const studentHomeworkRecords = studentsInGrade.map(s => ({ student_id: s.id, homework_id: newHomework.id, status: 'assigned' as const }));
         const { error: assignError } = await supabase.from("student_homework_records").insert(studentHomeworkRecords);
@@ -197,8 +206,8 @@ export default function HomeworkManagement() {
 
   const handleManageStatusClick = (hw: Homework) => { setSelectedHomeworkForStatus(hw); setShowStatusDialog(true); };
 
-  const uniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
-  const uniqueSubjects = Array.from(new Set(homeworkList.map(hw => hw.subject))).sort();
+  const uniqueGrades = Array.from(new Set(students.map(s => s.grade?.trim()).filter(Boolean))).sort() as string[];
+  const uniqueSubjects = Array.from(new Set(lessonPlans.map(lp => lp.subject))).sort();
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">

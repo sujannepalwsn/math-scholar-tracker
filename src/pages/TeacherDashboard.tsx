@@ -57,24 +57,19 @@ export default function TeacherDashboard() {
 
   // Data Fetching
   const { data: teacherStudents = [], isLoading: isStudentsLoading } = useQuery({
-    queryKey: ["teacher-students", teacherId, user?.role],
+    queryKey: ["teacher-students", centerId],
     queryFn: async () => {
-      if (!teacherId) return [];
-      let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      if (!centerId) return [];
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .eq("center_id", centerId)
+        .eq("is_active", true);
 
-      if (user?.role === 'teacher') {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', teacherId);
-        const grades = assignments?.map(a => a.grade) || [];
-        if (grades.length > 0) {
-          query = query.in('grade', grades);
-        }
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!teacherId });
+    enabled: !!centerId });
 
   const { data: classResults = [], isLoading: isClassResultsLoading } = useQuery({
     queryKey: ["teacher-class-performance", teacherId, dateRange.from, dateRange.to],
