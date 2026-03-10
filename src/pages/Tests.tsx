@@ -95,14 +95,20 @@ export default function Tests() {
 
   // Fetch lesson plans for the dropdown
   const { data: lessonPlans = [] } = useQuery({
-    queryKey: ["lesson-plans-for-tests", user?.center_id],
+    queryKey: ["lesson-plans-for-tests", user?.center_id, user?.teacher_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("lesson_plans")
         .select("id, subject, chapter, topic, grade")
         .eq("center_id", user.center_id)
         .order("lesson_date", { ascending: false });
+
+      if (user?.role === 'teacher') {
+        query = query.eq('teacher_id', user.teacher_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as LessonPlan[];
     },

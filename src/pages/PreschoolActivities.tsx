@@ -44,7 +44,7 @@ export default function PreschoolActivities() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-activities", user?.center_id],
+    queryKey: ["students-for-activities", user?.center_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
@@ -77,7 +77,7 @@ export default function PreschoolActivities() {
 
   // Fetch activities - now properly filtered by center and teacher
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id],
+    queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       // First get student IDs for this center

@@ -43,32 +43,17 @@ export default function PublishedResults() {
 
       if (user?.role === 'parent') {
         query = query.in("status", ["published", "results_published"]);
-      }
 
-      if (user?.role === 'teacher' && user?.teacher_id) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
-        const assignedGrades = assignments?.map(a => a.grade) || [];
-
-        // Also check subjects assigned to the teacher to widen visibility
-        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id);
-        const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
-
-        const allTeacherGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
-
-        if (allTeacherGrades.length > 0) {
-          query = query.in('grade', allTeacherGrades);
-        } else {
-          // If no specific grade assignments, show all for center admin-like experience if center_id matches
-          // But usually we should restrict. For now let's keep it restricted to assigned grades.
-          return [];
+        if (user?.linked_students) {
+          const parentGrades = Array.from(new Set(user.linked_students.map((s: any) => typeof s === 'string' ? null : s.grade).filter(Boolean)));
+          if (parentGrades.length > 0) {
+            query = query.in('grade', parentGrades);
+          }
         }
       }
 
-      if (user?.role === 'parent' && user?.linked_students) {
-        const parentGrades = Array.from(new Set(user.linked_students.map((s: any) => typeof s === 'string' ? null : s.grade).filter(Boolean)));
-        if (parentGrades.length > 0) {
-          query = query.in('grade', parentGrades);
-        }
+      if (user?.role === 'teacher') {
+        query = query.eq('created_by', user.id);
       }
 
       const { data, error } = await query;
@@ -101,18 +86,6 @@ export default function PublishedResults() {
 
       if (selectedExam?.grade) {
         query = query.eq("grade", selectedExam.grade);
-      } else {
-        // If no exam selected, and user is teacher, filter students by teacher's assigned grades
-        if (user?.role === 'teacher' && user?.teacher_id) {
-           const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
-           const assignedGrades = assignments?.map(a => a.grade) || [];
-           const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id);
-           const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
-           const allGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
-           if (allGrades.length > 0) {
-             query = query.in('grade', allGrades);
-           }
-        }
       }
 
       if (user?.role === 'parent' && user?.linked_students) {

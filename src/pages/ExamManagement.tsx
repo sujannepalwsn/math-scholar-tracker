@@ -40,14 +40,20 @@ export default function ExamManagement() {
   const [subjectForm, setSubjectForm] = useState({ subject_name: "", full_marks: "100", pass_marks: "40" });
 
   const { data: exams = [], isLoading } = useQuery({
-    queryKey: ["exams", centerId],
+    queryKey: ["exams", centerId, user?.id, user?.role],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("exams")
         .select("*")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
+
+      if (user?.role === 'teacher') {
+        query = query.eq('created_by', user.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

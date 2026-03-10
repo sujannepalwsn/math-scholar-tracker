@@ -48,7 +48,7 @@ export default function HomeworkManagement() {
   const [bulkRemarks, setBulkRemarks] = useState("");
 
   const { data: homeworkList = [], isLoading } = useQuery({
-    queryKey: ["homework", user?.center_id, gradeFilter, subjectFilter, user?.teacher_id],
+    queryKey: ["homework", user?.center_id, gradeFilter, subjectFilter, user?.teacher_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase.from("homework").select("*, lesson_plans(*)").eq("center_id", user.center_id).order("due_date", { ascending: false });
@@ -66,7 +66,7 @@ export default function HomeworkManagement() {
     enabled: !!user?.center_id });
 
   const { data: lessonPlans = [] } = useQuery({
-    queryKey: ["lesson-plans-for-homework", user?.center_id, user?.teacher_id],
+    queryKey: ["lesson-plans-for-homework", user?.center_id, user?.teacher_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase.from("lesson_plans").select("*").eq("center_id", user.center_id).order("lesson_date", { ascending: false });
@@ -82,10 +82,14 @@ export default function HomeworkManagement() {
     enabled: !!user?.center_id });
 
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-homework", user?.center_id],
+    queryKey: ["students-for-homework", user?.center_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", user.center_id).order("name");
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -198,7 +202,7 @@ export default function HomeworkManagement() {
   const handleManageStatusClick = (hw: Homework) => { setSelectedHomeworkForStatus(hw); setShowStatusDialog(true); };
 
   const uniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
-  const uniqueSubjects = Array.from(new Set(homeworkList.map(hw => hw.subject))).sort();
+  const uniqueSubjects = Array.from(new Set(lessonPlans.map(lp => lp.subject))).sort();
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">

@@ -29,8 +29,9 @@ export default function ResultsDashboard() {
         query = query.eq("status", "published");
       }
 
-      if (user?.role === 'teacher' && user?.teacher_id) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
+      if (user?.role === "teacher") {
+        query = query.eq("created_by", user.id);
+      }
         const assignedGrades = assignments?.map(a => a.grade) || [];
         const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id);
         const subjectGrades = subjectAssignments?.map(a => a.grade) || [];

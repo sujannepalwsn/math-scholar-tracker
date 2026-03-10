@@ -41,6 +41,9 @@ export default function MarksEntry() {
         .select("*")
         .eq("center_id", centerId)
         .in("status", ["draft", "published"])
+      if (user?.role === "teacher") {
+        query = query.eq("created_by", user.id);
+      }
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

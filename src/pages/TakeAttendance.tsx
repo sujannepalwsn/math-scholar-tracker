@@ -91,7 +91,7 @@ export default function TakeAttendance() {
 
   // For teachers, filter available grades to their assigned grades
   const availableGrades = students ? Array.from(new Set(students.map(s => s.grade))).sort() : [];
-  const allowedGrades = isTeacher && classTeacherGrades.length > 0 ? availableGrades.filter(g => classTeacherGrades.includes(g)) : availableGrades;
+  const allowedGrades = isTeacher ? availableGrades.filter(g => classTeacherGrades.includes(g)) : availableGrades;
 
   // Auto-set grade filter for teachers with only one assigned grade
   useEffect(() => {
@@ -117,8 +117,8 @@ export default function TakeAttendance() {
 
   // Filter students by grade - for teachers, only show their assigned grades
   const filteredStudents = students?.filter(s => {
-    if (isTeacher && classTeacherGrades.length > 0) {
-      if (gradeFilter !== "all") return s.grade === gradeFilter;
+    if (isTeacher) {
+      if (gradeFilter !== "all") return s.grade === gradeFilter && classTeacherGrades.includes(s.grade);
       return classTeacherGrades.includes(s.grade);
     }
     return gradeFilter === "all" || s.grade === gradeFilter;

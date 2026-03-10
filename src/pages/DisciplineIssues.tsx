@@ -51,7 +51,7 @@ export default function DisciplineIssues() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-discipline", user?.center_id],
+    queryKey: ["students-for-discipline", user?.center_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
@@ -85,7 +85,7 @@ export default function DisciplineIssues() {
 
   // Fetch discipline issues
   const { data: issues = [], isLoading: issuesLoading } = useQuery({ // Destructure isLoading here
-    queryKey: ["discipline-issues", user?.center_id, gradeFilter, user?.id],
+    queryKey: ["discipline-issues", user?.center_id, gradeFilter, user?.id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase
