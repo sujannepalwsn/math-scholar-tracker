@@ -139,7 +139,7 @@ export default function HomeworkManagement() {
         due_date: dueDate, attachment_url: fileUrl || imageUrl, attachment_name: file?.name || image?.name || null,
         teacher_id: user.teacher_id || null, lesson_plan_id: lessonPlanId }).select().single();
       if (error) throw error;
-      const studentsInGrade = students.filter(s => s.grade === grade);
+      const studentsInGrade = students.filter(s => s.grade?.trim() === grade?.trim());
       if (studentsInGrade.length > 0) {
         const studentHomeworkRecords = studentsInGrade.map(s => ({ student_id: s.id, homework_id: newHomework.id, status: 'assigned' as const }));
         const { error: assignError } = await supabase.from("student_homework_records").insert(studentHomeworkRecords);
@@ -201,7 +201,7 @@ export default function HomeworkManagement() {
 
   const handleManageStatusClick = (hw: Homework) => { setSelectedHomeworkForStatus(hw); setShowStatusDialog(true); };
 
-  const uniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
+  const uniqueGrades = Array.from(new Set(students.map(s => s.grade?.trim()).filter(Boolean))).sort() as string[];
   const uniqueSubjects = Array.from(new Set(lessonPlans.map(lp => lp.subject))).sort();
 
   return (

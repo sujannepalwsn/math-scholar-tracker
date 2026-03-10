@@ -79,7 +79,7 @@ export default function Tests() {
     queryFn: async () => {
       let query = supabase
         .from("tests")
-        .select("*, lesson_plans(id, subject, chapter, topic, grade)") // Fetch lesson_plans details
+        .select("*, lesson_plans(id, subject, chapter, topic, grade, class)") // Fetch lesson_plans details
         .order("date", { ascending: false });
       
       if (user?.role === 'teacher') {
@@ -100,7 +100,7 @@ export default function Tests() {
       if (!user?.center_id) return [];
       let query = supabase
         .from("lesson_plans")
-        .select("id, subject, chapter, topic, grade")
+        .select("id, subject, chapter, topic, grade, class")
         .eq("center_id", user.center_id)
         .order("lesson_date", { ascending: false });
 
@@ -175,6 +175,14 @@ export default function Tests() {
     mutationFn: async () => {
       let uploadedFileUrl = null;
 
+      const primaryLessonPlanId = selectedLessonPlanIds.length > 0 ? selectedLessonPlanIds[0] : null;
+      let inferredGrade = grade;
+      if (!inferredGrade && primaryLessonPlanId) {
+        const lp = lessonPlans.find(l => l.id === primaryLessonPlanId);
+        const lpGrade = lp?.grade || (lp?.class && lp.class !== 'General' ? lp.class : null);
+        if (lpGrade) inferredGrade = lpGrade;
+      }
+
       if (uploadedFile) {
         const fileExt = uploadedFile.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -187,16 +195,6 @@ export default function Tests() {
       }
       
       console.log("DEBUG: Attempting to create test with lessonPlanIds:", selectedLessonPlanIds);
-
-      // Use the first selected lesson plan ID for the test (primary link)
-      const primaryLessonPlanId = selectedLessonPlanIds.length > 0 ? selectedLessonPlanIds[0] : null;
-
-      // Infer grade from lesson plan if not provided
-      let inferredGrade = grade;
-      if (!inferredGrade && primaryLessonPlanId) {
-        const lp = lessonPlans.find(l => l.id === primaryLessonPlanId);
-        if (lp?.grade) inferredGrade = lp.grade;
-      }
 
       const { data, error } = await supabase.from("tests").insert({
         name: testName || 'Unnamed Test',
@@ -416,6 +414,15 @@ export default function Tests() {
     setQuestions(prev => prev.filter(q => q.id !== id));
   };
 
+  const normalizeGrade = (g: any) => {
+    if (g === null || g === undefined) return '';
+    let s = String(g).trim().toLowerCase();
+    if (s === 'general' || s === 'all' || s === 'select-grade' || s === 'none' || s === '') return '';
+    s = s.replace(/^(grade|class)\s+/, '');
+    s = s.replace(/(\d+)(st|nd|rd|th)$/, '$1');
+    return s.trim();
+  };
+
   const updateQuestionMark = (questionId: string, field: keyof QuestionMark, value: any) => {
     setQuestionMarks(prev => prev.map(qm => qm.questionId === questionId ? { ...qm, [field]: value } : qm));
   };
@@ -424,11 +431,44 @@ export default function Tests() {
 
   const testsWithFiles: typeof tests = []; // No uploaded_file_url in schema
 
-  const filteredStudents = selectedTestData?.class && selectedTestData.class !== 'General'
-    ? students.filter((s: Student) => s.grade === selectedTestData.class)
-    : students;
+  const filteredStudents = useMemo(() => {
+    if (!selectedTestData) return [];
 
-  const uniqueGrades = Array.from(new Set(students.map(s => s.grade).filter(Boolean))).sort();
+    const getRelation = (data: any) => Array.isArray(data) ? data[0] : data;
+    const testGrade = normalizeGrade(selectedTestData.class);
+
+    // Explicitly check for 'general' to show all students
+    const rawClass = String(selectedTestData.class || '').trim().toLowerCase();
+    if (rawClass === 'general' || rawClass === '') {
+        // Even if it's general, if there's a linked lesson plan with a specific grade, maybe we should filter?
+        // User says: "Students are displayed but it should display only the students of the grades to which exam was taken"
+        // If they took the exam for a specific grade, we must filter.
+        const linkedLp = getRelation((selectedTestData as any).lesson_plans);
+        const lpGrade = normalizeGrade(linkedLp?.grade || linkedLp?.class);
+        if (lpGrade) {
+            return students.filter((s: Student) => normalizeGrade(s.grade) === lpGrade);
+        }
+        return students;
+    }
+
+    if (testGrade) {
+      return students.filter((s: Student) => normalizeGrade(s.grade) === testGrade);
+    }
+
+    return [];
+  }, [selectedTestData, students]);
+
+  const PREDEFINED_GRADES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "LKG", "UKG", "Playgroup"];
+  const uniqueGrades = useMemo(() => {
+    const fromStudents = students.map(s => String(s.grade || '').trim()).filter(Boolean);
+    const combined = Array.from(new Set([...PREDEFINED_GRADES, ...fromStudents]));
+    return combined.sort((a, b) => {
+      const na = parseInt(a);
+      const nb = parseInt(b);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.localeCompare(b);
+    });
+  }, [students]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
@@ -592,8 +632,9 @@ export default function Tests() {
                                 setSelectedLessonPlanIds(prev => prev.filter(id => id !== lp.id));
                               } else {
                                 setSelectedLessonPlanIds(prev => [...prev, lp.id]);
-                                if (!grade && lp.grade) {
-                                  setGrade(lp.grade);
+                                const lpGrade = lp.grade || (lp.class !== 'General' ? lp.class : '');
+                                if (!grade && lpGrade) {
+                                  setGrade(lpGrade);
                                 }
                               }
                             }}
@@ -790,14 +831,20 @@ export default function Tests() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Display Linked Lesson Plan if available */}
-              {(selectedTestData as any).lesson_plans?.chapter && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  <span>
-                    Linked Lesson: {(selectedTestData as any).lesson_plans.subject}: {(selectedTestData as any).lesson_plans.chapter} - {(selectedTestData as any).lesson_plans.topic}
-                  </span>
-                </div>
-              )}
+              {(() => {
+                const lp = Array.isArray((selectedTestData as any).lesson_plans)
+                  ? (selectedTestData as any).lesson_plans[0]
+                  : (selectedTestData as any).lesson_plans;
+                if (!lp?.chapter) return null;
+                return (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    <span>
+                      Linked Lesson: {lp.subject}: {lp.chapter} - {lp.topic}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div>
                 <Label>Select Student</Label>
@@ -1011,14 +1058,20 @@ export default function Tests() {
                 </div>
               </div>
 
-              {viewingTestDetails.lesson_plans && (
-                <div className="border-l-4 border-primary pl-4 py-1">
-                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Linked Lesson/Chapter</Label>
-                  <p className="text-sm font-semibold">
-                    {viewingTestDetails.lesson_plans.subject}: {viewingTestDetails.lesson_plans.chapter} - {viewingTestDetails.lesson_plans.topic}
-                  </p>
-                </div>
-              )}
+              {(() => {
+                const lp = Array.isArray(viewingTestDetails.lesson_plans)
+                  ? viewingTestDetails.lesson_plans[0]
+                  : viewingTestDetails.lesson_plans;
+                if (!lp?.chapter) return null;
+                return (
+                  <div className="border-l-4 border-primary pl-4 py-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Linked Lesson/Chapter</Label>
+                    <p className="text-sm font-semibold">
+                      {lp.subject}: {lp.chapter} - {lp.topic}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {viewingTestDetails.questions && (viewingTestDetails.questions as any).length > 0 && (
                 <div className="space-y-3">
