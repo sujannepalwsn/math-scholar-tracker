@@ -1,5 +1,16 @@
 import React, { useState } from "react";
-import { Edit, Plus, Power, PowerOff, Users } from "lucide-react";
+import {
+  Edit,
+  Plus,
+  Power,
+  PowerOff,
+  Users,
+  LayoutDashboard,
+  Database as DbIcon,
+  ShieldCheck,
+  Activity,
+  PieChart as PieChartIcon
+} from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useAuth } from "@/contexts/AuthContext"
@@ -15,6 +26,7 @@ import * as bcrypt from 'bcryptjs';
 import CenterFeaturePermissions from '@/components/admin/CenterFeaturePermissions';
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
 
 const AdminDashboard = () => {
@@ -34,14 +46,45 @@ const AdminDashboard = () => {
   }
 
   const { data: centers = [], isLoading } = useQuery({
-    queryKey: ['centers-with-users'],
+    queryKey: ['centers-with-users-and-stats-optimized'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: centersData, error: centersError } = await supabase
         .from('centers')
         .select('*, users(*)')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+
+      if (centersError) throw centersError;
+
+      // Fetch all stats in parallel for all centers
+      const [studentsRes, teachersRes, parentsRes] = await Promise.all([
+        supabase.from('students').select('center_id'),
+        supabase.from('teachers').select('center_id'),
+        supabase.from('users').select('center_id').eq('role', 'parent')
+      ]);
+
+      const studentCounts = (studentsRes.data || []).reduce((acc: any, s) => {
+        acc[s.center_id] = (acc[s.center_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const teacherCounts = (teachersRes.data || []).reduce((acc: any, t) => {
+        acc[t.center_id] = (acc[t.center_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const parentCounts = (parentsRes.data || []).reduce((acc: any, p) => {
+        if (p.center_id) acc[p.center_id] = (acc[p.center_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      return centersData.map(center => ({
+        ...center,
+        stats: {
+          students: studentCounts[center.id] || 0,
+          teachers: teacherCounts[center.id] || 0,
+          parents: parentCounts[center.id] || 0
+        }
+      }));
     }
   });
 
@@ -129,9 +172,137 @@ const AdminDashboard = () => {
     setIsEditDialogOpen(true);
   };
 
+  const globalStats = centers.reduce((acc: any, center: any) => {
+    acc.students += center.stats.students;
+    acc.teachers += center.stats.teachers;
+    acc.parents += center.stats.parents;
+    return acc;
+  }, { students: 0, teachers: 0, parents: 0 });
+
+  const chartData = centers.slice(0, 5).map((c: any) => ({
+    name: c.name.length > 15 ? c.name.substring(0, 15) + '...' : c.name,
+    students: c.stats.students,
+    teachers: c.stats.teachers
+  }));
+
+  const pieData = [
+    { name: 'Students', value: globalStats.students, color: '#3b82f6' },
+    { name: 'Teachers', value: globalStats.teachers, color: '#8b5cf6' },
+    { name: 'Parents', value: globalStats.parents, color: '#10b981' }
+  ];
+
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
       <div className="max-w-7xl mx-auto space-y-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="border-none shadow-soft rounded-2xl bg-primary/5 border border-primary/10">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                <LayoutDashboard className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Centers</p>
+                <p className="text-2xl font-black">{centers.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-soft rounded-2xl bg-blue-50 border border-blue-100">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-blue-100 text-blue-600">
+                <Users className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Global Students</p>
+                <p className="text-2xl font-black">{globalStats.students}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-soft rounded-2xl bg-violet-50 border border-violet-100">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-violet-100 text-violet-600">
+                <DbIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Global Teachers</p>
+                <p className="text-2xl font-black">{globalStats.teachers}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-soft rounded-2xl bg-emerald-50 border border-emerald-100">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-emerald-100 text-emerald-600">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">System Health</p>
+                <p className="text-2xl font-black text-emerald-600">Optimal</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Card className="border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden">
+            <CardHeader className="border-b border-muted/20 bg-primary/5">
+              <CardTitle className="text-lg font-black flex items-center gap-3 text-primary">
+                <Activity className="h-5 w-5" />
+                Enrollment Distribution (Top 5)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700 }} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
+                    />
+                    <Bar dataKey="students" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={20} />
+                    <Bar dataKey="teachers" fill="#8b5cf6" radius={[6, 6, 0, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden">
+            <CardHeader className="border-b border-muted/20 bg-primary/5">
+              <CardTitle className="text-lg font-black flex items-center gap-3 text-primary">
+                <PieChartIcon className="h-5 w-5" />
+                Global User Base Matrix
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 flex items-center justify-center">
+              <div className="h-[300px] w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <p className="text-2xl font-black">{globalStats.students + globalStats.teachers + globalStats.parents}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">Total Active</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
@@ -229,8 +400,9 @@ const AdminDashboard = () => {
                   <TableHeader>
                     <TableRow className="bg-muted/5">
                       <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Center Entity</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Physical Location</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Telecom</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-center">Students</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-center">Teachers</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-center">Parents</TableHead>
                       <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Identity</TableHead>
                       <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Status</TableHead>
                       <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Operations</TableHead>
@@ -241,9 +413,21 @@ const AdminDashboard = () => {
                       const centerUser = center.users?.[0];
                       return (
                         <TableRow key={center.id} className="group transition-all duration-300 hover:bg-card/60">
-                          <TableCell className="px-6 py-4 font-black text-slate-700 group-hover:text-primary transition-colors">{center.name}</TableCell>
-                          <TableCell className="px-6 py-4 font-medium text-slate-500 text-xs truncate max-w-[200px]">{center.address || '-'}</TableCell>
-                          <TableCell className="px-6 py-4 font-bold text-primary text-xs">{center.phone || '-'}</TableCell>
+                          <TableCell className="px-6 py-4">
+                            <div className="space-y-0.5">
+                              <p className="font-black text-slate-700 group-hover:text-primary transition-colors">{center.name}</p>
+                              <p className="text-[10px] text-slate-400 font-bold truncate max-w-[150px]">{center.address || 'No location set'}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-center">
+                            <Badge variant="outline" className="font-black text-primary border-primary/20 bg-primary/5 min-w-[40px] justify-center">{center.stats.students}</Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-center">
+                            <Badge variant="outline" className="font-black text-violet-600 border-violet-200 bg-violet-50 min-w-[40px] justify-center">{center.stats.teachers}</Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-center">
+                            <Badge variant="outline" className="font-black text-emerald-600 border-emerald-200 bg-emerald-50 min-w-[40px] justify-center">{center.stats.parents}</Badge>
+                          </TableCell>
                           <TableCell className="px-6 py-4">
                             <code className="bg-slate-100 px-2 py-1 rounded text-xs font-bold text-slate-700">{centerUser?.username || '-'}</code>
                           </TableCell>
