@@ -96,58 +96,77 @@ export default function EditStudentLessonRecord({ studentChapterId, onSave, onCa
   const recordedByTeacherName = (studentChapter as any)?.recorded_by_teacher?.name;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4">
+    <form onSubmit={handleSubmit} className="space-y-6 py-4">
       <div className="space-y-2">
-        <Label htmlFor="teacherNotes">Teacher Notes</Label>
+        <Label htmlFor="teacherNotes" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Faculty Observations</Label>
         <Textarea
           id="teacherNotes"
           value={teacherNotes}
           onChange={(e) => setTeacherNotes(e.target.value)}
-          rows={5}
-          placeholder="Add specific observations, strengths, or areas for improvement for this student regarding this lesson."
+          rows={4}
+          placeholder="Add specific observations, strengths, or areas for improvement..."
+          className="rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="evaluationRating">Evaluation Rating (1-5)</Label>
-        <Select
-          value={evaluationRating?.toString() || ""}
-          onValueChange={(value) => setEvaluationRating(parseInt(value))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select rating" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">1 Star (Needs significant improvement)</SelectItem>
-            <SelectItem value="2">2 Stars (Needs improvement)</SelectItem>
-            <SelectItem value="3">3 Stars (Satisfactory)</SelectItem>
-            <SelectItem value="4">4 Stars (Good)</SelectItem>
-            <SelectItem value="5">5 Stars (Excellent)</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="isCompleted"
-          checked={isCompleted}
-          onCheckedChange={(checked) => setIsCompleted(Boolean(checked))}
-        />
-        <Label htmlFor="isCompleted" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-          Mark as Completed
-        </Label>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <div className="space-y-2">
+          <Label htmlFor="evaluationRating" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Evaluation Rating</Label>
+          <Select
+            value={evaluationRating?.toString() || ""}
+            onValueChange={(value) => setEvaluationRating(parseInt(value))}
+          >
+            <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold">
+              <SelectValue placeholder="Select rating" />
+            </SelectTrigger>
+            <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
+              <SelectItem value="1" className="font-black text-[10px] uppercase tracking-widest">1 Star (Critical)</SelectItem>
+              <SelectItem value="2" className="font-black text-[10px] uppercase tracking-widest">2 Stars (Improving)</SelectItem>
+              <SelectItem value="3" className="font-black text-[10px] uppercase tracking-widest">3 Stars (Target)</SelectItem>
+              <SelectItem value="4" className="font-black text-[10px] uppercase tracking-widest">4 Stars (Superior)</SelectItem>
+              <SelectItem value="5" className="font-black text-[10px] uppercase tracking-widest">5 Stars (Mastery)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="pt-6">
+          <div className="flex items-center space-x-3 p-3 rounded-2xl bg-slate-50 shadow-inner">
+            <Checkbox
+              id="isCompleted"
+              checked={isCompleted}
+              onCheckedChange={(checked) => setIsCompleted(Boolean(checked))}
+              className="h-5 w-5 rounded-lg border-2 border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+            />
+            <Label htmlFor="isCompleted" className="text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer">
+              VERIFY COMPLETION
+            </Label>
+          </div>
+        </div>
       </div>
 
       {recordedByTeacherName && (
-        <p className="text-sm text-muted-foreground flex items-center gap-1">
-          <User className="h-4 w-4" /> Last updated by: {recordedByTeacherName}
-        </p>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/5 text-primary w-fit">
+          <User className="h-3 w-3" />
+          <span className="text-[9px] font-black uppercase tracking-widest">Auditor: {recordedByTeacherName}</span>
+        </div>
       )}
 
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={updateStudentChapterMutation.isPending}>
-          Cancel
+      <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onCancel}
+          className="rounded-xl font-bold uppercase text-[10px] tracking-widest"
+          disabled={updateStudentChapterMutation.isPending}
+        >
+          DISMISS
         </Button>
-        <Button type="submit" disabled={updateStudentChapterMutation.isPending}>
-          {updateStudentChapterMutation.isPending ? "Saving..." : "Save Evaluation"}
+        <Button
+          type="submit"
+          className="rounded-xl font-black px-8 bg-slate-900 hover:bg-slate-800 text-white shadow-xl tracking-widest h-11"
+          disabled={updateStudentChapterMutation.isPending}
+        >
+          {updateStudentChapterMutation.isPending ? "COMMITING..." : "COMMIT EVALUATION"}
         </Button>
       </div>
     </form>

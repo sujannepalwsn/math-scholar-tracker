@@ -200,40 +200,109 @@ export default function LessonPlans() {
             </SelectContent>
           </Select>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild><Button size="sm" className="rounded-xl"><Plus className="h-4 w-4 mr-1" /> Create</Button></DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogTrigger asChild>
+              <Button className="h-11 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-gradient-to-r from-primary to-violet-600 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all px-6">
+                <Plus className="h-4 w-4 mr-2" /> CREATE PLAN
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl max-h-[95vh] overflow-y-auto rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
               <DialogHeader>
-                <DialogTitle>{editingLessonPlan ? "Edit Lesson Plan" : "New Lesson Plan"}</DialogTitle>
-                <DialogDescription>Fill in details below.</DialogDescription>
+                <DialogTitle className="text-2xl font-black tracking-tight">
+                  {editingLessonPlan ? "Nexus: Edit Strategy" : "Nexus: New Strategy"}
+                </DialogTitle>
+                <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  Drafting instructional roadmap for academic execution.
+                </DialogDescription>
               </DialogHeader>
-              <div className="space-y-3 py-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><Label>Subject *</Label><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Mathematics" /></div>
-                  <div className="space-y-1.5"><Label>Chapter *</Label><Input value={chapter} onChange={(e) => setChapter(e.target.value)} placeholder="Algebra" /></div>
-                </div>
-                <div className="space-y-1.5"><Label>Topic *</Label><Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Linear Equations" /></div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Grade</Label>
-                    <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                      <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
-                      <SelectContent><SelectItem value="all">All Grades</SelectItem>{uniqueGrades.map(g => <SelectItem key={g} value={g!}>{g}</SelectItem>)}</SelectContent>
-                    </Select>
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Subject Protocol *</Label>
+                    <Input
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="e.g. Mathematics"
+                      className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                    />
                   </div>
-                  <div className="space-y-1.5"><Label>Date *</Label><Input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} /></div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Chapter Index *</Label>
+                    <Input
+                      value={chapter}
+                      onChange={(e) => setChapter(e.target.value)}
+                      placeholder="e.g. Algebra"
+                      className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Key points..." /></div>
-                <div className="space-y-1.5">
-                  <Label>File (PDF, DOCX, Image)</Label>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Topic Specification *</Label>
                   <Input
-                    type="file"
-                    accept=".pdf,.doc,.docx,image/*"
-                    capture="environment"
-                    onChange={(e) => { if (e.target.files?.[0]) setFile(e.target.files[0]); }}
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="e.g. Linear Equations"
+                    className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
                   />
                 </div>
-                <Button onClick={() => editingLessonPlan ? updateLessonPlanMutation.mutate() : createLessonPlanMutation.mutate()} disabled={!subject || !chapter || !topic || !lessonDate} className="w-full">
-                  {editingLessonPlan ? "Update" : "Create"}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Grade Level</Label>
+                    <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                      <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold">
+                        <SelectValue placeholder="Grade" />
+                      </SelectTrigger>
+                      <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
+                        <SelectItem value="all" className="font-black text-[10px] uppercase tracking-widest">All Grades</SelectItem>
+                        {uniqueGrades.map(g => <SelectItem key={g} value={g!} className="font-black text-[10px] uppercase tracking-widest">Grade {g}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Execution Date *</Label>
+                    <Input
+                      type="date"
+                      value={lessonDate}
+                      onChange={(e) => setLessonDate(e.target.value)}
+                      className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Instructional Notes</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Enter pedagogical details..."
+                    className="rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Pedagogical Resource (PDF/Image)</Label>
+                  <div className="relative group/file">
+                    <Input
+                      type="file"
+                      accept=".pdf,.doc,.docx,image/*"
+                      capture="environment"
+                      onChange={(e) => { if (e.target.files?.[0]) setFile(e.target.files[0]); }}
+                      className="h-12 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-primary/30 transition-all cursor-pointer file:hidden text-slate-400 text-xs font-bold pt-3.5 pl-10"
+                    />
+                    <FileText className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-hover/file:text-primary transition-colors" />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                       {file ? (
+                         <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[9px] font-black">FILE LINKED</Badge>
+                       ) : (
+                         <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Select File</span>
+                       )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => editingLessonPlan ? updateLessonPlanMutation.mutate() : createLessonPlanMutation.mutate()}
+                  disabled={!subject || !chapter || !topic || !lessonDate}
+                  className="w-full h-14 rounded-2xl font-black uppercase text-xs tracking-[0.2em] bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-200 transition-all active:scale-95"
+                >
+                  {editingLessonPlan ? "UPDATE PLAN" : "ESTABLISH PLAN"}
                 </Button>
               </div>
             </DialogContent>
@@ -354,57 +423,59 @@ export default function LessonPlans() {
       </Card>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>Lesson Plan Details</DialogTitle>
-            <DialogDescription>In-depth look at the pedagogical roadmap.</DialogDescription>
+            <DialogTitle className="text-2xl font-black tracking-tight">Strategy Blueprint</DialogTitle>
+            <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary">In-depth look at the pedagogical roadmap.</DialogDescription>
           </DialogHeader>
           {viewingLessonPlan && (
-            <div className="space-y-4 py-2">
+            <div className="space-y-6 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Subject</Label>
-                  <p className="font-semibold">{viewingLessonPlan.subject}</p>
+                <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subject</Label>
+                  <p className="font-black text-primary leading-none mt-1">{viewingLessonPlan.subject}</p>
                 </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Chapter</Label>
-                  <p className="font-semibold">{viewingLessonPlan.chapter}</p>
+                <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chapter</Label>
+                  <p className="font-black text-slate-700 leading-none mt-1">{viewingLessonPlan.chapter}</p>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Topic</Label>
-                <p className="font-semibold">{viewingLessonPlan.topic}</p>
+              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Topic Specification</Label>
+                <p className="font-bold text-slate-600 italic leading-tight mt-1">{viewingLessonPlan.topic}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Grade</Label>
-                  <p className="font-semibold">{viewingLessonPlan.grade || "All Grades"}</p>
+                <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Grade</Label>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-lg text-[10px] font-black uppercase mt-1">Grade {viewingLessonPlan.grade || "All"}</Badge>
                 </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Planned Date</Label>
-                  <p className="font-semibold">{format(new Date(viewingLessonPlan.lesson_date), "PPP")}</p>
+                <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Execution Date</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-black text-slate-700 text-xs">{format(new Date(viewingLessonPlan.lesson_date), "PPP")}</span>
+                  </div>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Notes</Label>
-                <p className="text-sm whitespace-pre-wrap bg-muted/30 p-3 rounded-lg border">
+              <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Instructional Notes</Label>
+                <p className="text-xs font-bold text-slate-500 whitespace-pre-wrap leading-relaxed mt-1">
                   {viewingLessonPlan.notes || "No notes provided."}
                 </p>
               </div>
               {(viewingLessonPlan as any).admin_notes && (
-                <div className="space-y-1.5 p-3 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-orange-600/60">Institutional Feedback</Label>
-                  <p className="text-xs font-bold text-orange-700 leading-tight">
+                <div className="space-y-1.5 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-orange-600/60">Institutional Feedback</Label>
+                  <p className="text-xs font-black text-orange-700 leading-tight mt-1">
                     {(viewingLessonPlan as any).admin_notes}
                   </p>
                 </div>
               )}
               {viewingLessonPlan.lesson_file_url && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Resource</Label>
-                  <Button variant="outline" size="sm" className="w-full mt-1" asChild>
+                <div className="pt-2">
+                  <Button variant="outline" className="w-full rounded-2xl h-12 border-2 border-dashed font-black text-[10px] uppercase tracking-widest gap-2" asChild>
                     <a href={supabase.storage.from("lesson-files").getPublicUrl(viewingLessonPlan.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
-                      <Download className="h-4 w-4 mr-2" /> Download Attached File
+                      <Download className="h-4 w-4" /> DOWNLOAD RESOURCE
                     </a>
                   </Button>
                 </div>

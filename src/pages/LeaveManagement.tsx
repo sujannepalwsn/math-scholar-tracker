@@ -343,84 +343,79 @@ export default function LeaveManagement() {
 
       {/* Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-[550px] rounded-3xl">
+        <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
           {selectedApp && (
             <>
               <DialogHeader>
                 <div className="flex justify-between items-center pr-8">
-                  <DialogTitle className="text-2xl font-black">Application Details</DialogTitle>
+                  <DialogTitle className="text-2xl font-black tracking-tight">Leave Audit</DialogTitle>
                   {getStatusBadge(selectedApp.status)}
                 </div>
-                <DialogDescription className="font-medium">
-                  Review the leave request submitted by {selectedApp.teachers?.name || selectedApp.students?.name || selectedApp.users?.username}.
+                <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  Reviewing request submitted by {selectedApp.teachers?.name || selectedApp.students?.name || selectedApp.users?.username}.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">Applicant Info</Label>
-                    <p className="font-bold text-foreground flex items-center gap-2">
-                      <User className="w-4 h-4 text-primary" />
+                  <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Applicant Info</Label>
+                    <p className="font-black text-primary leading-none mt-1">
                       {selectedApp.teachers?.name || selectedApp.students?.name || selectedApp.users?.username}
                     </p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">
-                      Role: {selectedApp.teacher_id ? 'Teacher' : 'Student'}
+                    <p className="text-[9px] font-black text-muted-foreground uppercase mt-1">
+                      Role: {selectedApp.teacher_id ? 'Faculty' : 'Student'}
                     </p>
                   </div>
-                  <div className="space-y-1.5 p-4 rounded-2xl bg-violet-500/5 border border-violet-500/10">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-violet-600/60">Leave Period</Label>
-                    <p className="font-bold text-foreground flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-violet-600" />
-                      {format(new Date(selectedApp.start_date), "MMM d")} - {format(new Date(selectedApp.end_date), "MMM d")}
-                    </p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">
-                      Total Days: {Math.ceil((new Date(selectedApp.end_date).getTime() - new Date(selectedApp.start_date).getTime()) / (1000 * 3600 * 24)) + 1}
-                    </p>
+                  <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Leave Period</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-3.5 h-3.5 text-violet-600" />
+                      <span className="font-black text-slate-700 text-xs">
+                        {format(new Date(selectedApp.start_date), "MMM d")} - {format(new Date(selectedApp.end_date), "MMM d")}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Reason for Leave</Label>
-                  <div className="p-4 rounded-2xl bg-card border border-muted-foreground/10 italic text-sm font-medium">
+                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Justification</Label>
+                  <p className="text-xs font-medium text-slate-600 whitespace-pre-wrap leading-relaxed italic">
                     "{selectedApp.reason || 'No reason provided'}"
-                  </div>
+                  </p>
                 </div>
 
                 {selectedApp.document_url && (
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Supporting Document</Label>
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-2xl h-12 border-dashed border-2 font-bold justify-start px-6 gap-3"
-                      asChild
-                    >
-                      <a href={selectedApp.document_url} target="_blank" rel="noopener noreferrer">
-                        <Paperclip className="w-4 h-4" />
-                        VIEW ATTACHED DOCUMENT
-                      </a>
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-2xl h-12 border-dashed border-2 font-black text-[10px] uppercase tracking-widest gap-2"
+                    asChild
+                  >
+                    <a href={selectedApp.document_url} target="_blank" rel="noopener noreferrer">
+                      <Paperclip className="w-4 h-4" />
+                      VIEW ATTACHED EVIDENCE
+                    </a>
+                  </Button>
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Decision Notes</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Decision Feedback (Optional)</Label>
                   <Textarea
-                    placeholder="Enter approval/rejection notes..."
+                    placeholder="Enter analytical feedback for the applicant..."
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
-                    className="rounded-2xl min-h-[100px] border-muted-foreground/20 focus:ring-primary/20"
+                    className="rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold min-h-[100px]"
                   />
                 </div>
               </div>
 
-              <DialogFooter className="gap-3 sm:gap-0">
+              <DialogFooter className="gap-3 sm:gap-0 pt-6 border-t border-muted/20">
                 <Button
                   variant="ghost"
                   onClick={() => setIsDetailOpen(false)}
                   className="rounded-xl font-bold uppercase text-[10px] tracking-widest"
                 >
-                  CLOSE
+                  DISMISS
                 </Button>
                 <div className="flex gap-3">
                   <Button
@@ -432,11 +427,11 @@ export default function LeaveManagement() {
                     <X className="w-4 h-4 mr-2" /> REJECT
                   </Button>
                   <Button
-                    className="rounded-xl font-black uppercase text-[10px] tracking-widest bg-gradient-to-r from-green-600 to-emerald-600 shadow-soft"
+                    className="rounded-xl font-black uppercase text-[10px] tracking-widest bg-slate-900 hover:bg-slate-800 text-white shadow-xl"
                     onClick={handleApprove}
                     disabled={updateStatusMutation.isPending || selectedApp.status === 'approved'}
                   >
-                    <Check className="w-4 h-4 mr-2" /> APPROVE
+                    <Check className="w-4 h-4 mr-2" /> AUTHORIZE
                   </Button>
                 </div>
               </DialogFooter>

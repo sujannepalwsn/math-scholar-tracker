@@ -14,6 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -150,16 +161,34 @@ export default function LeaveCategoryManager() {
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => {
-                      if (confirm("Delete this category?")) deleteMutation.mutate(cat.id);
-                    }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-[2rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-2xl font-black tracking-tight">Erase Classification?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary">
+                          This action will permanently remove the "{cat.name}" category from the institutional matrix.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="gap-3 sm:gap-0 pt-6 border-t border-muted/20">
+                        <AlertDialogCancel className="rounded-xl font-bold uppercase text-[10px] tracking-widest">ABORT</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(cat.id)}
+                          className="rounded-xl font-black uppercase text-[10px] tracking-widest bg-red-600 hover:bg-red-700 text-white shadow-xl"
+                        >
+                          CONFIRM ERASE
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
 

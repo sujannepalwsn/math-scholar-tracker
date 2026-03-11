@@ -261,83 +261,74 @@ export default function LessonPlanManagement() {
       </Card>
 
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-[600px] rounded-3xl">
+        <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
           {selectedPlan && (
             <>
               <DialogHeader>
                 <div className="flex justify-between items-center pr-8">
-                  <DialogTitle className="text-2xl font-black">Review Lesson Plan</DialogTitle>
+                  <DialogTitle className="text-2xl font-black tracking-tight tracking-tight">Strategy Audit</DialogTitle>
                   {getStatusBadge(selectedPlan.status)}
                 </div>
-                <DialogDescription className="font-medium">
-                  Review the instructional roadmap submitted by {selectedPlan.teachers?.name}.
+                <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  Reviewing roadmap submitted by {selectedPlan.teachers?.name}.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-6 py-4 overflow-y-auto max-h-[60vh] pr-2 custom-scrollbar">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">Subject & Grade</Label>
-                    <p className="font-bold text-foreground flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-primary" />
-                      {selectedPlan.subject}
-                    </p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">
-                      Grade: {selectedPlan.grade || "N/A"}
+                  <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subject Protocol</Label>
+                    <p className="font-black text-primary leading-none mt-1">{selectedPlan.subject}</p>
+                    <p className="text-[9px] font-black text-muted-foreground uppercase mt-1">
+                      Grade {selectedPlan.grade || "N/A"}
                     </p>
                   </div>
-                  <div className="space-y-1.5 p-4 rounded-2xl bg-violet-500/5 border border-violet-500/10">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-violet-600/60">Target Date</Label>
-                    <p className="font-bold text-foreground flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-violet-600" />
-                      {selectedPlan.lesson_date ? format(new Date(selectedPlan.lesson_date), "MMM d, yyyy") : "Not set"}
-                    </p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">
-                      Created: {format(new Date(selectedPlan.created_at), "MMM d")}
-                    </p>
+                  <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Date</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="w-3.5 h-3.5 text-violet-600" />
+                      <span className="font-black text-slate-700 text-xs">
+                        {selectedPlan.lesson_date ? format(new Date(selectedPlan.lesson_date), "MMM d, yyyy") : "Not set"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Chapter & Topic</Label>
-                  <div className="p-4 rounded-2xl bg-card border border-muted-foreground/10">
-                    <p className="font-black text-lg text-primary">{selectedPlan.chapter}</p>
-                    <p className="text-sm font-medium text-foreground/70 italic mt-1">{selectedPlan.topic}</p>
-                  </div>
+                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chapter & Topic Specification</Label>
+                  <p className="font-black text-slate-800 leading-tight mt-1">{selectedPlan.chapter}</p>
+                  <p className="text-xs font-bold text-slate-500 italic mt-0.5">{selectedPlan.topic}</p>
                 </div>
 
                 {selectedPlan.notes && (
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Teacher Notes</Label>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-muted-foreground/10 text-sm whitespace-pre-wrap">
+                  <div className="space-y-2 p-4 rounded-2xl bg-slate-50 shadow-inner">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Teacher Notes</Label>
+                    <p className="text-xs font-medium text-slate-600 whitespace-pre-wrap leading-relaxed">
                       {selectedPlan.notes}
-                    </div>
+                    </p>
                   </div>
                 )}
 
                 {selectedPlan.lesson_file_url && (
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instructional Resource</Label>
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-2xl h-12 border-dashed border-2 font-bold justify-start px-6 gap-3"
-                      asChild
-                    >
-                      <a href={supabase.storage.from("lesson-files").getPublicUrl(selectedPlan.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
-                        <Download className="w-4 h-4" />
-                        DOWNLOAD PLAN ATTACHMENT
-                      </a>
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-2xl h-12 border-dashed border-2 font-black text-[10px] uppercase tracking-widest gap-2"
+                    asChild
+                  >
+                    <a href={supabase.storage.from("lesson-files").getPublicUrl(selectedPlan.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
+                      <Download className="w-4 h-4" />
+                      DOWNLOAD RESOURCE ATTACHMENT
+                    </a>
+                  </Button>
                 )}
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Admin Feedback (Optional)</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Institutional Feedback (Optional)</Label>
                   <Textarea
-                    placeholder="Enter feedback for the teacher..."
+                    placeholder="Enter analytical feedback for the teacher..."
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
-                    className="rounded-2xl min-h-[100px] border-muted-foreground/20"
+                    className="rounded-2xl min-h-[100px] border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
                   />
                 </div>
               </div>
@@ -360,7 +351,7 @@ export default function LessonPlanManagement() {
                     <X className="w-4 h-4 mr-2" /> REJECT
                   </Button>
                   <Button
-                    className="rounded-xl font-black uppercase text-[10px] tracking-widest bg-gradient-to-r from-green-600 to-emerald-600 shadow-soft"
+                    className="rounded-xl font-black uppercase text-[10px] tracking-widest bg-slate-900 hover:bg-slate-800 text-white shadow-xl"
                     onClick={() => updateStatusMutation.mutate({ id: selectedPlan.id, status: 'approved', notes: adminNotes })}
                     disabled={updateStatusMutation.isPending || selectedPlan.status === 'approved'}
                   >

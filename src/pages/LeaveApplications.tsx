@@ -237,24 +237,24 @@ export default function LeaveApplications() {
               NEW APPLICATION
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] rounded-3xl">
+          <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-black">Submit Leave Request</DialogTitle>
-              <DialogDescription className="font-medium">
-                Fill in the details for your leave application. All fields are required.
+              <DialogTitle className="text-2xl font-black tracking-tight">Leave Nexus: Application</DialogTitle>
+              <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary">
+                Drafting time-off request for institutional processing.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
               {isParent && (
                 <div className="space-y-2">
-                  <Label htmlFor="student" className="text-xs font-bold uppercase tracking-wider">Select Student</Label>
+                  <Label htmlFor="student" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Select Student Profile</Label>
                   <Select value={studentId} onValueChange={setStudentId}>
-                    <SelectTrigger className="h-11 rounded-xl bg-card/50 border-muted-foreground/10">
-                      <SelectValue placeholder="Select child" />
+                    <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold">
+                      <SelectValue placeholder="Identify student" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
                       {linkedStudents.map((s: any) => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        <SelectItem key={s.id} value={s.id} className="font-black text-[10px] uppercase tracking-widest">{s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -263,64 +263,64 @@ export default function LeaveApplications() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate" className="text-xs font-bold uppercase tracking-wider">Start Date</Label>
+                  <Label htmlFor="startDate" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Commencement Date</Label>
                   <Input
                     id="startDate"
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="h-11 rounded-xl bg-card/50 border-muted-foreground/10"
+                    className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate" className="text-xs font-bold uppercase tracking-wider">End Date</Label>
+                  <Label htmlFor="endDate" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Conclusion Date</Label>
                   <Input
                     id="endDate"
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="h-11 rounded-xl bg-card/50 border-muted-foreground/10"
+                    className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider">Leave Category</Label>
+                <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Classification Matrix</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger className="h-11 rounded-xl bg-card/50 border-muted-foreground/10">
-                    <SelectValue placeholder="Select category" />
+                  <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold">
+                    <SelectValue placeholder="Define leave type" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
                     {categories.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      <SelectItem key={c.id} value={c.id} className="font-black text-[10px] uppercase tracking-widest">{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="reason" className="text-xs font-bold uppercase tracking-wider">Reason</Label>
+                <Label htmlFor="reason" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Operational Justification</Label>
                 <Textarea
                   id="reason"
-                  placeholder="Explain the reason for leave..."
+                  placeholder="Explain the necessity for leave..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="rounded-xl bg-card/50 border-muted-foreground/10 min-h-[100px]"
+                  className="rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold min-h-[100px]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider">Supporting Document (Optional)</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Documentary Evidence (Optional)</Label>
                 <div className="flex items-center gap-4">
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-xl h-11 border-dashed border-2 flex-1"
+                    className="rounded-2xl h-12 border-dashed border-2 flex-1 font-black text-[10px] uppercase tracking-widest"
                     onClick={() => document.getElementById('file-upload')?.click()}
                     disabled={uploading}
                   >
                     {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Paperclip className="w-4 h-4 mr-2" />}
-                    {documentUrl ? "Document Linked" : "Upload Document"}
+                    {documentUrl ? "EVIDENCE LINKED" : "UPLOAD PROOF"}
                   </Button>
                   <input
                     id="file-upload"
@@ -332,20 +332,20 @@ export default function LeaveApplications() {
                 </div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-3 sm:gap-0 pt-6 border-t border-muted/20">
               <Button
                 variant="ghost"
                 onClick={() => setIsDialogOpen(false)}
-                className="rounded-xl font-bold"
+                className="rounded-xl font-bold uppercase text-[10px] tracking-widest"
               >
-                CANCEL
+                DISMISS
               </Button>
               <Button
-                className="rounded-xl font-black px-8 bg-gradient-to-r from-primary to-violet-600 shadow-soft"
+                className="rounded-xl font-black px-8 bg-slate-900 hover:bg-slate-800 text-white shadow-xl tracking-widest"
                 onClick={() => submitMutation.mutate()}
                 disabled={submitMutation.isPending || !startDate || !endDate || !categoryId}
               >
-                {submitMutation.isPending ? "SUBMITTING..." : "SUBMIT REQUEST"}
+                {submitMutation.isPending ? "PROCESSING..." : "TRANSMIT APPLICATION"}
               </Button>
             </DialogFooter>
           </DialogContent>

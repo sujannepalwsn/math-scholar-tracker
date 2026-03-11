@@ -384,94 +384,118 @@ export default function LessonTracking() {
               RECORD SESSION
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-labelledby="record-lesson-title" aria-describedby="record-lesson-description">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl" aria-labelledby="record-lesson-title" aria-describedby="record-lesson-description">
             <DialogHeader>
-              <DialogTitle id="record-lesson-title">Record Lesson Taught</DialogTitle>
-              <DialogDescription id="record-lesson-description">Select a lesson plan and students who attended</DialogDescription>
+              <DialogTitle id="record-lesson-title" className="text-2xl font-black tracking-tight">Instructional Log: Session Entry</DialogTitle>
+              <DialogDescription id="record-lesson-description" className="text-[10px] font-black uppercase tracking-widest text-primary">
+                Finalizing pedagogical delivery data and cohort attendance.
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              {/* DATE */}
-              <div>
-                <Label>Date</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Execution Date</Label>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Cohort Classification (Grade)</Label>
+                  <Select value={filterGrade} onValueChange={setFilterGrade}>
+                    <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold">
+                      <SelectValue placeholder="All Grades" />
+                    </SelectTrigger>
+                    <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
+                      <SelectItem value="all" className="font-black text-[10px] uppercase tracking-widest">All Grades</SelectItem>
+                      {grades.map((g) => <SelectItem key={g} value={g} className="font-black text-[10px] uppercase tracking-widest">Grade {g}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {/* SELECT LESSON PLAN */}
-              <div className="space-y-3 border rounded-lg p-4">
-                <Label className="text-base font-semibold">Select Lesson Plan *</Label>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Strategy Blueprint (Lesson Plan) *</Label>
                 <Select value={selectedLessonPlanId} onValueChange={setSelectedLessonPlanId}>
-                  <SelectTrigger><SelectValue placeholder="Choose a lesson plan..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Choose a lesson plan...</SelectItem>
+                  <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold">
+                    <SelectValue placeholder="Identify teaching roadmap..." />
+                  </SelectTrigger>
+                  <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
+                    <SelectItem value="none" className="font-black text-[10px] uppercase tracking-widest text-slate-400">Identify teaching roadmap...</SelectItem>
                     {lessonPlans.map((lp: any) => (
-                      <SelectItem key={lp.id} value={lp.id}>
-                        {lp.subject} - {lp.chapter} - {lp.topic} ({format(new Date(lp.lesson_date), "MMM d")})
+                      <SelectItem key={lp.id} value={lp.id} className="font-black text-[10px] uppercase tracking-widest">
+                        {lp.subject} | {lp.chapter} - {lp.topic}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* GENERAL NOTES */}
-              <div>
-                <Label>General Notes for this session (Optional)</Label>
-                <Textarea value={generalLessonNotes} onChange={(e) => setGeneralLessonNotes(e.target.value)} rows={2} placeholder="General observations for this teaching session" />
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Session Observations</Label>
+                <Textarea
+                  value={generalLessonNotes}
+                  onChange={(e) => setGeneralLessonNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Record pedagogical delivery notes..."
+                  className="rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                />
               </div>
 
-              {/* STUDENTS */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Students ({selectedStudentIds.length} selected)</Label>
+                <div className="flex items-center justify-between px-1">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cohort Attendance ({selectedStudentIds.length} Verified)</Label>
                   <div className="flex gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={selectAllStudents}>Select All</Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedStudentIds([])}>Clear</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={selectAllStudents} className="h-7 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 text-primary">SELECT ALL</Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedStudentIds([])} className="h-7 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-100 text-slate-400">CLEAR</Button>
                   </div>
                 </div>
 
-                {/* Grade Filter */}
-                <div className="mt-2">
-                  <Label>Filter by Grade</Label>
-                  <Select value={filterGrade} onValueChange={setFilterGrade}>
-                    <SelectTrigger><SelectValue placeholder="All Grades" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Grades</SelectItem>
-                      {grades.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Student List */}
-                <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                <div className="border-none bg-slate-50/50 rounded-2xl p-4 max-h-56 overflow-y-auto space-y-2 custom-scrollbar shadow-inner">
                   {filteredStudentsForModal.map((student: any) => {
                     const isPresent = presentStudentIdsForDate.includes(student.id);
                     return (
-                      <div key={student.id} className={`flex items-center space-x-2 p-2 rounded ${isPresent ? "bg-green-50" : ""}`}>
+                      <div key={student.id} className={cn(
+                        "flex items-center space-x-3 p-3 rounded-xl transition-all border border-transparent",
+                        selectedStudentIds.includes(student.id) ? "bg-white shadow-soft border-primary/10" : "hover:bg-white/50"
+                      )}>
                         <Checkbox
                           id={student.id}
                           checked={selectedStudentIds.includes(student.id)}
                           onCheckedChange={() => toggleStudentSelection(student.id)}
+                          className="h-5 w-5 rounded-lg border-2 border-slate-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
-                        <label htmlFor={student.id} className="text-sm font-medium cursor-pointer">
-                          {student.name} - Grade {student.grade}
+                        <label htmlFor={student.id} className="flex-1 text-xs font-black text-slate-700 cursor-pointer flex justify-between items-center">
+                          {student.name}
+                          <Badge variant="outline" className="text-[8px] font-black uppercase bg-primary/5 border-primary/10 text-primary">Grade {student.grade}</Badge>
                         </label>
-                        {isPresent && <span className="ml-auto text-xs text-green-700">Present</span>}
+                        {isPresent && (
+                          <div className="flex items-center gap-1">
+                             <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                             <span className="text-[8px] font-black text-emerald-600 uppercase">Verified Present</span>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                   {filteredStudentsForModal.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No students found for selected grade.</p>
+                    <div className="text-center py-8 space-y-2">
+                       <Users className="h-8 w-8 text-slate-200 mx-auto" />
+                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No profiles discovered for this cohort.</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* RECORD BUTTON */}
               <Button
                 onClick={() => recordLessonMutation.mutate()}
                 disabled={selectedStudentIds.length === 0 || selectedLessonPlanId === "none" || recordLessonMutation.isPending}
-                className="w-full"
+                className="w-full h-14 rounded-2xl font-black uppercase text-xs tracking-[0.2em] bg-slate-900 hover:bg-slate-800 text-white shadow-xl transition-all active:scale-95 mt-4"
               >
-                {recordLessonMutation.isPending ? "Recording..." : `Record Lesson for ${selectedStudentIds.length} Student(s)`}
+                {recordLessonMutation.isPending ? "PROCESSING..." : `COMMIT LOG FOR ${selectedStudentIds.length} STUDENTS`}
               </Button>
             </div>
 </DialogContent>
@@ -752,71 +776,110 @@ export default function LessonTracking() {
 
       {/* View Lesson Dialog */}
       <Dialog open={showViewLessonDialog} onOpenChange={setShowViewLessonDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>Lesson Tracking Details</DialogTitle>
-            <DialogDescription>Complete log of student performance for this session.</DialogDescription>
+            <DialogTitle className="text-2xl font-black tracking-tight">Instructional Audit: Performance Matrix</DialogTitle>
+            <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary">Complete log of student performance and academic linkage for this session.</DialogDescription>
           </DialogHeader>
           {viewingLessonGroup && (
-            <div className="space-y-6 py-4">
-              <div className="bg-muted/30 p-4 rounded-xl space-y-2">
-                <h3 className="font-bold text-xl">{viewingLessonGroup.lessonPlan.subject}: {viewingLessonGroup.lessonPlan.chapter}</h3>
-                <p className="font-medium text-primary">{viewingLessonGroup.lessonPlan.topic}</p>
-                <div className="flex gap-4 text-xs text-muted-foreground font-bold uppercase tracking-wider">
-                  <span>Date: {format(new Date(viewingLessonGroup.lessonPlan.lesson_date), "PPP")}</span>
-                  {viewingLessonGroup.lessonPlan.grade && <span>Grade: {viewingLessonGroup.lessonPlan.grade}</span>}
+            <div className="space-y-8 py-6">
+              <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 shadow-inner space-y-3 relative overflow-hidden group/header">
+                <div className="absolute top-0 right-0 p-4">
+                   <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                      Session Archive
+                   </div>
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-black text-2xl text-slate-800">{viewingLessonGroup.lessonPlan.subject}</h3>
+                  <p className="font-black text-primary uppercase tracking-widest text-sm">{viewingLessonGroup.lessonPlan.chapter}</p>
+                </div>
+                <p className="font-bold text-slate-500 italic text-sm">{viewingLessonGroup.lessonPlan.topic}</p>
+                <div className="flex gap-4 pt-2">
+                  <div className="flex items-center gap-1.5 bg-white shadow-soft px-3 py-1 rounded-lg">
+                    <Calendar className="h-3 w-3 text-violet-600" />
+                    <span className="text-[10px] font-black text-slate-600 uppercase">{format(new Date(viewingLessonGroup.lessonPlan.lesson_date), "MMM d, yyyy")}</span>
+                  </div>
+                  {viewingLessonGroup.lessonPlan.grade && (
+                    <div className="flex items-center gap-1.5 bg-white shadow-soft px-3 py-1 rounded-lg">
+                      <GraduationCap className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] font-black text-slate-600 uppercase">Grade {viewingLessonGroup.lessonPlan.grade}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-bold flex items-center gap-2"><Users className="h-5 w-5" /> Students & Evaluations ({viewingLessonGroup.students.length})</h4>
+                <div className="flex items-center justify-between px-2">
+                   <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                     <Users className="h-4 w-4" /> Participation Matrix ({viewingLessonGroup.students.length} Profiles)
+                   </h4>
+                </div>
                 <div className="grid gap-4">
                   {viewingLessonGroup.students.map((record) => (
-                    <div key={record.id} className="border rounded-xl p-4 bg-card shadow-sm space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold text-lg">{record.students?.name}</p>
-                          <p className="text-xs text-muted-foreground">Grade {record.students?.grade}</p>
+                    <div key={record.id} className="border-none bg-white shadow-soft rounded-[2rem] p-6 space-y-6 transition-all hover:shadow-medium border border-slate-50">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400">
+                             {record.students?.name[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-black text-lg text-slate-700 leading-none">{record.students?.name}</p>
+                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Profile: Grade {record.students?.grade}</p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           {record.evaluation_rating && (
-                            <Badge className="bg-yellow-500 hover:bg-yellow-600">
-                              <Star className="h-3 w-3 mr-1 fill-white" /> {record.evaluation_rating}/5
-                            </Badge>
+                            <div className="flex items-center gap-1 bg-yellow-500/10 px-3 py-1.5 rounded-xl">
+                              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                              <span className="text-xs font-black text-yellow-700">{record.evaluation_rating}/5</span>
+                            </div>
                           )}
-                          <Badge variant="outline" className="text-[10px] font-bold uppercase">
-                            {record.completed ? "Completed" : "In Progress"}
+                          <Badge className={cn(
+                            "rounded-xl px-3 py-1 text-[10px] font-black uppercase tracking-widest border-none",
+                            record.completed ? "bg-emerald-500" : "bg-amber-500"
+                          )}>
+                            {record.completed ? "Verified" : "Pending"}
                           </Badge>
                         </div>
                       </div>
 
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Teacher Remarks</Label>
-                          <p className="text-sm bg-muted/20 p-2 rounded border italic">
-                            {record.teacher_notes || "No specific remarks entered."}
-                          </p>
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Faculty Observations</Label>
+                          <div className="text-xs font-bold text-slate-600 bg-slate-50/50 p-4 rounded-2xl italic leading-relaxed shadow-inner">
+                            "{record.teacher_notes || "No operational observations recorded for this profile."}"
+                          </div>
                         </div>
-                        <div className="space-y-2 text-xs">
-                          <Label className="text-[10px] font-black uppercase text-muted-foreground">Academic Links</Label>
-                          <div className="space-y-1">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Cross-Academic Integration</Label>
+                          <div className="space-y-2">
                             {record.linked_test_results?.length ? (
-                              record.linked_test_results.map(tr => (
-                                <div key={tr.id} className="flex justify-between p-1 bg-primary/5 rounded">
-                                  <span>{tr.tests?.name}</span>
-                                  <span className="font-bold">{tr.marks_obtained}/{tr.tests?.total_marks}</span>
-                                </div>
-                              ))
-                            ) : <p className="text-muted-foreground italic">No tests linked.</p>}
+                              <div className="space-y-1.5">
+                                {record.linked_test_results.map(tr => (
+                                  <div key={tr.id} className="flex justify-between items-center p-3 bg-primary/5 rounded-xl border border-primary/10">
+                                    <span className="text-[10px] font-black uppercase text-primary/80 truncate max-w-[150px]">{tr.tests?.name}</span>
+                                    <Badge className="bg-primary text-white text-[10px] font-black">{tr.marks_obtained}/{tr.tests?.total_marks}</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
 
                             {record.linked_homework_records?.length ? (
-                              record.linked_homework_records.map(hr => (
-                                <div key={hr.id} className="flex justify-between p-1 bg-orange-50 rounded">
-                                  <span>{hr.homework?.title}</span>
-                                  <span className="font-bold uppercase text-[9px]">{hr.status}</span>
-                                </div>
-                              ))
-                            ) : <p className="text-muted-foreground italic">No homework linked.</p>}
+                              <div className="space-y-1.5">
+                                {record.linked_homework_records.map(hr => (
+                                  <div key={hr.id} className="flex justify-between items-center p-3 bg-orange-500/5 rounded-xl border border-orange-500/10">
+                                    <span className="text-[10px] font-black uppercase text-orange-600/80 truncate max-w-[150px]">{hr.homework?.title}</span>
+                                    <Badge className="bg-orange-500 text-white text-[10px] font-black uppercase">{hr.status}</Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+
+                            {!record.linked_test_results?.length && !record.linked_homework_records?.length && (
+                              <div className="text-center py-4 bg-slate-50/30 rounded-2xl border-2 border-dashed border-slate-100">
+                                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No Integrated Records</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -831,11 +894,11 @@ export default function LessonTracking() {
 
       {/* Edit Student Lesson Record Dialog */}
       <Dialog open={showEditStudentRecordDialog} onOpenChange={setShowEditStudentRecordDialog}>
-        <DialogContent className="max-w-xl" aria-labelledby="edit-student-lesson-record-title" aria-describedby="edit-student-lesson-record-description">
+        <DialogContent className="max-w-xl rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl" aria-labelledby="edit-student-lesson-record-title" aria-describedby="edit-student-lesson-record-description">
           <DialogHeader>
-            <DialogTitle id="edit-student-lesson-record-title">Edit Student Lesson Record</DialogTitle>
-            <DialogDescription id="edit-student-lesson-record-description">
-              Add or update evaluation notes and rating for this student's lesson.
+            <DialogTitle id="edit-student-lesson-record-title" className="text-2xl font-black tracking-tight">Profile Audit: Session Update</DialogTitle>
+            <DialogDescription id="edit-student-lesson-record-description" className="text-[10px] font-black uppercase tracking-widest text-primary">
+              Updating evaluation metrics and faculty observations for the selected profile.
             </DialogDescription>
           </DialogHeader>
           {editingStudentChapterId && (
