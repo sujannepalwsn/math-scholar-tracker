@@ -71,8 +71,12 @@ export default function Sidebar({
   const filteredNavItems = navItems.filter(item => {
     if (item.role && user?.role !== item.role) return false;
     if (item.featureName) {
-      if (user?.role === 'center' && user.centerPermissions) return user.centerPermissions[item.featureName];
-      if (user?.role === 'teacher' && user.teacherPermissions) return user.teacherPermissions[item.featureName];
+      if (user?.role === 'center' && user.centerPermissions) {
+        return user.centerPermissions[item.featureName] !== false;
+      }
+      if (user?.role === 'teacher' && user.teacherPermissions) {
+        return user.teacherPermissions[item.featureName] !== false;
+      }
     }
     return true;
   });
