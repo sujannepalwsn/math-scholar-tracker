@@ -1,5 +1,16 @@
 import React, { useState } from "react";
-import { Edit, Plus, Power, PowerOff, Users } from "lucide-react";
+import {
+  Edit,
+  Plus,
+  Power,
+  PowerOff,
+  Users,
+  LayoutDashboard,
+  Database as DbIcon,
+  ShieldCheck,
+  Activity,
+  PieChart as PieChartIcon
+} from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useAuth } from "@/contexts/AuthContext"
@@ -16,7 +27,6 @@ import CenterFeaturePermissions from '@/components/admin/CenterFeaturePermission
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { LayoutDashboard, Database as DbIcon, ShieldCheck, Activity } from "lucide-react";
 
 
 const AdminDashboard = () => {
@@ -261,7 +271,7 @@ const AdminDashboard = () => {
           <Card className="border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden">
             <CardHeader className="border-b border-muted/20 bg-primary/5">
               <CardTitle className="text-lg font-black flex items-center gap-3 text-primary">
-                <PieChart className="h-5 w-5" />
+                <PieChartIcon className="h-5 w-5" />
                 Global User Base Matrix
               </CardTitle>
             </CardHeader>

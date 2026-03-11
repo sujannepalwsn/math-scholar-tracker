@@ -16,7 +16,7 @@ interface NavItem {
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string;
   unreadCount?: number;
-  category?: 'Academics' | 'Administration' | 'Reports and Communications';
+  category?: 'Academic Sections' | 'Administration Section' | 'Reporting and Communication Sections';
 }
 
 interface SidebarProps {
@@ -38,7 +38,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['Academic Sections', 'Administration Section', 'Reporting and Communication Sections']);
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
 

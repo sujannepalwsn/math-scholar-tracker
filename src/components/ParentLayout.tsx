@@ -18,22 +18,28 @@ const navItems: Array<{
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string;
   unreadCount?: number;
-  category?: 'Academics' | 'Administration' | 'Reports and Communications';
+  category?: 'Academic Sections' | 'Administration Section' | 'Reporting and Communication Sections';
 }> = [
   { to: "/parent-dashboard", label: "Dashboard", icon: Home, role: 'parent' as const },
-  { to: "/parent-lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'parent' as const, featureName: 'lesson_tracking', category: 'Academics' },
-  { to: "/parent-student-report", label: "Academic Report", icon: BarChart3, role: 'parent' as const, featureName: 'student_report', category: 'Academics' },
-  { to: "/parent-results", label: "Exam Results", icon: GraduationCap, role: 'parent' as const, featureName: 'published_results', category: 'Academics' },
-  { to: "/parent-homework", label: "Homework", icon: Book, role: 'parent' as const, featureName: 'homework_management', category: 'Academics' },
-  { to: "/parent-activities", label: "Activities", icon: Paintbrush, role: 'parent' as const, featureName: 'preschool_activities', category: 'Academics' },
-  { to: "/parent-discipline", label: "Discipline", icon: AlertTriangle, role: 'parent' as const, featureName: 'discipline_issues', category: 'Academics' },
-  { to: "/parent-finance", label: "Finance", icon: DollarSign, role: 'parent' as const, featureName: 'finance', category: 'Reports and Communications' },
-  { to: "/parent-meetings", label: "Meetings", icon: Video, role: 'parent' as const, featureName: 'meetings_management', category: 'Reports and Communications' },
-  { to: "/parent-messages", label: "Messages", icon: MessageSquare, role: 'parent' as const, featureName: 'messaging', category: 'Reports and Communications' },
-  { to: "/parent-chapter-rating", label: "Chapter Rating", icon: Star, role: 'parent' as const, featureName: 'lesson_tracking', category: 'Reports and Communications' },
-  { to: "/parent-calendar", label: "Calendar", icon: Calendar, role: 'parent' as const, featureName: 'calendar_events', category: 'Reports and Communications' },
-  { to: "/parent-leave", label: "Leave Applications", icon: Plane, role: 'parent' as const, featureName: 'leave_management', category: 'Reports and Communications' },
-  { to: "/parent-settings", label: "Settings", icon: Settings, role: 'parent' as const, category: 'Administration' },
+
+  // Academics Group
+  { to: "/parent-lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'parent' as const, featureName: 'lesson_tracking', category: 'Academic Sections' },
+  { to: "/parent-results", label: "Exam Results", icon: GraduationCap, role: 'parent' as const, featureName: 'published_results', category: 'Academic Sections' },
+  { to: "/parent-homework", label: "Homework", icon: Book, role: 'parent' as const, featureName: 'homework_management', category: 'Academic Sections' },
+  { to: "/parent-activities", label: "Activities", icon: Paintbrush, role: 'parent' as const, featureName: 'preschool_activities', category: 'Academic Sections' },
+  { to: "/parent-discipline", label: "Discipline", icon: AlertTriangle, role: 'parent' as const, featureName: 'discipline_issues', category: 'Academic Sections' },
+
+  // Reports and Communications Group
+  { to: "/parent-student-report", label: "Academic Report", icon: BarChart3, role: 'parent' as const, featureName: 'student_report', category: 'Reporting and Communication Sections' },
+  { to: "/parent-finance", label: "Finance", icon: DollarSign, role: 'parent' as const, featureName: 'finance', category: 'Reporting and Communication Sections' },
+  { to: "/parent-chapter-rating", label: "Chapter Rating", icon: Star, role: 'parent' as const, featureName: 'lesson_tracking', category: 'Reporting and Communication Sections' },
+  { to: "/parent-meetings", label: "Meetings", icon: Video, role: 'parent' as const, featureName: 'meetings_management', category: 'Reporting and Communication Sections' },
+  { to: "/parent-messages", label: "Messages", icon: MessageSquare, role: 'parent' as const, featureName: 'messaging', category: 'Reporting and Communication Sections' },
+  { to: "/parent-calendar", label: "Calendar", icon: Calendar, role: 'parent' as const, featureName: 'calendar_events', category: 'Reporting and Communication Sections' },
+
+  // Administration Group
+  { to: "/parent-leave", label: "Leave Applications", icon: Plane, role: 'parent' as const, featureName: 'leave_management', category: 'Administration Section' },
+  { to: "/parent-settings", label: "Settings", icon: Settings, role: 'parent' as const, category: 'Administration Section' },
 ];
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
