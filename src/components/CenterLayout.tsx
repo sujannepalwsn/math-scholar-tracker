@@ -26,6 +26,7 @@ const navItems: Array<{
   { to: "/attendance", label: "Take Attendance", icon: CheckSquare, role: 'center' as const, featureName: 'take_attendance', category: 'Academic Sections' },
   { to: "/class-routine", label: "Class Routine", icon: Clock, role: 'center' as const, featureName: 'class_routine', category: 'Academic Sections' },
   { to: "/lesson-plans", label: "Lesson Plans", icon: LayoutList, role: 'center' as const, featureName: 'lesson_plans', category: 'Academic Sections' },
+  { to: "/lesson-plan-management", label: "Lesson Plan Management", icon: ClipboardCheck, role: 'center' as const, featureName: 'lesson_plans', category: 'Academic Sections' },
   { to: "/lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'center' as const, featureName: 'lesson_tracking', category: 'Academic Sections' },
   { to: "/homework", label: "Homework", icon: Book, role: 'center' as const, featureName: 'homework_management', category: 'Academic Sections' },
   { to: "/tests", label: "Tests", icon: ClipboardCheck, role: 'center' as const, featureName: 'test_management', category: 'Academic Sections' },

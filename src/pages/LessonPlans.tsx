@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { CalendarIcon, Download, Edit, Eye, FileText, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Download, Edit, Eye, FileText, Plus, Send, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,7 +81,8 @@ export default function LessonPlans() {
       if (!user?.center_id) throw new Error("Center ID not found");
       let fileUrl: string | null = null;
       if (file) fileUrl = await uploadFile(file, "lesson-files");
-      const { error } = await supabase.from("lesson_plans").insert({
+
+      const payload: any = {
         center_id: user.center_id,
         teacher_id: user.teacher_id || null,
         subject, chapter, topic,
@@ -88,7 +90,11 @@ export default function LessonPlans() {
         grade: selectedGrade === "all" ? null : selectedGrade,
         lesson_date: lessonDate,
         notes: notes || null,
-        lesson_file_url: fileUrl });
+        lesson_file_url: fileUrl,
+        status: user.role === 'center' ? 'approved' : 'planned'
+      };
+
+      const { error } = await supabase.from("lesson_plans").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["lesson-plans"] }); toast.success("Lesson Plan created!"); setIsDialogOpen(false); resetForm(); },
@@ -112,6 +118,30 @@ export default function LessonPlans() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["lesson-plans"] }); toast.success("Deleted!"); },
     onError: (error: any) => toast.error(error.message || "Failed to delete") });
 
+  const submitForApprovalMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("lesson_plans")
+        .update({ status: 'pending' })
+        .eq("id", id);
+      if (error) throw error;
+
+      // Send notification to admin
+      await supabase.from("notifications").insert({
+        center_id: user?.center_id,
+        title: "Lesson Plan Submission",
+        message: `${user?.username || 'A teacher'} has submitted a new lesson plan for approval.`,
+        type: "lesson_plan_submission",
+        user_id: null, // Broadcast to admins
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lesson-plans"] });
+      toast.success("Lesson plan submitted for approval!");
+    },
+    onError: (error: any) => toast.error(error.message || "Failed to submit")
+  });
+
   const handleEditClick = (lp: LessonPlan) => {
     setEditingLessonPlan(lp); setSubject(lp.subject); setChapter(lp.chapter); setTopic(lp.topic);
     setLessonDate(lp.lesson_date); setNotes(lp.notes || ""); setSelectedGrade(lp.grade || "all");
@@ -124,6 +154,19 @@ export default function LessonPlans() {
   };
 
   const uniqueSubjects = Array.from(new Set(lessonPlans.map(lp => lp.subject))).sort();
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500 hover:bg-green-600 border-none text-[10px] font-black uppercase tracking-tighter px-2 py-0">Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive" className="border-none text-[10px] font-black uppercase tracking-tighter px-2 py-0">Rejected</Badge>;
+      case 'pending':
+        return <Badge className="bg-amber-500 hover:bg-amber-600 border-none text-[10px] font-black uppercase tracking-tighter px-2 py-0">Pending</Badge>;
+      default:
+        return <Badge variant="secondary" className="border-none text-[10px] font-black uppercase tracking-tighter px-2 py-0">Draft</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
@@ -227,6 +270,7 @@ export default function LessonPlans() {
                     <TableHead className="pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Chapter & Topic</TableHead>
                     <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Subject</TableHead>
                     <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">Grade</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center">Status</TableHead>
                     <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date</TableHead>
                     <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right pr-6">Actions</TableHead>
                   </TableRow>
@@ -252,6 +296,9 @@ export default function LessonPlans() {
                           </Badge>
                         ) : <span className="text-xs font-bold text-slate-400">-</span>}
                       </TableCell>
+                      <TableCell className="text-center">
+                        {getStatusBadge(lp.status)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
                           <CalendarIcon className="h-3.5 w-3.5 text-primary" />
@@ -260,6 +307,25 @@ export default function LessonPlans() {
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <div className="flex justify-end gap-2">
+                          <TooltipProvider>
+                            {user?.role === 'teacher' && (lp.status === 'planned' || lp.status === 'rejected' || !lp.status) && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-xl bg-white shadow-soft text-amber-600 hover:bg-amber-50"
+                                    onClick={() => submitForApprovalMutation.mutate(lp.id)}
+                                    disabled={submitForApprovalMutation.isPending}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Submit for Approval</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TooltipProvider>
+
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/10" onClick={() => handleViewClick(lp)}>
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -325,6 +391,14 @@ export default function LessonPlans() {
                   {viewingLessonPlan.notes || "No notes provided."}
                 </p>
               </div>
+              {(viewingLessonPlan as any).admin_notes && (
+                <div className="space-y-1.5 p-3 rounded-2xl bg-orange-500/5 border border-orange-500/10">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-orange-600/60">Institutional Feedback</Label>
+                  <p className="text-xs font-bold text-orange-700 leading-tight">
+                    {(viewingLessonPlan as any).admin_notes}
+                  </p>
+                </div>
+              )}
               {viewingLessonPlan.lesson_file_url && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Resource</Label>
