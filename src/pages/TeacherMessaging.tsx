@@ -23,8 +23,6 @@ export default function TeacherMessaging() {
   }
 
   // Fetch conversation for teacher with their center
-  // This assumes a conversation exists where the teacher's user_id is treated as a 'parent_user_id'
-  // in a conversation with their center. This is a workaround given the current schema.
   const { data: conversation, isLoading: conversationLoading } = useQuery({
     queryKey: ["teacher-conversation", user.id, user.center_id],
     queryFn: async () => {
@@ -34,7 +32,7 @@ export default function TeacherMessaging() {
           *,
           centers:center_id(id, name)
         `)
-        .eq("parent_user_id", user.id) // Teacher's user ID
+        .eq("teacher_user_id", user.id)
         .eq("center_id", user.center_id)
         .maybeSingle();
       if (error) throw error;
@@ -162,86 +160,62 @@ export default function TeacherMessaging() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0">
-          <ChatWindow
-            messagesLoading={messagesLoading}
-            messages={messages}
-            user={user}
-            messagesEndRef={messagesEndRef}
-            newMessage={newMessage}
-            setNewMessage={setNewMessage}
-            handleSendMessage={handleSendMessage}
-            sendMessageMutation={sendMessageMutation}
-          />
+          <ScrollArea className="flex-1 p-4">
+            {messagesLoading ? (
+              <p className="text-center text-muted-foreground">Loading messages...</p>
+            ) : messages.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No messages yet. Start the conversation!
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {messages.map((msg: any) => {
+                  const isOwnMessage = msg.sender_user_id === user?.id;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[70%] rounded-lg p-3 ${
+                          isOwnMessage
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{msg.message_text}</p>
+                        <p className={`text-xs mt-1 ${isOwnMessage ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                          {format(new Date(msg.sent_at), "MMM d, h:mm a")}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </ScrollArea>
+
+          <form onSubmit={handleSendMessage} className="p-4 border-t flex gap-2">
+            <Textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (newMessage.trim()) sendMessageMutation.mutate();
+                }
+              }}
+              placeholder="Type a message... (Shift+Enter for new line)"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none"
+              rows={1}
+            />
+            <Button type="submit" disabled={!newMessage.trim() || sendMessageMutation.isPending}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-const ChatWindow = ({
-  messagesLoading,
-  messages,
-  user,
-  messagesEndRef,
-  newMessage,
-  setNewMessage,
-  handleSendMessage,
-  sendMessageMutation
-}: any) => (
-  <>
-    <ScrollArea className="flex-1 p-4">
-      {messagesLoading ? (
-        <p className="text-center text-muted-foreground">Loading messages...</p>
-      ) : messages.length === 0 ? (
-        <p className="text-center text-muted-foreground py-8">
-          No messages yet. Start the conversation!
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {messages.map((msg: any) => {
-            const isOwnMessage = msg.sender_user_id === user?.id;
-            return (
-              <div
-                key={msg.id}
-                className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[70%] rounded-lg p-3 ${
-                    isOwnMessage
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{msg.message_text}</p>
-                  <p className={`text-xs mt-1 ${isOwnMessage ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                    {format(new Date(msg.sent_at), "MMM d, h:mm a")}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </div>
-      )}
-    </ScrollArea>
-
-    <form onSubmit={handleSendMessage} className="p-4 border-t flex gap-2">
-      <Textarea
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (newMessage.trim()) sendMessageMutation.mutate();
-          }
-        }}
-        placeholder="Type a message... (Shift+Enter for new line)"
-        className="flex-1 min-h-[40px] max-h-[120px] resize-none"
-        rows={1}
-      />
-      <Button type="submit" disabled={!newMessage.trim() || sendMessageMutation.isPending}>
-        <Send className="h-4 w-4" />
-      </Button>
-    </form>
-  </>
-);

@@ -28,17 +28,19 @@ export default function ParentActivities() {
 
   // Fetch student's activities
   const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['parent-activities', user.student_id],
+    queryKey: ['parent-activities', user.student_id, user.center_id],
     queryFn: async () => {
+      if (!user.center_id) return [];
       const { data, error } = await supabase
         .from('student_activities')
         .select('*, activities(*)')
         .eq('student_id', user.student_id!)
+        .eq('center_id', user.center_id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user.student_id });
+    enabled: !!user.student_id && !!user.center_id });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">

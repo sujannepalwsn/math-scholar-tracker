@@ -78,8 +78,6 @@ import ChapterPerformanceOverview from "./pages/ChapterPerformanceOverview";
 import TeacherPerformanceReport from "./pages/TeacherPerformanceReport";
 import LeaveApplications from "./pages/LeaveApplications";
 import LeaveManagement from "./pages/LeaveManagement";
-import LessonPlanManagement from "./pages/LessonPlanManagement";
-import SchoolDays from "./pages/SchoolDays";
 
 const queryClient = new QueryClient();
 
@@ -179,8 +177,6 @@ const App = () => (
               <Route path="/settings" element={<ProtectedRoute role="center"><CenterLayout><CenterSettings /></CenterLayout></ProtectedRoute>} />
               <Route path="/teacher-performance" element={<ProtectedRoute role="center"><CenterLayout><TeacherPerformanceReport /></CenterLayout></ProtectedRoute>} />
               <Route path="/leave-management" element={<ProtectedRoute role="center"><CenterLayout><LeaveManagement /></CenterLayout></ProtectedRoute>} />
-              <Route path="/school-days" element={<ProtectedRoute role="center"><CenterLayout><SchoolDays /></CenterLayout></ProtectedRoute>} />
-              <Route path="/lesson-plan-management" element={<ProtectedRoute role="center"><CenterLayout><LessonPlanManagement /></CenterLayout></ProtectedRoute>} />
               <Route path="/exams" element={<ProtectedRoute role="center"><CenterLayout><ExamManagement /></CenterLayout></ProtectedRoute>} />
               <Route path="/published-results" element={<ProtectedRoute role="center"><CenterLayout><PublishedResults /></CenterLayout></ProtectedRoute>} />
               <Route path="/marks-entry" element={<ProtectedRoute role="center"><CenterLayout><MarksEntry /></CenterLayout></ProtectedRoute>} />

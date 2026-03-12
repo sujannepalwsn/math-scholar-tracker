@@ -65,15 +65,8 @@ Deno.serve(async (req: Request) => {
           const { data: newConv } = await supabase.from('chat_conversations').insert({ center_id: centerId, student_id: recipient.student_id, parent_user_id: recipient.id }).select('id').single();
           conversationId = newConv?.id || null;
         }
-      } else if (recipient.teacher_id || recipient.id) {
-        // Handle teacher or other users without a student_id link (using recipient.id as parent_user_id)
-        const { data: existingConversation } = await supabase.from('chat_conversations').select('id').eq('center_id', centerId).eq('parent_user_id', recipient.id).is('student_id', null).maybeSingle();
-        if (existingConversation) {
-          conversationId = existingConversation.id;
-        } else {
-          const { data: newConv } = await supabase.from('chat_conversations').insert({ center_id: centerId, parent_user_id: recipient.id, student_id: null }).select('id').single();
-          conversationId = newConv?.id || null;
-        }
+      } else if (recipient.teacher_id) {
+        continue;
       }
       if (conversationId) {
         messagesToInsert.push({ conversation_id: conversationId, sender_user_id: senderUserId, message_text: messageText, is_read: false });

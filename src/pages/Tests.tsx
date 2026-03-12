@@ -77,15 +77,15 @@ export default function Tests() {
   const { data: tests = [] } = useQuery({
     queryKey: ["tests", user?.center_id, user?.id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase
         .from("tests")
         .select("*, lesson_plans(id, subject, chapter, topic, grade)") // Fetch lesson_plans details
+        .eq("center_id", user.center_id)
         .order("date", { ascending: false });
       
       if (user?.role === 'teacher') {
         query = query.eq('created_by', user.id);
-      } else if (user?.role !== 'admin' && user?.center_id) {
-        query = query.eq('center_id', user.center_id);
       }
       
       const { data, error } = await query;
@@ -95,37 +95,33 @@ export default function Tests() {
 
   // Fetch lesson plans for the dropdown
   const { data: lessonPlans = [] } = useQuery({
-    queryKey: ["lesson-plans-for-tests", user?.center_id, user?.teacher_id],
+    queryKey: ["lesson-plans-for-tests", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase
+      const { data, error } = await supabase
         .from("lesson_plans")
         .select("id, subject, chapter, topic, grade")
         .eq("center_id", user.center_id)
         .order("lesson_date", { ascending: false });
-
-      if (user?.role === 'teacher') {
-        query = query.eq('teacher_id', user.teacher_id);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data as LessonPlan[];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id
+  });
 
   const { data: teacherAssignments = [] } = useQuery({
-    queryKey: ["teacher-assignments", user?.teacher_id],
+    queryKey: ["teacher-assignments-tests", user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.teacher_id) return [];
+      if (!user?.teacher_id || !user?.center_id) return [];
       const { data, error } = await supabase
         .from("period_schedules")
         .select("subject, grade")
+        .eq("center_id", user.center_id)
         .eq("teacher_id", user.teacher_id);
       if (error) throw error;
       return data;
     },
-    enabled: user?.role === 'teacher' && !!user?.teacher_id
+    enabled: user?.role === 'teacher' && !!user?.teacher_id && !!user?.center_id
   });
 
   const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
@@ -135,34 +131,34 @@ export default function Tests() {
   const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase
+      if (!user?.center_id) return [];
+      const { data, error } = await supabase
         .from("students")
         .select("*")
+        .eq("center_id", user.center_id)
         .order("name");
       
-      if (user?.role !== 'admin' && user?.center_id) {
-        query = query.eq('center_id', user.center_id);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return data;
-    } });
+    },
+    enabled: !!user?.center_id
+  });
 
   // Fetch test results for selected test
   const { data: testResults = [], isLoading: testResultsLoading } = useQuery({
-    queryKey: ["test-results", selectedTest],
+    queryKey: ["test-results", selectedTest, user?.center_id],
     queryFn: async () => {
-      if (!selectedTest) return [];
+      if (!selectedTest || !user?.center_id) return [];
       const { data, error } = await supabase
         .from("test_results")
         .select("*, students(name, grade)")
+        .eq("center_id", user.center_id)
         .eq("test_id", selectedTest)
         .order("marks_obtained", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedTest });
+    enabled: !!selectedTest && !!user?.center_id });
 
   // Effect to update questionMarks when selectedTest changes
   useEffect(() => {
@@ -249,6 +245,7 @@ export default function Tests() {
       const resultData = {
         test_id: selectedTest,
         student_id: selectedStudentId,
+        center_id: user?.center_id!,
         marks_obtained: questions.length > 0 ? totalMarksObtainedFromQuestions : parseInt(marksObtained), // Use sum of question marks or overall marks
         date_taken: resultDate,
         // Removed notes field
@@ -305,6 +302,7 @@ export default function Tests() {
       const records = marks.map((m) => ({
         test_id: selectedTest,
         student_id: m.studentId,
+        center_id: user?.center_id!,
         marks_obtained: m.marks,
         date_taken: format(new Date(), "yyyy-MM-dd"),
         question_marks: null, // Bulk entry doesn't support question-wise for now
@@ -564,7 +562,7 @@ export default function Tests() {
                   <Select value={grade} onValueChange={setGrade}>
                     <SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger>
                     <SelectContent>
-                      {assignedGrades.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                      {assignedGrades.map(g => <SelectItem key={g} value={g!}>{g}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 ) : (

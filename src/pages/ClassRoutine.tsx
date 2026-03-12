@@ -62,17 +62,27 @@ export default function ClassRoutine() {
     queryKey: ["class-periods", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("class_periods").select("*").eq("center_id", user.center_id).eq("is_active", true).order("period_number");
+      const { data, error } = await supabase
+        .from("class_periods")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .eq("is_active", true)
+        .order("period_number");
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id
+  });
 
   const { data: schedules = [], isLoading: schedulesLoading } = useQuery({
     queryKey: ["period-schedules", user?.center_id, selectedGrade, user?.role, user?.teacher_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("period_schedules").select(`*, class_periods:class_period_id(*), teachers:teacher_id(id, name)`).eq("center_id", user.center_id).eq("grade", selectedGrade);
+      let query = supabase
+        .from("period_schedules")
+        .select(`*, class_periods:class_period_id(*), teachers!left(id, name)`)
+        .eq("center_id", user.center_id)
+        .eq("grade", selectedGrade);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('teacher_id', user.teacher_id);
@@ -233,6 +243,7 @@ export default function ClassRoutine() {
               </Dialog>
             </div>
 
+            {user?.role === 'center' && (
             <Dialog open={showScheduleDialog} onOpenChange={(open) => { setShowScheduleDialog(open); if (!open) resetScheduleForm(); }}>
               <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Schedule</Button></DialogTrigger>
               <DialogContent className="max-w-lg">
@@ -289,6 +300,7 @@ export default function ClassRoutine() {
                 </form>
               </DialogContent>
             </Dialog>
+            )}
           </div>
 
           {schedulesLoading ? (
@@ -350,6 +362,7 @@ export default function ClassRoutine() {
 
         <TabsContent value="periods" className="space-y-4">
           <div className="flex justify-end">
+            {user?.role === 'center' && (
             <Dialog open={showPeriodDialog} onOpenChange={(open) => { setShowPeriodDialog(open); if (!open) resetPeriodForm(); }}>
               <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Period</Button></DialogTrigger>
               <DialogContent>
@@ -370,6 +383,7 @@ export default function ClassRoutine() {
                 </form>
               </DialogContent>
             </Dialog>
+            )}
           </div>
 
           <Card>

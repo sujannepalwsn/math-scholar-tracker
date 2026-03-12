@@ -31,22 +31,28 @@ export default function Summary() {
   const { data: students } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("name");
-      if (user?.role !== "admin" && user?.center_id) query = query.eq("center_id", user.center_id);
-      const { data, error } = await query;
+      if (!user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .order("name");
       if (error) throw error;
       return data;
-    } });
+    },
+    enabled: !!user?.center_id
+  });
 
   // Fetch attendance
   const studentIds = students?.map((s) => s.id) || [];
   const { data: allAttendance } = useQuery({
     queryKey: ["all-attendance", user?.center_id, studentIds.length > 0 ? studentIds.join(",") : "", user?.role, user?.id],
     queryFn: async () => {
-      if (!studentIds.length) return [];
+      if (!studentIds.length || !user?.center_id) return [];
       let query = supabase
         .from("attendance")
         .select("*")
+        .eq("center_id", user.center_id)
         .in("student_id", studentIds);
 
       if (user?.role === 'teacher') {

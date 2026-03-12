@@ -43,8 +43,12 @@ export default function TakeAttendance() {
   const { data: classTeacherGrades = [] } = useQuery({
     queryKey: ["my-class-teacher-grades", user?.teacher_id],
     queryFn: async () => {
-      if (!user?.teacher_id) return [];
-      const { data, error } = await supabase.from("class_teacher_assignments").select("grade").eq("teacher_id", user.teacher_id);
+      if (!user?.teacher_id || !user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("class_teacher_assignments")
+        .select("grade")
+        .eq("center_id", user.center_id)
+        .eq("teacher_id", user.teacher_id);
       if (error) throw error;
       return data.map(d => d.grade);
     },
@@ -56,39 +60,27 @@ export default function TakeAttendance() {
   const { data: students } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("id, name, grade").eq("is_active", true).order("name");
-      if (user?.role !== "admin" && user?.center_id) {
-        query = query.eq("center_id", user.center_id);
-      }
+      if (!user?.center_id) return [];
+      let query = supabase
+        .from("students")
+        .select("id, name, grade")
+        .eq("center_id", user.center_id)
+        .eq("is_active", true)
+        .order("name");
       const { data, error } = await query;
       if (error) throw error;
       return data as Student[];
-    } });
-
-  const { data: schoolDayConfig } = useQuery({
-    queryKey: ["school-day-config", dateStr, user?.center_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("school_days")
-        .select("is_school_day")
-        .eq("center_id", user?.center_id!)
-        .eq("date", dateStr)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
     },
-    enabled: !!dateStr && !!user?.center_id
-  });
-
-  const isSchoolDay = schoolDayConfig ? schoolDayConfig.is_school_day : false;
+    enabled: !!user?.center_id });
 
   const { data: approvedLeaves = [] } = useQuery({
     queryKey: ["approved-leaves", dateStr, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("leave_applications")
         .select("student_id, category_id, leave_categories(name)")
-        .eq("center_id", user?.center_id!)
+        .eq("center_id", user.center_id)
         .eq("status", "approved")
         .lte("start_date", dateStr)
         .gte("end_date", dateStr);
@@ -191,7 +183,7 @@ export default function TakeAttendance() {
     mutationFn: async () => {
       if (!filteredStudents || !user?.center_id) return;
       // Delete existing records for these students on this date
-      await supabase.from("attendance").delete().eq("date", dateStr).in("student_id", filteredStudents.map((s) => s.id));
+      await supabase.from("attendance").delete().eq("date", dateStr).eq("center_id", user.center_id).in("student_id", filteredStudents.map((s) => s.id));
       // Insert ALL filtered students - present AND absent
       const records = filteredStudents.map((student) => ({
         student_id: student.id,
@@ -250,15 +242,6 @@ export default function TakeAttendance() {
             <Lock className="h-4 w-4" />
           </div>
           <span className="text-sm font-bold uppercase tracking-tight">Records Locked — Only Center Admin can modify.</span>
-        </div>
-      )}
-
-      {!isSchoolDay && (
-        <div className="flex items-center gap-3 p-4 bg-red-50/50 backdrop-blur-sm border border-red-200 rounded-2xl text-red-700 shadow-soft animate-in slide-in-from-top-2">
-          <div className="p-2 rounded-xl bg-red-100">
-            <XCircle className="h-4 w-4" />
-          </div>
-          <span className="text-sm font-bold uppercase tracking-tight">Non-School Day — Attendance recording is disabled.</span>
         </div>
       )}
 
@@ -404,7 +387,7 @@ export default function TakeAttendance() {
               <Button
                 type="submit"
                 className="w-full h-16 text-xl font-black shadow-strong rounded-[2rem] bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.01] transition-all duration-300"
-                disabled={saveMutation.isPending || (isLocked && !canEdit) || !isSchoolDay}
+                disabled={saveMutation.isPending || (isLocked && !canEdit)}
               >
                 {saveMutation.isPending ? (
                   <div className="flex items-center gap-3">

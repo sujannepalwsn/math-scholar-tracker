@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Bell, CheckCheck, ExternalLink } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell, CheckCheck, ExternalLink, Calendar, GraduationCap, BookOpen, Clock, MessageSquare, Info } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,38 +17,95 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["notifications", user?.center_id],
+    queryKey: ["notifications", user?.center_id, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase
+      if (!user?.center_id || !user?.id) return [];
+
+      const { data: userNotifs, error } = await supabase
         .from("notifications")
         .select("*")
         .eq("center_id", user.center_id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(10);
       if (error) throw error;
-      return data || [];
+
+      let broadcastQuery = supabase
+        .from("broadcast_messages")
+        .select("*")
+        .eq("center_id", user.center_id);
+
+      if (user.role === 'teacher') {
+        broadcastQuery = broadcastQuery.in('target_audience', ['all_teachers']);
+      } else if (user.role === 'parent') {
+        broadcastQuery = broadcastQuery.in('target_audience', ['all_parents']);
+      }
+
+      const { data: broadcasts, error: bError } = await broadcastQuery
+        .order("sent_at", { ascending: false })
+        .limit(10);
+      if (bError) throw bError;
+
+      const mappedBroadcasts = (broadcasts || []).map(b => ({
+        id: b.id,
+        center_id: b.center_id,
+        user_id: user.id,
+        title: "Announcement",
+        message: b.message_text,
+        type: "broadcast",
+        is_read: false,
+        created_at: b.sent_at || b.created_at,
+        link: null
+      }));
+
+      const combined = [...(userNotifs || []), ...mappedBroadcasts].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      return combined.slice(0, 20);
     },
-    enabled: !!user?.center_id,
-    refetchInterval: 30000,
+    enabled: !!user?.center_id && !!user?.id,
+    refetchInterval: 15000,
   });
+
+  useEffect(() => {
+    if (!user?.id || !user?.center_id) return;
+    const channel = supabase
+      .channel('notif-bell-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, user?.center_id]);
 
   const unreadCount = notifications.filter((n: any) => !n.is_read).length;
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      if (!user?.center_id) return;
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", id)
+        .eq("center_id", user.center_id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.center_id) return;
+      if (!user?.center_id || !user?.id) return;
       await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("center_id", user.center_id)
+        .eq("user_id", user.id)
         .eq("is_read", false);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
@@ -66,15 +123,19 @@ export default function NotificationBell() {
     return '/notifications';
   };
 
-  const getTypeIcon = (type: string) => {
-    const colors: Record<string, string> = {
-      student: "bg-blue-100 text-blue-600",
-      attendance: "bg-green-100 text-green-600",
-      marks: "bg-purple-100 text-purple-600",
-      exam: "bg-orange-100 text-orange-600",
-      info: "bg-muted text-muted-foreground",
+  const getTypeConfig = (type: string) => {
+    const configs: Record<string, { color: string; icon: any }> = {
+      student: { color: "bg-blue-100 text-blue-600", icon: Bell },
+      attendance: { color: "bg-green-100 text-green-600", icon: Bell },
+      marks: { color: "bg-purple-100 text-purple-600", icon: GraduationCap },
+      exam: { color: "bg-orange-100 text-orange-600", icon: Calendar },
+      leave_request: { color: "bg-amber-100 text-amber-600", icon: Clock },
+      leave_status: { color: "bg-emerald-100 text-emerald-600", icon: Bell },
+      broadcast: { color: "bg-indigo-100 text-indigo-600", icon: MessageSquare },
+      homework: { color: "bg-rose-100 text-rose-600", icon: BookOpen },
+      info: { color: "bg-muted text-muted-foreground", icon: Info },
     };
-    return colors[type] || colors.info;
+    return configs[type] || configs.info;
   };
 
   return (
@@ -116,28 +177,32 @@ export default function NotificationBell() {
                   No notifications yet
                 </div>
               ) : (
-                notifications.map((n: any) => (
-                  <button
-                    key={n.id}
-                    onClick={() => handleNotificationClick(n)}
-                    className={cn(
-                      "w-full text-left p-3 border-b last:border-0 hover:bg-muted/50 transition-colors flex gap-3",
-                      !n.is_read && "bg-primary/5"
-                    )}
-                  >
-                    <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5", getTypeIcon(n.type))}>
-                      <Bell className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("text-sm font-medium truncate", !n.is_read && "font-bold")}>{n.title}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                    {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2" />}
-                  </button>
-                ))
+                notifications.map((n: any) => {
+                  const config = getTypeConfig(n.type);
+                  const Icon = config.icon;
+                  return (
+                    <button
+                      key={n.id}
+                      onClick={() => handleNotificationClick(n)}
+                      className={cn(
+                        "w-full text-left p-3 border-b last:border-0 hover:bg-muted/50 transition-colors flex gap-3",
+                        !n.is_read && "bg-primary/5"
+                      )}
+                    >
+                      <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5", config.color)}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("text-sm font-black tracking-tight truncate", !n.is_read && "text-primary")}>{n.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{n.message}</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mt-1">
+                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2 animate-pulse" />}
+                    </button>
+                  );
+                })
               )}
             </ScrollArea>
             <div className="p-2 border-t">

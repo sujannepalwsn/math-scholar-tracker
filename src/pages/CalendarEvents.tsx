@@ -109,13 +109,13 @@ export default function CalendarEvents() {
 
   const updateEventMutation = useMutation({
     mutationFn: async () => {
-      if (!editingEvent?.id) throw new Error("Event ID not found");
+      if (!editingEvent?.id || !user?.center_id) throw new Error("Event ID or Center ID not found");
       const { error } = await supabase.from("center_events").update({
         title,
         description: description || null,
         event_date: eventDate,
         event_type: eventType,
-        is_holiday: isHoliday } as any).eq("id", editingEvent.id);
+        is_holiday: isHoliday } as any).eq("id", editingEvent.id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -130,7 +130,8 @@ export default function CalendarEvents() {
 
   const deleteEventMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("center_events").delete().eq("id", id);
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("center_events").delete().eq("id", id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -339,7 +340,7 @@ export default function CalendarEvents() {
                           </div>
                         </div>
                       </div>
-                      {!isParent && (
+                      {user?.role === 'center' && (
                         <div className="flex gap-1">
                           <Button variant="ghost" size="sm" onClick={() => handleEditEvent(event)}>
                             <Edit className="h-4 w-4" />
@@ -393,7 +394,7 @@ export default function CalendarEvents() {
                         )}
                       </div>
                     </div>
-                    {!isParent && (
+                    {user?.role === 'center' && (
                       <Button
                         variant="ghost"
                         size="sm"

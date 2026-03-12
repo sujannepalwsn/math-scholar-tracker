@@ -55,18 +55,33 @@ export default function ExamManagement() {
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ["exam-subjects", selectedExamId],
+    queryKey: ["exam-subjects-management", selectedExamId, centerId],
     queryFn: async () => {
-      if (!selectedExamId) return [];
+      if (!selectedExamId || !centerId) return [];
       const { data, error } = await supabase
         .from("exam_subjects")
         .select("*")
         .eq("exam_id", selectedExamId)
+        .eq("center_id", centerId)
         .order("subject_name");
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedExamId,
+    enabled: !!selectedExamId && !!centerId,
+  });
+
+  const { data: routineSubjects = [] } = useQuery({
+    queryKey: ["routine-subjects", centerId],
+    queryFn: async () => {
+      if (!centerId) return [];
+      const { data, error } = await supabase
+        .from("period_schedules")
+        .select("subject")
+        .eq("center_id", centerId);
+      if (error) throw error;
+      return Array.from(new Set(data.map(d => d.subject))).sort();
+    },
+    enabled: !!centerId && user?.role === 'center',
   });
 
   const createExam = useMutation({
@@ -106,8 +121,35 @@ export default function ExamManagement() {
 
   const publishExam = useMutation({
     mutationFn: async (id: string) => {
+      const { data: exam, error: fetchError } = await supabase
+        .from("exams")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase.from("exams").update({ status: "published" }).eq("id", id);
       if (error) throw error;
+
+      // Notify students/parents
+      const { data: studentUsers } = await supabase
+        .from("users")
+        .select("id")
+        .eq("center_id", centerId!)
+        .in("role", ["student", "parent"])
+        .eq("student_grade", exam.grade);
+
+      if (studentUsers && studentUsers.length > 0) {
+        const notifications = studentUsers.map(u => ({
+          user_id: u.id,
+          center_id: centerId!,
+          title: "Exam Routine Published",
+          message: `The routine for ${exam.name} has been published.`,
+          type: "exam"
+        }));
+        await supabase.from("notifications").insert(notifications);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
@@ -117,11 +159,13 @@ export default function ExamManagement() {
 
   const publishResults = useMutation({
     mutationFn: async (exam: any) => {
+      if (!centerId) return;
       // 1. Get subjects for this exam
       const { data: subjects, error: subjError } = await supabase
         .from("exam_subjects")
         .select("id")
-        .eq("exam_id", exam.id);
+        .eq("exam_id", exam.id)
+        .eq("center_id", centerId);
 
       if (subjError) throw subjError;
       if (!subjects || subjects.length === 0) throw new Error("No subjects defined for this exam. Please add subjects first.");
@@ -130,7 +174,7 @@ export default function ExamManagement() {
       const { count: studentCount, error: studError } = await supabase
         .from("students")
         .select("*", { count: 'exact', head: true })
-        .eq("center_id", centerId!)
+        .eq("center_id", centerId)
         .eq("grade", exam.grade)
         .eq("is_active", true);
 
@@ -143,7 +187,8 @@ export default function ExamManagement() {
       const { count: marksCount, error: marksError } = await supabase
         .from("exam_marks")
         .select("*", { count: 'exact', head: true })
-        .eq("exam_id", exam.id);
+        .eq("exam_id", exam.id)
+        .eq("center_id", centerId);
 
       if (marksError) throw marksError;
 
@@ -151,8 +196,27 @@ export default function ExamManagement() {
         throw new Error(`Incomplete marks. Expected ${expectedMarksCount} marks (${studentCount} students × ${subjects.length} subjects), but only ${marksCount} entered.`);
       }
 
-      const { error } = await supabase.from("exams").update({ status: "results_published" }).eq("id", exam.id);
+      const { error } = await supabase.from("exams").update({ status: "results_published" }).eq("id", exam.id).eq("center_id", centerId);
       if (error) throw error;
+
+      // Notify students/parents
+      const { data: studentUsers } = await supabase
+        .from("users")
+        .select("id")
+        .eq("center_id", centerId)
+        .in("role", ["student", "parent"])
+        .eq("student_grade", exam.grade);
+
+      if (studentUsers && studentUsers.length > 0) {
+        const notifications = studentUsers.map(u => ({
+          user_id: u.id,
+          center_id: centerId,
+          title: "Exam Results Published",
+          message: `The results for ${exam.name} are now available.`,
+          type: "marks"
+        }));
+        await supabase.from("notifications").insert(notifications);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
@@ -214,11 +278,13 @@ export default function ExamManagement() {
     <div className="space-y-6">
       <PageHeader title="Exam Management" description="Create and manage exams, configure subjects" />
 
-      <div className="flex justify-end">
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Create Exam
-        </Button>
-      </div>
+      {user?.role === 'center' && (
+        <div className="flex justify-end">
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Create Exam
+          </Button>
+        </div>
+      )}
 
       {/* Exam Form Dialog */}
       <Dialog open={showForm} onOpenChange={(v) => { if (!v) resetForm(); }}>
@@ -262,23 +328,32 @@ export default function ExamManagement() {
             <DialogDescription>Add subjects with marks structure</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label>Subject</Label>
-                <Input value={subjectForm.subject_name} onChange={(e) => setSubjectForm({ ...subjectForm, subject_name: e.target.value })} placeholder="Math" />
-              </div>
-              <div>
-                <Label>Full Marks</Label>
-                <Input type="number" value={subjectForm.full_marks} onChange={(e) => setSubjectForm({ ...subjectForm, full_marks: e.target.value })} />
-              </div>
-              <div>
-                <Label>Pass Marks</Label>
-                <Input type="number" value={subjectForm.pass_marks} onChange={(e) => setSubjectForm({ ...subjectForm, pass_marks: e.target.value })} />
-              </div>
-            </div>
-            <Button onClick={() => addSubject.mutate()} disabled={!subjectForm.subject_name} size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Add Subject
-            </Button>
+            {user?.role === 'center' && (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label>Subject</Label>
+                    <Select value={subjectForm.subject_name} onValueChange={(v) => setSubjectForm({ ...subjectForm, subject_name: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                      <SelectContent>
+                        {routineSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Full Marks</Label>
+                    <Input type="number" value={subjectForm.full_marks} onChange={(e) => setSubjectForm({ ...subjectForm, full_marks: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Pass Marks</Label>
+                    <Input type="number" value={subjectForm.pass_marks} onChange={(e) => setSubjectForm({ ...subjectForm, pass_marks: e.target.value })} />
+                  </div>
+                </div>
+                <Button onClick={() => addSubject.mutate()} disabled={!subjectForm.subject_name || addSubject.isPending} size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> Add Subject
+                </Button>
+              </>
+            )}
             {subjects.length > 0 && (
               <Table>
                 <TableHeader>
@@ -286,7 +361,7 @@ export default function ExamManagement() {
                     <TableHead>Subject</TableHead>
                     <TableHead>Full Marks</TableHead>
                     <TableHead>Pass Marks</TableHead>
-                    <TableHead></TableHead>
+                    {user?.role === 'center' && <TableHead></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -295,11 +370,13 @@ export default function ExamManagement() {
                       <TableCell>{s.subject_name}</TableCell>
                       <TableCell>{s.full_marks}</TableCell>
                       <TableCell>{s.pass_marks}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => deleteSubject.mutate(s.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
+                      {user?.role === 'center' && (
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => deleteSubject.mutate(s.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -343,7 +420,7 @@ export default function ExamManagement() {
                       <BookOpen className="h-3 w-3 mr-1" /> Subjects
                     </Button>
 
-                    {exam.status === "draft" && (
+                    {user?.role === 'center' && exam.status === "draft" && (
                       <>
                         <Button variant="outline" size="sm" onClick={() => handleEdit(exam)}>
                           <Edit className="h-3 w-3 mr-1" /> Edit
@@ -359,17 +436,19 @@ export default function ExamManagement() {
 
                     {exam.status === "published" && (
                       <>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/marks-entry?examId=${exam.id}`)}>
+                        <Button variant="outline" size="sm" onClick={() => navigate(user?.role === 'teacher' ? `/teacher/marks-entry?examId=${exam.id}` : `/marks-entry?examId=${exam.id}`)}>
                           <Edit className="h-3 w-3 mr-1" /> Enter Marks
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => publishResults.mutate(exam)}
-                          disabled={publishResults.isPending}
-                        >
-                          <GraduationCap className="h-3 w-3 mr-1" /> Publish Results
-                        </Button>
+                        {user?.role === 'center' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => publishResults.mutate(exam)}
+                            disabled={publishResults.isPending}
+                          >
+                            <GraduationCap className="h-3 w-3 mr-1" /> Publish Results
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>

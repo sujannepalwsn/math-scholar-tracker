@@ -82,14 +82,14 @@ export default function PublishedResults() {
 
   // Fetch Exam Subjects
   const { data: subjects = [] } = useQuery({
-    queryKey: ["exam-subjects", selectedExamId],
+    queryKey: ["exam-subjects", selectedExamId, centerId],
     queryFn: async () => {
-      if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId).order("subject_name");
+      if (!selectedExamId || !centerId) return [];
+      const { data, error } = await supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId).eq("center_id", centerId).order("subject_name");
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedExamId
+    enabled: !!selectedExamId && !!centerId
   });
 
   // Fetch Students
@@ -104,9 +104,9 @@ export default function PublishedResults() {
       } else {
         // If no exam selected, and user is teacher, filter students by teacher's assigned grades
         if (user?.role === 'teacher' && user?.teacher_id) {
-           const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
+           const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
            const assignedGrades = assignments?.map(a => a.grade) || [];
-           const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id);
+           const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
            const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
            const allGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
            if (allGrades.length > 0) {
@@ -129,14 +129,14 @@ export default function PublishedResults() {
 
   // Fetch Marks
   const { data: marks = [] } = useQuery({
-    queryKey: ["exam-marks", selectedExamId],
+    queryKey: ["exam-marks", selectedExamId, centerId],
     queryFn: async () => {
-      if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId);
+      if (!selectedExamId || !centerId) return [];
+      const { data, error } = await supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId).eq("center_id", centerId);
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedExamId
+    enabled: !!selectedExamId && !!centerId
   });
 
   const filteredExams = useMemo(() => {

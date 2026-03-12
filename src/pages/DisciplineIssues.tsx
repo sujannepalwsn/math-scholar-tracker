@@ -90,7 +90,7 @@ export default function DisciplineIssues() {
       if (!user?.center_id) return [];
       let query = supabase
         .from("discipline_issues")
-        .select("*, students(name, grade), discipline_categories(name)")
+        .select("*, students!inner(name, grade), discipline_categories(name)")
         .eq("center_id", user.center_id)
         .order("issue_date", { ascending: false });
       
@@ -157,7 +157,7 @@ export default function DisciplineIssues() {
         severity,
         issue_date: issueDate,
         resolution: resolution || null,
-        status: status }).eq("id", editingIssue.id);
+        status: status }).eq("id", editingIssue.id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -172,7 +172,8 @@ export default function DisciplineIssues() {
 
   const deleteIssueMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("discipline_issues").delete().eq("id", id);
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("discipline_issues").delete().eq("id", id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {

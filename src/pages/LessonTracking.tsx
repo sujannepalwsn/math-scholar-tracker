@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { format, isFuture } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
 import EditStudentLessonRecord from "@/components/center/EditStudentLessonRecord"; // Import the new component
 
@@ -109,15 +109,16 @@ export default function LessonTracking() {
   const { data: studentLessonRecordsRaw = [] } = useQuery({
     queryKey: ["student-lesson-records", user?.center_id, filterSubject, filterStudent, filterGrade, user?.teacher_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase
         .from("student_chapters")
         .select(`
           *,
-          students(id, name, grade, center_id),
-          lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
+          students!inner(id, name, grade, center_id),
+          lesson_plans!inner(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
           recorded_by_teacher:recorded_by_teacher_id(name)
         `)
-        .eq("students.center_id", user?.center_id!);
+        .eq("center_id", user.center_id);
 
       if (filterStudent !== "all") query = query.eq("student_id", filterStudent);
       if (filterGrade !== "all") query = query.eq("students.grade", filterGrade);
@@ -262,14 +263,6 @@ export default function LessonTracking() {
         notes: generalLessonNotes || null, // Use generalLessonNotes
         recorded_by_teacher_id: user.teacher_id || null, // Set to null if not a teacher
       }));
-
-      // Prevent future dates
-      const selectedDate = new Date(date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (selectedDate > today) {
-        throw new Error("You cannot track lesson completion for future dates.");
-      }
 
       const { error: linkError } = await supabase.from("student_chapters").insert(studentLessonRecordsToInsert);
       if (linkError) throw linkError;
@@ -475,8 +468,14 @@ export default function LessonTracking() {
 
               {/* RECORD BUTTON */}
               <Button
-                onClick={() => recordLessonMutation.mutate()}
-                disabled={selectedStudentIds.length === 0 || selectedLessonPlanId === "none" || recordLessonMutation.isPending}
+                onClick={() => {
+                  if (isFuture(new Date(date))) {
+                    toast.error("You cannot track lesson completion for future dates.");
+                    return;
+                  }
+                  recordLessonMutation.mutate();
+                }}
+                disabled={selectedStudentIds.length === 0 || selectedLessonPlanId === "none" || recordLessonMutation.isPending || isFuture(new Date(date))}
                 className="w-full"
               >
                 {recordLessonMutation.isPending ? "Recording..." : `Record Lesson for ${selectedStudentIds.length} Student(s)`}

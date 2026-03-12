@@ -147,11 +147,6 @@ serve(async (req) => {
           calendar_events: permissionsData.calendar_events ?? true,
           class_routine: permissionsData.class_routine ?? true,
           messaging: permissionsData.messaging ?? true,
-          leave_management: permissionsData.leave_management ?? true,
-          published_results: permissionsData.published_results ?? true,
-          student_id_cards: permissionsData.student_id_cards ?? true,
-          teacher_performance: permissionsData.teacher_performance ?? true,
-          chapter_performance: permissionsData.chapter_performance ?? true,
         };
       }
     }
@@ -185,10 +180,6 @@ serve(async (req) => {
         messaging: permissionsData?.messaging ?? true,
         class_routine: permissionsData?.class_routine ?? true,
         calendar_events: permissionsData?.calendar_events ?? true,
-        leave_management: permissionsData?.leave_management ?? true,
-        published_results: permissionsData?.published_results ?? true,
-        student_id_cards: permissionsData?.student_id_cards ?? true,
-        teacher_performance: permissionsData?.teacher_performance ?? true,
       };
     }
 

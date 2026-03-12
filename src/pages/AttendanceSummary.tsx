@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Calendar, TrendingUp, Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -121,22 +122,6 @@ export default function AttendanceSummary() {
 
   const stats = calculateStats();
 
-  const { data: schoolDays = [] } = useQuery({
-    queryKey: ["school-days-summary", format(selectedMonth, "yyyy-MM"), user?.center_id],
-    queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase
-        .from("school_days")
-        .select("date, is_school_day")
-        .eq("center_id", user.center_id)
-        .gte("date", format(startOfMonth(selectedMonth), "yyyy-MM-dd"))
-        .lte("date", format(endOfMonth(selectedMonth), "yyyy-MM-dd"));
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id
-  });
-
   const daysInMonth = eachDayOfInterval({
     start: startOfMonth(selectedMonth),
     end: endOfMonth(selectedMonth) });
@@ -237,39 +222,26 @@ export default function AttendanceSummary() {
                 const { status, remarks } = getAttendanceStatus(dateStr, selectedStudent);
                 const isAbsentWithLeave = status === 'absent' && remarks?.includes('Approved Leave');
 
-                const schoolDayConfig = schoolDays.find(sd => sd.date === dateStr);
-                const isSchoolDay = schoolDayConfig ? schoolDayConfig.is_school_day : false;
-                const isMissingAttendance = isSchoolDay && status === 'none' && isPast(date);
-
                 return (
                   <TooltipProvider key={dateStr}>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
                           className={cn(
-                            "aspect-square rounded-lg flex items-center justify-center text-sm font-medium cursor-pointer transition-transform hover:scale-110 relative",
-                            isAbsentWithLeave && "ring-2 ring-orange-400 ring-offset-2",
-                            isMissingAttendance && "border-2 border-dashed border-red-400"
+                            "aspect-square rounded-lg flex items-center justify-center text-sm font-medium cursor-pointer transition-transform hover:scale-110",
+                            isAbsentWithLeave && "ring-2 ring-orange-400 ring-offset-2"
                           )}
                           style={{
-                            backgroundColor: status === 'present' ? colors.present : (status === 'absent' || isMissingAttendance) ? colors.absent : colors.none,
-                            color: (status !== 'none' || isMissingAttendance) ? 'white' : 'inherit' }}
-                          onClick={() => (remarks || isMissingAttendance) && setSelectedDayDetail({
-                            date: dateStr,
-                            remarks: isMissingAttendance ? "School Day: Attendance Not Recorded (Default Absent)" : remarks
-                          })}
+                            backgroundColor: status === 'present' ? colors.present : status === 'absent' ? colors.absent : colors.none,
+                            color: status !== 'none' ? 'white' : 'inherit' }}
+                          onClick={() => remarks && setSelectedDayDetail({ date: dateStr, remarks })}
                         >
                           {format(date, 'd')}
-                          {isMissingAttendance && (
-                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-600 rounded-full" />
-                          )}
                         </div>
                       </TooltipTrigger>
-                      {(remarks || isMissingAttendance) && (
+                      {remarks && (
                         <TooltipContent className="bg-card/90 backdrop-blur-md border-muted-foreground/10 rounded-xl p-3 shadow-strong max-w-xs">
-                          <p className="text-xs font-bold leading-relaxed">
-                            {isMissingAttendance ? "Attendance Not Recorded" : remarks}
-                          </p>
+                          <p className="text-xs font-bold leading-relaxed">{remarks}</p>
                         </TooltipContent>
                       )}
                     </Tooltip>

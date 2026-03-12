@@ -78,6 +78,7 @@ export default function TeacherAttendancePage() {
       const { data, error } = await supabase
         .from("teacher_attendance")
         .select("*")
+        .eq("center_id", user.center_id)
         .in("teacher_id", teacherIds)
         .eq("date", dateStr);
       if (error) throw error;
@@ -88,10 +89,11 @@ export default function TeacherAttendancePage() {
   const { data: approvedLeaves = [] } = useQuery({
     queryKey: ["teacher-approved-leaves", dateStr, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("leave_applications")
         .select("teacher_id, leave_categories(name)")
-        .eq("center_id", user?.center_id!)
+        .eq("center_id", user.center_id)
         .eq("status", "approved")
         .lte("start_date", dateStr)
         .gte("end_date", dateStr);
@@ -108,8 +110,8 @@ export default function TeacherAttendancePage() {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("teacher_attendance")
-        .select("*, teachers(name)")
-        .eq("teachers.center_id", user.center_id);
+        .select("*, teachers!inner(name)")
+        .eq("center_id", user.center_id);
       if (error) throw error;
       return data;
     },

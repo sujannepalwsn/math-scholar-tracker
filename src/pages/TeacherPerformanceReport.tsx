@@ -108,7 +108,7 @@ export default function TeacherPerformanceReport() {
     queryKey: ["evaluations-report", user?.center_id, range.start, range.end, selectedTeacher, user?.role, user?.teacher_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("student_chapters").select("*").gte("completed_at", range.start).lte("completed_at", range.end);
+      let query = supabase.from("student_chapters").select("*").eq("center_id", user.center_id).gte("completed_at", range.start).lte("completed_at", range.end);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('recorded_by_teacher_id', user.teacher_id);

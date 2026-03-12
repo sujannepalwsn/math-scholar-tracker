@@ -84,7 +84,7 @@ export default function MeetingManagement() {
 
     // First, clear all existing attendees for this meeting to ensure a clean slate
     // This simplifies logic by not having to figure out which ones to remove vs update
-    await supabase.from('meeting_attendees').delete().eq('meeting_id', meetingData.id);
+    await supabase.from('meeting_attendees').delete().eq('meeting_id', meetingData.id).eq('center_id', user.center_id!);
 
     const attendeesToInsert: TablesInsert<'meeting_attendees'>[] = [];
 
@@ -108,6 +108,7 @@ export default function MeetingManagement() {
             meeting_id: meetingData.id,
             student_id: pu.student_id,
             user_id: pu.id, // Link parent user ID
+            center_id: user.center_id!,
             attendance_status: 'pending' });
         }
       });
@@ -132,6 +133,7 @@ export default function MeetingManagement() {
             meeting_id: meetingData.id,
             teacher_id: tu.teacher_id,
             user_id: tu.id, // Link teacher user ID
+            center_id: user.center_id!,
             attendance_status: 'pending' });
         }
       });
@@ -144,6 +146,16 @@ export default function MeetingManagement() {
       if (attendeeInsertError) {
         console.error("Error inserting meeting attendees:", attendeeInsertError);
         toast.error("Failed to save meeting attendees.");
+      } else {
+        // Notify attendees
+        const userNotifications = attendeesToInsert.map(a => ({
+          user_id: a.user_id,
+          center_id: user.center_id!,
+          title: "New Meeting Scheduled",
+          message: `${meetingData.title} on ${format(new Date(meetingData.meeting_date), "MMM d, h:mm a")}`,
+          type: "exam" // Reusing exam/calendar icon
+        }));
+        await supabase.from("notifications").insert(userNotifications);
       }
     }
 
@@ -197,7 +209,7 @@ export default function MeetingManagement() {
               CREATE SESSION
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-labelledby="meeting-form-title" aria-describedby="meeting-form-description">
+          <DialogContent className="max-w-2xl max-h-[90vh]" aria-labelledby="meeting-form-title" aria-describedby="meeting-form-description">
             <DialogHeader>
               <DialogTitle id="meeting-form-title" className="text-2xl font-black tracking-tight">{editingMeeting ? "Update Consultation" : "Schedule New Assembly"}</DialogTitle>
               <DialogDescription id="meeting-form-description" className="font-medium">

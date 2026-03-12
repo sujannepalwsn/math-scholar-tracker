@@ -31,10 +31,10 @@ const AdminFinance = () => {
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         // Teachers only see invoices for their assigned grades
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', user.center_id);
         const grades = assignments?.map(a => a.grade) || [];
         if (grades.length > 0) {
-          const { data: gradeStudents } = await supabase.from('students').select('id').in('grade', grades);
+          const { data: gradeStudents } = await supabase.from('students').select('id').in('grade', grades).eq('center_id', user.center_id);
           const studentIds = gradeStudents?.map(s => s.id) || [];
           query = query.in('student_id', studentIds);
         }
@@ -60,10 +60,10 @@ const AdminFinance = () => {
         .eq('center_id', user.center_id);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', user.center_id);
         const grades = assignments?.map(a => a.grade) || [];
         if (grades.length > 0) {
-          const { data: gradeStudents } = await supabase.from('students').select('id').in('grade', grades);
+          const { data: gradeStudents } = await supabase.from('students').select('id').in('grade', grades).eq('center_id', user.center_id);
           const studentIds = gradeStudents?.map(s => s.id) || [];
           invQuery = invQuery.in('student_id', studentIds);
         }
@@ -80,6 +80,7 @@ const AdminFinance = () => {
       const { data, error } = await supabase
         .from('payments')
         .select('amount')
+        .eq('center_id', user.center_id)
         .in('invoice_id', invoiceIds); // Filter payments by invoice_id
 
       if (error) throw error;

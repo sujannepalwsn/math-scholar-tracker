@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import CenterLogo from "./CenterLogo";
-import { Footer } from "./Footer";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 
@@ -16,30 +15,23 @@ const navItems: Array<{
   label: string;
   icon: React.ElementType;
   role?: 'admin' | 'center' | 'parent' | 'teacher';
-  featureName?: string;
   unreadCount?: number;
-  category?: 'Academic Sections' | 'Administration Section' | 'Reporting and Communication Sections';
+  category?: 'Academics' | 'Administration' | 'Reports and Communications';
 }> = [
   { to: "/parent-dashboard", label: "Dashboard", icon: Home, role: 'parent' as const },
-
-  // Academics Group
-  { to: "/parent-lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'parent' as const, featureName: 'lesson_tracking', category: 'Academic Sections' },
-  { to: "/parent-results", label: "Exam Results", icon: GraduationCap, role: 'parent' as const, featureName: 'published_results', category: 'Academic Sections' },
-  { to: "/parent-homework", label: "Homework", icon: Book, role: 'parent' as const, featureName: 'homework_management', category: 'Academic Sections' },
-  { to: "/parent-activities", label: "Activities", icon: Paintbrush, role: 'parent' as const, featureName: 'preschool_activities', category: 'Academic Sections' },
-  { to: "/parent-discipline", label: "Discipline", icon: AlertTriangle, role: 'parent' as const, featureName: 'discipline_issues', category: 'Academic Sections' },
-
-  // Reports and Communications Group
-  { to: "/parent-student-report", label: "Academic Report", icon: BarChart3, role: 'parent' as const, featureName: 'student_report', category: 'Reporting and Communication Sections' },
-  { to: "/parent-finance", label: "Finance", icon: DollarSign, role: 'parent' as const, featureName: 'finance', category: 'Reporting and Communication Sections' },
-  { to: "/parent-chapter-rating", label: "Chapter Rating", icon: Star, role: 'parent' as const, featureName: 'lesson_tracking', category: 'Reporting and Communication Sections' },
-  { to: "/parent-meetings", label: "Meetings", icon: Video, role: 'parent' as const, featureName: 'meetings_management', category: 'Reporting and Communication Sections' },
-  { to: "/parent-messages", label: "Messages", icon: MessageSquare, role: 'parent' as const, featureName: 'messaging', category: 'Reporting and Communication Sections' },
-  { to: "/parent-calendar", label: "Calendar", icon: Calendar, role: 'parent' as const, featureName: 'calendar_events', category: 'Reporting and Communication Sections' },
-
-  // Administration Group
-  { to: "/parent-leave", label: "Leave Applications", icon: Plane, role: 'parent' as const, featureName: 'leave_management', category: 'Administration Section' },
-  { to: "/parent-settings", label: "Settings", icon: Settings, role: 'parent' as const, category: 'Administration Section' },
+  { to: "/parent-lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'parent' as const, category: 'Academics' },
+  { to: "/parent-student-report", label: "Academic Report", icon: BarChart3, role: 'parent' as const, category: 'Academics' },
+  { to: "/parent-results", label: "Exam Results", icon: GraduationCap, role: 'parent' as const, category: 'Academics' },
+  { to: "/parent-homework", label: "Homework", icon: Book, role: 'parent' as const, category: 'Academics' },
+  { to: "/parent-activities", label: "Activities", icon: Paintbrush, role: 'parent' as const, category: 'Academics' },
+  { to: "/parent-discipline", label: "Discipline", icon: AlertTriangle, role: 'parent' as const, category: 'Academics' },
+  { to: "/parent-finance", label: "Finance", icon: DollarSign, role: 'parent' as const, category: 'Reports and Communications' },
+  { to: "/parent-meetings", label: "Meetings", icon: Video, role: 'parent' as const, category: 'Reports and Communications' },
+  { to: "/parent-messages", label: "Messages", icon: MessageSquare, role: 'parent' as const, category: 'Reports and Communications' },
+  { to: "/parent-chapter-rating", label: "Chapter Rating", icon: Star, role: 'parent' as const, category: 'Reports and Communications' },
+  { to: "/parent-calendar", label: "Calendar", icon: Calendar, role: 'parent' as const, category: 'Reports and Communications' },
+  { to: "/parent-leave", label: "Leave Applications", icon: Plane, role: 'parent' as const, category: 'Reports and Communications' },
+  { to: "/parent-settings", label: "Settings", icon: Settings, role: 'parent' as const, category: 'Administration' },
 ];
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
@@ -81,13 +73,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     item.to === "/parent-messages" ? { ...item, unreadCount: unreadMessageCount } : item
   );
 
-  const filteredNavItems = updatedNavItems.filter(item => {
-    if (item.featureName && user?.centerPermissions) {
-      return user.centerPermissions[item.featureName] !== false;
-    }
-    return true;
-  });
-
   const headerContent = (
     <CenterLogo size="md" showName={true} />
   );
@@ -107,7 +92,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
       <Sidebar
-        navItems={filteredNavItems}
+        navItems={updatedNavItems}
         headerContent={headerContent}
         footerContent={footerContent}
         onCollapseChange={setSidebarCollapsed}
@@ -123,22 +108,18 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       </header>
 
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-200 flex flex-col",
+        "flex-1 overflow-y-auto bg-background transition-all duration-200",
         "md:h-screen",
         "pt-16 md:pt-0",
+        "px-4 pb-20 md:p-6 lg:p-8",
         sidebarCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
-        <div className="flex-1 px-4 pb-20 md:p-6 lg:p-8">
-          <div className="page-enter max-w-7xl mx-auto">
-            {children}
-          </div>
-        </div>
-        <div className="px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
-          <Footer />
+        <div className="page-enter max-w-7xl mx-auto">
+          {children}
         </div>
       </main>
 
-      <BottomNav navItems={filteredNavItems} />
+      <BottomNav navItems={updatedNavItems} />
     </div>
   );
 }

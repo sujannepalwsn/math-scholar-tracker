@@ -80,20 +80,11 @@ export default function PreschoolActivities() {
     queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      // First get student IDs for this center
-      const { data: centerStudents } = await supabase
-        .from("students")
-        .select("id")
-        .eq("center_id", user.center_id);
-      
-      if (!centerStudents || centerStudents.length === 0) return [];
-      
-      const studentIds = centerStudents.map(s => s.id);
       
       let query = supabase
         .from("student_activities")
-        .select("*, students(name, grade, center_id), activities!inner(*), activity_types(name)")
-        .in("student_id", studentIds);
+        .select("*, students!inner(name, grade, center_id), activities!inner(*), activity_types(name)")
+        .eq("center_id", user.center_id);
 
       if (user?.role === 'teacher') {
         query = query.eq('activities.created_by', user.id);
@@ -167,6 +158,7 @@ export default function PreschoolActivities() {
       // Then create student_activity records for all selected students
       const studentActivityRecords = selectedStudentIds.map(sid => ({
         student_id: sid,
+        center_id: user.center_id,
         activity_id: activity.id,
         activity_type_id: activityTypeId,
         involvement_score: involvementRating }));

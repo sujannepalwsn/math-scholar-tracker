@@ -1,5 +1,5 @@
-import React from "react";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import React, { useEffect } from "react";
+import { Bell, CheckCheck, Trash2, MessageSquare, BookOpen, GraduationCap, Calendar, CheckCircle2, Info, User, Clock } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,56 +15,130 @@ export default function Notifications() {
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ["all-notifications", user?.center_id],
+    queryKey: ["all-notifications", user?.center_id, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase
+      if (!user?.center_id || !user?.id) return [];
+
+      // Fetch user specific notifications
+      const { data: userNotifs, error } = await supabase
         .from("notifications")
         .select("*")
         .eq("center_id", user.center_id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(50);
       if (error) throw error;
-      return data || [];
+
+      // Fetch broadcast messages
+      let broadcastQuery = supabase
+        .from("broadcast_messages")
+        .select("*")
+        .eq("center_id", user.center_id);
+
+      if (user.role === 'teacher') {
+        broadcastQuery = broadcastQuery.in('target_audience', ['all_teachers']);
+      } else if (user.role === 'parent') {
+        broadcastQuery = broadcastQuery.in('target_audience', ['all_parents']);
+        // Grade filtering for parents would be more complex, but we'll include all for now
+        // to ensure visibility, as the RLS should protect grade-specific ones anyway.
+      }
+
+      const { data: broadcasts, error: bError } = await broadcastQuery
+        .order("sent_at", { ascending: false })
+        .limit(50);
+      if (bError) throw bError;
+
+      const mappedBroadcasts = (broadcasts || []).map(b => ({
+        id: b.id,
+        center_id: b.center_id,
+        user_id: user.id,
+        title: "Broadcast Announcement",
+        message: b.message_text,
+        type: "broadcast",
+        is_read: false,
+        created_at: b.sent_at || b.created_at,
+        link: null
+      }));
+
+      const combined = [...(userNotifs || []), ...mappedBroadcasts].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      return combined.slice(0, 100);
     },
-    enabled: !!user?.center_id,
+    enabled: !!user?.center_id && !!user?.id,
+    refetchInterval: 10000, // Real-timeish polling
   });
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!user?.id || !user?.center_id) return;
+    const channel = supabase
+      .channel('notifications-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ["all-notifications"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, user?.center_id]);
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      if (!user?.center_id) return;
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", id)
+        .eq("center_id", user.center_id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-notifications"] }),
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.center_id) return;
-      await supabase.from("notifications").update({ is_read: true }).eq("center_id", user.center_id).eq("is_read", false);
+      if (!user?.center_id || !user?.id) return;
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("center_id", user.center_id)
+        .eq("user_id", user.id)
+        .eq("is_read", false);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-notifications"] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("notifications").delete().eq("id", id);
+      if (!user?.center_id) return;
+      await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", id)
+        .eq("center_id", user.center_id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-notifications"] }),
   });
 
   const unreadCount = notifications.filter((n: any) => !n.is_read).length;
 
-  const getTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      student: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      attendance: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      marks: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-      exam: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-      leave_request: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-      leave_status: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-      info: "bg-muted text-muted-foreground",
+  const getTypeConfig = (type: string) => {
+    const configs: Record<string, { color: string; icon: any }> = {
+      student: { color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: User },
+      attendance: { color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", icon: CheckCircle2 },
+      marks: { color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", icon: GraduationCap },
+      exam: { color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400", icon: Calendar },
+      leave_request: { color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icon: Clock },
+      leave_status: { color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: CheckCircle2 },
+      broadcast: { color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400", icon: MessageSquare },
+      homework: { color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", icon: BookOpen },
+      info: { color: "bg-muted text-muted-foreground", icon: Info },
     };
-    return colors[type] || colors.info;
+    return configs[type] || configs.info;
   };
 
   return (
@@ -89,39 +163,45 @@ export default function Notifications() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {notifications.map((n: any) => (
-            <Card key={n.id} className={cn("transition-colors", !n.is_read && "border-primary/30 bg-primary/5")}>
-              <CardContent className="p-4 flex items-start gap-3">
-                <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", getTypeColor(n.type))}>
-                  <Bell className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className={cn("text-sm text-foreground", !n.is_read && "font-bold")}>{n.title}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{n.message}</p>
+          {notifications.map((n: any) => {
+            const config = getTypeConfig(n.type);
+            const Icon = config.icon;
+            return (
+              <Card key={n.id} className={cn("transition-all duration-300 hover:shadow-soft", !n.is_read && "border-primary/30 bg-primary/5 shadow-soft")}>
+                <CardContent className="p-4 flex items-start gap-4">
+                  <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center shrink-0", config.color)}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <p className={cn("text-sm text-foreground font-black tracking-tight", !n.is_read && "text-primary")}>{n.title}</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{n.message}</p>
+                      </div>
+                      <Badge variant="secondary" className="text-[9px] uppercase font-black tracking-widest px-2 py-0.5 rounded-md">
+                        {n.type}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] shrink-0">
-                      {n.type}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="text-[11px] text-muted-foreground">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                    </span>
-                    {!n.is_read && (
-                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => markReadMutation.mutate(n.id)}>
-                        Mark read
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-muted/20">
+                      <div className="flex items-center gap-4">
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                        </span>
+                        {!n.is_read && (
+                          <Button variant="ghost" size="sm" className="h-6 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10" onClick={() => markReadMutation.mutate(n.id)}>
+                            Mark as Read
+                          </Button>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => deleteMutation.mutate(n.id)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive" onClick={() => deleteMutation.mutate(n.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

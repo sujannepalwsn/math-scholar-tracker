@@ -9,6 +9,7 @@ import { cn, formatCurrency, safeFormatDate } from "@/lib/utils"
 import { KPICard } from "@/components/dashboard/KPICard"
 import { AlertList } from "@/components/dashboard/AlertList"
 import CenterLogo from "@/components/CenterLogo";
+import NotificationBell from "@/components/NotificationBell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -69,94 +70,98 @@ const ParentDashboardContent = () => {
   const activeStudentId = selectedStudentId || user?.student_id;
 
   const { data: student } = useQuery({
-    queryKey: ['student', activeStudentId],
+    queryKey: ['student', activeStudentId, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return null;
-      const { data, error } = await supabase.from('students').select('*').eq('id', activeStudentId).single();
+      if (!activeStudentId || !user?.center_id) return null;
+      const { data, error } = await supabase.from('students').select('*').eq('id', activeStudentId).eq('center_id', user.center_id).single();
       if (error) throw error;
       return data;
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   const { data: attendance = [] } = useQuery({
-    queryKey: ['attendance', activeStudentId, dateRange.from, dateRange.to],
+    queryKey: ['attendance', activeStudentId, dateRange.from, dateRange.to, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
+      if (!activeStudentId || !user?.center_id) return [];
       const { data, error } = await supabase
         .from('attendance')
         .select('*')
         .eq('student_id', activeStudentId)
+        .eq('center_id', user.center_id)
         .gte('date', dateRange.from)
         .lte('date', dateRange.to)
         .order('date', { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   const { data: testResults = [] } = useQuery({
-    queryKey: ['test-results-parent-dashboard', activeStudentId, dateRange.from, dateRange.to],
+    queryKey: ['test-results-parent-dashboard', activeStudentId, dateRange.from, dateRange.to, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
+      if (!activeStudentId || !user?.center_id) return [];
       const { data, error } = await supabase
         .from('test_results')
         .select('*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions)')
         .eq('student_id', activeStudentId)
+        .eq('center_id', user.center_id)
         .gte('date_taken', dateRange.from)
         .lte('date_taken', dateRange.to)
         .order('date_taken', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   const { data: homeworkStatus = [] } = useQuery({
-    queryKey: ['student-homework-records', activeStudentId, dateRange.from, dateRange.to],
+    queryKey: ['student-homework-records', activeStudentId, dateRange.from, dateRange.to, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
+      if (!activeStudentId || !user?.center_id) return [];
       const { data, error } = await supabase
         .from('student_homework_records')
         .select('*, homework(*)')
         .eq('student_id', activeStudentId)
+        .eq('center_id', user.center_id)
         .gte('created_at', `${dateRange.from}T00:00:00`)
         .lte('created_at', `${dateRange.to}T23:59:59`)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   const { data: invoices = [] } = useQuery({
-    queryKey: ['student-invoices-dashboard', activeStudentId],
+    queryKey: ['student-invoices-dashboard', activeStudentId, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
-      const { data, error } = await supabase.from('invoices').select('*').eq('student_id', activeStudentId);
+      if (!activeStudentId || !user?.center_id) return [];
+      const { data, error } = await supabase.from('invoices').select('*').eq('student_id', activeStudentId).eq('center_id', user.center_id);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   const { data: lessonRecords = [] } = useQuery({
-    queryKey: ['student-lesson-records', activeStudentId],
+    queryKey: ['student-lesson-records', activeStudentId, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
+      if (!activeStudentId || !user?.center_id) return [];
       const { data, error } = await supabase.from('student_chapters').select(`
         *,
         lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url, grade, notes),
         recorded_by_teacher:recorded_by_teacher_id(name)
-      `).eq('student_id', activeStudentId).order('completed_at', { ascending: false });
+      `).eq('student_id', activeStudentId).eq('center_id', user.center_id).order('completed_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   // Fetch activities (participations)
   const { data: preschoolActivities = [] } = useQuery({
-    queryKey: ["student-preschool-activities-report", activeStudentId, dateRange],
+    queryKey: ["student-preschool-activities-report", activeStudentId, dateRange, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
+      if (!activeStudentId || !user?.center_id) return [];
       let query = supabase.from("student_activities").select("*, activities(title, description, activity_date, photo_url, video_url, activity_type_id, activity_types(name))")
         .eq("student_id", activeStudentId)
+        .eq("center_id", user.center_id)
         .gte("created_at", `${dateRange.from}T00:00:00`)
         .lte("created_at", `${dateRange.to}T23:59:59`);
 
@@ -164,15 +169,16 @@ const ParentDashboardContent = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   // Fetch discipline issues
   const { data: disciplineIssues = [] } = useQuery({
-    queryKey: ["student-discipline-issues-report", activeStudentId, dateRange],
+    queryKey: ["student-discipline-issues-report", activeStudentId, dateRange, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
+      if (!activeStudentId || !user?.center_id) return [];
       let query = supabase.from("discipline_issues").select("*, discipline_categories(name)")
         .eq("student_id", activeStudentId)
+        .eq("center_id", user.center_id)
         .gte("issue_date", dateRange.from)
         .lte("issue_date", dateRange.to);
 
@@ -180,30 +186,32 @@ const ParentDashboardContent = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   // Fetch payments
   const { data: payments = [] } = useQuery({
-    queryKey: ["student-payments-report", activeStudentId, dateRange],
+    queryKey: ["student-payments-report", activeStudentId, dateRange, user?.center_id],
     queryFn: async () => {
-      if (!activeStudentId) return [];
+      if (!activeStudentId || !user?.center_id) return [];
       const { data: invoices, error: invError } = await supabase
         .from('invoices')
         .select('id')
-        .eq('student_id', activeStudentId);
+        .eq('student_id', activeStudentId)
+        .eq('center_id', user.center_id);
 
       if (invError) throw invError;
       if (!invoices || invoices.length === 0) return [];
 
       const invoiceIds = invoices.map(inv => inv.id);
       const { data, error } = await supabase.from("payments").select("*")
+        .eq("center_id", user.center_id)
         .in("invoice_id", invoiceIds)
         .gte("payment_date", dateRange.from)
         .lte("payment_date", dateRange.to);
       if (error) throw error;
       return data as Payment[];
     },
-    enabled: !!activeStudentId });
+    enabled: !!activeStudentId && !!user?.center_id });
 
   // Fetch all lesson plans for context
   const { data: allLessonPlans = [] } = useQuery({
@@ -393,10 +401,7 @@ const ParentDashboardContent = () => {
               </SelectContent>
             </Select>
           )}
-          <Button variant="ghost" size="icon" className="relative bg-white shadow-soft rounded-xl">
-            <Bell className="h-5 w-5 text-slate-600" />
-            <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full border-2 border-white" />
-          </Button>
+          <NotificationBell />
           <div className="flex items-center gap-3 bg-white p-1.5 pr-4 rounded-2xl shadow-soft">
             <div className="h-9 w-9 bg-primary/10 rounded-xl flex items-center justify-center overflow-hidden">
                <Users className="h-5 w-5 text-primary" />

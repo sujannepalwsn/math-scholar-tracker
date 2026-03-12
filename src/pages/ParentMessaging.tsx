@@ -22,9 +22,9 @@ export default function ParentMessaging() {
 
   // Fetch conversation for parent
   const { data: conversation, isLoading: conversationLoading } = useQuery({
-    queryKey: ["parent-conversation", user?.id],
+    queryKey: ["parent-conversation", user?.id, user?.center_id],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!user?.id || !user?.center_id) return null;
       const { data, error } = await supabase
         .from("chat_conversations")
         .select(`
@@ -33,11 +33,12 @@ export default function ParentMessaging() {
           centers:center_id(id, name)
         `)
         .eq("parent_user_id", user.id)
+        .eq("center_id", user.center_id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id });
+    enabled: !!user?.id && !!user?.center_id });
 
   // Fetch messages
   const { data: messages = [], isLoading: messagesLoading } = useQuery({

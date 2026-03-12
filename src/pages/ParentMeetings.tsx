@@ -36,8 +36,9 @@ export default function ParentMeetings() {
 
   // Fetch meetings relevant to the parent's student
   const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["parent-meetings", user.student_id],
+    queryKey: ["parent-meetings", user.student_id, user.center_id],
     queryFn: async () => {
+      if (!user.center_id) return [];
       const { data, error } = await supabase
         .from("meeting_attendees")
         .select(`
@@ -47,12 +48,13 @@ export default function ParentMeetings() {
             meeting_conclusions(conclusion_notes, recorded_at)
           )
         `)
-        .eq("student_id", user.student_id!);
+        .eq("student_id", user.student_id!)
+        .eq("center_id", user.center_id);
 
       if (error) throw error;
       return data?.filter((d: any) => d.meetings) || [];
     },
-    enabled: !!user.student_id });
+    enabled: !!user.student_id && !!user.center_id });
 
   const getStatusStyles = (status: Meeting['status']) => {
     switch (status) {

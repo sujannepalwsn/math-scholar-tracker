@@ -55,10 +55,11 @@ export default function ViewRecords() {
   const { data: students = [] } = useQuery({
     queryKey: ['students', user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase
         .from('students')
         .select('id, name, grade')
-        .eq('center_id', user?.center_id!)
+        .eq('center_id', user.center_id)
         .order('name');
       const { data, error } = await query;
       if (error) throw error;
@@ -72,6 +73,7 @@ export default function ViewRecords() {
   const { data: records, isLoading } = useQuery({
     queryKey: ["attendance-records", dateStr, gradeFilter, user?.center_id, user?.role, user?.id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       const studentIds = filteredStudents.map(s => s.id);
       if (studentIds.length === 0) return [];
       let query = supabase
@@ -83,11 +85,12 @@ export default function ViewRecords() {
           date,
           time_in,
           time_out,
-          students (
+          students!inner (
             name,
             grade
           )
         `)
+        .eq("center_id", user.center_id)
         .in("student_id", studentIds)
         .eq("date", dateStr);
 

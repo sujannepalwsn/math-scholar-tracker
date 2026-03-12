@@ -12,12 +12,12 @@ const navItems: Array<{
   label: string;
   icon: React.ElementType;
   role: 'admin' | 'center' | 'parent' | 'teacher';
-  category?: 'Academic Sections' | 'Administration Section' | 'Reporting and Communication Sections';
+  category?: 'Academics' | 'Administration' | 'Reports and Communications';
 }> = [
   { to: "/admin-dashboard", label: "Dashboard", icon: Home, role: 'admin' as const },
-  { to: "/admin/settings", label: "Settings", icon: Settings, role: 'admin' as const, category: 'Administration Section' },
-  { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'admin' as const, category: 'Administration Section' },
-  { to: "/admin/finance", label: "Finance", icon: DollarSign, role: 'admin' as const, category: 'Reporting and Communication Sections' },
+  { to: "/admin/finance", label: "Finance", icon: DollarSign, role: 'admin' as const, category: 'Reports and Communications' },
+  { to: "/admin/settings", label: "Settings", icon: Settings, role: 'admin' as const, category: 'Administration' },
+  { to: "/change-password", label: "Change Password", icon: KeyRound, role: 'admin' as const, category: 'Administration' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

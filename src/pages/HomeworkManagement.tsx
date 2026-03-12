@@ -15,7 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
-import { format } from "date-fns"
+import { format, isFuture } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
 import { cn } from "@/lib/utils"
 
@@ -65,6 +65,24 @@ export default function HomeworkManagement() {
     },
     enabled: !!user?.center_id });
 
+  const { data: teacherAssignments = [] } = useQuery({
+    queryKey: ["teacher-assignments-homework", user?.teacher_id, user?.center_id],
+    queryFn: async () => {
+      if (!user?.teacher_id || !user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("period_schedules")
+        .select("subject, grade")
+        .eq("center_id", user.center_id)
+        .eq("teacher_id", user.teacher_id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: user?.role === 'teacher' && !!user?.teacher_id && !!user?.center_id
+  });
+
+  const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
+  const assignedGrades = Array.from(new Set(teacherAssignments.map(a => a.grade))).sort();
+
   const { data: lessonPlans = [] } = useQuery({
     queryKey: ["lesson-plans-for-homework", user?.center_id, user?.teacher_id],
     queryFn: async () => {
@@ -91,32 +109,19 @@ export default function HomeworkManagement() {
     },
     enabled: !!user?.center_id });
 
-  const { data: teacherAssignments = [] } = useQuery({
-    queryKey: ["teacher-assignments", user?.teacher_id],
-    queryFn: async () => {
-      if (!user?.teacher_id) return [];
-      const { data, error } = await supabase
-        .from("period_schedules")
-        .select("subject, grade")
-        .eq("teacher_id", user.teacher_id);
-      if (error) throw error;
-      return data;
-    },
-    enabled: user?.role === 'teacher' && !!user?.teacher_id
-  });
-
-  const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
-  const assignedGrades = Array.from(new Set(teacherAssignments.map(a => a.grade))).sort();
-
   const { data: studentStatuses = [], refetch: refetchStudentStatuses } = useQuery({
-    queryKey: ["student-homework-records", selectedHomeworkForStatus?.id],
+    queryKey: ["student-homework-records", selectedHomeworkForStatus?.id, user?.center_id],
     queryFn: async () => {
-      if (!selectedHomeworkForStatus?.id) return [];
-      const { data, error } = await supabase.from("student_homework_records").select("*, students(*)").eq("homework_id", selectedHomeworkForStatus.id);
+      if (!selectedHomeworkForStatus?.id || !user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("student_homework_records")
+        .select("*, students(*)")
+        .eq("center_id", user.center_id)
+        .eq("homework_id", selectedHomeworkForStatus.id);
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedHomeworkForStatus?.id });
+    enabled: !!selectedHomeworkForStatus?.id && !!user?.center_id });
 
   const resetForm = () => {
     setTitle(""); setSubject(""); setGrade("select-grade"); setDescription(""); setDueDate(format(new Date(), "yyyy-MM-dd"));
@@ -145,14 +150,6 @@ export default function HomeworkManagement() {
       if (grade === "select-grade") throw new Error("Please select a valid grade.");
       let fileUrl: string | null = null;
       let imageUrl: string | null = null;
-      // Prevent future dates for assigning homework
-      const selectedDueDate = new Date(dueDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (selectedDueDate > today) {
-        throw new Error("You cannot assign homework for future dates. Assignments must be for today or past dates.");
-      }
-
       if (file) fileUrl = await uploadFile(file, "homework-files");
       if (image) imageUrl = await uploadFile(image, "homework-images");
       const { data: newHomework, error } = await supabase.from("homework").insert({
@@ -162,9 +159,28 @@ export default function HomeworkManagement() {
       if (error) throw error;
       const studentsInGrade = students.filter(s => s.grade === grade);
       if (studentsInGrade.length > 0) {
-        const studentHomeworkRecords = studentsInGrade.map(s => ({ student_id: s.id, homework_id: newHomework.id, status: 'assigned' as const }));
+        const studentHomeworkRecords = studentsInGrade.map(s => ({ student_id: s.id, homework_id: newHomework.id, center_id: user.center_id!, status: 'assigned' as const }));
         const { error: assignError } = await supabase.from("student_homework_records").insert(studentHomeworkRecords);
         if (assignError) throw assignError;
+
+        // Notify parents/students
+        const { data: usersToNotify } = await supabase
+          .from("users")
+          .select("id")
+          .eq("center_id", user.center_id!)
+          .in("role", ["student", "parent"])
+          .eq("student_grade", grade);
+
+        if (usersToNotify && usersToNotify.length > 0) {
+          const notifications = usersToNotify.map(u => ({
+            user_id: u.id,
+            center_id: user.center_id!,
+            title: "New Homework Assigned",
+            message: `${subject}: ${title} (Due: ${format(new Date(dueDate), "MMM d")})`,
+            type: "homework"
+          }));
+          await supabase.from("notifications").insert(notifications);
+        }
       }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["homework"] }); toast.success("Homework created!"); setIsDialogOpen(false); resetForm(); },
@@ -186,18 +202,22 @@ export default function HomeworkManagement() {
     onError: (error: any) => toast.error(error.message) });
 
   const deleteHomeworkMutation = useMutation({
-    mutationFn: async (id: string) => { await supabase.from("homework").delete().eq("id", id); },
+    mutationFn: async (id: string) => {
+      if (!user?.center_id) return;
+      await supabase.from("homework").delete().eq("id", id).eq("center_id", user.center_id);
+    },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["homework"] }); toast.success("Deleted!"); } });
 
   const updateStudentHomeworkRecordMutation = useMutation({
     mutationFn: async ({ id, status, teacher_remarks }: { id: string; status: StudentHomeworkRecord['status']; teacher_remarks: string }) => {
-      await supabase.from("student_homework_records").update({ status, teacher_remarks, submission_date: status === 'completed' || status === 'checked' ? format(new Date(), "yyyy-MM-dd") : null }).eq("id", id);
+      if (!user?.center_id) return;
+      await supabase.from("student_homework_records").update({ status, teacher_remarks, submission_date: status === 'completed' || status === 'checked' ? format(new Date(), "yyyy-MM-dd") : null }).eq("id", id).eq("center_id", user.center_id);
     },
     onSuccess: () => { refetchStudentStatuses(); toast.success("Status updated!"); } });
 
   const bulkUpdateHomeworkMutation = useMutation({
     mutationFn: async () => {
-      if (bulkSelectedStudents.length === 0) return;
+      if (bulkSelectedStudents.length === 0 || !user?.center_id) return;
       const { error } = await supabase
         .from("student_homework_records")
         .update({
@@ -205,6 +225,7 @@ export default function HomeworkManagement() {
           teacher_remarks: bulkRemarks || null,
           submission_date: bulkStatus === 'completed' || bulkStatus === 'checked' ? format(new Date(), "yyyy-MM-dd") : null
         })
+        .eq("center_id", user.center_id)
         .in("id", bulkSelectedStudents);
       if (error) throw error;
     },
@@ -222,8 +243,7 @@ export default function HomeworkManagement() {
 
   const handleManageStatusClick = (hw: Homework) => { setSelectedHomeworkForStatus(hw); setShowStatusDialog(true); };
 
-  const allUniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
-  const uniqueGrades = user?.role === 'teacher' ? assignedGrades : allUniqueGrades;
+  const uniqueGrades = user?.role === 'teacher' ? assignedGrades : Array.from(new Set(students.map(s => s.grade))).sort();
   const uniqueSubjects = Array.from(new Set(homeworkList.map(hw => hw.subject))).sort();
 
   return (
@@ -281,10 +301,19 @@ export default function HomeworkManagement() {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <Input value={subject} onChange={e => setSubject(e.target.value)} />
+                    <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Mathematics" />
                   )}
                 </div>
-                <div><Label>Grade *</Label><Select value={grade} onValueChange={setGrade}><SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger><SelectContent><SelectItem value="select-grade" disabled>Select Grade</SelectItem>{uniqueGrades.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent></Select></div>
+                <div>
+                  <Label>Grade *</Label>
+                  <Select value={grade} onValueChange={setGrade}>
+                    <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="select-grade" disabled>Select Grade</SelectItem>
+                      {uniqueGrades.map(g => <SelectItem key={g} value={g!}>{g}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Label>Link Lesson Plan</Label><Select value={lessonPlanId || "none"} onValueChange={v => setLessonPlanId(v === "none" ? null : v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">No Lesson Plan</SelectItem>{lessonPlans.map(lp => <SelectItem key={lp.id} value={lp.id}>{lp.subject}: {lp.chapter}</SelectItem>)}</SelectContent></Select>
               <Label>Description</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} />
@@ -297,8 +326,19 @@ export default function HomeworkManagement() {
                   onChange={handleFileChange}
                 />
               </div>
-              <Label>Due Date *</Label><Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-              <Button onClick={() => (editingHomework ? updateHomeworkMutation.mutate() : createHomeworkMutation.mutate())} disabled={!title || !subject || grade === "select-grade"}>{editingHomework ? "Update" : "Create"}</Button>
+              <Label>Assignment Date *</Label><Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              <Button
+                onClick={() => {
+                  if (isFuture(new Date(dueDate))) {
+                    toast.error("You cannot assign homework for future dates.");
+                    return;
+                  }
+                  editingHomework ? updateHomeworkMutation.mutate() : createHomeworkMutation.mutate();
+                }}
+                disabled={!title || !subject || grade === "select-grade" || isFuture(new Date(dueDate))}
+              >
+                {editingHomework ? "Update" : "Create"}
+              </Button>
             </div></DialogContent></Dialog>
         </div>
       </div>

@@ -10,6 +10,10 @@ import { formatCurrency } from "@/lib/utils";
 import { KPICard } from "@/components/dashboard/KPICard";
 import { AlertList } from "@/components/dashboard/AlertList";
 import { ClassSchedule } from "@/components/dashboard/ClassSchedule";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import CenterLogo from "@/components/CenterLogo";
 import NotificationBell from "@/components/NotificationBell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,12 +27,14 @@ type AttendanceRange = "weekly" | "monthly" | "yearly" | "overall";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
   const centerId = user?.center_id;
   const role = user?.role;
 
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>("weekly");
+  const [selectedVacantClass, setSelectedVacantClass] = useState<any>(null);
 
   // Compute date range based on attendance selector
   const dateRange = useMemo(() => {
@@ -98,7 +104,7 @@ export default function Dashboard() {
     queryKey: ["teacher-attendance-dashboard", centerId, today],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase.from("teacher_attendance").select("*").eq("center_id", centerId).eq("date", today);
+      const { data, error } = await supabase.from("teacher_attendance").select("*, teachers(*)").eq("center_id", centerId).eq("date", today);
       if (error) throw error;
       return data || [];
     },
@@ -190,6 +196,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("test_results")
         .select("*, students(name, grade), tests(name, total_marks, subject)")
+        .eq("center_id", centerId)
         .gte("date_taken", dateRange.from)
         .lte("date_taken", dateRange.to)
         .order("date_taken", { ascending: false });
@@ -256,6 +263,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("test_results")
         .select("date_taken, marks_obtained, tests(total_marks)")
+        .eq("center_id", centerId)
         .gte("date_taken", dateRange.from)
         .lte("date_taken", dateRange.to)
         .order("date_taken");
@@ -273,9 +281,39 @@ export default function Dashboard() {
       const dayOfWeek = new Date().getDay();
       const { data, error } = await supabase
         .from("period_schedules")
-        .select("*, teachers(name), class_periods(*)")
+        .select("*, teachers(*), class_periods(*)")
         .eq("center_id", centerId)
         .eq("day_of_week", dayOfWeek);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!centerId,
+  });
+
+  const { data: substitutions = [] } = useQuery({
+    queryKey: ["class-substitutions", centerId, today],
+    queryFn: async () => {
+      if (!centerId) return [];
+      const { data, error } = await supabase
+        .from("class_substitutions")
+        .select("*, substitute_teacher:substitute_teacher_id(name)")
+        .eq("center_id", centerId)
+        .eq("date", today);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!centerId,
+  });
+
+  const { data: leaveApplications = [] } = useQuery({
+    queryKey: ["leave-applications-dashboard", centerId],
+    queryFn: async () => {
+      if (!centerId) return [];
+      const { data, error } = await supabase
+        .from("leave_applications")
+        .select("*, teachers(name), students(name, grade), leave_categories(name)")
+        .eq("center_id", centerId)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -286,7 +324,13 @@ export default function Dashboard() {
     queryKey: ["homework-defaulters-dashboard", centerId],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase.from("student_homework_records").select("*, students(name, grade), homework(title, subject, due_date)").eq("status", "assigned").order("created_at", { ascending: false }).limit(5);
+      const { data, error } = await supabase
+        .from("student_homework_records")
+        .select("*, students(name, grade), homework(title, subject, due_date)")
+        .eq("center_id", centerId)
+        .eq("status", "assigned")
+        .order("created_at", { ascending: false })
+        .limit(5);
       if (error) throw error;
       return data || [];
     },
@@ -396,12 +440,31 @@ export default function Dashboard() {
 
   // Connect instruction grid to period_schedules with current day
   const todayClasses = useMemo(() => {
-    return periodSchedules.map((ps: any) => ({
+    return periodSchedules.map((ps: any) => {
+      const sub = substitutions.find((s: any) => s.period_schedule_id === ps.id);
+
+      const isMissingAttendance = !sub && ps.teacher_id && (() => {
+        const att = teacherAttendance.find((a: any) => a.teacher_id === ps.teacher_id);
+        if (att) return false;
+        if (!ps.teachers?.expected_check_in) return false;
+        const [h, m] = ps.teachers.expected_check_in.split(':').map(Number);
+        const cutoff = new Date(); cutoff.setHours(h, m, 0);
+        return new Date() > cutoff;
+      })();
+
+      return {
       id: ps.id,
+      teacher_id: ps.teacher_id,
+      class_period_id: ps.class_period_id,
       time: ps.class_periods ? `${ps.class_periods.start_time?.slice(0, 5)} – ${ps.class_periods.end_time?.slice(0, 5)}` : "N/A",
       grade: ps.grade,
-      teacher: ps.teachers?.name || "Unassigned",
+      teacher: sub ? `${sub.substitute_teacher?.name} (Sub)` : (ps.teachers?.name || "Unassigned"),
       subject: ps.subject,
+      isSubstitution: !!sub,
+      isVacant: !sub && (!ps.teacher_id || isMissingAttendance || (() => {
+        const att = teacherAttendance.find((a: any) => a.teacher_id === ps.teacher_id);
+        return att?.status === 'absent' || att?.status === 'leave';
+      })()),
       status: (() => {
         if (!ps.class_periods) return "upcoming" as const;
         const now = new Date();
@@ -414,8 +477,8 @@ export default function Dashboard() {
         if (nowMin >= startMin) return "running" as const;
         return "upcoming" as const;
       })(),
-    })).sort((a: any, b: any) => a.time.localeCompare(b.time));
-  }, [periodSchedules]);
+    };}).sort((a: any, b: any) => a.time.localeCompare(b.time));
+  }, [periodSchedules, substitutions, teacherAttendance]);
 
   const recentAlerts = [
     ...allAttendance
@@ -442,7 +505,102 @@ export default function Dashboard() {
       timestamp: new Date().toISOString(),
       onClick: () => navigate("/leave-management")
     }] : []),
-  ].slice(0, 6);
+    ...todayClasses.filter(c => c.isVacant && !c.isSubstitution && c.status !== 'completed').map(c => ({
+      id: `vacant-${c.id}`,
+      title: `Vacant Class: Grade ${c.grade} ${c.subject}`,
+      description: `Period ${c.time} is currently unassigned or teacher is absent.`,
+      type: "error" as const,
+      timestamp: new Date().toISOString(),
+    })),
+    ...periodSchedules.filter(ps => {
+      const att = teacherAttendance.find(a => a.teacher_id === ps.teacher_id);
+      if (att) return false; // Attendance marked
+      if (!ps.teachers?.expected_check_in) return false;
+      const [h, m] = ps.teachers.expected_check_in.split(':').map(Number);
+      const cutoff = new Date(); cutoff.setHours(h, m, 0);
+      return new Date() > cutoff;
+    }).map(ps => {
+      const cls = todayClasses.find(c => c.id === ps.id);
+      return {
+        id: `vacant-${ps.id}`, // Reuse vacant ID to trigger dialog
+        title: `Missing Attendance: ${ps.teachers?.name}`,
+        description: `Expected check-in was at ${ps.teachers?.expected_check_in}. Class: Grade ${ps.grade} ${ps.subject}`,
+        type: "warning" as const,
+        timestamp: new Date().toISOString(),
+      };
+    })
+  ].slice(0, 10);
+
+  const availableTeachers = useMemo(() => {
+    if (!selectedVacantClass) return [];
+
+    // 1. Get all present teachers today
+    const presentTeachers = teacherAttendance
+      .filter(a => a.status === 'present')
+      .map(a => a.teacher_id);
+
+    // 2. Filter out those who have a class in THIS period in period_schedules
+    const busyTeachers = periodSchedules
+      .filter(ps => ps.class_period_id === selectedVacantClass.class_period_id)
+      .map(ps => ps.teacher_id);
+
+    // 3. Filter out those who have a substitution in THIS period today
+    const busyBySub = substitutions
+      .filter(s => {
+        // If the substitution itself has the class_period_id (might not, depends on JOIN)
+        // or if we find it via period_schedules
+        const ps = periodSchedules.find(p => p.id === s.period_schedule_id);
+        // Important: check both if substitution has direct period_id OR linked period_schedule has it
+        const periodId = s.class_period_id || ps?.class_period_id || s.period_schedules?.class_period_id;
+        return periodId === selectedVacantClass.class_period_id;
+      })
+      .map(s => s.substitute_teacher_id);
+
+    return teachers.filter(t => {
+      const isPresent = presentTeachers.includes(t.id);
+      const isBusyRegular = busyTeachers.includes(t.id);
+      const isBusySub = busyBySub.includes(t.id);
+
+      return isPresent && !isBusyRegular && !isBusySub;
+    });
+  }, [selectedVacantClass, teacherAttendance, periodSchedules, substitutions, teachers]);
+
+  const assignSubstitutionMutation = useMutation({
+    mutationFn: async (teacherId: string) => {
+      if (!centerId || !selectedVacantClass) throw new Error("Missing center ID or class selection");
+
+      const { error } = await supabase.from('class_substitutions').insert({
+        center_id: centerId,
+        period_schedule_id: selectedVacantClass.id,
+        date: today,
+        substitute_teacher_id: teacherId,
+        original_teacher_id: selectedVacantClass.teacher_id || null,
+        status: 'assigned'
+      });
+      if (error) throw error;
+
+      // Create notification for the substitute teacher
+      const subTeacher = teachers.find(t => t.id === teacherId);
+      if (subTeacher?.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: subTeacher.user_id,
+          center_id: centerId,
+          title: 'New Substitution Assigned',
+          message: `You have been assigned to cover Grade ${selectedVacantClass.grade} ${selectedVacantClass.subject} at ${selectedVacantClass.time}.`,
+          type: 'info'
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["class-substitutions"] });
+      toast.success("Substitution assigned successfully!");
+      setSelectedVacantClass(null);
+    },
+    onError: (err: any) => {
+      console.error("Substitution assignment error:", err);
+      toast.error(err.message || "Failed to assign substitution");
+    }
+  });
 
   const isLoading = isStudentsLoading || isTeachersLoading;
 
@@ -466,6 +624,55 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 space-y-6 pb-24 md:pb-8">
+      {/* Substitution Dialog */}
+      <Dialog open={!!selectedVacantClass} onOpenChange={(open) => !open && setSelectedVacantClass(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">Assign Substitute</DialogTitle>
+            <DialogDescription className="font-medium">
+              Assign a teacher to cover Grade {selectedVacantClass?.grade} {selectedVacantClass?.subject} during {selectedVacantClass?.time}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Available Teachers (Present & Free)</h4>
+            <div className="border rounded-2xl overflow-hidden shadow-soft">
+              <Table>
+                <TableHeader className="bg-muted/5">
+                  <TableRow>
+                    <TableHead className="font-bold text-[10px] uppercase">Teacher</TableHead>
+                    <TableHead className="font-bold text-[10px] uppercase">Subject</TableHead>
+                    <TableHead className="text-right font-bold text-[10px] uppercase">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {availableTeachers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground italic">No available teachers found for this period.</TableCell>
+                    </TableRow>
+                  ) : (
+                    availableTeachers.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-bold">{t.name}</TableCell>
+                        <TableCell className="text-xs font-medium text-muted-foreground">{t.subject}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            className="rounded-xl font-black text-[10px] uppercase tracking-widest"
+                            onClick={() => assignSubstitutionMutation.mutate(t.id)}
+                            disabled={assignSubstitutionMutation.isPending}
+                          >
+                            Assign
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Top Header - redesigned */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -670,6 +877,59 @@ export default function Dashboard() {
             </Card>
           </div>
 
+          {/* Leave Applications Table */}
+          <Card className="border shadow-soft bg-card rounded-2xl overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-warning" /> Leave Applications
+              </CardTitle>
+              <Button variant="ghost" size="sm" className="text-xs text-primary h-7" onClick={() => navigate("/leave-management")}>
+                Manage <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/5">
+                      <TableHead className="font-bold text-[10px] uppercase">Applicant</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Type</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Period</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaveApplications.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground italic text-xs">No recent leave applications.</TableCell>
+                      </TableRow>
+                    ) : (
+                      leaveApplications.slice(0, 5).map((leave) => (
+                        <TableRow key={leave.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate("/leave-management")}>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm">{leave.teachers?.name || leave.students?.name}</span>
+                              <span className="text-[10px] text-muted-foreground uppercase">{leave.teacher_id ? 'Teacher' : `Grade ${leave.students?.grade}`}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs font-medium">{leave.leave_categories?.name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {format(new Date(leave.start_date), "MMM d")} - {format(new Date(leave.end_date), "MMM d")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={leave.status === 'approved' ? 'success' : leave.status === 'pending' ? 'warning' : 'destructive'} className="text-[9px] font-black uppercase">
+                              {leave.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Activities & Discipline Preview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Activities Preview */}
@@ -732,8 +992,16 @@ export default function Dashboard() {
 
         {/* Right Column */}
         <div className="lg:col-span-4 space-y-6">
-          <AlertList alerts={recentAlerts} onViewAll={() => navigate("/messages")} />
-          <ClassSchedule classes={todayClasses} title="Today's Classes" onViewRoutine={() => navigate("/class-routine")} />
+          <AlertList alerts={recentAlerts} onViewAll={() => navigate("/messages")} onItemClick={(a) => {
+            if (a.id.startsWith('vacant-')) {
+              const classId = a.id.replace('vacant-', '');
+              const cls = todayClasses.find(c => c.id === classId);
+              if (cls) setSelectedVacantClass(cls);
+            }
+          }} />
+          <ClassSchedule classes={todayClasses} title="Today's Classes" onViewRoutine={() => navigate("/class-routine")} onItemClick={(item) => {
+            if (item.isVacant) setSelectedVacantClass(item);
+          }} />
         </div>
       </div>
     </div>

@@ -33,15 +33,27 @@ export default function MarksEntry() {
   const [marksData, setMarksData] = useState<Record<string, Record<string, string>>>({});
 
   const { data: exams = [] } = useQuery({
-    queryKey: ["exams-entry-list", centerId],
+    queryKey: ["exams-entry-list", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("exams")
         .select("*")
         .eq("center_id", centerId)
-        .in("status", ["draft", "published"])
-        .order("created_at", { ascending: false });
+        .in("status", ["draft", "published"]);
+
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
+        const assignedGrades = assignments?.map(a => a.grade) || [];
+        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
+        const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
+        const allGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
+        if (allGrades.length > 0) {
+          query = query.in('grade', allGrades);
+        }
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -57,42 +69,29 @@ export default function MarksEntry() {
 
   const selectedExam = exams.find((e: any) => e.id === selectedExamId);
 
-  const { data: teacherAssignments = [] } = useQuery({
-    queryKey: ["teacher-assignments", user?.teacher_id],
-    queryFn: async () => {
-      if (!user?.teacher_id) return [];
-      const { data, error } = await supabase
-        .from("period_schedules")
-        .select("subject, grade")
-        .eq("teacher_id", user.teacher_id);
-      if (error) throw error;
-      return data;
-    },
-    enabled: user?.role === 'teacher' && !!user?.teacher_id
-  });
-
-  const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject)));
-
   const { data: subjects = [] } = useQuery({
-    queryKey: ["exam-subjects-entry", selectedExamId, user?.role, user?.teacher_id],
+    queryKey: ["exam-subjects-entry", selectedExamId, centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!selectedExamId) return [];
+      if (!selectedExamId || !centerId) return [];
       let query = supabase
         .from("exam_subjects")
         .select("*")
-        .eq("exam_id", selectedExamId)
-        .order("subject_name");
+        .eq("center_id", centerId)
+        .eq("exam_id", selectedExamId);
 
-      const { data, error } = await query;
-      if (error) throw error;
-
-      if (user?.role === 'teacher') {
-        return data.filter(s => assignedSubjects.includes(s.subject_name));
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        const { data: assignments } = await supabase.from('period_schedules').select('subject').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
+        const assignedSubjects = Array.from(new Set(assignments?.map(a => a.subject) || []));
+        if (assignedSubjects.length > 0) {
+          query = query.in('subject_name', assignedSubjects);
+        }
       }
 
+      const { data, error } = await query.order("subject_name");
+      if (error) throw error;
       return data;
     },
-    enabled: !!selectedExamId,
+    enabled: !!selectedExamId && !!centerId,
   });
 
   const { data: students = [] } = useQuery({
@@ -114,17 +113,18 @@ export default function MarksEntry() {
 
   // Load existing marks
   const { data: existingMarks = [] } = useQuery({
-    queryKey: ["existing-marks", selectedExamId],
+    queryKey: ["existing-marks", selectedExamId, centerId],
     queryFn: async () => {
-      if (!selectedExamId) return [];
+      if (!selectedExamId || !centerId) return [];
       const { data, error } = await supabase
         .from("exam_marks")
         .select("*")
+        .eq("center_id", centerId)
         .eq("exam_id", selectedExamId);
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedExamId,
+    enabled: !!selectedExamId && !!centerId,
   });
 
   // Initialize marks data from existing marks

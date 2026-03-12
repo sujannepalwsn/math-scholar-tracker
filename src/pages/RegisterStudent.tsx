@@ -63,14 +63,17 @@ export default function RegisterStudent() {
   const { data: students, isLoading } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("created_at", { ascending: false });
-      if (user?.role !== "admin" && user?.center_id) {
-        query = query.eq("center_id", user.center_id);
-      }
+      if (!user?.center_id) return [];
+      let query = supabase
+        .from("students")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .order("created_at", { ascending: false });
       const { data, error } = await query;
       if (error) throw error;
       return data as Student[];
-    } });
+    },
+    enabled: !!user?.center_id });
 
   // Filter students based on grade and search
   const filteredStudents = students?.filter(s => 
@@ -110,6 +113,7 @@ export default function RegisterStudent() {
   // Update
   const updateMutation = useMutation({
     mutationFn: async (student: Student) => {
+      if (!user?.center_id) return;
       const { error } = await supabase
         .from("students")
         .update({
@@ -118,7 +122,8 @@ export default function RegisterStudent() {
           school_name: student.school_name,
           parent_name: student.parent_name,
           contact_number: student.contact_number })
-        .eq("id", student.id);
+        .eq("id", student.id)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -134,7 +139,8 @@ export default function RegisterStudent() {
   // Delete
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("students").delete().eq("id", id);
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("students").delete().eq("id", id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {

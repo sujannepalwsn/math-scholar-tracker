@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import CenterLogo from "./CenterLogo";
-import { Footer } from "./Footer";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 
@@ -18,39 +17,33 @@ const navItems: Array<{
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string;
   unreadCount?: number;
-  category?: 'Academic Sections' | 'Administration Section' | 'Reporting and Communication Sections';
+  category?: 'Academics' | 'Administration' | 'Reports and Communications';
 }> = [
   { to: "/teacher-dashboard", label: "Dashboard", icon: Home, role: 'teacher' as const },
+  { to: "/teacher/take-attendance", label: "Take Attendance", icon: CheckSquare, role: 'teacher' as const, featureName: 'take_attendance', category: 'Academics' },
+  { to: "/teacher/lesson-plans", label: "Lesson Plans", icon: LayoutList, role: 'teacher' as const, featureName: 'lesson_plans', category: 'Academics' },
+  { to: "/teacher/lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'teacher' as const, featureName: 'lesson_tracking', category: 'Academics' },
+  { to: "/teacher/homework-management", label: "Homework", icon: Book, role: 'teacher' as const, featureName: 'homework_management', category: 'Academics' },
+  { to: "/teacher/test-management", label: "Tests", icon: ClipboardCheck, role: 'teacher' as const, featureName: 'test_management', category: 'Academics' },
+  { to: "/teacher/exams", label: "Exams & Results", icon: GraduationCap, role: 'teacher' as const, featureName: 'test_management', category: 'Academics' },
+  { to: "/teacher/published-results", label: "Published Results", icon: Award, role: 'teacher' as const, category: 'Academics' },
+  { to: "/teacher/marks-entry", label: "Marks Entry", icon: PenTool, role: 'teacher' as const, featureName: 'test_management', category: 'Academics' },
+  { to: "/teacher/activities", label: "Activities", icon: Paintbrush, role: 'teacher' as const, featureName: 'activities', category: 'Academics' },
+  { to: "/teacher/discipline-issues", label: "Discipline", icon: AlertTriangle, role: 'teacher' as const, featureName: 'discipline_issues', category: 'Academics' },
+  { to: "/teacher/chapter-performance", label: "Chapter Performance", icon: TrendingUp, role: 'teacher' as const, featureName: 'chapter_performance', category: 'Administration' },
+  { to: "/teacher/settings", label: "Settings", icon: Settings, role: 'teacher' as const, category: 'Administration' },
 
-  // Academics Group
-  { to: "/teacher/take-attendance", label: "Take Attendance", icon: CheckSquare, role: 'teacher' as const, featureName: 'take_attendance', category: 'Academic Sections' },
-  { to: "/teacher/class-routine", label: "Class Routine", icon: Clock, role: 'teacher' as const, featureName: 'class_routine', category: 'Academic Sections' },
-  { to: "/teacher/lesson-plans", label: "Lesson Plans", icon: LayoutList, role: 'teacher' as const, featureName: 'lesson_plans', category: 'Academic Sections' },
-  { to: "/teacher/lesson-tracking", label: "Lesson Tracking", icon: BookOpen, role: 'teacher' as const, featureName: 'lesson_tracking', category: 'Academic Sections' },
-  { to: "/teacher/homework-management", label: "Homework", icon: Book, role: 'teacher' as const, featureName: 'homework_management', category: 'Academic Sections' },
-  { to: "/teacher/test-management", label: "Tests", icon: ClipboardCheck, role: 'teacher' as const, featureName: 'test_management', category: 'Academic Sections' },
-  { to: "/teacher/exams", label: "Exams & Results", icon: GraduationCap, role: 'teacher' as const, featureName: 'test_management', category: 'Academic Sections' },
-  { to: "/teacher/published-results", label: "Published Results", icon: Award, role: 'teacher' as const, featureName: 'published_results', category: 'Academic Sections' },
-  { to: "/teacher/marks-entry", label: "Marks Entry", icon: PenTool, role: 'teacher' as const, featureName: 'test_management', category: 'Academic Sections' },
-  { to: "/teacher/activities", label: "Activities", icon: Paintbrush, role: 'teacher' as const, featureName: 'preschool_activities', category: 'Academic Sections' },
-  { to: "/teacher/preschool-activities", label: "Preschool Activities", icon: Paintbrush, role: 'teacher' as const, featureName: 'preschool_activities', category: 'Academic Sections' },
-  { to: "/teacher/discipline-issues", label: "Discipline", icon: AlertTriangle, role: 'teacher' as const, featureName: 'discipline_issues', category: 'Academic Sections' },
-
-  // Reports and Communications Group
-  { to: "/teacher/ai-insights", label: "AI Insights", icon: Brain, role: 'teacher' as const, featureName: 'ai_insights', category: 'Reporting and Communication Sections' },
-  { to: "/teacher/view-records", label: "View Records", icon: FileText, role: 'teacher' as const, featureName: 'view_records', category: 'Reporting and Communication Sections' },
-  { to: "/teacher/summary", label: "Summary", icon: BarChart3, role: 'teacher' as const, featureName: 'summary', category: 'Reporting and Communication Sections' },
-  { to: "/teacher/finance", label: "Finance", icon: DollarSign, role: 'teacher' as const, featureName: 'finance', category: 'Reporting and Communication Sections' },
-  { to: "/teacher/chapter-performance", label: "Chapter Performance", icon: TrendingUp, role: 'teacher' as const, featureName: 'chapter_performance', category: 'Reporting and Communication Sections' },
-  { to: "/teacher/attendance-summary", label: "Attendance Summary", icon: CalendarDays, role: 'teacher' as const, featureName: 'attendance_summary', category: 'Reporting and Communication Sections' },
-  { to: "/teacher/student-report", label: "Student Report", icon: User, role: 'teacher' as const, featureName: 'student_report_access', category: 'Reporting and Communication Sections' },
-  { to: "/teacher-meetings", label: "Meetings", icon: Video, role: 'teacher' as const, featureName: 'meetings_management', category: 'Reporting and Communication Sections' },
-  { to: "/teacher-messages", label: "Messages", icon: MessageSquare, role: 'teacher' as const, featureName: 'messaging', category: 'Reporting and Communication Sections' },
-  { to: "/teacher/calendar", label: "Calendar", icon: Calendar, role: 'teacher' as const, featureName: 'calendar_events', category: 'Reporting and Communication Sections' },
-
-  // Administration Group
-  { to: "/teacher/leave", label: "Leave Applications", icon: Plane, role: 'teacher' as const, featureName: 'leave_management', category: 'Administration Section' },
-  { to: "/teacher/settings", label: "Settings", icon: Settings, role: 'teacher' as const, category: 'Administration Section' },
+  { to: "/teacher/ai-insights", label: "AI Insights", icon: Brain, role: 'teacher' as const, featureName: 'ai_insights', category: 'Reports and Communications' },
+  { to: "/teacher/view-records", label: "View Records", icon: FileText, role: 'teacher' as const, featureName: 'view_records', category: 'Reports and Communications' },
+  { to: "/teacher/summary", label: "Summary", icon: BarChart3, role: 'teacher' as const, featureName: 'summary', category: 'Reports and Communications' },
+  { to: "/teacher/finance", label: "Finance", icon: DollarSign, role: 'teacher' as const, featureName: 'finance', category: 'Reports and Communications' },
+  { to: "/teacher-meetings", label: "Meetings", icon: Video, role: 'teacher' as const, featureName: 'meetings_management', category: 'Reports and Communications' },
+  { to: "/teacher-messages", label: "Messages", icon: MessageSquare, role: 'teacher' as const, featureName: 'messaging', category: 'Reports and Communications' },
+  { to: "/teacher/class-routine", label: "Class Routine", icon: Clock, role: 'teacher' as const, featureName: 'class_routine', category: 'Reports and Communications' },
+  { to: "/teacher/calendar", label: "Calendar", icon: Calendar, role: 'teacher' as const, featureName: 'calendar_events', category: 'Reports and Communications' },
+  { to: "/teacher/leave", label: "Leave Applications", icon: Plane, role: 'teacher' as const, category: 'Reports and Communications' },
+  { to: "/teacher/attendance-summary", label: "Attendance Summary", icon: CalendarDays, role: 'teacher' as const, featureName: 'attendance_summary', category: 'Reports and Communications' },
+  { to: "/teacher/student-report", label: "Student Report", icon: User, role: 'teacher' as const, featureName: 'student_report_access', category: 'Reports and Communications' },
 ];
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
@@ -110,14 +103,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   );
 
   const filteredTeacherNavItems = updatedNavItems.filter(item => {
-    // Teachers must respect both their individual permissions AND the center's permissions
-    if (item.featureName) {
-      if (user?.centerPermissions && user.centerPermissions[item.featureName] === false) {
-        return false;
-      }
-      if (user?.teacherPermissions && user.teacherPermissions[item.featureName] === false) {
-        return false;
-      }
+    if (item.featureName && user?.teacherPermissions) {
+      const permission = user.teacherPermissions[item.featureName];
+      return permission !== false;
     }
     return true;
   });
@@ -141,18 +129,14 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       </header>
 
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-200 flex flex-col",
+        "flex-1 overflow-y-auto bg-background transition-all duration-200",
         "md:h-screen",
         "pt-16 md:pt-0",
+        "px-4 pb-20 md:p-6 lg:p-8",
         sidebarCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
-        <div className="flex-1 px-4 pb-20 md:p-6 lg:p-8">
-          <div className="page-enter max-w-7xl mx-auto">
-            {children}
-          </div>
-        </div>
-        <div className="px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
-          <Footer />
+        <div className="page-enter max-w-7xl mx-auto">
+          {children}
         </div>
       </main>
 

@@ -4,17 +4,19 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
-import { eachDayOfInterval, endOfMonth, format, isFuture, isPast, isToday, startOfDay, subDays, subYears } from "date-fns"
+import { eachDayOfInterval, endOfMonth, format, isFuture, isPast, isToday, startOfDay, subDays, subYears, parseISO } from "date-fns"
 import { cn, formatCurrency, safeFormatDate } from "@/lib/utils"
 import { KPICard } from "@/components/dashboard/KPICard"
 import { AlertList } from "@/components/dashboard/AlertList"
 import { ClassSchedule } from "@/components/dashboard/ClassSchedule"
 import CenterLogo from "@/components/CenterLogo";
+import NotificationBell from "@/components/NotificationBell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
@@ -37,6 +39,7 @@ interface ChapterPerformanceGroup {
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const today = new Date().toISOString().split("T")[0];
   const teacherId = user?.teacher_id;
   const centerId = user?.center_id;
@@ -52,17 +55,64 @@ export default function TeacherDashboard() {
   });
 
   const [selectedChapterDetail, setSelectedChapterDetail] = useState<ChapterPerformanceGroup | null>(null);
+  const [viewingLessonPlan, setViewingLessonPlan] = useState<LessonPlan | null>(null);
   const [selectedDisciplineIssue, setSelectedDisciplineIssue] = useState<any>(null);
 
   // Data Fetching
-  const { data: teacherStudents = [], isLoading: isStudentsLoading } = useQuery({
-    queryKey: ["teacher-students", teacherId, user?.role],
+  const { data: teacherInfo } = useQuery({
+    queryKey: ["teacher-info", teacherId],
     queryFn: async () => {
-      if (!teacherId) return [];
+      if (!teacherId) return null;
+      const { data, error } = await supabase.from("teachers").select("*").eq("id", teacherId).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!teacherId });
+
+  const { data: todayAttendance } = useQuery({
+    queryKey: ["teacher-attendance-today", teacherId, today],
+    queryFn: async () => {
+      if (!teacherId) return null;
+      const { data, error } = await supabase.from("teacher_attendance").select("*").eq("teacher_id", teacherId).eq("date", today).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!teacherId });
+
+  const markAttendanceMutation = useMutation({
+    mutationFn: async (type: 'check-in' | 'check-out') => {
+      if (!teacherId || !centerId) return;
+      const now = new Date();
+      const timeStr = format(now, "HH:mm:ss");
+
+      if (type === 'check-in') {
+        const { error } = await supabase.from("teacher_attendance").upsert({
+          teacher_id: teacherId,
+          center_id: centerId,
+          date: today,
+          status: 'present',
+          time_in: timeStr }, { onConflict: 'teacher_id,date' });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("teacher_attendance").update({
+          time_out: timeStr }).eq("teacher_id", teacherId).eq("date", today);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-attendance-today"] });
+      toast.success("Attendance marked successfully!");
+    },
+    onError: (err: any) => toast.error(err.message) });
+
+  const { data: teacherStudents = [], isLoading: isStudentsLoading } = useQuery({
+    queryKey: ["teacher-students", teacherId, user?.role, centerId],
+    queryFn: async () => {
+      if (!teacherId || !centerId) return [];
       let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
 
       if (user?.role === 'teacher') {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', teacherId);
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', teacherId).eq('center_id', centerId);
         const grades = assignments?.map(a => a.grade) || [];
         if (grades.length > 0) {
           query = query.in('grade', grades);
@@ -73,17 +123,18 @@ export default function TeacherDashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!teacherId });
+    enabled: !!teacherId && !!centerId });
 
   const { data: classResults = [], isLoading: isClassResultsLoading } = useQuery({
     queryKey: ["teacher-class-performance", teacherId, dateRange.from, dateRange.to],
     queryFn: async () => {
-      if (!teacherId) return [];
+      if (!teacherId || !centerId) return [];
       // Join with tests and filter by created_by (User ID).
       // The tests table uses created_by instead of teacher_id in this schema.
       const { data, error } = await supabase
         .from("test_results")
         .select("*, students(name, grade), tests!inner(*)")
+        .eq("center_id", centerId)
         .eq("tests.created_by", user?.id)
         .gte("date_taken", dateRange.from)
         .lte("date_taken", dateRange.to);
@@ -99,42 +150,65 @@ export default function TeacherDashboard() {
   const { data: teacherSchedule = [], isLoading: isScheduleLoading } = useQuery({
     queryKey: ["teacher-schedule-dashboard", teacherId, dateRange.to],
     queryFn: async () => {
-      if (!teacherId) return [];
+      if (!teacherId || !centerId) return [];
       const dayOfWeek = new Date(dateRange.to).getDay();
-      const { data, error } = await supabase.from("period_schedules").select("*, class_periods(*)").eq("teacher_id", teacherId).eq("day_of_week", dayOfWeek);
+
+      // Get regular schedules
+      const { data: regular, error } = await supabase
+        .from("period_schedules")
+        .select("*, class_periods(*)")
+        .eq("center_id", centerId)
+        .eq("teacher_id", teacherId)
+        .eq("day_of_week", dayOfWeek);
       if (error) throw error;
-      return data || [];
+
+      // Get substitutions for today
+      const { data: subs, error: subError } = await supabase
+        .from("class_substitutions")
+        .select("*, period_schedules(*, class_periods(*))")
+        .eq("center_id", centerId)
+        .eq("substitute_teacher_id", teacherId)
+        .eq("date", dateRange.to);
+      if (subError) throw subError;
+
+      const mappedSubs = (subs || []).map(s => ({
+        ...s.period_schedules,
+        isSubstitution: true
+      }));
+
+      return [...(regular || []), ...mappedSubs];
     },
     enabled: !!teacherId });
 
   const { data: upcomingMeetings = [], isLoading: isMeetingsLoading } = useQuery({
-    queryKey: ['teacher-upcoming-meetings', teacherId],
+    queryKey: ['teacher-upcoming-meetings', teacherId, centerId],
     queryFn: async () => {
-      if (!teacherId) return [];
-      const { data, error } = await supabase.from('meeting_attendees').select('*, meetings(*)').eq('teacher_id', teacherId).order('created_at', { ascending: false });
+      if (!teacherId || !centerId) return [];
+      const { data, error } = await supabase.from('meeting_attendees').select('*, meetings(*)').eq('teacher_id', teacherId).eq('center_id', centerId).order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []).filter((att: any) => att.meetings?.meeting_date && (isFuture(new Date(att.meetings.meeting_date)) || isToday(new Date(att.meetings.meeting_date)))).slice(0, 5);
     },
-    enabled: !!teacherId });
+    enabled: !!teacherId && !!centerId });
 
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['teacher-unread-messages', user?.id],
+    queryKey: ['teacher-unread-messages', user?.id, centerId],
     queryFn: async () => {
-      if (!user?.id) return 0;
-      const { data: conversation } = await supabase.from('chat_conversations').select('id').eq('parent_user_id', user.id).maybeSingle();
+      if (!user?.id || !centerId) return 0;
+      const { data: conversation } = await supabase.from('chat_conversations').select('id').eq('parent_user_id', user.id).eq('center_id', centerId).maybeSingle();
       if (!conversation) return 0;
-      const { count } = await supabase.from('chat_messages').select('id', { count: 'exact' }).eq('conversation_id', conversation.id).eq('is_read', false).neq('sender_user_id', user.id);
+      const { count } = await supabase.from('chat_messages').select('id', { count: 'exact' }).eq('conversation_id', conversation.id).eq('center_id', centerId).eq('is_read', false).neq('sender_user_id', user.id);
       return count || 0;
     },
-    enabled: !!user?.id });
+    enabled: !!user?.id && !!centerId });
 
   const { data: homeworkToGrade = [], isLoading: isHomeworkLoading } = useQuery({
     queryKey: ["teacher-homework-to-grade", teacherId, dateRange.from, dateRange.to],
     queryFn: async () => {
-      if (!teacherId) return [];
+      if (!teacherId || !centerId) return [];
       const { data, error } = await supabase
         .from("student_homework_records")
         .select("*, students(name, grade), homework!inner(*)")
+        .eq("center_id", centerId)
         .eq("homework.teacher_id", teacherId)
         .eq("status", "submitted")
         .gte("created_at", `${dateRange.from}T00:00:00`)
@@ -189,12 +263,13 @@ export default function TeacherDashboard() {
   const { data: lessonRecords = [] } = useQuery({
     queryKey: ['teacher-lesson-records', teacherId, dateRange.from, dateRange.to],
     queryFn: async () => {
-      if (!teacherId) return [];
+      if (!teacherId || !centerId) return [];
       const { data, error } = await supabase.from('student_chapters').select(`
         *,
         lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url, grade, notes),
         recorded_by_teacher:recorded_by_teacher_id(name)
       `)
+        .eq('center_id', centerId)
         .eq('recorded_by_teacher_id', teacherId)
         .gte('completed_at', `${dateRange.from}T00:00:00`)
         .lte('completed_at', `${dateRange.to}T23:59:59`)
@@ -210,12 +285,12 @@ export default function TeacherDashboard() {
       if (!teacherId) return [];
       const { data, error } = await supabase
         .from("lesson_plans")
-        .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
+        .select("*")
         .eq("center_id", centerId)
         .eq("teacher_id", teacherId)
         .order("lesson_date", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as LessonPlan[];
     },
     enabled: !!teacherId });
 
@@ -353,14 +428,27 @@ export default function TeacherDashboard() {
       .slice(0, 50);
   }, [classResults]);
 
-  const todayClasses = teacherSchedule.map((ps: any) => ({
-    id: ps.id,
-    time: ps.class_periods ? `${ps.class_periods.start_time.slice(0, 5)} - ${ps.class_periods.end_time.slice(0, 5)}` : "N/A",
-    grade: ps.grade,
-    teacher: user?.username?.split('@')[0] || "Me",
-    subject: ps.subject,
-    status: "upcoming" as const
-  }));
+  const todayClasses = useMemo(() => {
+    return teacherSchedule.map((ps: any) => {
+      // Look for a lesson plan for this subject, grade and date
+      const matchingPlan = allLessonPlans.find(lp =>
+        lp.subject === ps.subject &&
+        lp.grade === ps.grade &&
+        lp.lesson_date === dateRange.to
+      );
+
+      return {
+        id: ps.id,
+        time: ps.class_periods ? `${ps.class_periods.start_time.slice(0, 5)} - ${ps.class_periods.end_time.slice(0, 5)}` : "N/A",
+        grade: ps.grade,
+        teacher: ps.isSubstitution ? "Substitution Coverage" : (user?.username?.split('@')[0] || "Me"),
+        subject: ps.subject,
+        status: "upcoming" as const,
+        lesson_plan_id: matchingPlan?.id,
+        isSubstitution: ps.isSubstitution
+      };
+    });
+  }, [teacherSchedule, allLessonPlans, dateRange.to, user]);
 
   const getRatingStars = (rating: number | null) => {
     if (rating === null) return "N/A";
@@ -387,6 +475,13 @@ export default function TeacherDashboard() {
       title: `Meeting today: ${att.meetings?.title}`,
       type: "warning" as const,
       timestamp: att.meetings?.meeting_date
+    })),
+    ...todayClasses.filter(c => c.isSubstitution).map(c => ({
+      id: `sub-${c.id}`,
+      title: `Substitution Coverage`,
+      description: `Grade ${c.grade} ${c.subject} at ${c.time}`,
+      type: "info" as const,
+      timestamp: today
     }))
   ];
 
@@ -402,10 +497,7 @@ export default function TeacherDashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <CenterLogo size="lg" />
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="relative bg-white shadow-soft rounded-xl">
-            <Bell className="h-5 w-5 text-slate-600" />
-            <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full border-2 border-white" />
-          </Button>
+          <NotificationBell />
           <div className="flex items-center gap-3 bg-white p-1.5 pr-4 rounded-2xl shadow-soft">
             <div className="h-9 w-9 bg-primary/10 rounded-xl flex items-center justify-center overflow-hidden">
                <Users className="h-5 w-5 text-primary" />
@@ -419,14 +511,66 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-2 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
-          <div className="p-2 bg-primary text-white rounded-lg">
-            <Home className="h-4 w-4" />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
+            <div className="p-2 bg-primary text-white rounded-lg">
+              <Home className="h-4 w-4" />
+            </div>
+            <div className="flex items-center gap-2 px-3 border-l border-slate-200 ml-2">
+               <Calendar className="h-4 w-4 text-slate-400" />
+               <span className="text-xs font-bold text-slate-600">{format(new Date(), "eee, MMM d")}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 px-3 border-l border-slate-200 ml-2">
-             <Calendar className="h-4 w-4 text-slate-400" />
-             <span className="text-xs font-bold text-slate-600">{format(new Date(), "eee, MMM d")}</span>
-          </div>
+
+          {teacherInfo && (
+            <div className="flex items-center gap-2 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
+              {(() => {
+                const now = new Date();
+                const [inH, inM] = (teacherInfo.expected_check_in || "09:00").split(":").map(Number);
+                const [outH, outM] = (teacherInfo.expected_check_out || "17:00").split(":").map(Number);
+
+                const inTime = new Date(); inTime.setHours(inH, inM, 0);
+                const outTime = new Date(); outTime.setHours(outH, outM, 0);
+
+                const withinCheckInRange = now >= inTime && now <= outTime;
+                const canCheckIn = !todayAttendance?.time_in && withinCheckInRange;
+                const canCheckOut = !!todayAttendance?.time_in && !todayAttendance.time_out && withinCheckInRange;
+
+                if (!todayAttendance?.time_in) {
+                  return (
+                    <Button
+                      size="sm"
+                      className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest bg-emerald-600"
+                      onClick={() => markAttendanceMutation.mutate('check-in')}
+                      disabled={markAttendanceMutation.isPending || !canCheckIn}
+                      title={!canCheckIn ? `Check-in allowed between ${teacherInfo.expected_check_in} and ${teacherInfo.expected_check_out}` : ""}
+                    >
+                      Check-In
+                    </Button>
+                  );
+                } else if (!todayAttendance.time_out) {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest border-rose-200 text-rose-600"
+                      onClick={() => markAttendanceMutation.mutate('check-out')}
+                      disabled={markAttendanceMutation.isPending || !canCheckOut}
+                      title={!canCheckOut ? `Check-out allowed between ${teacherInfo.expected_check_in} and ${teacherInfo.expected_check_out}` : ""}
+                    >
+                      Check-Out
+                    </Button>
+                  );
+                } else {
+                  return (
+                    <Badge variant="outline" className="h-8 border-emerald-200 text-emerald-600 font-black text-[10px] uppercase">
+                      Shift Completed
+                    </Badge>
+                  );
+                }
+              })()}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
            <Input
@@ -523,6 +667,10 @@ export default function TeacherDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <ClassSchedule
           classes={todayClasses}
+          onViewPlan={(item) => {
+            const plan = allLessonPlans.find(lp => lp.id === item.lesson_plan_id);
+            if (plan) setViewingLessonPlan(plan);
+          }}
           onViewRoutine={() => navigate("/teacher/class-routine")}
         />
         <Card className="lg:col-span-2 border-none shadow-soft bg-card/60 backdrop-blur-md rounded-2xl border border-border/20">
@@ -927,6 +1075,267 @@ export default function TeacherDashboard() {
                 ) : (
                   <p className="text-xs italic text-slate-400">No tests associated.</p>
                 )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lesson Plan View Dialog */}
+      <Dialog open={!!viewingLessonPlan} onOpenChange={(open) => !open && setViewingLessonPlan(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle>Daily Lesson Plan Details</DialogTitle>
+            <DialogDescription>Full pedagogical breakdown and roadmap.</DialogDescription>
+          </DialogHeader>
+          {viewingLessonPlan && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border p-6 rounded-3xl bg-primary/5 border-primary/10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                   <FileText className="h-24 w-24 text-primary" />
+                </div>
+                <div className="space-y-4 relative z-10">
+                  <div>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">Subject & Unit</Label>
+                    <p className="text-xl font-black text-primary leading-tight">{viewingLessonPlan.subject}</p>
+                    <p className="text-sm font-bold text-muted-foreground">{viewingLessonPlan.chapter || "N/A"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">Topic</Label>
+                    <p className="text-md font-bold text-foreground">{viewingLessonPlan.topic}</p>
+                  </div>
+                </div>
+                <div className="space-y-4 relative z-10">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">Grade</Label>
+                      <p className="text-sm font-bold">{viewingLessonPlan.grade || "All Grades"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">Period</Label>
+                      <p className="text-sm font-bold">{viewingLessonPlan.period || "N/A"}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">Date</Label>
+                    <div className="flex items-center gap-2 text-sm font-bold">
+                       <CalendarIcon className="h-4 w-4 text-primary" />
+                       {format(new Date(viewingLessonPlan.lesson_date), "EEEE, MMM do yyyy")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black flex items-center gap-2 text-primary">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    1. Learning Outcomes
+                  </h3>
+                  <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-2xl border border-muted-foreground/10 min-h-[60px]">
+                    {viewingLessonPlan.objectives || "No specific outcomes defined."}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black flex items-center gap-2 text-primary">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    2. Warm up & Review
+                  </h3>
+                  <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-2xl border border-muted-foreground/10 min-h-[60px]">
+                    {viewingLessonPlan.warm_up_review || "No review notes."}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black flex items-center gap-2 text-primary">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    3. Teaching Learning Activities
+                  </h3>
+                  <div className="space-y-2 bg-muted/30 p-4 rounded-2xl border border-muted-foreground/10 min-h-[60px]">
+                    {Array.isArray(viewingLessonPlan.learning_activities) && (viewingLessonPlan.learning_activities as string[]).length > 0 ? (
+                      (viewingLessonPlan.learning_activities as string[]).map((activity, idx) => (
+                        <div key={idx} className="flex gap-3 text-sm">
+                          <span className="font-black text-primary/40">{String.fromCharCode(97 + idx)}.</span>
+                          <span className="text-muted-foreground">{activity}</span>
+                        </div>
+                      ))
+                    ) : <p className="text-sm text-muted-foreground italic">None listed.</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black flex items-center gap-2 text-primary">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    4. Class Review / Evaluation
+                  </h3>
+                  <div className="space-y-2 bg-muted/30 p-4 rounded-2xl border border-muted-foreground/10 min-h-[60px]">
+                    {Array.isArray(viewingLessonPlan.evaluation_activities) && (viewingLessonPlan.evaluation_activities as string[]).length > 0 ? (
+                      (viewingLessonPlan.evaluation_activities as string[]).map((activity, idx) => (
+                        <div key={idx} className="flex gap-3 text-sm">
+                          <span className="font-black text-primary/40">{String.fromCharCode(97 + idx)}.</span>
+                          <span className="text-muted-foreground">{activity}</span>
+                        </div>
+                      ))
+                    ) : <p className="text-sm text-muted-foreground italic">None listed.</p>}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black flex items-center gap-2 text-primary">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    5. Assignments
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 block">Class Work</Label>
+                       <p className="text-sm text-muted-foreground">{viewingLessonPlan.class_work || "N/A"}</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-violet-500/5 border border-violet-500/10">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-violet-600 mb-2 block">Home Assignment</Label>
+                       <p className="text-sm text-muted-foreground">{viewingLessonPlan.home_assignment || "N/A"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {viewingLessonPlan.notes && (
+                  <div className="space-y-2">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">General Notes</h3>
+                    <p className="text-sm text-muted-foreground p-4 bg-muted/20 rounded-2xl border border-muted/20 italic">
+                      "{viewingLessonPlan.notes}"
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                  {viewingLessonPlan.lesson_file_url && (
+                    <Button variant="outline" size="sm" className="w-full rounded-xl" asChild>
+                      <a href={supabase.storage.from("lesson-files").getPublicUrl(viewingLessonPlan.lesson_file_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
+                        <Download className="h-4 w-4 mr-2" /> Download Attached Resource
+                      </a>
+                    </Button>
+                  )}
+                  {viewingLessonPlan.status === 'approved' && (
+                     <div className="flex items-center justify-end gap-2 text-xs font-black text-emerald-600">
+                        <Badge variant="secondary" className="bg-emerald-100 text-emerald-600 hover:bg-emerald-100 border-none">APPROVED BY PRINCIPAL</Badge>
+                     </div>
+                  )}
+                </div>
+
+                <div className="pt-6 no-print">
+                   <Button
+                     onClick={() => {
+                       const printWindow = window.open("", "_blank");
+                       printWindow?.document.write(`
+                         <html>
+                           <head>
+                             <title>Lesson Plan - ${viewingLessonPlan.subject}</title>
+                             <style>
+                               @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+                               body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
+                               .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+                               .header h1 { margin: 0; font-size: 24px; font-weight: 800; color: #4f46e5; text-transform: uppercase; }
+                               .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+                               .field { margin-bottom: 15px; }
+                               .label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+                               .value { font-size: 14px; font-weight: 700; color: #1e293b; }
+                               .section { margin-bottom: 25px; }
+                               .section-title { font-size: 12px; font-weight: 800; color: #4f46e5; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+                               .section-content { font-size: 13px; color: #334155; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; min-height: 50px; white-space: pre-wrap; }
+                               .activity-item { display: flex; gap: 10px; margin-bottom: 8px; }
+                               .activity-num { font-weight: 800; color: #4f46e5; min-width: 20px; }
+                               .footer { margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 30px; display: grid; grid-template-cols: 1fr 1fr; gap: 40px; }
+                               .signature-line { border-top: 1px solid #94a3b8; margin-top: 40px; padding-top: 8px; font-size: 10px; font-weight: 700; color: #64748b; text-align: center; text-transform: uppercase; }
+                               @media print { body { padding: 0; } .no-print { display: none; } }
+                             </style>
+                           </head>
+                           <body>
+                             <div class="header">
+                               <h1>Daily Lesson Plan</h1>
+                               <div style="text-align: right">
+                                 <div class="label">Institution</div>
+                                 <div class="value">${user?.center_name || 'Academic Institution'}</div>
+                               </div>
+                             </div>
+
+                             <div class="grid">
+                               <div>
+                                 <div class="field"><div class="label">Subject</div><div class="value">${viewingLessonPlan.subject}</div></div>
+                                 <div class="field"><div class="label">Unit / Chapter</div><div class="value">${viewingLessonPlan.chapter || 'N/A'}</div></div>
+                                 <div class="field"><div class="label">Topic</div><div class="value">${viewingLessonPlan.topic}</div></div>
+                               </div>
+                               <div>
+                                 <div class="field"><div class="label">Grade</div><div class="value">${viewingLessonPlan.grade || 'All Grades'}</div></div>
+                                 <div class="field"><div class="label">Period</div><div class="value">${viewingLessonPlan.period || 'N/A'}</div></div>
+                                 <div class="field"><div class="label">Date</div><div class="value">${format(new Date(viewingLessonPlan.lesson_date), "EEEE, MMM do yyyy")}</div></div>
+                               </div>
+                             </div>
+
+                             <div class="section">
+                               <div class="section-title">1. Learning Outcomes</div>
+                               <div class="section-content">${viewingLessonPlan.objectives || 'None defined.'}</div>
+                             </div>
+
+                             <div class="section">
+                               <div class="section-title">2. Warm up & Review</div>
+                               <div class="section-content">${viewingLessonPlan.warm_up_review || 'N/A'}</div>
+                             </div>
+
+                             <div class="section">
+                               <div class="section-title">3. Teaching Learning Activities</div>
+                               <div class="section-content">
+                                 ${Array.isArray(viewingLessonPlan.learning_activities) && (viewingLessonPlan.learning_activities as string[]).length > 0
+                                   ? (viewingLessonPlan.learning_activities as string[]).map((a, i) => `<div class="activity-item"><span class="activity-num">${String.fromCharCode(97 + i)}.</span><span>${a}</span></div>`).join('')
+                                   : 'None listed.'}
+                               </div>
+                             </div>
+
+                             <div class="section">
+                               <div class="section-title">4. Class Review / Evaluation</div>
+                               <div class="section-content">
+                                 ${Array.isArray(viewingLessonPlan.evaluation_activities) && (viewingLessonPlan.evaluation_activities as string[]).length > 0
+                                   ? (viewingLessonPlan.evaluation_activities as string[]).map((a, i) => `<div class="activity-item"><span class="activity-num">${String.fromCharCode(97 + i)}.</span><span>${a}</span></div>`).join('')
+                                   : 'None listed.'}
+                               </div>
+                             </div>
+
+                             <div class="grid">
+                               <div class="section">
+                                 <div class="section-title">5a. Class Work</div>
+                                 <div class="section-content">${viewingLessonPlan.class_work || 'N/A'}</div>
+                               </div>
+                               <div class="section">
+                                 <div class="section-title">5b. Home Assignment</div>
+                                 <div class="section-content">${viewingLessonPlan.home_assignment || 'N/A'}</div>
+                               </div>
+                             </div>
+
+                             ${viewingLessonPlan.principal_remarks ? `
+                             <div class="section">
+                               <div class="section-title" style="color: #ea580c">Principal Remarks</div>
+                               <div class="section-content" style="background: #fff7ed; border-color: #ffedd5">"${viewingLessonPlan.principal_remarks}"</div>
+                             </div>
+                             ` : ''}
+
+                             <div class="footer">
+                               <div class="signature-line">Teacher's Signature</div>
+                               <div class="signature-line">Principal / Coordinator's Signature</div>
+                             </div>
+                           </body>
+                         </html>
+                       `);
+                       printWindow?.document.close();
+                       printWindow?.focus();
+                       setTimeout(() => {
+                         printWindow?.print();
+                         printWindow?.close();
+                       }, 500);
+                     }}
+                     className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-12 font-bold shadow-strong"
+                   >
+                     <Printer className="h-4 w-4 mr-2" /> Print Lesson Plan
+                   </Button>
+                </div>
               </div>
             </div>
           )}

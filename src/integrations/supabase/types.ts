@@ -1244,19 +1244,27 @@ export type Database = {
       }
       lesson_plans: {
         Row: {
+          approval_date: string | null
+          approved_by: string | null
           center_id: string
           chapter: string | null
           class: string
+          class_work: string | null
           content: string | null
           created_at: string
           end_date: string | null
+          evaluation_activities: Json | null
           grade: string | null
+          home_assignment: string | null
           id: string
+          learning_activities: Json | null
           lesson_date: string | null
           lesson_file_url: string | null
           notes: string | null
           objectives: string | null
+          period: string | null
           planned_date: string | null
+          principal_remarks: string | null
           section: string | null
           start_date: string | null
           status: string | null
@@ -1264,21 +1272,30 @@ export type Database = {
           teacher_id: string | null
           topic: string
           updated_at: string
+          warm_up_review: string | null
         }
         Insert: {
+          approval_date?: string | null
+          approved_by?: string | null
           center_id: string
           chapter?: string | null
           class: string
+          class_work?: string | null
           content?: string | null
           created_at?: string
           end_date?: string | null
+          evaluation_activities?: Json | null
           grade?: string | null
+          home_assignment?: string | null
           id?: string
+          learning_activities?: Json | null
           lesson_date?: string | null
           lesson_file_url?: string | null
           notes?: string | null
           objectives?: string | null
+          period?: string | null
           planned_date?: string | null
+          principal_remarks?: string | null
           section?: string | null
           start_date?: string | null
           status?: string | null
@@ -1286,21 +1303,30 @@ export type Database = {
           teacher_id?: string | null
           topic: string
           updated_at?: string
+          warm_up_review?: string | null
         }
         Update: {
+          approval_date?: string | null
+          approved_by?: string | null
           center_id?: string
           chapter?: string | null
           class?: string
+          class_work?: string | null
           content?: string | null
           created_at?: string
           end_date?: string | null
+          evaluation_activities?: Json | null
           grade?: string | null
+          home_assignment?: string | null
           id?: string
+          learning_activities?: Json | null
           lesson_date?: string | null
           lesson_file_url?: string | null
           notes?: string | null
           objectives?: string | null
+          period?: string | null
           planned_date?: string | null
+          principal_remarks?: string | null
           section?: string | null
           start_date?: string | null
           status?: string | null
@@ -1308,6 +1334,7 @@ export type Database = {
           teacher_id?: string | null
           topic?: string
           updated_at?: string
+          warm_up_review?: string | null
         }
         Relationships: [
           {

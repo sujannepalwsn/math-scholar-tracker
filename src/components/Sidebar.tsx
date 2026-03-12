@@ -16,7 +16,7 @@ interface NavItem {
   role?: 'admin' | 'center' | 'parent' | 'teacher';
   featureName?: string;
   unreadCount?: number;
-  category?: 'Academic Sections' | 'Administration Section' | 'Reporting and Communication Sections';
+  category?: 'Academics' | 'Administration' | 'Reports and Communications';
 }
 
 interface SidebarProps {
@@ -38,7 +38,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['Academic Sections', 'Administration Section', 'Reporting and Communication Sections']);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
 
@@ -71,12 +71,8 @@ export default function Sidebar({
   const filteredNavItems = navItems.filter(item => {
     if (item.role && user?.role !== item.role) return false;
     if (item.featureName) {
-      if (user?.role === 'center' && user.centerPermissions) {
-        return user.centerPermissions[item.featureName] !== false;
-      }
-      if (user?.role === 'teacher' && user.teacherPermissions) {
-        return user.teacherPermissions[item.featureName] !== false;
-      }
+      if (user?.role === 'center' && user.centerPermissions) return user.centerPermissions[item.featureName];
+      if (user?.role === 'teacher' && user.teacherPermissions) return user.teacherPermissions[item.featureName];
     }
     return true;
   });

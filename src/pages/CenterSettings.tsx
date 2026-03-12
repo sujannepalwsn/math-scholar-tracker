@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Building, ImageIcon, KeyRound, Loader2, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import ThemeSelector from "@/components/ThemeSelector";
 import * as bcrypt from 'bcryptjs';
 

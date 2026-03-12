@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.chat_conversations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   center_id uuid NOT NULL REFERENCES public.centers(id),
   parent_user_id uuid NOT NULL REFERENCES public.users(id),
-  student_id uuid REFERENCES public.students(id),
+  student_id uuid NOT NULL REFERENCES public.students(id),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT chat_conversations_pkey PRIMARY KEY (id)
