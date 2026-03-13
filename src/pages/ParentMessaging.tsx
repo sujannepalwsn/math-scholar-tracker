@@ -42,9 +42,9 @@ export default function ParentMessaging() {
 
   // Fetch messages
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
-    queryKey: ["parent-chat-messages", conversation?.id],
+    queryKey: ["parent-chat-messages", conversation?.id, user?.center_id],
     queryFn: async () => {
-      if (!conversation?.id) return [];
+      if (!conversation?.id || !user?.center_id) return [];
       const { data, error } = await supabase
         .from("chat_messages")
         .select(`
@@ -52,6 +52,7 @@ export default function ParentMessaging() {
           sender:sender_user_id(id, username, role)
         `)
         .eq("conversation_id", conversation.id)
+        .eq("center_id", user.center_id)
         .order("sent_at", { ascending: true });
       if (error) throw error;
       return data;
@@ -84,11 +85,12 @@ export default function ParentMessaging() {
   // Send message
   const sendMessageMutation = useMutation({
     mutationFn: async () => {
-      if (!conversation?.id || !user?.id || !newMessage.trim()) {
+      if (!conversation?.id || !user?.id || !user?.center_id || !newMessage.trim()) {
         throw new Error("Missing required data");
       }
       const { error } = await supabase.from("chat_messages").insert({
         conversation_id: conversation.id,
+        center_id: user.center_id,
         sender_user_id: user.id,
         message_text: newMessage.trim() });
       if (error) throw error;
@@ -96,7 +98,8 @@ export default function ParentMessaging() {
       await supabase
         .from("chat_conversations")
         .update({ updated_at: new Date().toISOString() })
-        .eq("id", conversation.id);
+        .eq("id", conversation.id)
+        .eq("center_id", user.center_id);
     },
     onSuccess: () => {
       setNewMessage("");
@@ -227,7 +230,7 @@ export default function ParentMessaging() {
           </ScrollArea>
 
           <div className="p-6 bg-card/60 backdrop-blur-md border-t border-slate-100 shrink-0">
-            <form onSubmit={handleSendMessage} className="relative">
+            <form onSubmit={handleSendMessage} className="relative flex items-end gap-2">
               <Textarea
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
@@ -238,19 +241,18 @@ export default function ParentMessaging() {
                   }
                 }}
                 placeholder="Synchronize your thoughts..."
-                className="w-full min-h-[56px] max-h-[150px] resize-none py-4 px-6 pr-16 rounded-[1.5rem] border-none bg-white shadow-soft focus-visible:ring-primary/20 font-medium text-slate-700 placeholder:text-slate-300"
-                rows={1}
+                className="flex-1 min-h-[56px] max-h-[120px] px-6 py-4 rounded-[1.5rem] border-none bg-white shadow-soft focus-visible:ring-primary/20 font-medium text-slate-700 placeholder:text-slate-300 resize-none"
               />
               <Button
                 type="submit"
                 disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                className="absolute right-2 top-2 h-10 w-10 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+                className="h-10 w-10 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 hover:scale-105 transition-all shrink-0 mb-2"
               >
                 <Send className="h-4 w-4" />
               </Button>
             </form>
             <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest text-center mt-3">
-               Press Shift + Enter for new line • Messages are securely logged
+               Press Enter to send • Messages are securely logged
             </p>
           </div>
         </CardContent>

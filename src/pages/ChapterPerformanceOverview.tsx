@@ -83,7 +83,7 @@ export default function ChapterPerformanceOverview() {
         students(id, name, grade, center_id),
         lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
         recorded_by_teacher:recorded_by_teacher_id(name)
-      `).eq("students.center_id", user.center_id);
+      `).eq("center_id", user.center_id);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('recorded_by_teacher_id', user.teacher_id);
@@ -120,7 +120,7 @@ export default function ChapterPerformanceOverview() {
           marks_obtained,
           tests!inner(id, name, subject, total_marks, lesson_plan_id, created_by)
         `) // Removed lesson_plans(chapter) as it's not directly on tests
-        .eq("tests.center_id", user.center_id); // Ensure tests belong to the same center
+        .eq("center_id", user.center_id); // Ensure tests belong to the same center
 
       if (user?.role === 'teacher') {
         query = query.eq('tests.created_by', user.id);

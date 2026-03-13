@@ -47,7 +47,7 @@ export default function CenterFeaturePermissions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('center_feature_permissions')
-        .select('*');
+        .select('*').eq('center_id', centerId);
       if (error) throw error;
       return data;
     } });

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle, CheckCircle2, ClipboardCheck, Clock, DollarSign, Download, Eye, FileText, GraduationCap, Home, Info, MessageSquare, Paintbrush, Printer, Star, Target, TrendingUp, User, Users, Wallet, XCircle } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
@@ -63,7 +63,7 @@ export default function TeacherDashboard() {
     queryKey: ["teacher-info", teacherId],
     queryFn: async () => {
       if (!teacherId) return null;
-      const { data, error } = await supabase.from("teachers").select("*").eq("id", teacherId).single();
+      const { data, error } = await supabase.from("teachers").select("*").eq('center_id', user?.center_id).eq("id", teacherId).single();
       if (error) throw error;
       return data;
     },
@@ -73,7 +73,7 @@ export default function TeacherDashboard() {
     queryKey: ["teacher-attendance-today", teacherId, today],
     queryFn: async () => {
       if (!teacherId) return null;
-      const { data, error } = await supabase.from("teacher_attendance").select("*").eq("teacher_id", teacherId).eq("date", today).maybeSingle();
+      const { data, error } = await supabase.from("teacher_attendance").select("*").eq('center_id', user?.center_id).eq("teacher_id", teacherId).eq("date", today).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -194,9 +194,20 @@ export default function TeacherDashboard() {
     queryKey: ['teacher-unread-messages', user?.id, centerId],
     queryFn: async () => {
       if (!user?.id || !centerId) return 0;
-      const { data: conversation } = await supabase.from('chat_conversations').select('id').eq('parent_user_id', user.id).eq('center_id', centerId).maybeSingle();
+      const { data: conversation } = await supabase
+        .from('chat_conversations')
+        .select('id')
+        .eq('teacher_user_id', user.id)
+        .eq('center_id', centerId)
+        .maybeSingle();
       if (!conversation) return 0;
-      const { count } = await supabase.from('chat_messages').select('id', { count: 'exact' }).eq('conversation_id', conversation.id).eq('center_id', centerId).eq('is_read', false).neq('sender_user_id', user.id);
+      const { count } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact' })
+        .eq('conversation_id', conversation.id)
+        .eq('center_id', centerId)
+        .eq('is_read', false)
+        .neq('sender_user_id', user.id);
       return count || 0;
     },
     enabled: !!user?.id && !!centerId });
@@ -314,7 +325,7 @@ export default function TeacherDashboard() {
     queryKey: ["teacher-activities", user?.id, dateRange],
     queryFn: async () => {
       if (!centerId || !user?.id) return [];
-      let query = supabase.from("student_activities").select("*, activities!inner(*, activity_types(name)), students(name, grade)")
+      let query = supabase.from("student_activities").select("*, activities!inner(*, activity_types(name)), students(name, grade)").eq('center_id', user?.center_id)
         .eq("activities.center_id", centerId)
         .eq("activities.created_by", user.id)
         .gte("created_at", `${dateRange.from}T00:00:00`)
@@ -526,8 +537,11 @@ export default function TeacherDashboard() {
             <div className="flex items-center gap-2 bg-card/60 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-border/40">
               {(() => {
                 const now = new Date();
-                const [inH, inM] = (teacherInfo.expected_check_in || "09:00").split(":").map(Number);
-                const [outH, outM] = (teacherInfo.expected_check_out || "17:00").split(":").map(Number);
+                const inTimeStr = teacherInfo.regular_in_time || "09:00";
+                const outTimeStr = teacherInfo.regular_out_time || "17:00";
+
+                const [inH, inM] = inTimeStr.split(":").map(Number);
+                const [outH, outM] = outTimeStr.split(":").map(Number);
 
                 const inTime = new Date(); inTime.setHours(inH, inM, 0);
                 const outTime = new Date(); outTime.setHours(outH, outM, 0);
@@ -543,7 +557,7 @@ export default function TeacherDashboard() {
                       className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest bg-emerald-600"
                       onClick={() => markAttendanceMutation.mutate('check-in')}
                       disabled={markAttendanceMutation.isPending || !canCheckIn}
-                      title={!canCheckIn ? `Check-in allowed between ${teacherInfo.expected_check_in} and ${teacherInfo.expected_check_out}` : ""}
+                      title={!canCheckIn ? `Attendance only allowed between ${inTimeStr} and ${outTimeStr}` : ""}
                     >
                       Check-In
                     </Button>
@@ -556,7 +570,7 @@ export default function TeacherDashboard() {
                       className="h-8 rounded-lg font-black text-[10px] uppercase tracking-widest border-rose-200 text-rose-600"
                       onClick={() => markAttendanceMutation.mutate('check-out')}
                       disabled={markAttendanceMutation.isPending || !canCheckOut}
-                      title={!canCheckOut ? `Check-out allowed between ${teacherInfo.expected_check_in} and ${teacherInfo.expected_check_out}` : ""}
+                      title={!canCheckOut ? `Attendance only allowed between ${inTimeStr} and ${outTimeStr}` : ""}
                     >
                       Check-Out
                     </Button>

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Book, BookOpen, Calendar, CheckCircle, ClipboardCheck, Clock, DollarSign, Download, Eye, FileText, GraduationCap, Paintbrush, Printer, Star, Users, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,6 +36,7 @@ interface ChapterPerformance {
 
 export default function StudentReport() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const [selectedStudentId, setSelectedStudentId] = useState<string>("none"); // Changed initial state to "none"
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -320,14 +321,14 @@ export default function StudentReport() {
 
       const { data: subjects, error: subjError } = await supabase
         .from("exam_subjects")
-        .select("*")
+        .select("*").eq('center_id', user?.center_id)
         .in("exam_id", examIds);
 
       if (subjError) throw subjError;
 
       const { data: marks, error: marksError } = await supabase
         .from("exam_marks")
-        .select("*")
+        .select("*").eq('center_id', user?.center_id)
         .eq("student_id", selectedStudentId)
         .in("exam_id", examIds);
 
@@ -414,9 +415,12 @@ export default function StudentReport() {
       if (!invoices || invoices.length === 0) return [];
       
       const invoiceIds = invoices.map(inv => inv.id);
-      const { data: pData, error: pError } = await supabase.from("payments").select("*")
+      const { data: pData, error: pError } = await supabase.from("payments").select(`
+        *,
+        invoices!inner(student_id)
+      `)
         .eq("center_id", user.center_id)
-        .in("invoice_id", invoiceIds)
+        .eq("invoices.student_id", selectedStudentId)
         .gte("payment_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("payment_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
       if (pError) throw pError;

@@ -46,7 +46,7 @@ export default function CalendarEvents() {
       if (!isParent) return null;
       const studentId = user?.student_id || user?.linked_students?.[0]?.id;
       if (!studentId) return null;
-      const { data, error } = await supabase.from('students').select('center_id').eq('id', studentId).single();
+      const { data, error } = await supabase.from('students').select('center_id').eq('center_id', user?.center_id).eq('id', studentId).single();
       if (error) throw error;
       return data;
     },

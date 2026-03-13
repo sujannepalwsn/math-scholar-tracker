@@ -3,6 +3,7 @@ import { Users } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/contexts/AuthContext"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 
@@ -11,8 +12,9 @@ interface MeetingAttendeesViewerProps {
 }
 
 export default function MeetingAttendeesViewer({ meetingId }: MeetingAttendeesViewerProps) {
+  const { user } = useAuth();
   const { data: attendees = [], isLoading } = useQuery({
-    queryKey: ["meeting-attendees-viewer", meetingId],
+    queryKey: ["meeting-attendees-viewer", meetingId, user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("meeting_attendees")
@@ -22,11 +24,12 @@ export default function MeetingAttendeesViewer({ meetingId }: MeetingAttendeesVi
           teachers(name),
           users(username)
         `)
-        .eq("meeting_id", meetingId);
+        .eq("meeting_id", meetingId)
+        .eq("center_id", user?.center_id!);
       if (error) throw error;
       return data;
     },
-    enabled: !!meetingId });
+    enabled: !!meetingId && !!user?.center_id });
 
   const getStatusColorClass = (status: string | null) => {
     switch (status) {

@@ -117,6 +117,20 @@
   *:focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
+
+  /* Req 2: Dark Mode Input Visibility - Enforce white background and black text */
+  .dark input,
+  .dark textarea,
+  .dark select,
+  .dark [role="combobox"] {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #64748b !important; /* text-slate-500 */
+  }
 }
 
 @layer components {

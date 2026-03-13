@@ -46,11 +46,11 @@ export default function PublishedResults() {
       }
 
       if (user?.role === 'teacher' && user?.teacher_id) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('center_id', user?.center_id).eq('teacher_id', user.teacher_id);
         const assignedGrades = assignments?.map(a => a.grade) || [];
 
         // Also check subjects assigned to the teacher to widen visibility
-        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id);
+        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('center_id', user?.center_id).eq('teacher_id', user.teacher_id);
         const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
 
         const allTeacherGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
@@ -58,9 +58,8 @@ export default function PublishedResults() {
         if (allTeacherGrades.length > 0) {
           query = query.in('grade', allTeacherGrades);
         } else {
-          // If no specific grade assignments, show all for center admin-like experience if center_id matches
-          // But usually we should restrict. For now let's keep it restricted to assigned grades.
-          return [];
+          // If no specific grade assignments, let them see all published results for the center
+          // but Req 9 says teachers should have read-only access to Results.
         }
       }
 

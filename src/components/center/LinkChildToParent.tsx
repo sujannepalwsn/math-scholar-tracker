@@ -79,6 +79,7 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
           users:parent_user_id(username),
           students:student_id(name, grade)
         `)
+        .eq("center_id", user.center_id)
         .in("student_id", studentIds);
       if (error) throw error;
       return data || [];
@@ -113,6 +114,7 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
       }
 
       const { error } = await supabase.from("parent_students").insert({
+        center_id: user?.center_id!,
         parent_user_id: selectedParentId,
         student_id: selectedStudentId });
       if (error) throw error;
@@ -133,7 +135,8 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
         .from("parent_students")
         .delete()
         .eq("parent_user_id", parentId)
-        .eq("student_id", studentId);
+        .eq("student_id", studentId)
+        .eq("center_id", user?.center_id!);
       if (error) throw error;
     },
     onSuccess: () => {

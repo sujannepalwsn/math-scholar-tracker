@@ -62,7 +62,7 @@ export default function ParentStudentReport() {
     queryFn: async () => {
       if (!linkedStudents.length) return [];
       const studentIds = linkedStudents.map((s: any) => typeof s === 'string' ? s : s.id);
-      const { data, error } = await supabase.from("students").select("*").in("id", studentIds).order("name");
+      const { data, error } = await supabase.from("students").select("*").eq('center_id', user?.center_id).in("id", studentIds).order("name");
       if (error) throw error;
       return data;
     } });
@@ -116,13 +116,15 @@ export default function ParentStudentReport() {
 
   // Fetch student_chapters (lesson evaluations)
   const { data: studentChapters = [], isLoading: isChaptersLoading } = useQuery({
-    queryKey: ["student-lesson-records-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds],
+    queryKey: ["student-lesson-records-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase.from("student_chapters").select(`
         *,
         lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url),
         recorded_by_teacher:recorded_by_teacher_id(name)
       `)
+        .eq('center_id', user.center_id)
         .gte("completed_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("completed_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -147,9 +149,11 @@ export default function ParentStudentReport() {
 
   // Fetch test results
   const { data: testResults = [], isLoading: isTestsLoading } = useQuery({
-    queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds],
+    queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase.from("test_results").select("*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions)")
+        .eq('center_id', user.center_id)
         .gte("date_taken", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("date_taken", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -173,9 +177,11 @@ export default function ParentStudentReport() {
 
   // Fetch homework status
   const { data: homeworkStatus = [], isLoading: isHomeworkLoading } = useQuery({
-    queryKey: ["student-homework-status-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds],
+    queryKey: ["student-homework-status-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase.from("student_homework_records").select("*, homework!inner(id, title, subject, due_date, lesson_plan_id)")
+        .eq('center_id', user.center_id)
         .gte("homework.due_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("homework.due_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -220,9 +226,11 @@ export default function ParentStudentReport() {
 
   // Fetch preschool activities (student participations)
   const { data: preschoolActivities = [], isLoading: isActivitiesLoading } = useQuery({
-    queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds],
+    queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase.from("student_activities").select("*, activities(title, description, activity_date, photo_url, video_url, activity_type_id, activity_types(name))")
+        .eq('center_id', user.center_id)
         .gte("created_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("created_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -287,14 +295,14 @@ export default function ParentStudentReport() {
 
       const { data: subjects, error: subjError } = await supabase
         .from("exam_subjects")
-        .select("*")
+        .select("*").eq('center_id', user?.center_id)
         .in("exam_id", examIds);
 
       if (subjError) throw subjError;
 
       const { data: marks, error: marksError } = await supabase
         .from("exam_marks")
-        .select("*")
+        .select("*").eq('center_id', user?.center_id)
         .eq("student_id", selectedStudentId)
         .in("exam_id", examIds);
 
@@ -355,7 +363,7 @@ export default function ParentStudentReport() {
     queryKey: ["student-invoices-report", selectedStudentId, dateRange],
     queryFn: async () => {
       if (!selectedStudentId || selectedStudentId === "none") return [];
-      const { data, error } = await supabase.from("invoices").select("*").eq("student_id", selectedStudentId)
+      const { data, error } = await supabase.from("invoices").select("*").eq('center_id', user?.center_id).eq("student_id", selectedStudentId)
         .gte("invoice_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("invoice_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
       if (error) throw error;
@@ -369,14 +377,14 @@ export default function ParentStudentReport() {
       if (!selectedStudentId || selectedStudentId === "none") return [];
       const { data: invoices, error: invError } = await supabase
         .from('invoices')
-        .select('id')
+        .select('id').eq('center_id', user?.center_id)
         .eq('student_id', selectedStudentId);
 
       if (invError) throw invError;
       if (!invoices || invoices.length === 0) return [];
 
       const invoiceIds = invoices.map(inv => inv.id);
-      const { data, error } = await supabase.from("payments").select("*")
+      const { data, error } = await supabase.from("payments").select("*").eq('center_id', user?.center_id)
         .in("invoice_id", invoiceIds)
         .gte("payment_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("payment_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));

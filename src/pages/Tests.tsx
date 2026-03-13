@@ -81,14 +81,13 @@ export default function Tests() {
       let query = supabase
         .from("tests")
         .select("*, lesson_plans(id, subject, chapter, topic, grade)") // Fetch lesson_plans details
-        .eq("center_id", user.center_id)
-        .order("date", { ascending: false });
+        .eq("center_id", user.center_id);
       
       if (user?.role === 'teacher') {
         query = query.eq('created_by', user.id);
       }
       
-      const { data, error } = await query;
+      const { data, error } = await query.order("date", { ascending: false });
       if (error) throw error;
       return data;
     } });
@@ -112,16 +111,21 @@ export default function Tests() {
   const { data: teacherAssignments = [] } = useQuery({
     queryKey: ["teacher-assignments-tests", user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.teacher_id || !user?.center_id) return [];
-      const { data, error } = await supabase
+      if (!user?.center_id) return [];
+      let query = supabase
         .from("period_schedules")
         .select("subject, grade")
-        .eq("center_id", user.center_id)
-        .eq("teacher_id", user.teacher_id);
+        .eq("center_id", user.center_id);
+
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        query = query.eq("teacher_id", user.teacher_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: user?.role === 'teacher' && !!user?.teacher_id && !!user?.center_id
+    enabled: !!user?.center_id
   });
 
   const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
@@ -358,12 +362,14 @@ export default function Tests() {
       await supabase
         .from("test_results")
         .delete()
-        .eq("test_id", testId);
+        .eq("test_id", testId)
+        .eq("center_id", user?.center_id);
 
       const { error } = await supabase
         .from("tests")
         .delete()
-        .eq("id", testId);
+        .eq("id", testId)
+        .eq("center_id", user?.center_id);
       
       if (error) throw error;
     },
@@ -498,12 +504,14 @@ export default function Tests() {
             OCR Upload
           </Button>
           <Dialog open={isAddingTest} onOpenChange={setIsAddingTest}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Test
-              </Button>
-            </DialogTrigger>
+            {user?.role === 'center' && (
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Test
+                </Button>
+              </DialogTrigger>
+            )}
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-labelledby="create-test-title" aria-describedby="create-test-description">
             <DialogHeader>
               <DialogTitle id="create-test-title">Create New Test</DialogTitle>
@@ -522,20 +530,16 @@ export default function Tests() {
               </div>
               <div>
                 <Label>Subject</Label>
-                {user?.role === 'teacher' ? (
-                  <Select value={testSubject} onValueChange={setTestSubject}>
-                    <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
-                    <SelectContent>
-                      {assignedSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={testSubject}
-                    onChange={(e) => setTestSubject(e.target.value)}
-                    placeholder="e.g., Mathematics"
-                  />
-                )}
+                <Select value={testSubject} onValueChange={setTestSubject}>
+                  <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                  <SelectContent>
+                    {assignedSubjects.length > 0 ? (
+                      assignedSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)
+                    ) : (
+                      <SelectItem value="none" disabled>No subjects found in routine</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -757,19 +761,21 @@ export default function Tests() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-xl bg-white shadow-soft text-destructive hover:bg-destructive/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm(`Are you sure you want to delete "${test.name}"? This will also delete all associated student results.`)) {
-                              deleteTestMutation.mutate(test.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {user?.role === 'center' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-xl bg-white shadow-soft text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Are you sure you want to delete "${test.name}"? This will also delete all associated student results.`)) {
+                                deleteTestMutation.mutate(test.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

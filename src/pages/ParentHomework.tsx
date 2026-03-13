@@ -30,12 +30,13 @@ export default function ParentHomework() {
 
   // Fetch student's homework records
   const { data: homeworkStatus = [], isLoading } = useQuery({
-    queryKey: ['parent-homework-records', user.student_id],
+    queryKey: ['parent-homework-records', user.student_id, user.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('student_homework_records')
         .select('*, homework(*)')
         .eq('student_id', user.student_id!)
+        .eq('center_id', user.center_id!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;

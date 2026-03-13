@@ -39,6 +39,7 @@ export default function TeacherMeetings() {
             meeting_conclusions(conclusion_notes, recorded_at)
           )
         `)
+        .eq("center_id", user.center_id!)
         .eq("teacher_id", user.teacher_id!)
         .order("created_at", { ascending: false });
 
@@ -55,6 +56,7 @@ export default function TeacherMeetings() {
               meeting_conclusions(conclusion_notes, recorded_at)
             )
           `)
+          .eq("center_id", user.center_id!)
           .eq("user_id", user.id!)
           .order("created_at", { ascending: false });
         

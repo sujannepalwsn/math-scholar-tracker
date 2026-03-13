@@ -68,16 +68,21 @@ export default function HomeworkManagement() {
   const { data: teacherAssignments = [] } = useQuery({
     queryKey: ["teacher-assignments-homework", user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.teacher_id || !user?.center_id) return [];
-      const { data, error } = await supabase
+      if (!user?.center_id) return [];
+      let query = supabase
         .from("period_schedules")
         .select("subject, grade")
-        .eq("center_id", user.center_id)
-        .eq("teacher_id", user.teacher_id);
+        .eq("center_id", user.center_id);
+
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        query = query.eq("teacher_id", user.teacher_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: user?.role === 'teacher' && !!user?.teacher_id && !!user?.center_id
+    enabled: !!user?.center_id
   });
 
   const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
@@ -195,7 +200,7 @@ export default function HomeworkManagement() {
       if (file) { attachmentUrl = await uploadFile(file, "homework-files"); attachmentName = file.name; }
       else if (image) { attachmentUrl = await uploadFile(image, "homework-images"); attachmentName = image.name; }
       const { error } = await supabase.from("homework").update({
-        title, subject, grade, description, due_date: dueDate, attachment_url: attachmentUrl, attachment_name: attachmentName, lesson_plan_id: lessonPlanId }).eq("id", editingHomework.id);
+        title, subject, grade, description, due_date: dueDate, attachment_url: attachmentUrl, attachment_name: attachmentName, lesson_plan_id: lessonPlanId }).eq("id", editingHomework.id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["homework"] }); toast.success("Updated!"); setIsDialogOpen(false); resetForm(); },
@@ -278,11 +283,13 @@ export default function HomeworkManagement() {
             </SelectContent>
           </Select>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button className="rounded-xl shadow-medium">
-                <Plus className="h-4 w-4 mr-2" /> Create Homework
-              </Button>
-            </DialogTrigger>
+            {user?.role === 'center' && (
+              <DialogTrigger asChild>
+                <Button className="rounded-xl shadow-medium">
+                  <Plus className="h-4 w-4 mr-2" /> Create Homework
+                </Button>
+              </DialogTrigger>
+            )}
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingHomework ? "Edit Homework" : "New Homework"}</DialogTitle>
@@ -293,16 +300,16 @@ export default function HomeworkManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Subject *</Label>
-                  {user?.role === 'teacher' ? (
-                    <Select value={subject} onValueChange={setSubject}>
-                      <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
-                      <SelectContent>
-                        {assignedSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Mathematics" />
-                  )}
+                  <Select value={subject} onValueChange={setSubject}>
+                    <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                    <SelectContent>
+                      {assignedSubjects.length > 0 ? (
+                        assignedSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)
+                      ) : (
+                        <SelectItem value="none" disabled>No subjects found in routine</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Grade *</Label>
@@ -411,22 +418,26 @@ export default function HomeworkManagement() {
                             <Users className="h-4 w-4 mr-1" />
                             Track
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:text-primary hover:bg-primary/10"
-                            onClick={() => handleEditClick(hw)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-xl bg-white shadow-soft text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => deleteHomeworkMutation.mutate(hw.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {user?.role === 'center' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:text-primary hover:bg-primary/10"
+                                onClick={() => handleEditClick(hw)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-xl bg-white shadow-soft text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => deleteHomeworkMutation.mutate(hw.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

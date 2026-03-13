@@ -33,8 +33,9 @@ export default function EditStudentLessonRecord({ studentChapterId, onSave, onCa
 
   // Fetch the specific student_chapter record
   const { data: studentChapter, isLoading: studentChapterLoading } = useQuery({
-    queryKey: ["student-chapter-detail", studentChapterId],
+    queryKey: ["student-chapter-detail", studentChapterId, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return null;
       const { data, error } = await supabase
         .from("student_chapters")
         .select(`
@@ -42,6 +43,7 @@ export default function EditStudentLessonRecord({ studentChapterId, onSave, onCa
           recorded_by_teacher:recorded_by_teacher_id(name)
         `)
         .eq("id", studentChapterId)
+        .eq("center_id", user.center_id)
         .single();
       if (error) throw error;
       return data;
@@ -71,7 +73,8 @@ export default function EditStudentLessonRecord({ studentChapterId, onSave, onCa
           completed_at: isCompleted ? new Date().toISOString() : null,
           recorded_by_teacher_id: recordedById, // Record which teacher/center user made the update
         })
-        .eq("id", studentChapterId);
+        .eq("id", studentChapterId)
+        .eq("center_id", user?.center_id!);
       if (error) throw error;
     },
     onSuccess: () => {

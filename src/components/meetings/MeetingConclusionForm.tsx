@@ -3,6 +3,7 @@ import React, { useState } from "react";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,6 +17,7 @@ interface MeetingConclusionFormProps {
 
 export default function MeetingConclusionForm({ meetingId, onSave, onClose }: MeetingConclusionFormProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [conclusionNotes, setConclusionNotes] = useState("");
 
   const updateMeetingMutation = useMutation({
@@ -25,6 +27,7 @@ export default function MeetingConclusionForm({ meetingId, onSave, onClose }: Me
         .from("meeting_conclusions")
         .select("id")
         .eq("meeting_id", meetingId)
+        .eq("center_id", user?.center_id)
         .single();
 
       if (fetchError && fetchError.code !== "PGRST116") {
@@ -39,7 +42,8 @@ export default function MeetingConclusionForm({ meetingId, onSave, onClose }: Me
           .update({
             conclusion_notes: conclusionNotes,
             updated_at: new Date().toISOString() })
-          .eq("id", existingConclusion.id);
+          .eq("id", existingConclusion.id)
+          .eq("center_id", user?.center_id);
         if (error) throw error;
       } else {
         // Insert new conclusion
@@ -47,6 +51,7 @@ export default function MeetingConclusionForm({ meetingId, onSave, onClose }: Me
           .from("meeting_conclusions")
           .insert({
             meeting_id: meetingId,
+            center_id: user?.center_id,
             conclusion_notes: conclusionNotes });
         if (error) throw error;
       }

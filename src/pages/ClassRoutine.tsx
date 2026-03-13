@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { CalendarIcon, Clock, Edit, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Clock, Edit, Plus, Trash2, FileDown, FileUp, UserCheck, AlertCircle, LayoutGrid } from "lucide-react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { format } from "date-fns";
 
 // Sunday(0) to Friday(5) only
 const DAYS_OF_WEEK = [
@@ -38,6 +40,13 @@ export default function ClassRoutine() {
   const [customGrades, setCustomGrades] = useState<string[]>([]);
   const [newGrade, setNewGrade] = useState("");
   const [showAddGradeDialog, setShowAddGradeDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importCsv, setImportCsv] = useState("");
+
+  const [selectedDaySummary, setSelectedDaySummary] = useState<number>(new Date().getDay() > 5 ? 0 : new Date().getDay());
+  const [showSubstituteDialog, setShowSubstituteDialog] = useState(false);
+  const [substitutionData, setSubstitutionData] = useState<any>(null);
+  const [substituteTeacherId, setSubstituteTeacherId] = useState("");
 
   React.useEffect(() => {
     const savedGrades = localStorage.getItem(`custom_grades_${user?.center_id}`);
@@ -94,6 +103,36 @@ export default function ClassRoutine() {
     },
     enabled: !!user?.center_id });
 
+  const { data: allSchedules = [], isLoading: allSchedulesLoading } = useQuery({
+    queryKey: ["all-period-schedules", user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+
+      const { data: baseSchedules, error } = await supabase
+        .from("period_schedules")
+        .select(`*, class_periods:class_period_id(*), teachers!left(id, name)`)
+        .eq("center_id", user.center_id)
+        .order("day_of_week");
+      if (error) throw error;
+
+      // Also get substitutions for today
+      const { data: substitutions } = await supabase
+        .from("class_substitutions")
+        .select("*, teachers:substitute_teacher_id(id, name)")
+        .eq("center_id", user.center_id)
+        .eq("date", format(new Date(), "yyyy-MM-dd"));
+
+      return (baseSchedules || []).map(s => {
+        const sub = substitutions?.find(sub => sub.period_schedule_id === s.id);
+        return {
+          ...s,
+          substitution: sub ? { id: sub.id, teacher_id: sub.substitute_teacher_id, teacher_name: sub.teachers?.name } : null
+        };
+      });
+    },
+    enabled: !!user?.center_id
+  });
+
   const { data: teachers = [] } = useQuery({
     queryKey: ["teachers-list", user?.center_id],
     queryFn: async () => {
@@ -115,16 +154,24 @@ export default function ClassRoutine() {
 
   const updatePeriodMutation = useMutation({
     mutationFn: async () => {
-      if (!editingPeriod?.id) throw new Error("Period ID not found");
-      const { error } = await supabase.from("class_periods").update({ period_number: parseInt(periodNumber), start_time: startTime, end_time: endTime }).eq("id", editingPeriod.id);
+      if (!editingPeriod?.id || !user?.center_id) throw new Error("Period ID or Center ID not found");
+      const { error } = await supabase.from("class_periods").update({ period_number: parseInt(periodNumber), start_time: startTime, end_time: endTime }).eq("id", editingPeriod.id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["class-periods"] }); toast.success("Period updated!"); resetPeriodForm(); setShowPeriodDialog(false); },
     onError: (error: any) => toast.error(error.message || "Failed to update period") });
 
   const deletePeriodMutation = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("class_periods").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["class-periods"] }); toast.success("Period deleted!"); },
+    mutationFn: async (id: string) => {
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("class_periods").delete().eq("id", id).eq("center_id", user.center_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["period-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["all-period-schedules"] });
+      toast.success("Schedule deleted!");
+    },
     onError: (error: any) => toast.error(error.message || "Failed to delete period") });
 
   const createScheduleMutation = useMutation({
@@ -160,19 +207,52 @@ export default function ClassRoutine() {
 
   const updateScheduleMutation = useMutation({
     mutationFn: async () => {
-      if (!editingSchedule?.id) throw new Error("Schedule ID not found");
+      if (!editingSchedule?.id || !user?.center_id) throw new Error("Schedule ID or Center ID not found");
       const dayNum = parseInt(scheduleDay);
       if (isNaN(dayNum)) throw new Error("Invalid day selected");
-      const { error } = await supabase.from("period_schedules").update({ class_period_id: schedulePeriodId, grade: scheduleGrade, day_of_week: dayNum, subject: scheduleSubject, teacher_id: scheduleTeacherId === "none" ? null : scheduleTeacherId || null }).eq("id", editingSchedule.id);
+      const { error } = await supabase.from("period_schedules").update({ class_period_id: schedulePeriodId, grade: scheduleGrade, day_of_week: dayNum, subject: scheduleSubject, teacher_id: scheduleTeacherId === "none" ? null : scheduleTeacherId || null }).eq("id", editingSchedule.id).eq("center_id", user.center_id);
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["period-schedules"] }); toast.success("Schedule updated!"); resetScheduleForm(); setShowScheduleDialog(false); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["period-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["all-period-schedules"] });
+      toast.success("Schedule updated!"); resetScheduleForm(); setShowScheduleDialog(false);
+    },
     onError: (error: any) => toast.error(error.message || "Failed to update schedule") });
 
   const deleteScheduleMutation = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from("period_schedules").delete().eq("id", id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["period-schedules"] }); toast.success("Schedule deleted!"); },
+    mutationFn: async (id: string) => {
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("period_schedules").delete().eq("id", id).eq("center_id", user.center_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["period-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["all-period-schedules"] });
+      toast.success("Schedule deleted!");
+    },
     onError: (error: any) => toast.error(error.message || "Failed to delete schedule") });
+
+  const createSubstitutionMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.center_id || !substitutionData || !substituteTeacherId) throw new Error("Missing data");
+      const { error } = await supabase.from("class_substitutions").insert({
+        center_id: user.center_id,
+        period_schedule_id: substitutionData.session.id,
+        substitute_teacher_id: substituteTeacherId,
+        date: format(new Date(), "yyyy-MM-dd"),
+        notes: "Automated substitution assignment"
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-period-schedules"] });
+      toast.success("Substitution assigned!");
+      setShowSubstituteDialog(false);
+      setSubstitutionData(null);
+    },
+    onError: (error: any) => toast.error(error.message)
+  });
 
   const resetPeriodForm = () => { setPeriodNumber(""); setStartTime(""); setEndTime(""); setEditingPeriod(null); };
   const resetScheduleForm = () => { setScheduleGrade(""); setSchedulePeriodId(""); setScheduleDay(""); setScheduleSubject(""); setScheduleTeacherId("none"); setEditingSchedule(null); };
@@ -187,6 +267,27 @@ export default function ClassRoutine() {
   const schedulesByDay = DAYS_OF_WEEK.map(day => ({
     ...day,
     schedules: schedules.filter((s: any) => s.day_of_week === day.value).sort((a: any, b: any) => a.class_periods?.period_number - b.class_periods?.period_number) }));
+
+  const today = new Date().getDay();
+  const { data: todayAttendance = [] } = useQuery({
+    queryKey: ["teacher-attendance-today", user?.center_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teacher_attendance")
+        .select("teacher_id, status")
+        .eq("center_id", user?.center_id!)
+        .eq("date", format(new Date(), "yyyy-MM-dd"));
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id
+  });
+
+  const getTeacherStatus = (teacherId: string | null) => {
+    if (!teacherId) return "vacant";
+    const record = todayAttendance.find(a => a.teacher_id === teacherId);
+    return record?.status || "present"; // Default to present if no attendance record yet
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
@@ -203,9 +304,12 @@ export default function ClassRoutine() {
       </div>
 
       <Tabs defaultValue="schedule" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-14 bg-card/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-border/40 shadow-soft">
+        <TabsList className="grid w-full grid-cols-3 h-14 bg-card/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-border/40 shadow-soft">
           <TabsTrigger value="schedule" className="rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium flex items-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all duration-300">
-            Institutional Schedule
+            Schedule View
+          </TabsTrigger>
+          <TabsTrigger value="summary" className="rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium flex items-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all duration-300">
+            Matrix Summary
           </TabsTrigger>
           <TabsTrigger value="periods" className="rounded-[1.5rem] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium flex items-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all duration-300">
             Time Slots
@@ -215,6 +319,92 @@ export default function ClassRoutine() {
         <TabsContent value="schedule" className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => {
+                const headers = ["Grade", "Day", "Period", "Subject", "Teacher"];
+                const csv = [
+                  headers.join(","),
+                  ...schedules.map((s: any) => [
+                    s.grade,
+                    DAYS_OF_WEEK.find(d => d.value === s.day_of_week)?.label,
+                    s.class_periods?.period_number,
+                    s.subject,
+                    s.teachers?.name || ""
+                  ].join(","))
+                ].join("\n");
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `routine_grade_${selectedGrade}.csv`;
+                a.click();
+              }}>
+                <FileDown className="h-4 w-4 mr-1" /> Export CSV
+              </Button>
+              <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <FileUp className="h-4 w-4 mr-1" /> Import CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Import Routine CSV</DialogTitle>
+                    <DialogDescription>
+                      Paste CSV content. Format: Grade,Day,Period,Subject,TeacherName
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <Textarea
+                      placeholder="8,Monday,1,Mathematics,John Doe"
+                      className="min-h-[200px] font-mono text-xs"
+                      value={importCsv}
+                      onChange={(e) => setImportCsv(e.target.value)}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setShowImportDialog(false)}>Cancel</Button>
+                      <Button onClick={async () => {
+                        try {
+                          const rows = importCsv.split("\n").filter(r => r.trim());
+                          if (rows.length === 0) return;
+
+                          const entries = [];
+                          for (const row of rows) {
+                            const [grade, dayStr, periodNum, subject, teacherName] = row.split(",").map(s => s?.trim());
+                            if (!grade || !dayStr || !periodNum || !subject) continue;
+
+                            const day = DAYS_OF_WEEK.find(d => d.label.toLowerCase() === dayStr.toLowerCase());
+                            const period = periods.find(p => p.period_number === parseInt(periodNum));
+                            const teacher = teachers.find(t => t.name.toLowerCase() === teacherName?.toLowerCase());
+
+                            if (day && period) {
+                              entries.push({
+                                center_id: user?.center_id,
+                                grade,
+                                day_of_week: day.value,
+                                class_period_id: period.id,
+                                subject,
+                                teacher_id: teacher?.id || null
+                              });
+                            }
+                          }
+
+                          if (entries.length > 0) {
+                            const { error } = await supabase.from("period_schedules").insert(entries.map(e => ({ ...e, center_id: user?.center_id })));
+                            if (error) throw error;
+                            toast.success(`Imported ${entries.length} records!`);
+                            queryClient.invalidateQueries({ queryKey: ["period-schedules"] });
+                            queryClient.invalidateQueries({ queryKey: ["all-period-schedules"] });
+                            setImportCsv("");
+                            setShowImportDialog(false);
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message);
+                        }
+                      }}>Import</Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Select value={selectedGrade} onValueChange={setSelectedGrade}>
                 <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
                 <SelectContent>{allGrades.map(g => <SelectItem key={g} value={g}>Grade {g}</SelectItem>)}</SelectContent>
@@ -360,6 +550,126 @@ export default function ClassRoutine() {
           )}
         </TabsContent>
 
+        <TabsContent value="summary" className="space-y-4">
+          <div className="flex justify-between items-center px-2">
+            <div className="flex items-center gap-4">
+              <Select value={selectedDaySummary.toString()} onValueChange={(v) => setSelectedDaySummary(parseInt(v))}>
+                <SelectTrigger className="w-[180px] h-9 bg-card/60 backdrop-blur-sm border-border/40 font-bold">
+                  <SelectValue placeholder="Select Day" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS_OF_WEEK.map(day => <SelectItem key={day.value} value={day.value.toString()}>{day.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+              Live Matrix for {DAYS_OF_WEEK.find(d => d.value === selectedDaySummary)?.label}
+            </div>
+          </div>
+          <Card className="border-none shadow-strong rounded-3xl overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b border-border/20">
+              <CardTitle className="text-xl font-black flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-primary" />
+                Institutional Matrix Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest text-center border-r">Time Period</TableHead>
+                      {allGrades.map(grade => (
+                        <TableHead key={grade} className="text-center font-black uppercase text-[10px] tracking-widest min-w-[120px]">
+                          Grade {grade}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {periods.map(period => (
+                      <TableRow key={period.id} className="hover:bg-muted/10 transition-colors">
+                        <TableCell className="text-center border-r bg-muted/5">
+                          <div className="font-black text-[10px] uppercase">Period {period.period_number}</div>
+                          <div className="text-[9px] font-medium text-muted-foreground normal-case">{period.start_time}-{period.end_time}</div>
+                        </TableCell>
+                        {allGrades.map(grade => {
+                          const session = allSchedules.find(s =>
+                            s.grade === grade &&
+                            s.class_period_id === period.id &&
+                            s.day_of_week === selectedDaySummary
+                          );
+
+                          if (!session) {
+                            return <TableCell key={grade} className="p-2 border-r last:border-r-0 text-center bg-slate-50/50 italic text-[10px] text-muted-foreground/30">Vacant</TableCell>;
+                          }
+
+                          const status = getTeacherStatus(session.teacher_id);
+                          const isSubstituted = !!session.substitution;
+
+                          const statusColors = {
+                            present: "bg-emerald-500",
+                            leave: "bg-amber-500",
+                            absent: "bg-rose-500",
+                            vacant: "bg-slate-300",
+                            unknown: "bg-slate-300"
+                          };
+
+                          return (
+                            <TableCell
+                              key={grade}
+                              className={cn(
+                                "p-2 border-r last:border-r-0 text-center transition-all cursor-pointer",
+                                (status === 'leave' || status === 'absent') && !isSubstituted && "bg-rose-50/50 animate-pulse"
+                              )}
+                              onClick={() => {
+                                if (user?.role === 'center' && (status === 'leave' || status === 'absent') && !isSubstituted) {
+                                  setSubstitutionData({ session, status });
+                                  setShowSubstituteDialog(true);
+                                }
+                              }}
+                            >
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="font-black text-[10px] uppercase truncate max-w-[100px]">{session.subject}</div>
+                                <div className="flex items-center gap-1.5">
+                                  <div className={`h-2 w-2 rounded-full ${statusColors[status as keyof typeof statusColors] || "bg-slate-300"}`} />
+                                  <div className="text-[9px] font-medium text-muted-foreground truncate max-w-[80px]">
+                                    {isSubstituted ? session.substitution.teacher_name : (session.teachers?.name || "No Teacher")}
+                                  </div>
+                                </div>
+                                {isSubstituted && (
+                                  <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none px-1.5 py-0 text-[8px] font-black uppercase">Covered</Badge>
+                                )}
+                                {(status === 'leave' || status === 'absent') && !isSubstituted && (
+                                  <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-none px-1.5 py-0 text-[8px] font-black uppercase tracking-tighter">Substitute Needed</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="flex gap-4 justify-center py-4">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
+              <div className="h-3 w-3 rounded-full bg-emerald-500" /> Present
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
+              <div className="h-3 w-3 rounded-full bg-amber-500" /> Leave
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
+              <div className="h-3 w-3 rounded-full bg-rose-500" /> Absent
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter">
+              <div className="h-3 w-3 rounded-full bg-slate-300" /> Vacant
+            </div>
+          </div>
+        </TabsContent>
+
         <TabsContent value="periods" className="space-y-4">
           <div className="flex justify-end">
             {user?.role === 'center' && (
@@ -413,6 +723,61 @@ export default function ClassRoutine() {
           </Card>
         </TabsContent>
       </Tabs>
+      <Dialog open={showSubstituteDialog} onOpenChange={setShowSubstituteDialog}>
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">Assign Substitute</DialogTitle>
+            <DialogDescription className="font-medium text-rose-600">
+              Teacher is currently {substitutionData?.status}. Assign coverage.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="bg-slate-50 p-4 rounded-2xl border space-y-2">
+              <div className="flex justify-between">
+                <span className="text-[10px] font-black uppercase text-muted-foreground">Original Subject</span>
+                <span className="text-sm font-bold">{substitutionData?.session?.subject}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[10px] font-black uppercase text-muted-foreground">Original Teacher</span>
+                <span className="text-sm font-bold">{substitutionData?.session?.teachers?.name}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Suggested Leisure Teachers</Label>
+              <Select value={substituteTeacherId} onValueChange={setSubstituteTeacherId}>
+                <SelectTrigger className="rounded-xl h-11">
+                  <SelectValue placeholder="Select available teacher" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teachers.filter(t => {
+                    // Filter teachers who are free this period/day
+                    const isFree = !allSchedules.some(s =>
+                      s.teacher_id === t.id &&
+                      s.class_period_id === substitutionData?.session?.class_period_id &&
+                      s.day_of_week === selectedDaySummary
+                    );
+                    return isFree;
+                  }).map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground italic px-2">Showing only teachers who do not have a scheduled class in this slot.</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" className="flex-1 rounded-xl font-bold" onClick={() => setShowSubstituteDialog(false)}>CANCEL</Button>
+            <Button
+              className="flex-1 rounded-xl font-black bg-gradient-to-r from-emerald-600 to-teal-600 shadow-soft"
+              onClick={() => createSubstitutionMutation.mutate()}
+              disabled={!substituteTeacherId || createSubstitutionMutation.isPending}
+            >
+              {createSubstitutionMutation.isPending ? "ASSIGNING..." : "CONFIRM COVERAGE"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

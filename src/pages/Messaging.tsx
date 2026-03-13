@@ -148,7 +148,7 @@ export default function Messaging() {
   // Send message
   const sendMessageMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedConversation?.id || !user?.id || !newMessage.trim()) throw new Error("Missing data");
+      if (!selectedConversation?.id || !user?.id || !user?.center_id || !newMessage.trim()) throw new Error("Missing data");
       const { error } = await supabase.from("chat_messages").insert({
         conversation_id: selectedConversation.id,
         sender_user_id: user.id,
@@ -156,7 +156,7 @@ export default function Messaging() {
         message_text: newMessage.trim(),
       });
       if (error) throw error;
-      await supabase.from("chat_conversations").update({ updated_at: new Date().toISOString() }).eq("id", selectedConversation.id);
+      await supabase.from("chat_conversations").update({ updated_at: new Date().toISOString() }).eq("id", selectedConversation.id).eq("center_id", user.center_id);
     },
     onSuccess: () => {
       setNewMessage("");
@@ -203,6 +203,14 @@ export default function Messaging() {
     mutationFn: async (recipient: any) => {
       if (!user?.center_id) throw new Error("Center ID not found");
 
+      const payload: any = { center_id: user.center_id };
+      if (recipient.type === 'parent') {
+        payload.student_id = recipient.student_id;
+        payload.parent_user_id = recipient.id;
+      } else {
+        payload.teacher_user_id = recipient.id;
+      }
+
       let query = supabase.from("chat_conversations").select("id").eq("center_id", user.center_id);
 
       if (recipient.type === 'parent') {
@@ -213,14 +221,6 @@ export default function Messaging() {
 
       const { data: existing } = await query.maybeSingle();
       if (existing) return existing;
-
-      const payload: any = { center_id: user.center_id };
-      if (recipient.type === 'parent') {
-        payload.student_id = recipient.student_id;
-        payload.parent_user_id = recipient.id;
-      } else {
-        payload.teacher_user_id = recipient.id;
-      }
 
       const { data, error } = await supabase.from("chat_conversations").insert(payload).select().single();
       if (error) throw error;
@@ -375,13 +375,12 @@ export default function Messaging() {
                   {/* Input */}
                   {selectedConversation && (
                     <form onSubmit={handleSendMessage} className="p-3 border-t flex gap-2 items-end bg-card">
-                      <Textarea
+                      <Input
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (newMessage.trim()) sendMessageMutation.mutate(); } }}
-                        placeholder="Type a message... (Shift+Enter for new line)"
-                        className="flex-1 min-h-[40px] max-h-[120px] resize-none"
-                        rows={1}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (newMessage.trim()) sendMessageMutation.mutate(); } }}
+                        placeholder="Type a message..."
+                        className="flex-1 h-10"
                       />
                       <Button type="submit" size="icon" disabled={!newMessage.trim() || sendMessageMutation.isPending} className="shrink-0">
                         <Send className="h-4 w-4" />
@@ -596,12 +595,16 @@ export default function Messaging() {
                         <Textarea
                           value={newMessage}
                           onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (newMessage.trim()) sendMessageMutation.mutate(); } }}
-                          placeholder="Type a message... (Shift+Enter for new line)"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              if (newMessage.trim()) sendMessageMutation.mutate();
+                            }
+                          }}
+                          placeholder="Type a message..."
                           className="flex-1 min-h-[40px] max-h-[120px] resize-none"
-                          rows={1}
                         />
-                        <Button type="submit" size="icon" disabled={!newMessage.trim() || sendMessageMutation.isPending} className="shrink-0">
+                        <Button type="submit" size="icon" disabled={!newMessage.trim() || sendMessageMutation.isPending} className="shrink-0 mb-1">
                           <Send className="h-4 w-4" />
                         </Button>
                       </form>

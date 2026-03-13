@@ -30,12 +30,13 @@ const ParentFinanceDashboard = () => {
 
   // Fetch student details
   const { data: student, isLoading: studentLoading } = useQuery({
-    queryKey: ['student', user.student_id],
+    queryKey: ['student', user.student_id, user.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('students')
         .select('*')
         .eq('id', user.student_id!)
+        .eq('center_id', user.center_id!)
         .single();
 
       if (error) throw error;
@@ -45,12 +46,13 @@ const ParentFinanceDashboard = () => {
 
   // Fetch student's invoices
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ['student-invoices', user.student_id],
+    queryKey: ['student-invoices', user.student_id, user.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
         .eq('student_id', user.student_id!)
+        .eq('center_id', user.center_id!)
         .order('invoice_date', { ascending: false });
 
       if (error) throw error;
@@ -71,12 +73,13 @@ const ParentFinanceDashboard = () => {
 
   // Fetch payment history via invoices
   const { data: payments = [], isLoading: paymentsLoading } = useQuery({
-    queryKey: ['student-payments', user.student_id],
+    queryKey: ['student-payments', user.student_id, user.center_id],
     queryFn: async () => {
       const { data: studentInvoices, error: invError } = await supabase
         .from('invoices')
         .select('id')
-        .eq('student_id', user.student_id!);
+        .eq('student_id', user.student_id!)
+        .eq('center_id', user.center_id!);
       
       if (invError) throw invError;
       if (!studentInvoices || studentInvoices.length === 0) return [];
@@ -85,6 +88,7 @@ const ParentFinanceDashboard = () => {
       const { data, error } = await supabase
         .from('payments')
         .select('*')
+        .eq('center_id', user.center_id!)
         .in('invoice_id', invoiceIds)
         .order('payment_date', { ascending: false });
 

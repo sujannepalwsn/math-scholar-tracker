@@ -124,13 +124,15 @@ const InvoiceManagement = () => {
       const { error: invoiceError } = await supabase
         .from('invoices')
         .update({ status: 'paid', paid_amount: invoice.total_amount }) // Mark as fully paid
-        .eq('id', invoiceId);
+        .eq('id', invoiceId)
+        .eq('center_id', user?.center_id!);
       if (invoiceError) throw invoiceError;
 
       // Create payment record
       const { error: paymentError } = await supabase
         .from('payments')
         .insert({
+          center_id: user?.center_id!,
           invoice_id: invoiceId,
           amount: invoice.total_amount,
           payment_date: new Date().toISOString().split('T')[0],

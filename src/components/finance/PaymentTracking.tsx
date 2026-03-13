@@ -60,7 +60,7 @@ const PaymentTracking = () => {
       
       const { data, error } = await supabase
         .from('payments')
-        .select('*, invoices(invoice_number, center_id, students(name))')
+        .select('*, invoices(invoice_number, center_id, students(name))').eq('center_id', user?.center_id)
         .in('invoice_id', invoiceIds)
         .order('payment_date', { ascending: false })
         .limit(50);
@@ -81,6 +81,7 @@ const PaymentTracking = () => {
       const { error: paymentError } = await supabase
         .from('payments')
         .insert({
+          center_id: user?.center_id!,
           invoice_id: paymentForm.invoice_id,
           amount: parseFloat(paymentForm.amount),
           payment_date: new Date().toISOString().split('T')[0],
@@ -95,7 +96,8 @@ const PaymentTracking = () => {
         const { error: updateError } = await supabase
           .from('invoices')
           .update({ status: 'paid' })
-          .eq('id', paymentForm.invoice_id);
+          .eq('id', paymentForm.invoice_id)
+          .eq('center_id', user?.center_id!);
         if (updateError) throw updateError;
       }
     },

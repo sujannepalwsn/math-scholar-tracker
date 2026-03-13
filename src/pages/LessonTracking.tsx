@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Book, BookOpen, CheckCircle, ChevronDown, ChevronUp, Clock, Edit, Eye, FileText, Plus, Star, Trash2, User, Users, XCircle } from "lucide-react";
+import { Book, BookOpen, CheckCircle, ChevronDown, ChevronUp, Clock, Edit, Eye, FileText, Plus, Printer, Star, Trash2, User, Users, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils"
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,7 +41,6 @@ interface GroupedLessonRecord {
 
 export default function LessonTracking() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
   // State for recording new lessons
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -94,7 +93,7 @@ export default function LessonTracking() {
 
       if (filterSubject !== "all") query = query.eq("subject", filterSubject);
 
-      if (user?.role === 'teacher') {
+      if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('teacher_id', user.teacher_id);
       }
 
@@ -149,7 +148,7 @@ export default function LessonTracking() {
           marks_obtained,
           tests(id, name, subject, total_marks, lesson_plan_id)
         `) // Removed lesson_plans(chapter) as it's not directly on tests
-        .eq("tests.center_id", user.center_id); // Ensure tests belong to the same center
+        .eq("center_id", user.center_id); // Ensure tests belong to the same center
       if (error) throw error;
       return data;
     },
@@ -169,7 +168,7 @@ export default function LessonTracking() {
           teacher_remarks,
           homework(id, title, subject, due_date, lesson_plan_id)
         `)
-        .eq("homework.center_id", user.center_id); // Ensure homework belongs to the same center
+        .eq("center_id", user.center_id); // Ensure homework belongs to the same center
       if (error) throw error;
       return data;
     },
@@ -237,7 +236,7 @@ export default function LessonTracking() {
       if (!studentIds.length) return [];
       const { data, error } = await supabase
         .from("attendance")
-        .select("*")
+        .select("*").eq('center_id', user?.center_id)
         .in("student_id", studentIds)
         .eq("date", date);
       if (error) throw error;
@@ -258,6 +257,7 @@ export default function LessonTracking() {
       const studentLessonRecordsToInsert = selectedStudentIds.map((studentId) => ({
         student_id: studentId,
         lesson_plan_id: selectedLessonPlanId,
+        center_id: user.center_id,
         completed: true,
         completed_at: date,
         notes: generalLessonNotes || null, // Use generalLessonNotes
@@ -283,7 +283,8 @@ export default function LessonTracking() {
 
   const deleteStudentLessonRecordMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("student_chapters").delete().eq("id", id);
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("student_chapters").delete().eq("id", id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -296,13 +297,14 @@ export default function LessonTracking() {
 
   const bulkEvaluateMutation = useMutation({
     mutationFn: async () => {
-      if (bulkEvaluationSelected.length === 0) return;
+      if (bulkEvaluationSelected.length === 0 || !user?.center_id) return;
       const { error } = await supabase
         .from("student_chapters")
         .update({
           evaluation_rating: bulkRating,
           teacher_notes: bulkTeacherNotes || null })
-        .in("id", bulkEvaluationSelected);
+        .in("id", bulkEvaluationSelected)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -830,6 +832,75 @@ export default function LessonTracking() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className="pt-6 border-t no-print">
+                 <Button
+                   onClick={() => {
+                     const printWindow = window.open("", "_blank");
+                     printWindow?.document.write(`
+                       <html>
+                         <head>
+                           <title>Lesson Tracking - ${viewingLessonGroup.lessonPlan.subject}</title>
+                           <style>
+                             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+                             body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
+                             .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+                             .header h1 { margin: 0; font-size: 24px; font-weight: 800; color: #4f46e5; text-transform: uppercase; }
+                             .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+                             .field { margin-bottom: 15px; }
+                             .label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+                             .value { font-size: 14px; font-weight: 700; color: #1e293b; }
+                             .student-card { margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; page-break-inside: avoid; }
+                             .student-header { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 5px; }
+                             .rating { color: #f59e0b; font-weight: 800; }
+                             @media print { body { padding: 0; } .no-print { display: none; } }
+                           </style>
+                         </head>
+                         <body>
+                           <div class="header">
+                             <h1>Lesson Tracking Record</h1>
+                             <div class="grid" style="margin-top: 20px;">
+                               <div>
+                                 <div class="field"><div class="label">Subject</div><div class="value">${viewingLessonGroup.lessonPlan.subject}</div></div>
+                                 <div class="field"><div class="label">Chapter / Unit</div><div class="value">${viewingLessonGroup.lessonPlan.chapter}</div></div>
+                               </div>
+                               <div>
+                                 <div class="field"><div class="label">Topic</div><div class="value">${viewingLessonGroup.lessonPlan.topic}</div></div>
+                                 <div class="field"><div class="label">Date</div><div class="value">${format(new Date(viewingLessonGroup.lessonPlan.lesson_date), "PPP")}</div></div>
+                               </div>
+                             </div>
+                           </div>
+
+                           <h2>Student Evaluations (${viewingLessonGroup.students.length})</h2>
+                           <div class="students-list">
+                             ${viewingLessonGroup.students.map(s => `
+                               <div class="student-card">
+                                 <div class="student-header">
+                                   <div class="value">${s.students?.name}</div>
+                                   <div class="rating">${s.evaluation_rating ? '★'.repeat(s.evaluation_rating) : 'No Rating'}</div>
+                                 </div>
+                                 <div class="field">
+                                   <div class="label">Teacher Remarks</div>
+                                   <div class="value" style="font-style: italic; font-weight: 400;">${s.teacher_notes || 'No remarks recorded.'}</div>
+                                 </div>
+                               </div>
+                             `).join('')}
+                           </div>
+                         </body>
+                       </html>
+                     `);
+                     printWindow?.document.close();
+                     printWindow?.focus();
+                     setTimeout(() => {
+                       printWindow?.print();
+                       printWindow?.close();
+                     }, 500);
+                   }}
+                   className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-12 font-bold shadow-strong"
+                 >
+                   <Printer className="h-4 w-4 mr-2" /> Print Tracking Record
+                 </Button>
               </div>
             </div>
           )}

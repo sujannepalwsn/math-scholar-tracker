@@ -32,17 +32,18 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
 
   // Fetch meeting details to determine its type
   const { data: meetingDetails, isLoading: meetingDetailsLoading } = useQuery({
-    queryKey: ["meeting-details-for-attendance", meetingId],
+    queryKey: ["meeting-details-for-attendance", meetingId, user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("meetings")
         .select("meeting_type")
         .eq("id", meetingId)
+        .eq("center_id", user?.center_id!)
         .single();
       if (error) throw error;
       return data;
     },
-    enabled: !!meetingId });
+    enabled: !!meetingId && !!user?.center_id });
 
   // Fetch all students to get unique grades for the filter
   const { data: allStudents = [] } = useQuery({
@@ -77,16 +78,18 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
 
   // Fetch existing attendees for this meeting
   const { data: existingAttendees = [], isLoading: existingAttendeesLoading } = useQuery({
-    queryKey: ["meeting-attendees", meetingId],
+    queryKey: ["meeting-attendees", meetingId, user?.center_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("meeting_attendees")
-        .select("*, students(id, name, grade), users(id, username, role), teachers(id, name, user_id)") // Fetch teacher user_id
-        .eq("meeting_id", meetingId);
+        .select("*, students(id, name, grade), users(id, username, role), teachers(id, name, user_id)")
+        .eq("meeting_id", meetingId)
+        .eq("center_id", user.center_id);
       if (error) throw error;
       return data;
     },
-    enabled: !!meetingId });
+    enabled: !!meetingId && !!user?.center_id });
 
   // Determine the list of participants to display
   const { data: participants = [], isLoading: participantsLoading } = useQuery({
@@ -205,13 +208,15 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
 
       // Perform inserts
       if (recordsToInsert.length > 0) {
-        const { error: insertError } = await supabase.from("meeting_attendees").insert(recordsToInsert);
+        const recordsWithCenter = recordsToInsert.map(r => ({ ...r, center_id: user?.center_id }));
+        const { error: insertError } = await supabase.from("meeting_attendees").insert(recordsWithCenter);
         if (insertError) throw insertError;
       }
 
       // Perform updates
       if (recordsToUpdate.length > 0) {
-        const { error: updateError } = await supabase.from("meeting_attendees").upsert(recordsToUpdate, { onConflict: 'id' });
+        const recordsWithCenter = recordsToUpdate.map(r => ({ ...r, center_id: user?.center_id }));
+        const { error: updateError } = await supabase.from("meeting_attendees").upsert(recordsWithCenter, { onConflict: 'id' });
         if (updateError) throw updateError;
       }
     },

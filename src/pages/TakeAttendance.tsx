@@ -187,7 +187,7 @@ export default function TakeAttendance() {
       // Insert ALL filtered students - present AND absent
       const records = filteredStudents.map((student) => ({
         student_id: student.id,
-        center_id: user.center_id!,
+        center_id: user.center_id,
         date: dateStr,
         status: attendance[student.id]?.present ? "present" : "absent",
         time_in: attendance[student.id]?.timeIn || null,

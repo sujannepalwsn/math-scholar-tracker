@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogDescription } from "@/components/ui/dialog"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
+import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
@@ -31,6 +32,7 @@ const TEACHER_FEATURES = [
 
 export default function TeacherFeaturePermissions({ teacherId, teacherName }: { teacherId: string; teacherName: string }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: permissions, isLoading: permissionsLoading } = useQuery({
     queryKey: ['teacher-feature-permissions', teacherId],
@@ -39,6 +41,7 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
         .from('teacher_feature_permissions')
         .select('*')
         .eq('teacher_id', teacherId)
+        .eq('center_id', user?.center_id)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -52,13 +55,14 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
         const { error } = await supabase
           .from('teacher_feature_permissions')
           .update({ [featureName]: isEnabled })
-          .eq('teacher_id', teacherId);
+          .eq('teacher_id', teacherId)
+          .eq('center_id', user?.center_id);
         if (error) throw error;
       } else {
         // Insert new record with this permission set
         const { error } = await supabase
           .from('teacher_feature_permissions')
-          .insert({ teacher_id: teacherId, [featureName]: isEnabled });
+          .insert({ teacher_id: teacherId, center_id: user?.center_id, [featureName]: isEnabled });
         if (error) throw error;
       }
     },

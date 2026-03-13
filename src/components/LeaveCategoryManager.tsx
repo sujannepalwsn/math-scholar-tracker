@@ -24,16 +24,17 @@ export default function LeaveCategoryManager() {
   const [newApplicableTo, setNewApplicableTo] = useState<"student" | "teacher" | "both">("both");
 
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ["leave-categories", user?.center_id],
+    queryKey: ["leave-categories", user?.center_id, user?.role],
     queryFn: async () => {
       let query = supabase
         .from("leave_categories")
         .select("*");
 
       if (user?.role === 'admin') {
-        // Superadmin sees only global ones (or all if we want)
+        // Superadmin sees only global ones
         query = query.is("center_id", null);
       } else if (user?.center_id) {
+        // Regular centers see global + their own
         query = query.or(`center_id.is.null,center_id.eq.${user.center_id}`);
       } else {
         query = query.is("center_id", null);
@@ -72,7 +73,8 @@ export default function LeaveCategoryManager() {
       const { error } = await supabase
         .from("leave_categories")
         .update(payload)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("center_id", user?.center_id!);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -82,7 +84,15 @@ export default function LeaveCategoryManager() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("leave_categories").delete().eq("id", id);
+      let query = supabase.from("leave_categories").delete().eq("id", id);
+
+      if (user?.role === 'admin') {
+        query = query.is("center_id", null);
+      } else {
+        query = query.eq("center_id", user?.center_id!);
+      }
+
+      const { error } = await query;
       if (error) throw error;
     },
     onSuccess: () => {

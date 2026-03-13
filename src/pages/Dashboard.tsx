@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Search, TrendingUp, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +13,6 @@ import { ClassSchedule } from "@/components/dashboard/ClassSchedule";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import CenterLogo from "@/components/CenterLogo";
 import NotificationBell from "@/components/NotificationBell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,7 +117,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("student_homework_records")
         .select("status, created_at, homework!inner(center_id)")
-        .eq("homework.center_id", centerId)
+        .eq("center_id", centerId)
         .gte("created_at", `${dateRange.from}T00:00:00`)
         .lte("created_at", `${dateRange.to}T23:59:59`);
       if (error) throw error;
@@ -134,7 +133,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from("student_chapters")
         .select("completed, completed_at, evaluation_rating, lesson_plans!inner(center_id)")
-        .eq("lesson_plans.center_id", centerId)
+        .eq("center_id", centerId)
         .gte("completed_at", `${dateRange.from}T00:00:00`)
         .lte("completed_at", `${dateRange.to}T23:59:59`);
       if (error) throw error;

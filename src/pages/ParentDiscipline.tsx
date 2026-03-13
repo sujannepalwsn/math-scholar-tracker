@@ -28,12 +28,13 @@ export default function ParentDiscipline() {
 
   // Fetch student's discipline issues
   const { data: issues = [], isLoading } = useQuery({
-    queryKey: ['parent-discipline-issues', user.student_id],
+    queryKey: ['parent-discipline-issues', user.student_id, user.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('discipline_issues')
         .select('*, discipline_categories(name)')
         .eq('student_id', user.student_id!)
+        .eq('center_id', user.center_id!)
         .order('issue_date', { ascending: false });
       if (error) throw error;
       return data;

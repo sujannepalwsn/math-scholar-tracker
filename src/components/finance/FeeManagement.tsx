@@ -98,7 +98,7 @@ const FeeManagement = () => {
 
   const deleteHeadingMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('fee_headings').delete().eq('id', id);
+      const { error } = await supabase.from('fee_headings').delete().eq('id', id).eq('center_id', user?.center_id!);
       if (error) throw error;
     },
     onSuccess: () => {

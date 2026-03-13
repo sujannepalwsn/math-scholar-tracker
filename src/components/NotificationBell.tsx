@@ -38,7 +38,8 @@ export default function NotificationBell() {
       if (user.role === 'teacher') {
         broadcastQuery = broadcastQuery.in('target_audience', ['all_teachers']);
       } else if (user.role === 'parent') {
-        broadcastQuery = broadcastQuery.in('target_audience', ['all_parents']);
+        const studentGrades = user.linked_students?.map(s => `grade_${s.grade}`).filter(Boolean) || [];
+        broadcastQuery = broadcastQuery.in('target_audience', ['all_parents', ...studentGrades]);
       }
 
       const { data: broadcasts, error: bError } = await broadcastQuery
@@ -133,6 +134,7 @@ export default function NotificationBell() {
       leave_status: { color: "bg-emerald-100 text-emerald-600", icon: Bell },
       broadcast: { color: "bg-indigo-100 text-indigo-600", icon: MessageSquare },
       homework: { color: "bg-rose-100 text-rose-600", icon: BookOpen },
+      meeting: { color: "bg-cyan-100 text-cyan-600", icon: Calendar },
       info: { color: "bg-muted text-muted-foreground", icon: Info },
     };
     return configs[type] || configs.info;

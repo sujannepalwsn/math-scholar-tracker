@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
-import { cn } from "@/lib/utils";
 
 interface AttendanceStats {
   studentId: string;
@@ -37,12 +36,24 @@ export default function AttendanceSummary() {
   const [selectedStudent, setSelectedStudent] = useState('all');
 
   const { data: students = [] } = useQuery({
-    queryKey: ['students', user?.center_id],
+    queryKey: ['students', user?.center_id, user?.role, user?.teacher_id],
     queryFn: async () => {
       let query = supabase.from('students').select('id, name, grade').order('name');
       if (user?.role !== 'admin' && user?.center_id) {
         query = query.eq('center_id', user.center_id);
       }
+
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', user.center_id);
+        const assignedGrades = assignments?.map(a => a.grade) || [];
+        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', user.center_id);
+        const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
+        const allGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
+        if (allGrades.length > 0) {
+          query = query.in('grade', allGrades);
+        }
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -60,7 +71,7 @@ export default function AttendanceSummary() {
 
       let query = supabase
         .from('attendance')
-        .select('*, students(name, grade)')
+        .select('*, students(name, grade)').eq('center_id', user?.center_id)
         .in('student_id', studentIds)
         .gte('date', startDate)
         .lte('date', endDate);

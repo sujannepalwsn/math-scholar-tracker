@@ -65,7 +65,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       const { data: conversation, error: convError } = await supabase
         .from('chat_conversations')
         .select('id')
-        .eq('parent_user_id', user.id)
+        .eq('teacher_user_id', user.id)
         .eq('center_id', user.center_id)
         .maybeSingle();
       if (convError || !conversation) return 0;
@@ -74,6 +74,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         .from('chat_messages')
         .select('id', { count: 'exact' })
         .eq('conversation_id', conversation.id)
+        .eq('center_id', user.center_id)
         .eq('is_read', false)
         .neq('sender_user_id', user.id);
       if (error) return 0;

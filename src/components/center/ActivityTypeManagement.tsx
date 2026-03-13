@@ -69,7 +69,9 @@ export default function ActivityTypeManagement() {
       if (!editingType || !user?.center_id) throw new Error("Activity Type or Center ID not found");
       const { error } = await supabase.from("activity_types").update({
         name,
-        description: description || null }).eq("id", editingType.id);
+        description: description || null })
+        .eq("id", editingType.id)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -84,8 +86,11 @@ export default function ActivityTypeManagement() {
 
   const toggleActivityTypeStatusMutation = useMutation({
     mutationFn: async (type: ActivityType) => {
+      if (!user?.center_id) return;
       const { error } = await supabase.from("activity_types").update({
-        is_active: !type.is_active }).eq("id", type.id);
+        is_active: !type.is_active })
+        .eq("id", type.id)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -98,7 +103,10 @@ export default function ActivityTypeManagement() {
 
   const deleteActivityTypeMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("activity_types").delete().eq("id", id);
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("activity_types").delete()
+        .eq("id", id)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {

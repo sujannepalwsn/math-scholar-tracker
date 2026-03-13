@@ -56,18 +56,20 @@ export default function MeetingManagement() {
       const { error: attendeesError } = await supabase
         .from("meeting_attendees")
         .delete()
-        .eq("meeting_id", id);
+        .eq("meeting_id", id)
+        .eq("center_id", user?.center_id);
       if (attendeesError) throw attendeesError;
 
       // Next, delete associated meeting_conclusions records
       const { error: conclusionsError } = await supabase
         .from("meeting_conclusions")
         .delete()
-        .eq("meeting_id", id);
+        .eq("meeting_id", id)
+        .eq("center_id", user?.center_id);
       if (conclusionsError) throw conclusionsError;
 
       // Finally, delete the meeting itself
-      const { error: meetingError } = await supabase.from("meetings").delete().eq("id", id);
+      const { error: meetingError } = await supabase.from("meetings").delete().eq("id", id).eq("center_id", user?.center_id);
       if (meetingError) throw meetingError;
     },
     onSuccess: () => {
@@ -153,9 +155,9 @@ export default function MeetingManagement() {
           center_id: user.center_id!,
           title: "New Meeting Scheduled",
           message: `${meetingData.title} on ${format(new Date(meetingData.meeting_date), "MMM d, h:mm a")}`,
-          type: "exam" // Reusing exam/calendar icon
+          type: "meeting"
         }));
-        await supabase.from("notifications").insert(userNotifications);
+        await supabase.from("notifications").insert(userNotifications).eq('center_id', user.center_id!);
       }
     }
 
@@ -209,18 +211,20 @@ export default function MeetingManagement() {
               CREATE SESSION
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh]" aria-labelledby="meeting-form-title" aria-describedby="meeting-form-description">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" aria-labelledby="meeting-form-title" aria-describedby="meeting-form-description">
             <DialogHeader>
               <DialogTitle id="meeting-form-title" className="text-2xl font-black tracking-tight">{editingMeeting ? "Update Consultation" : "Schedule New Assembly"}</DialogTitle>
               <DialogDescription id="meeting-form-description" className="font-medium">
                 {editingMeeting ? "Modify session parameters and attendees." : "Initialize a new communication protocol with stakeholders."}
               </DialogDescription>
             </DialogHeader>
-            <MeetingForm
-              meeting={editingMeeting}
-              onSave={handleMeetingSave}
-              onCancel={() => setShowMeetingFormDialog(false)}
-            />
+            <div className="overflow-y-auto flex-1 pr-2">
+              <MeetingForm
+                meeting={editingMeeting}
+                onSave={handleMeetingSave}
+                onCancel={() => setShowMeetingFormDialog(false)}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -319,25 +323,27 @@ export default function MeetingManagement() {
 
       {/* Attendance Recorder Dialog */}
       <Dialog open={showAttendanceDialog} onOpenChange={setShowAttendanceDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" aria-labelledby="attendance-recorder-title" aria-describedby="attendance-recorder-description">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" aria-labelledby="attendance-recorder-title" aria-describedby="attendance-recorder-description">
           <DialogHeader>
             <DialogTitle id="attendance-recorder-title">Record Attendance for {selectedMeetingForAttendance?.title}</DialogTitle>
             <DialogDescription id="attendance-recorder-description">
               Mark attendees as present, absent, or excused.
             </DialogDescription>
           </DialogHeader>
-          {selectedMeetingForAttendance && (
-            <MeetingAttendanceRecorder
-              meetingId={selectedMeetingForAttendance.id}
-              onClose={() => setShowAttendanceDialog(false)}
-            />
-          )}
+          <div className="overflow-y-auto flex-1 pr-2">
+            {selectedMeetingForAttendance && (
+              <MeetingAttendanceRecorder
+                meetingId={selectedMeetingForAttendance.id}
+                onClose={() => setShowAttendanceDialog(false)}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Conclusion Form/Viewer Dialog (now includes attendees) */}
       <Dialog open={showConclusionDialog} onOpenChange={setShowConclusionDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-labelledby="conclusion-dialog-title" aria-describedby="conclusion-dialog-description">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" aria-labelledby="conclusion-dialog-title" aria-describedby="conclusion-dialog-description">
           <DialogHeader>
             <DialogTitle id="conclusion-dialog-title">Meeting Details for {selectedMeetingForConclusion?.title}</DialogTitle>
             <DialogDescription id="conclusion-dialog-description">
@@ -346,20 +352,22 @@ export default function MeetingManagement() {
                 : "Add the summary and notes for this meeting."}
             </DialogDescription>
           </DialogHeader>
-          {selectedMeetingForConclusion && (
-            <div className="space-y-6 py-4">
-              {selectedMeetingForConclusion.meeting_conclusions && selectedMeetingForConclusion.meeting_conclusions.length > 0 ? (
-                <MeetingConclusionViewer conclusion={selectedMeetingForConclusion.meeting_conclusions[0]} />
-              ) : (
-                <MeetingConclusionForm
-                  meetingId={selectedMeetingForConclusion.id}
-                  onSave={() => setShowConclusionDialog(false)}
-                  onClose={() => setShowConclusionDialog(false)}
-                />
-              )}
-              <MeetingAttendeesViewer meetingId={selectedMeetingForConclusion.id} />
-            </div>
-          )}
+          <div className="overflow-y-auto flex-1 pr-2">
+            {selectedMeetingForConclusion && (
+              <div className="space-y-6 py-4">
+                {selectedMeetingForConclusion.meeting_conclusions && selectedMeetingForConclusion.meeting_conclusions.length > 0 ? (
+                  <MeetingConclusionViewer conclusion={selectedMeetingForConclusion.meeting_conclusions[0]} />
+                ) : (
+                  <MeetingConclusionForm
+                    meetingId={selectedMeetingForConclusion.id}
+                    onSave={() => setShowConclusionDialog(false)}
+                    onClose={() => setShowConclusionDialog(false)}
+                  />
+                )}
+                <MeetingAttendeesViewer meetingId={selectedMeetingForConclusion.id} />
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

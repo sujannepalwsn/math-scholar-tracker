@@ -118,7 +118,7 @@ export default function ViewRecords() {
       const end = endOfMonth(detailMonthFilter);
       let query = supabase
         .from("attendance")
-        .select("id, date, status, time_in, time_out")
+        .select("id, date, status, time_in, time_out").eq('center_id', user?.center_id)
         .eq("student_id", selectedStudentDetail.id)
         .gte("date", format(start, "yyyy-MM-dd")) // Corrected format string
         .lte("date", format(end, "yyyy-MM-dd"));

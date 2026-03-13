@@ -38,9 +38,8 @@ export default function Notifications() {
       if (user.role === 'teacher') {
         broadcastQuery = broadcastQuery.in('target_audience', ['all_teachers']);
       } else if (user.role === 'parent') {
-        broadcastQuery = broadcastQuery.in('target_audience', ['all_parents']);
-        // Grade filtering for parents would be more complex, but we'll include all for now
-        // to ensure visibility, as the RLS should protect grade-specific ones anyway.
+        const studentGrades = user.linked_students?.map(s => `grade_${s.grade}`).filter(Boolean) || [];
+        broadcastQuery = broadcastQuery.in('target_audience', ['all_parents', ...studentGrades]);
       }
 
       const { data: broadcasts, error: bError } = await broadcastQuery
@@ -136,6 +135,7 @@ export default function Notifications() {
       leave_status: { color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: CheckCircle2 },
       broadcast: { color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400", icon: MessageSquare },
       homework: { color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400", icon: BookOpen },
+      meeting: { color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400", icon: Calendar },
       info: { color: "bg-muted text-muted-foreground", icon: Info },
     };
     return configs[type] || configs.info;

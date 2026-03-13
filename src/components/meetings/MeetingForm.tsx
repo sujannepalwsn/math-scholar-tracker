@@ -219,7 +219,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
 
   const updateMeetingMutation = useMutation({
     mutationFn: async () => {
-      if (!meeting?.id) throw new Error("Meeting ID not found");
+      if (!meeting?.id || !user?.center_id) throw new Error("Meeting ID or Center ID not found");
       const { data, error } = await supabase.from("meetings").update({
         title,
         description: description || null,
@@ -228,7 +228,10 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
         meeting_type: meetingType,
         status,
         agenda: `[Category: ${agendaCategory}] ${description || ''}`,
-        related_meeting_id: relatedMeetingId } as any).eq("id", meeting.id).select().single();
+        related_meeting_id: relatedMeetingId } as any)
+        .eq("id", meeting.id)
+        .eq("center_id", user.center_id)
+        .select().single();
       if (error) throw error;
       return data;
     },
@@ -251,7 +254,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
+    <form onSubmit={handleSubmit} className="space-y-4 py-4">
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
         <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Meeting title" required />

@@ -64,6 +64,7 @@ ALTER TABLE public.test_results ADD COLUMN IF NOT EXISTS center_id uuid REFERENC
 UPDATE public.test_results tr SET center_id = s.center_id FROM public.students s WHERE tr.student_id = s.id AND tr.center_id IS NULL;
 
 -- 3. Enable RLS on all tables and create policies
+-- To avoid infinite recursion, we use a simpler check for the users table
 DO $$
 DECLARE
     t text;
@@ -85,12 +86,13 @@ BEGIN
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('DROP POLICY IF EXISTS "Center Isolation Policy" ON public.%I', t);
 
-        -- Special case for users table: allow reading self and others in same center
         IF t = 'users' THEN
-            EXECUTE format('CREATE POLICY "Center Isolation Policy" ON public.%I USING (id = auth.uid() OR center_id = (SELECT center_id FROM public.users WHERE id = auth.uid()))', t);
+            -- Users can see themselves
+            EXECUTE format('CREATE POLICY "Center Isolation Policy" ON public.%I FOR SELECT USING (id = auth.uid() OR center_id = public.get_auth_center_id())', t);
+            EXECUTE format('CREATE POLICY "Users update own record" ON public.%I FOR UPDATE USING (id = auth.uid())', t);
         ELSE
             -- Default policy: matches center_id
-            EXECUTE format('CREATE POLICY "Center Isolation Policy" ON public.%I USING (center_id = (SELECT center_id FROM public.users WHERE id = auth.uid()))', t);
+            EXECUTE format('CREATE POLICY "Center Isolation Policy" ON public.%I USING (center_id = public.get_auth_center_id())', t);
         END IF;
     END LOOP;
 END $$;

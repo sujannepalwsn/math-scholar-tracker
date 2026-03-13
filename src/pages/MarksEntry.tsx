@@ -30,6 +30,7 @@ export default function MarksEntry() {
   const centerId = user?.center_id;
 
   const [selectedExamId, setSelectedExamId] = useState<string>(searchParams.get("examId") || "");
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [marksData, setMarksData] = useState<Record<string, Record<string, string>>>({});
 
   const { data: exams = [] } = useQuery({
@@ -69,6 +70,18 @@ export default function MarksEntry() {
 
   const selectedExam = exams.find((e: any) => e.id === selectedExamId);
 
+  useEffect(() => {
+    if (selectedExam) {
+      if (selectedExam.grades?.length > 0) {
+        if (!selectedExam.grades.includes(selectedGrade)) {
+          setSelectedGrade(selectedExam.grades[0]);
+        }
+      } else if (selectedExam.grade) {
+        setSelectedGrade(selectedExam.grade);
+      }
+    }
+  }, [selectedExam]);
+
   const { data: subjects = [] } = useQuery({
     queryKey: ["exam-subjects-entry", selectedExamId, centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
@@ -95,20 +108,20 @@ export default function MarksEntry() {
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-exam", centerId, selectedExam?.grade],
+    queryKey: ["students-for-exam", centerId, selectedGrade],
     queryFn: async () => {
-      if (!centerId || !selectedExam?.grade) return [];
+      if (!centerId || !selectedGrade) return [];
       const { data, error } = await supabase
         .from("students")
         .select("*")
         .eq("center_id", centerId)
-        .eq("grade", selectedExam.grade)
+        .eq("grade", selectedGrade)
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId && !!selectedExam?.grade,
+    enabled: !!centerId && !!selectedGrade,
   });
 
   // Load existing marks
@@ -215,22 +228,38 @@ export default function MarksEntry() {
       <PageHeader title="Marks Entry" description="Enter student marks for exams" />
 
       <Card>
-        <CardContent className="p-4">
-          <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select an exam" />
-            </SelectTrigger>
-            <SelectContent>
-              {exams.map((exam: any) => (
-                <SelectItem key={exam.id} value={exam.id}>
-                  {exam.name} - Grade {exam.grade} ({exam.academic_year})
-                  <span className="ml-2 text-[10px] uppercase text-muted-foreground">
-                    ({exam.status === 'published' ? 'Routine Published' : 'Draft'})
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Examination</label>
+            <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an exam" />
+              </SelectTrigger>
+              <SelectContent>
+                {exams.map((exam: any) => (
+                  <SelectItem key={exam.id} value={exam.id}>
+                    {exam.name} ({exam.academic_year})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedExam && selectedExam.grades?.length > 1 && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Grade</label>
+              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectedExam.grades.map((g: string) => (
+                    <SelectItem key={g} value={g}>Grade {g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
       </Card>
 

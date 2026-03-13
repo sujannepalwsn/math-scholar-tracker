@@ -193,13 +193,17 @@ export default function PreschoolActivities() {
         activity_date: activityDate,
         photo_url: photoUrl,
         video_url: videoUrl,
-        activity_type_id: activityTypeId }).eq("id", (editingActivity as any).activities?.id);
+        activity_type_id: activityTypeId })
+        .eq("id", (editingActivity as any).activities?.id)
+        .eq("center_id", user.center_id);
       if (activityUpdateError) throw activityUpdateError;
 
       // Update the student_activity record (Updates only the current record being edited)
       const { error: saUpdateError } = await supabase.from("student_activities").update({
         student_id: selectedStudentIds[0],
-        involvement_score: involvementRating }).eq("id", editingActivity.id);
+        involvement_score: involvementRating })
+        .eq("id", editingActivity.id)
+        .eq("center_id", user.center_id);
       if (saUpdateError) throw saUpdateError;
     },
     onSuccess: () => {
@@ -214,8 +218,11 @@ export default function PreschoolActivities() {
 
   const deleteActivityMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!user?.center_id) return;
       // First delete the student_activity record
-      const { error: saDeleteError } = await supabase.from("student_activities").delete().eq("id", id);
+      const { error: saDeleteError } = await supabase.from("student_activities").delete()
+        .eq("id", id)
+        .eq("center_id", user.center_id);
       if (saDeleteError) throw saDeleteError;
 
       // Then delete the main activity record (if no other student_activities reference it)
@@ -297,9 +304,11 @@ export default function PreschoolActivities() {
             setIsDialogOpen(open);
             if (!open) resetForm();
           }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> Log Activity</Button>
-            </DialogTrigger>
+            {user?.role === 'center' && (
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" /> Log Activity</Button>
+              </DialogTrigger>
+            )}
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-labelledby="log-activity-title" aria-describedby="log-activity-description">
             <DialogHeader>
               <DialogTitle id="log-activity-title">{editingActivity ? "Edit Activity" : "Log New Activity"}</DialogTitle>
@@ -512,12 +521,16 @@ export default function PreschoolActivities() {
                                </a>
                              </Button>
                           )}
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/10" onClick={() => handleEditClick(activity)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-destructive hover:bg-destructive/10" onClick={() => deleteActivityMutation.mutate(activity.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {user?.role === 'center' && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/10" onClick={() => handleEditClick(activity)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-destructive hover:bg-destructive/10" onClick={() => deleteActivityMutation.mutate(activity.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

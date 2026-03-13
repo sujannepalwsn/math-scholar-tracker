@@ -46,9 +46,9 @@ export default function MarksheetView() {
       }
 
       if (user?.role === 'teacher' && user?.teacher_id) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('center_id', user?.center_id).eq('teacher_id', user.teacher_id);
         const assignedGrades = assignments?.map(a => a.grade) || [];
-        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id);
+        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('center_id', user?.center_id).eq('teacher_id', user.teacher_id);
         const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
         const allTeacherGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
 
@@ -88,7 +88,7 @@ export default function MarksheetView() {
     queryKey: ["marksheet-subjects", selectedExamId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId).order("subject_name");
+      const { data, error } = await supabase.from("exam_subjects").select("*").eq('center_id', user?.center_id).eq("exam_id", selectedExamId).order("subject_name");
       if (error) throw error;
       return data;
     },
@@ -99,7 +99,7 @@ export default function MarksheetView() {
     queryKey: ["marksheet-marks", selectedExamId, selectedStudentId],
     queryFn: async () => {
       if (!selectedExamId || !selectedStudentId) return [];
-      const { data, error } = await supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId).eq("student_id", selectedStudentId);
+      const { data, error } = await supabase.from("exam_marks").select("*").eq('center_id', user?.center_id).eq("exam_id", selectedExamId).eq("student_id", selectedStudentId);
       if (error) throw error;
       return data;
     },

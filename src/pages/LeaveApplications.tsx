@@ -63,7 +63,7 @@ export default function LeaveApplications() {
     queryFn: async () => {
       let query = supabase
         .from("leave_categories")
-        .select("*")
+        .select("*").eq('center_id', user?.center_id)
         .eq("is_active", true);
 
       if (user?.center_id) {
@@ -91,7 +91,7 @@ export default function LeaveApplications() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("parent_students")
-        .select("student_id, students(id, name)")
+        .select("student_id, students(id, name)").eq('center_id', user?.center_id)
         .eq("parent_user_id", user?.id!);
       if (error) throw error;
       return data.map((d: any) => d.students);
@@ -105,7 +105,7 @@ export default function LeaveApplications() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("leave_applications")
-        .select("*, leave_categories(name), students(name)")
+        .select("*, leave_categories(name), students(name)").eq('center_id', user?.center_id)
         .eq("user_id", user?.id!)
         .order("created_at", { ascending: false });
       if (error) throw error;

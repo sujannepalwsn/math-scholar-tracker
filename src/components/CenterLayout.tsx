@@ -83,6 +83,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
         .from('chat_messages')
         .select('id', { count: 'exact' })
         .in('conversation_id', conversationIds)
+        .eq('center_id', user.center_id)
         .eq('is_read', false)
         .neq('sender_user_id', user.id);
       if (error) return 0;

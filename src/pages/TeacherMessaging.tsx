@@ -42,9 +42,9 @@ export default function TeacherMessaging() {
 
   // Fetch messages
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
-    queryKey: ["teacher-chat-messages", conversation?.id],
+    queryKey: ["teacher-chat-messages", conversation?.id, user.center_id],
     queryFn: async () => {
-      if (!conversation?.id) return [];
+      if (!conversation?.id || !user.center_id) return [];
       const { data, error } = await supabase
         .from("chat_messages")
         .select(`
@@ -52,6 +52,7 @@ export default function TeacherMessaging() {
           sender:sender_user_id(id, username, role)
         `)
         .eq("conversation_id", conversation.id)
+        .eq("center_id", user.center_id)
         .order("sent_at", { ascending: true });
       if (error) throw error;
       return data;
@@ -84,19 +85,21 @@ export default function TeacherMessaging() {
   // Send message
   const sendMessageMutation = useMutation({
     mutationFn: async () => {
-      if (!conversation?.id || !user?.id || !newMessage.trim()) {
+      if (!conversation?.id || !user?.id || !user?.center_id || !newMessage.trim()) {
         throw new Error("Missing required data");
       }
       const { error } = await supabase.from("chat_messages").insert({
         conversation_id: conversation.id,
         sender_user_id: user.id,
+        center_id: user.center_id,
         message_text: newMessage.trim() });
       if (error) throw error;
 
       await supabase
         .from("chat_conversations")
         .update({ updated_at: new Date().toISOString() })
-        .eq("id", conversation.id);
+        .eq("id", conversation.id)
+        .eq("center_id", user.center_id);
     },
     onSuccess: () => {
       setNewMessage("");
@@ -196,7 +199,7 @@ export default function TeacherMessaging() {
             )}
           </ScrollArea>
 
-          <form onSubmit={handleSendMessage} className="p-4 border-t flex gap-2">
+          <form onSubmit={handleSendMessage} className="p-4 border-t flex gap-2 items-end">
             <Textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -206,11 +209,10 @@ export default function TeacherMessaging() {
                   if (newMessage.trim()) sendMessageMutation.mutate();
                 }
               }}
-              placeholder="Type a message... (Shift+Enter for new line)"
+              placeholder="Type a message..."
               className="flex-1 min-h-[40px] max-h-[120px] resize-none"
-              rows={1}
             />
-            <Button type="submit" disabled={!newMessage.trim() || sendMessageMutation.isPending}>
+            <Button type="submit" disabled={!newMessage.trim() || sendMessageMutation.isPending} className="mb-1">
               <Send className="h-4 w-4" />
             </Button>
           </form>

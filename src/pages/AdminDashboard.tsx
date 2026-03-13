@@ -36,6 +36,8 @@ const AdminDashboard = () => {
   const { data: centers = [], isLoading } = useQuery({
     queryKey: ['centers-with-users'],
     queryFn: async () => {
+      // centers table doesn't have center_id (id is the center identifier)
+      // users table has center_id, but here we want all users for each center
       const { data, error } = await supabase
         .from('centers')
         .select('*, users(*)')

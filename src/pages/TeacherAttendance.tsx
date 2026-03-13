@@ -127,6 +127,7 @@ export default function TeacherAttendancePage() {
       const { data, error } = await supabase
         .from("teacher_attendance")
         .select("id, date, status, time_in, time_out, notes")
+        .eq('center_id', user?.center_id!)
         .eq("teacher_id", selectedTeacherDetail.id)
         .gte("date", format(start, "yyyy-MM-dd"))
         .lte("date", format(end, "yyyy-MM-dd"))
@@ -220,7 +221,9 @@ export default function TeacherAttendancePage() {
             status: record.status,
             time_in: record.time_in,
             time_out: record.time_out,
-            notes: record.notes }).eq("id", record.id);
+            notes: record.notes })
+            .eq("id", record.id)
+            .eq("center_id", user.center_id!);
           if (updateError) throw updateError;
         }
       }

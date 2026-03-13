@@ -57,18 +57,23 @@ export default function LessonPlans() {
   const allUniqueGrades = Array.from(new Set(students.map(s => s.grade).filter(Boolean))).sort();
 
   const { data: teacherAssignments = [] } = useQuery({
-    queryKey: ["teacher-assignments-lp", user?.teacher_id],
+    queryKey: ["teacher-assignments-lp", user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.teacher_id || !user?.center_id) return [];
-      const { data, error } = await supabase
+      if (!user?.center_id) return [];
+      let query = supabase
         .from("period_schedules")
         .select("subject, grade")
-        .eq("center_id", user.center_id)
-        .eq("teacher_id", user.teacher_id);
+        .eq("center_id", user.center_id);
+
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        query = query.eq("teacher_id", user.teacher_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: user?.role === 'teacher' && !!user?.teacher_id && !!user?.center_id
+    enabled: !!user?.center_id
   });
 
   const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
@@ -169,7 +174,7 @@ export default function LessonPlans() {
         notes: notes || null,
         lesson_file_url: fileUrl,
         grade: selectedGrade === "all" ? null : selectedGrade
-      }).eq("id", editingLessonPlan.id);
+      }).eq("id", editingLessonPlan.id).eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["lesson-plans-for-tracking"] }); toast.success("Updated!"); setIsDialogOpen(false); resetForm(); },
@@ -264,7 +269,9 @@ export default function LessonPlans() {
             </SelectContent>
           </Select>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild><Button size="sm" className="rounded-xl"><Plus className="h-4 w-4 mr-1" /> Create</Button></DialogTrigger>
+            {user?.role === 'center' && (
+              <DialogTrigger asChild><Button size="sm" className="rounded-xl"><Plus className="h-4 w-4 mr-1" /> Create</Button></DialogTrigger>
+            )}
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingLessonPlan ? "Edit Lesson Plan" : "New Lesson Plan"}</DialogTitle>
@@ -276,18 +283,18 @@ export default function LessonPlans() {
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Subject *</Label>
-                      {user?.role === 'teacher' ? (
-                        <Select value={subject} onValueChange={setSubject}>
-                          <SelectTrigger className="bg-background border-muted-foreground/20">
-                            <SelectValue placeholder="Select Subject" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {assignedSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Mathematics" className="bg-background border-muted-foreground/20" />
-                      )}
+                      <Select value={subject} onValueChange={setSubject}>
+                        <SelectTrigger className="bg-background border-muted-foreground/20">
+                          <SelectValue placeholder="Select Subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assignedSubjects.length > 0 ? (
+                            assignedSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)
+                          ) : (
+                            <SelectItem value="none" disabled>No subjects assigned</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Unit (Chapter) *</Label>

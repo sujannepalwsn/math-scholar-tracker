@@ -27,13 +27,16 @@ export default function ParentLessonTracking() {
   }
 
   const { data: lessonRecords = [], isLoading } = useQuery({
-    queryKey: ['student-lesson-records-parent-lesson-tracking', user.student_id, subjectFilter],
+    queryKey: ['student-lesson-records-parent-lesson-tracking', user.student_id, subjectFilter, user.center_id],
     queryFn: async () => {
       let query = supabase.from('student_chapters').select(`
         *,
         lesson_plans(id, subject, chapter, topic, lesson_date, lesson_file_url),
         recorded_by_teacher:recorded_by_teacher_id(name)
-      `).eq('student_id', user.student_id).order('completed_at', { ascending: false });
+      `)
+      .eq('student_id', user.student_id!)
+      .eq('center_id', user.center_id!)
+      .order('completed_at', { ascending: false });
       
       const { data, error } = await query;
       if (error) throw error;

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Calendar, Edit, GraduationCap, Plus, Trash2, ListChecks, CheckCircle2 } from "lucide-react";
+import { BookOpen, Calendar, Edit, GraduationCap, Plus, Trash2, ListChecks, CheckCircle2, Info } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,9 +28,11 @@ export default function ExamManagement() {
   const [editingExam, setEditingExam] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
-    grade: "",
+    grades: [] as string[],
     academic_year: "2025/2026",
-    exam_date: "",
+    start_date: "",
+    end_date: "",
+    description: "",
     status: "draft",
   });
 
@@ -40,14 +42,26 @@ export default function ExamManagement() {
   const [subjectForm, setSubjectForm] = useState({ subject_name: "", full_marks: "100", pass_marks: "40" });
 
   const { data: exams = [], isLoading } = useQuery({
-    queryKey: ["exams", centerId],
+    queryKey: ["exams", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("exams")
         .select("*")
-        .eq("center_id", centerId)
-        .order("created_at", { ascending: false });
+        .eq("center_id", centerId);
+
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
+        const assignedGrades = assignments?.map(a => a.grade) || [];
+        const { data: subjectAssignments } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
+        const subjectGrades = subjectAssignments?.map(a => a.grade) || [];
+        const allGrades = Array.from(new Set([...assignedGrades, ...subjectGrades]));
+        if (allGrades.length > 0) {
+          query = query.in('grade', allGrades);
+        }
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -71,32 +85,47 @@ export default function ExamManagement() {
   });
 
   const { data: routineSubjects = [] } = useQuery({
-    queryKey: ["routine-subjects", centerId],
+    queryKey: ["routine-subjects", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("period_schedules")
         .select("subject")
         .eq("center_id", centerId);
+
+      if (user?.role === 'teacher' && user?.teacher_id) {
+        query = query.eq("teacher_id", user.teacher_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return Array.from(new Set(data.map(d => d.subject))).sort();
     },
-    enabled: !!centerId && user?.role === 'center',
+    enabled: !!centerId,
   });
 
   const createExam = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const payload = {
-        ...data,
+      const payload: any = {
+        name: data.name,
+        grades: data.grades,
+        academic_year: data.academic_year,
+        start_date: data.start_date || null,
+        end_date: data.end_date || null,
+        description: data.description || null,
+        status: data.status,
         center_id: centerId!,
         created_by: user?.id,
-        exam_date: data.exam_date || null,
       };
+      // Keep legacy fields for compatibility if necessary, though migration should handle it
+      if (data.grades.length > 0) payload.grade = data.grades[0];
+      if (data.start_date) payload.exam_date = data.start_date;
+
       if (editingExam) {
-        const { error } = await supabase.from("exams").update(payload).eq("id", editingExam.id);
+        const { error } = await supabase.from("exams").update(payload).eq("id", editingExam.id).eq("center_id", centerId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("exams").insert(payload);
+        const { error } = await supabase.from("exams").insert(payload).eq('center_id', centerId);
         if (error) throw error;
       }
     },
@@ -110,7 +139,8 @@ export default function ExamManagement() {
 
   const deleteExam = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("exams").delete().eq("id", id);
+      if (!centerId) return;
+      const { error } = await supabase.from("exams").delete().eq("id", id).eq("center_id", centerId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -121,15 +151,17 @@ export default function ExamManagement() {
 
   const publishExam = useMutation({
     mutationFn: async (id: string) => {
+      if (!centerId) return;
       const { data: exam, error: fetchError } = await supabase
         .from("exams")
         .select("*")
         .eq("id", id)
+        .eq("center_id", centerId)
         .single();
 
       if (fetchError) throw fetchError;
 
-      const { error } = await supabase.from("exams").update({ status: "published" }).eq("id", id);
+      const { error } = await supabase.from("exams").update({ status: "published" }).eq("id", id).eq("center_id", centerId);
       if (error) throw error;
 
       // Notify students/parents
@@ -247,7 +279,8 @@ export default function ExamManagement() {
 
   const deleteSubject = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("exam_subjects").delete().eq("id", id);
+      if (!centerId) return;
+      const { error } = await supabase.from("exam_subjects").delete().eq("id", id).eq("center_id", centerId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -257,7 +290,15 @@ export default function ExamManagement() {
   });
 
   const resetForm = () => {
-    setFormData({ name: "", grade: "", academic_year: "2025/2026", exam_date: "", status: "draft" });
+    setFormData({
+      name: "",
+      grades: [],
+      academic_year: "2025/2026",
+      start_date: "",
+      end_date: "",
+      description: "",
+      status: "draft"
+    });
     setEditingExam(null);
     setShowForm(false);
   };
@@ -265,9 +306,11 @@ export default function ExamManagement() {
   const handleEdit = (exam: any) => {
     setFormData({
       name: exam.name,
-      grade: exam.grade,
+      grades: exam.grades || (exam.grade ? [exam.grade] : []),
       academic_year: exam.academic_year,
-      exam_date: exam.exam_date || "",
+      start_date: exam.start_date || exam.exam_date || "",
+      end_date: exam.end_date || exam.exam_date || "",
+      description: exam.description || "",
       status: exam.status,
     });
     setEditingExam(exam);
@@ -298,22 +341,45 @@ export default function ExamManagement() {
               <Label>Exam Name</Label>
               <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. First Term Exam" />
             </div>
-            <div>
-              <Label>Grade</Label>
-              <Select value={formData.grade} onValueChange={(v) => setFormData({ ...formData, grade: v })}>
-                <SelectTrigger><SelectValue placeholder="Select grade" /></SelectTrigger>
-                <SelectContent>{grades.map(g => <SelectItem key={g} value={g}>Grade {g}</SelectItem>)}</SelectContent>
-              </Select>
+            <div className="space-y-2">
+              <Label>Applicable Grades (Multi-select)</Label>
+              <div className="flex flex-wrap gap-2 p-2 border rounded-md max-h-32 overflow-y-auto">
+                {grades.map(g => (
+                  <Badge
+                    key={g}
+                    variant={formData.grades.includes(g) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      const newGrades = formData.grades.includes(g)
+                        ? formData.grades.filter(item => item !== g)
+                        : [...formData.grades, g];
+                      setFormData({ ...formData, grades: newGrades });
+                    }}
+                  >
+                    Grade {g}
+                  </Badge>
+                ))}
+              </div>
             </div>
             <div>
               <Label>Academic Year</Label>
               <Input value={formData.academic_year} onChange={(e) => setFormData({ ...formData, academic_year: e.target.value })} />
             </div>
-            <div>
-              <Label>Exam Date</Label>
-              <Input type="date" value={formData.exam_date} onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })} />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <Input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
+              </div>
             </div>
-            <Button className="w-full" onClick={() => createExam.mutate(formData)} disabled={!formData.name || !formData.grade}>
+            <div>
+              <Label>Description (Optional)</Label>
+              <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Exam instructions or details..." />
+            </div>
+            <Button className="w-full" onClick={() => createExam.mutate(formData)} disabled={!formData.name || formData.grades.length === 0}>
               {editingExam ? "Update Exam" : "Create Exam"}
             </Button>
           </div>
@@ -411,13 +477,13 @@ export default function ExamManagement() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Grade {exam.grade} • {exam.academic_year}
-                      {exam.exam_date && ` • ${safeFormatDate(exam.exam_date, "MMM dd, yyyy")}`}
+                      Grades: {exam.grades?.join(", ") || exam.grade} • {exam.academic_year}
+                      {exam.start_date && ` • ${safeFormatDate(exam.start_date, "MMM dd")} - ${safeFormatDate(exam.end_date, "MMM dd, yyyy")}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button variant="outline" size="sm" onClick={() => { setSelectedExamId(exam.id); setShowSubjectDialog(true); }}>
-                      <BookOpen className="h-3 w-3 mr-1" /> Subjects
+                      <Eye className="h-3 w-3 mr-1" /> View Subjects
                     </Button>
 
                     {user?.role === 'center' && exam.status === "draft" && (
@@ -436,6 +502,9 @@ export default function ExamManagement() {
 
                     {exam.status === "published" && (
                       <>
+                        {/* Teachers can still enter marks but the request says Read-Only access to Exams and Results.
+                            However, requirement 11 says teachers must be able to enter exam marks for assigned subjects.
+                            Let's keep Enter Marks for teachers if they are on published status. */}
                         <Button variant="outline" size="sm" onClick={() => navigate(user?.role === 'teacher' ? `/teacher/marks-entry?examId=${exam.id}` : `/marks-entry?examId=${exam.id}`)}>
                           <Edit className="h-3 w-3 mr-1" /> Enter Marks
                         </Button>

@@ -181,10 +181,10 @@ export default function RegisterStudent() {
   // Bulk insert
   const bulkInsertMutation = useMutation({
     mutationFn: async (rows: StudentInput[]) => {
-      if (!rows.length) return;
+      if (!rows.length || !user?.center_id) return;
       const rowsWithCenter = rows.map((r) => ({
         ...r,
-        center_id: user?.center_id || null }));
+        center_id: user.center_id }));
       const { error } = await supabase.from("students").insert(rowsWithCenter);
       if (error) throw error;
     },

@@ -44,8 +44,6 @@ export default function TeacherManagement() {
   const [monthlySalary, setMonthlySalary] = useState("");
   const [regularInTime, setRegularInTime] = useState("09:00");
   const [regularOutTime, setRegularOutTime] = useState("17:00");
-  const [expectedCheckIn, setExpectedCheckIn] = useState("09:00");
-  const [expectedCheckOut, setExpectedCheckOut] = useState("17:00");
 
   const [bulkText, setBulkText] = useState("");
   const [parsedBulkEntries, setParsedBulkEntries] = useState<BulkTeacherEntry[]>([]);
@@ -111,7 +109,6 @@ export default function TeacherManagement() {
     setName(""); setContactNumber(""); setEmail("");
     setHireDate(format(new Date(), "yyyy-MM-dd"));
     setMonthlySalary(""); setRegularInTime("09:00"); setRegularOutTime("17:00");
-    setExpectedCheckIn("09:00"); setExpectedCheckOut("17:00");
     setEditingTeacher(null); setBulkText(""); setParsedBulkEntries([]);
   };
 
@@ -134,8 +131,7 @@ export default function TeacherManagement() {
       const { error, data: newTeacher } = await supabase.from("teachers").insert({
         center_id: user.center_id, name, contact_number: contactNumber || null, email: email || null,
         hire_date: hireDate, is_active: true, monthly_salary: parseFloat(monthlySalary) || 0,
-        regular_in_time: regularInTime || '09:00', regular_out_time: regularOutTime || '17:00',
-        expected_check_in: expectedCheckIn || '09:00', expected_check_out: expectedCheckOut || '17:00' } as any).select().single();
+        regular_in_time: regularInTime || '09:00', regular_out_time: regularOutTime || '17:00' } as any).eq('center_id', user.center_id).select().single();
       if (error) throw error;
       const { error: permError } = await supabase.from('teacher_feature_permissions').insert({
         teacher_id: newTeacher.id, take_attendance: true, lesson_tracking: true, homework_management: true,
@@ -154,7 +150,7 @@ export default function TeacherManagement() {
         center_id: user.center_id, name: entry.name, contact_number: entry.contactNumber || null, email: entry.email || null,
         hire_date: format(new Date(), "yyyy-MM-dd"), is_active: true, monthly_salary: entry.monthlySalary || 0,
         regular_in_time: entry.regularInTime || '09:00', regular_out_time: entry.regularOutTime || '17:00' }));
-      const { data: newTeachers, error } = await supabase.from("teachers").insert(teachersToInsert as any).select();
+      const { data: newTeachers, error } = await supabase.from("teachers").insert(teachersToInsert as any).eq('center_id', user.center_id).select();
       if (error) throw error;
       if (newTeachers && newTeachers.length > 0) {
         const permissions = newTeachers.map(t => ({ teacher_id: t.id, take_attendance: true, lesson_tracking: true, homework_management: true, preschool_activities: true, discipline_issues: true, test_management: true, student_report_access: true, meetings_management: true }));
@@ -170,8 +166,7 @@ export default function TeacherManagement() {
       if (!editingTeacher || !user?.center_id) throw new Error("Teacher or Center ID not found");
       const { error } = await supabase.from("teachers").update({
         name, contact_number: contactNumber || null, email: email || null, hire_date: hireDate,
-        monthly_salary: parseFloat(monthlySalary) || 0, regular_in_time: regularInTime || '09:00', regular_out_time: regularOutTime || '17:00',
-        expected_check_in: expectedCheckIn || '09:00', expected_check_out: expectedCheckOut || '17:00' } as any)
+        monthly_salary: parseFloat(monthlySalary) || 0, regular_in_time: regularInTime || '09:00', regular_out_time: regularOutTime || '17:00' } as any)
         .eq("id", editingTeacher.id)
         .eq("center_id", user.center_id);
       if (error) throw error;
@@ -200,7 +195,7 @@ export default function TeacherManagement() {
   const createTeacherLoginMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTeacherForLogin || !user?.center_id) throw new Error("Missing info");
-      const { data: existingUser, error: existingUserError } = await supabase.from('users').select('id').eq('username', teacherUsername).single();
+      const { data: existingUser, error: existingUserError } = await supabase.from('users').select('id').eq('username', teacherUsername).eq('center_id', user.center_id).single();
       if (existingUserError && existingUserError.code !== 'PGRST116') throw existingUserError;
       if (existingUser) throw new Error('Username already exists.');
       const hashedPassword = await bcrypt.hash(teacherPassword, 12);
@@ -235,7 +230,6 @@ export default function TeacherManagement() {
     setHireDate(teacher.hire_date ? format(new Date(teacher.hire_date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"));
     setMonthlySalary(teacher.monthly_salary?.toString() || "");
     setRegularInTime(teacher.regular_in_time || "09:00"); setRegularOutTime(teacher.regular_out_time || "17:00");
-    setExpectedCheckIn(teacher.expected_check_in || "09:00"); setExpectedCheckOut(teacher.expected_check_out || "17:00");
     setIsDialogOpen(true);
   };
 
@@ -294,12 +288,8 @@ export default function TeacherManagement() {
                   <div className="space-y-2"><Label><DollarSign className="h-4 w-4 inline" /> Salary</Label><Input type="number" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} /></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-in Boundary</Label><Input type="time" value={expectedCheckIn} onChange={(e) => setExpectedCheckIn(e.target.value)} /></div>
-                  <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-out Boundary</Label><Input type="time" value={expectedCheckOut} onChange={(e) => setExpectedCheckOut(e.target.value)} /></div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular Start Time</Label><Input type="time" value={regularInTime} onChange={(e) => setRegularInTime(e.target.value)} /></div>
-                  <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular End Time</Label><Input type="time" value={regularOutTime} onChange={(e) => setRegularOutTime(e.target.value)} /></div>
+                  <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Incoming Time</Label><Input type="time" value={regularInTime} onChange={(e) => setRegularInTime(e.target.value)} /></div>
+                  <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Outgoing Time</Label><Input type="time" value={regularOutTime} onChange={(e) => setRegularOutTime(e.target.value)} /></div>
                 </div>
                 <Button onClick={handleSubmit} disabled={!name || updateTeacherMutation.isPending} className="w-full">{updateTeacherMutation.isPending ? "Updating..." : "Update Teacher"}</Button>
               </div>
@@ -319,12 +309,8 @@ export default function TeacherManagement() {
                     <div className="space-y-2"><Label><DollarSign className="h-4 w-4 inline" /> Salary</Label><Input type="number" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} /></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-in Boundary</Label><Input type="time" value={expectedCheckIn} onChange={(e) => setExpectedCheckIn(e.target.value)} /></div>
-                    <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-out Boundary</Label><Input type="time" value={expectedCheckOut} onChange={(e) => setExpectedCheckOut(e.target.value)} /></div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular Start Time</Label><Input type="time" value={regularInTime} onChange={(e) => setRegularInTime(e.target.value)} /></div>
-                    <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular End Time</Label><Input type="time" value={regularOutTime} onChange={(e) => setRegularOutTime(e.target.value)} /></div>
+                    <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Incoming Time</Label><Input type="time" value={regularInTime} onChange={(e) => setRegularInTime(e.target.value)} /></div>
+                    <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Outgoing Time</Label><Input type="time" value={regularOutTime} onChange={(e) => setRegularOutTime(e.target.value)} /></div>
                   </div>
                   <Button onClick={handleSubmit} disabled={!name || createTeacherMutation.isPending} className="w-full">{createTeacherMutation.isPending ? "Adding..." : "Add Teacher"}</Button>
                 </TabsContent>

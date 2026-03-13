@@ -80,7 +80,9 @@ export default function DisciplineCategoryManagement() {
       const { error } = await supabase.from("discipline_categories").update({
         name,
         description: description || null,
-        default_severity: defaultSeverity }).eq("id", editingCategory.id);
+        default_severity: defaultSeverity })
+        .eq("id", editingCategory.id)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -95,8 +97,11 @@ export default function DisciplineCategoryManagement() {
 
   const toggleCategoryStatusMutation = useMutation({
     mutationFn: async (category: DisciplineCategory) => {
+      if (!user?.center_id) return;
       const { error } = await supabase.from("discipline_categories").update({
-        is_active: !category.is_active }).eq("id", category.id);
+        is_active: !category.is_active })
+        .eq("id", category.id)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -109,7 +114,10 @@ export default function DisciplineCategoryManagement() {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("discipline_categories").delete().eq("id", id);
+      if (!user?.center_id) return;
+      const { error } = await supabase.from("discipline_categories").delete()
+        .eq("id", id)
+        .eq("center_id", user.center_id);
       if (error) throw error;
     },
     onSuccess: () => {
