@@ -22,6 +22,7 @@ type LessonPlan = Tables<'lesson_plans'>;
 export default function LessonPlans() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [editingLessonPlan, setEditingLessonPlan] = useState<LessonPlan | null>(null);
@@ -46,20 +47,22 @@ export default function LessonPlans() {
   const [file, setFile] = useState<File | null>(null);
 
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-grades", user?.center_id],
+    queryKey: ["students-for-grades", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("students").select("grade").eq("center_id", user.center_id);
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("students").select("grade");
+      if (!isAdmin) query = query.eq("center_id", user.center_id);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
   const allUniqueGrades = Array.from(new Set(students.map(s => s.grade).filter(Boolean))).sort();
 
   const { data: teacherAssignments = [] } = useQuery({
     queryKey: ["teacher-assignments-lp", user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("period_schedules")
         .select("subject, grade")
@@ -73,7 +76,7 @@ export default function LessonPlans() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
@@ -83,8 +86,8 @@ export default function LessonPlans() {
   const { data: lessonPlans = [], isLoading } = useQuery({
     queryKey: ["lesson-plans-for-tracking", user?.center_id, subjectFilter, gradeFilter, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("lesson_plans").select("*").eq("center_id", user.center_id).order("lesson_date", { ascending: false });
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("lesson_plans").select("*").order("lesson_date", { ascending: false });
       if (subjectFilter !== "all") query = query.eq("subject", subjectFilter);
       if (gradeFilter !== "all") query = query.eq("grade", gradeFilter);
 
@@ -96,7 +99,7 @@ export default function LessonPlans() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const resetForm = () => {
     setSubject("");

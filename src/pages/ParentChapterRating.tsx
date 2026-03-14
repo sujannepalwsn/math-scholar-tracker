@@ -15,6 +15,7 @@ type StudentChapter = Tables<'student_chapters'>;
 
 export default function ParentChapterRating() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
 
   if (!user || user.role !== 'parent' || !user.student_id) {

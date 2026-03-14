@@ -41,11 +41,18 @@ export default function Sidebar({
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(timer);
   }, []);
+
+  // Initialize expanded categories on mount
+  useEffect(() => {
+    const categories = Array.from(new Set(navItems.map(item => item.category).filter(Boolean))) as string[];
+    setExpandedCategories(categories);
+  }, [navItems]);
 
   const handleCollapseToggle = () => {
     const newState = !isCollapsed;
@@ -71,8 +78,14 @@ export default function Sidebar({
   const filteredNavItems = navItems.filter(item => {
     if (item.role && user?.role !== item.role) return false;
     if (item.featureName) {
-      if (user?.role === 'center' && user.centerPermissions) return user.centerPermissions[item.featureName];
-      if (user?.role === 'teacher' && user.teacherPermissions) return user.teacherPermissions[item.featureName];
+      if (user?.role === 'center' && user.centerPermissions) {
+        return user.centerPermissions[item.featureName] !== false;
+      }
+      if (user?.role === 'teacher' && user.teacherPermissions) {
+        return user.teacherPermissions[item.featureName] !== false;
+      }
+      // Default to visible if permissions are not loaded yet but role matches
+      if (user?.role === 'center' || user?.role === 'teacher') return true;
     }
     return true;
   });
@@ -84,14 +97,18 @@ export default function Sidebar({
 
     const flushCategory = (category: string, children: React.ReactNode[]) => {
       const isExpanded = expandedCategories.includes(category);
+      const displayCategory = category === 'Academics' ? 'Academic Sections' :
+                               category === 'Reports and Communications' ? 'Reporting and Communication Sections' :
+                               category === 'Administration' ? 'Administration Section' : category;
+
       if (isMobile) {
         return (
           <div key={`mob-cat-group-${category}`} className="space-y-0.5">
             <button
               onClick={() => toggleCategory(category)}
-              className="flex items-center justify-between w-full px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-4 first:mt-0 hover:text-foreground transition-colors"
+              className="flex items-center justify-between w-full px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-4 first:mt-0 hover:text-foreground transition-colors text-left"
             >
-              {category}
+              {displayCategory}
               {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             </button>
             {isExpanded && children}
@@ -103,9 +120,9 @@ export default function Sidebar({
             {!isCollapsed ? (
               <button
                 onClick={() => toggleCategory(category)}
-                className="flex items-center justify-between w-full px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-5 first:mt-0 hover:text-foreground transition-colors"
+                className="flex items-center justify-between w-full px-3 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-5 first:mt-0 hover:text-foreground transition-colors text-left"
               >
-                {category}
+                {displayCategory}
                 {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </button>
             ) : (

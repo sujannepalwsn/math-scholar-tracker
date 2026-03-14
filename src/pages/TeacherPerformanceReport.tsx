@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 
 export default function TeacherPerformanceReport() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [selectedTeacher, setSelectedTeacher] = useState("all");
   const [dateRange, setDateRange] = useState<"daily" | "weekly" | "monthly" | "overall">("monthly");
 
@@ -33,8 +34,8 @@ export default function TeacherPerformanceReport() {
   const { data: teachers = [] } = useQuery({
     queryKey: ["teachers-for-report", user?.center_id, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("teachers").select("id, name").eq("center_id", user.center_id).eq("is_active", true);
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("teachers").select("id, name").eq("is_active", true);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('id', user.teacher_id);
@@ -44,14 +45,14 @@ export default function TeacherPerformanceReport() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Teacher attendance
   const { data: teacherAttendance = [] } = useQuery({
     queryKey: ["teacher-attendance-report", user?.center_id, range.start, range.end, selectedTeacher, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("teacher_attendance").select("*").eq("center_id", user.center_id).gte("date", range.start).lte("date", range.end);
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("teacher_attendance").select("*").gte("date", range.start).lte("date", range.end);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('teacher_id', user.teacher_id);
@@ -63,14 +64,14 @@ export default function TeacherPerformanceReport() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Lesson plans created
   const { data: lessonPlans = [] } = useQuery({
     queryKey: ["lesson-plans-report", user?.center_id, range.start, range.end, selectedTeacher, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("lesson_plans").select("*").eq("center_id", user.center_id).gte("lesson_date", range.start).lte("lesson_date", range.end);
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("lesson_plans").select("*").gte("lesson_date", range.start).lte("lesson_date", range.end);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('teacher_id', user.teacher_id);
@@ -82,14 +83,14 @@ export default function TeacherPerformanceReport() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Homework assigned
   const { data: homework = [] } = useQuery({
     queryKey: ["homework-report", user?.center_id, range.start, range.end, selectedTeacher, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("homework").select("*").eq("center_id", user.center_id).gte("due_date", range.start).lte("due_date", range.end);
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("homework").select("*").gte("due_date", range.start).lte("due_date", range.end);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('teacher_id', user.teacher_id);
@@ -101,14 +102,14 @@ export default function TeacherPerformanceReport() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Student chapters (evaluations)
   const { data: evaluations = [] } = useQuery({
     queryKey: ["evaluations-report", user?.center_id, range.start, range.end, selectedTeacher, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("student_chapters").select("*").eq("center_id", user.center_id).gte("completed_at", range.start).lte("completed_at", range.end);
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("student_chapters").select("*").gte("completed_at", range.start).lte("completed_at", range.end);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         query = query.eq('recorded_by_teacher_id', user.teacher_id);
@@ -120,7 +121,7 @@ export default function TeacherPerformanceReport() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Build per-teacher stats
   const teacherStats = teachers.map(t => {

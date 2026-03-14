@@ -58,6 +58,7 @@ import LeaveCategoryManager from "@/components/LeaveCategoryManager";
 
 export default function LeaveManagement() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -68,7 +69,7 @@ export default function LeaveManagement() {
 
   // Fetch all leave applications for the center
   const { data: applications = [], isLoading } = useQuery({
-    queryKey: ["center-leave-applications", user?.center_id],
+    queryKey: ["center-leave-applications", user?.center_id, user?.role],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("leave_applications")
@@ -84,7 +85,7 @@ export default function LeaveManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id,
+    enabled: !!user?.center_id || isAdmin,
   });
 
   const updateStatusMutation = useMutation({

@@ -27,6 +27,7 @@ type LessonPlan = Tables<'lesson_plans'>;
 export default function HomeworkManagement() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
   const [gradeFilter, setGradeFilter] = useState<string>("all");
@@ -50,8 +51,9 @@ export default function HomeworkManagement() {
   const { data: homeworkList = [], isLoading } = useQuery({
     queryKey: ["homework", user?.center_id, gradeFilter, subjectFilter, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("homework").select("*, lesson_plans(*)").eq("center_id", user.center_id).order("due_date", { ascending: false });
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("homework").select("*, lesson_plans(*)").order("due_date", { ascending: false });
+if (!isAdmin) query = query.eq("center_id", user.center_id);
       if (gradeFilter !== "all") query = query.eq("grade", gradeFilter);
       if (subjectFilter !== "all") query = query.eq("subject", subjectFilter);
 
@@ -63,12 +65,12 @@ export default function HomeworkManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const { data: teacherAssignments = [] } = useQuery({
     queryKey: ["teacher-assignments-homework", user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("period_schedules")
         .select("subject, grade")
@@ -82,7 +84,7 @@ export default function HomeworkManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
@@ -91,8 +93,8 @@ export default function HomeworkManagement() {
   const { data: lessonPlans = [] } = useQuery({
     queryKey: ["lesson-plans-for-homework", user?.center_id, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("lesson_plans").select("*").eq("center_id", user.center_id).order("lesson_date", { ascending: false });
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("lesson_plans").select("*").order("lesson_date", { ascending: false });
 
       if (user?.role === 'teacher') {
         query = query.eq('teacher_id', user.teacher_id);
@@ -102,17 +104,19 @@ export default function HomeworkManagement() {
       if (error) throw error;
       return data as LessonPlan[];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-homework", user?.center_id],
+    queryKey: ["students-for-homework", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", user.center_id).order("name");
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("students").select("*");
+      if (!isAdmin) query = query.eq("center_id", user.center_id);
+      const { data, error } = await query.order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const { data: studentStatuses = [], refetch: refetchStudentStatuses } = useQuery({
     queryKey: ["student-homework-records", selectedHomeworkForStatus?.id, user?.center_id],

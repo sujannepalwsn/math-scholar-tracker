@@ -38,15 +38,16 @@ interface CombinedChapterRecord {
 
 export default function ChapterPerformanceOverview() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [studentFilter, setStudentFilter] = useState<string>("all"); // NEW: Student filter state
 
   // Fetch all students for grade and student filters
   const { data: allStudents = [] } = useQuery({
-    queryKey: ["all-students-for-chapter-overview", user?.center_id],
+    queryKey: ["all-students-for-chapter-overview", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("students")
         .select("id, name, grade")
@@ -55,14 +56,14 @@ export default function ChapterPerformanceOverview() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
   const uniqueGrades = Array.from(new Set(allStudents.map(s => s.grade))).sort();
 
   // Fetch all lesson plans for subject filter and grouping
   const { data: allLessonPlans = [] } = useQuery({
-    queryKey: ["all-lesson-plans-for-overview", user?.center_id],
+    queryKey: ["all-lesson-plans-for-overview", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("lesson_plans")
         .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
@@ -71,13 +72,13 @@ export default function ChapterPerformanceOverview() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch all student_chapters for the center, filtered by student/grade/subject
   const { data: studentChaptersRaw = [], isLoading: studentChaptersLoading } = useQuery({
     queryKey: ["all-student-chapters-overview", user?.center_id, subjectFilter, gradeFilter, studentFilter, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase.from("student_chapters").select(`
         *,
         students(id, name, grade, center_id),
@@ -105,13 +106,13 @@ export default function ChapterPerformanceOverview() {
       // Filter out records where student or lesson_plan data might be missing
       return data?.filter((d: any) => d.students && d.lesson_plans) || [];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // NEW: Fetch all test results for the center, including test details and linked lesson_plan_id
   const { data: allTestResults = [], isLoading: testResultsLoading } = useQuery({
     queryKey: ["all-test-results-for-chapter-overview", user?.center_id, user?.role, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("test_results")
         .select(`
@@ -130,7 +131,7 @@ export default function ChapterPerformanceOverview() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const allSubjects = useMemo(() => {
     return Array.from(new Set(allLessonPlans.map(lp => lp.subject).filter(Boolean))).sort();

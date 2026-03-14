@@ -18,6 +18,7 @@ interface MeetingConclusionFormProps {
 export default function MeetingConclusionForm({ meetingId, onSave, onClose }: MeetingConclusionFormProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [conclusionNotes, setConclusionNotes] = useState("");
 
   const updateMeetingMutation = useMutation({

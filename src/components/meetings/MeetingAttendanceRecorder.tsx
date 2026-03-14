@@ -27,6 +27,7 @@ type MeetingAttendeeRow = Tables<'meeting_attendees'>;
 export default function MeetingAttendanceRecorder({ meetingId, onClose }: MeetingAttendanceRecorderProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [attendeeStatuses, setAttendeeStatuses] = useState<Record<string, AttendanceStatus>>({});
   const [gradeFilter, setGradeFilter] = useState("all");
 
@@ -49,7 +50,7 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
   const { data: allStudents = [] } = useQuery({
     queryKey: ["all-students-for-grade-filter", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("students")
         .select("grade")
@@ -57,14 +58,14 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
   const uniqueGrades = Array.from(new Set(allStudents.map(s => s.grade))).sort();
 
   // Fetch all active teachers for the current center (needed for teacherUser lookup in mutation)
   const { data: allTeachers = [] } = useQuery({
     queryKey: ["all-teachers-for-meeting-attendance", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("teachers")
         .select("id, name, user_id")
@@ -74,13 +75,13 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch existing attendees for this meeting
   const { data: existingAttendees = [], isLoading: existingAttendeesLoading } = useQuery({
     queryKey: ["meeting-attendees", meetingId, user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("meeting_attendees")
         .select("*, students(id, name, grade), users(id, username, role), teachers(id, name, user_id)")
@@ -120,7 +121,7 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
       }
       return fetchedParticipants;
     },
-    enabled: !!user?.center_id && !!meetingDetails });
+    enabled: !!user?.center_id || isAdmin && !!meetingDetails });
 
   useEffect(() => {
     const initialStatuses: Record<string, AttendanceStatus> = {};

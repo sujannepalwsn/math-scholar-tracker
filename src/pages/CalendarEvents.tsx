@@ -25,6 +25,7 @@ const EVENT_TYPES = [
 
 export default function CalendarEvents() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [showEventDialog, setShowEventDialog] = useState(false);
@@ -59,7 +60,7 @@ export default function CalendarEvents() {
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["center-events", centerId, user?.role, user?.id],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId && !isAdmin) return [];
       let query = supabase
         .from("center_events")
         .select("*")
@@ -73,7 +74,7 @@ export default function CalendarEvents() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId });
+    enabled: !!centerId || isAdmin });
 
   const resetForm = () => {
     setTitle("");

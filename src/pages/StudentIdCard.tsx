@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/page-header";
 
 export default function StudentIdCard() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const centerId = user?.center_id;
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -21,24 +22,26 @@ export default function StudentIdCard() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const { data: center } = useQuery({
-    queryKey: ["center-idcard", centerId],
+    queryKey: ["center-idcard", centerId, user?.role],
     queryFn: async () => {
       if (!centerId) return null;
       const { data } = await supabase.from("centers").select("*").eq("id", centerId).single();
       return data;
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   const { data: students = [] } = useQuery({
-    queryKey: ["students-idcard", centerId],
+    queryKey: ["students-idcard", centerId, user?.role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true).order("name");
+      if (!centerId && !isAdmin) return [];
+      let query = supabase.from("students").select("*");
+      if (!isAdmin) query = query.eq("center_id", centerId);
+      const { data, error } = await query.eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   const grades = [...new Set(students.map((s: any) => s.grade).filter(Boolean))].sort();

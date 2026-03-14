@@ -25,6 +25,7 @@ function getGrade(percentage: number): string {
 
 export default function MarksEntry() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const centerId = user?.center_id;
@@ -36,7 +37,7 @@ export default function MarksEntry() {
   const { data: exams = [] } = useQuery({
     queryKey: ["exams-entry-list", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId && !isAdmin) return [];
       let query = supabase
         .from("exams")
         .select("*")
@@ -58,7 +59,7 @@ export default function MarksEntry() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   useEffect(() => {
@@ -121,7 +122,7 @@ export default function MarksEntry() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId && !!selectedGrade,
+    enabled: !!centerId || isAdmin && !!selectedGrade,
   });
 
   // Load existing marks

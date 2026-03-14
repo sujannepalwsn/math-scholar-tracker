@@ -24,23 +24,24 @@ interface StudentSummary {
 
 export default function Summary() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>(format(new Date(), "yyyy-MM"));
 
   // Fetch students
   const { data: students } = useQuery({
-    queryKey: ["students", user?.center_id],
+    queryKey: ["students", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase
-        .from("students")
-        .select("*")
-        .eq("center_id", user.center_id)
-        .order("name");
+      let query = supabase.from("students").select("*").order("name");
+      if (user?.role !== 'admin') {
+        if (!user?.center_id && !isAdmin) return [];
+        if (!isAdmin) query = query.eq("center_id", user.center_id);
+      }
+      const { data, error } = await query;
       if (error) throw error;
-      return data;
+      return data || [];
     },
-    enabled: !!user?.center_id
+    enabled: !!user
   });
 
   // Fetch attendance
@@ -48,12 +49,16 @@ export default function Summary() {
   const { data: allAttendance } = useQuery({
     queryKey: ["all-attendance", user?.center_id, studentIds.length > 0 ? studentIds.join(",") : "", user?.role, user?.id],
     queryFn: async () => {
-      if (!studentIds.length || !user?.center_id) return [];
+      if (!studentIds.length) return [];
       let query = supabase
         .from("attendance")
         .select("*")
-        .eq("center_id", user.center_id)
         .in("student_id", studentIds);
+
+      if (user?.role !== 'admin') {
+        if (!user?.center_id && !isAdmin) return [];
+        if (!isAdmin) query = query.eq("center_id", user.center_id);
+      }
 
       if (user?.role === 'teacher') {
         query = query.eq('marked_by', user.id);

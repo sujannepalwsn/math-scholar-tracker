@@ -20,6 +20,7 @@ type MeetingConclusion = Tables<'meeting_conclusions'>;
 
 export default function ParentMeetings() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [showConclusionDialog, setShowConclusionDialog] = useState(false);
   const [selectedMeetingConclusion, setSelectedMeetingConclusion] = useState<MeetingConclusion | null>(null);
 

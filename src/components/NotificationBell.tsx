@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function NotificationBell() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -65,7 +66,7 @@ export default function NotificationBell() {
 
       return combined.slice(0, 20);
     },
-    enabled: !!user?.center_id && !!user?.id,
+    enabled: !!user?.center_id || isAdmin && !!user?.id,
     refetchInterval: 15000,
   });
 

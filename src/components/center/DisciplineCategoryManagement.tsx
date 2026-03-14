@@ -24,6 +24,7 @@ const severityLevels = [
 export default function DisciplineCategoryManagement() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<DisciplineCategory | null>(null);
 
@@ -35,7 +36,7 @@ export default function DisciplineCategoryManagement() {
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ["discipline-categories", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("discipline_categories")
         .select("*")
@@ -44,7 +45,7 @@ export default function DisciplineCategoryManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const resetForm = () => {
     setName("");

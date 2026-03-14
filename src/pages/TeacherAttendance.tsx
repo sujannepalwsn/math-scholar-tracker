@@ -45,6 +45,7 @@ interface TeacherDetailAttendance {
 export default function TeacherAttendancePage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, TeacherAttendance>>({});
   const [reportMonthFilter, setReportMonthFilter] = useState<string>(format(new Date(), "yyyy-MM"));
@@ -55,9 +56,9 @@ export default function TeacherAttendancePage() {
 
   // Fetch active teachers for the center
   const { data: teachers = [], isLoading: teachersLoading } = useQuery({
-    queryKey: ["active-teachers", user?.center_id],
+    queryKey: ["active-teachers", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("teachers")
         .select("id, name")
@@ -67,7 +68,7 @@ export default function TeacherAttendancePage() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch existing attendance for the selected date
   const { data: existingAttendance = [], isLoading: attendanceLoading } = useQuery({
@@ -84,12 +85,12 @@ export default function TeacherAttendancePage() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id && teachers.length > 0 });
+    enabled: !!user?.center_id || isAdmin && teachers.length > 0 });
 
   const { data: approvedLeaves = [] } = useQuery({
     queryKey: ["teacher-approved-leaves", dateStr, user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("leave_applications")
         .select("teacher_id, leave_categories(name)")
@@ -105,9 +106,9 @@ export default function TeacherAttendancePage() {
 
   // Fetch all attendance for report
   const { data: allTeacherAttendance = [] } = useQuery({
-    queryKey: ["all-teacher-attendance", user?.center_id],
+    queryKey: ["all-teacher-attendance", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("teacher_attendance")
         .select("*, teachers!inner(name)")
@@ -115,7 +116,7 @@ export default function TeacherAttendancePage() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch all attendance for a specific teacher for the detail dialog
   const { data: teacherDetailAttendance = [], refetch: refetchTeacherDetailAttendance } = useQuery({

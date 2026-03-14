@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 
 export default function ChangePassword() {
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const { toast } = useToast();
 

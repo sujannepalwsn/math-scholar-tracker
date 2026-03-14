@@ -14,6 +14,7 @@ import { format } from "date-fns"
 
 export default function TeacherMessaging() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);

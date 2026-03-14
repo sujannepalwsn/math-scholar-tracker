@@ -17,6 +17,7 @@ type ActivityType = Tables<'activity_types'>;
 export default function ActivityTypeManagement() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<ActivityType | null>(null);
 
@@ -27,7 +28,7 @@ export default function ActivityTypeManagement() {
   const { data: activityTypes = [], isLoading } = useQuery({
     queryKey: ["activity-types", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("activity_types")
         .select("*")
@@ -36,7 +37,7 @@ export default function ActivityTypeManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const resetForm = () => {
     setName("");

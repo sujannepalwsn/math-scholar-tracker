@@ -17,6 +17,7 @@ const PAYMENT_METHODS = ['cash', 'cheque', 'bank_transfer', 'upi', 'card', 'othe
 
 const PaymentTracking = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -40,14 +41,14 @@ const PaymentTracking = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   // Fetch payments - filtered by center through invoices
   const { data: payments = [], isLoading: paymentsLoading } = useQuery({
     queryKey: ['payments', user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       // First get invoice IDs for this center
       const { data: centerInvoices } = await supabase
         .from('invoices')
@@ -67,7 +68,7 @@ const PaymentTracking = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const recordPaymentMutation = useMutation({

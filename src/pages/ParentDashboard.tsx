@@ -45,6 +45,7 @@ interface ChapterPerformanceGroup {
 
 const ParentDashboardContent = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
   
@@ -215,9 +216,9 @@ const ParentDashboardContent = () => {
 
   // Fetch all lesson plans for context
   const { data: allLessonPlans = [] } = useQuery({
-    queryKey: ["all-lesson-plans-for-report", user?.center_id],
+    queryKey: ["all-lesson-plans-for-report", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("lesson_plans")
         .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
@@ -226,7 +227,7 @@ const ParentDashboardContent = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const attendanceTrend = useMemo(() => {
     const range = eachDayOfInterval({ start: new Date(dateRange.from), end: new Date(dateRange.to) });

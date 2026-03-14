@@ -9,6 +9,7 @@ import { Tooltip } from "@/components/ui/tooltip"
 
 const FinanceReports = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   // Fetch invoices summary
   const { data: invoices = [] } = useQuery({
@@ -21,7 +22,7 @@ const FinanceReports = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   // Fetch payments summary
@@ -35,7 +36,7 @@ const FinanceReports = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   // Fetch expense breakdown
@@ -59,7 +60,7 @@ const FinanceReports = () => {
         value: amount
       }));
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4'];

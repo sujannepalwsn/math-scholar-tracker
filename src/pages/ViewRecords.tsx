@@ -44,6 +44,7 @@ interface StudentDetailAttendance {
 
 export default function ViewRecords() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -55,7 +56,7 @@ export default function ViewRecords() {
   const { data: students = [] } = useQuery({
     queryKey: ['students', user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from('students')
         .select('id, name, grade')
@@ -65,7 +66,7 @@ export default function ViewRecords() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const filteredStudents = students.filter(s => gradeFilter === "all" || s.grade === gradeFilter);
 
@@ -73,7 +74,7 @@ export default function ViewRecords() {
   const { data: records, isLoading } = useQuery({
     queryKey: ["attendance-records", dateStr, gradeFilter, user?.center_id, user?.role, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const studentIds = filteredStudents.map(s => s.id);
       if (studentIds.length === 0) return [];
       let query = supabase

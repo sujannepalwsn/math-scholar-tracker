@@ -20,6 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Messaging() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
@@ -52,7 +53,7 @@ export default function Messaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id && (user?.role === "center" || user?.role === "teacher"),
+    enabled: !!user?.center_id || isAdmin && (user?.role === "center" || user?.role === "teacher"),
   });
 
   const { data: parentConversations = [] } = useQuery({
@@ -168,9 +169,9 @@ export default function Messaging() {
 
   // Recipients for new conversation
   const { data: potentialRecipients = [] } = useQuery({
-    queryKey: ["potential-recipients", user?.center_id],
+    queryKey: ["potential-recipients", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
 
       // Fetch parents
       const { data: parentUsers } = await supabase.from("users").select("id, username, student_id, students(name, grade)").eq("center_id", user.center_id).eq("role", "parent").not("student_id", "is", null);
@@ -196,7 +197,7 @@ export default function Messaging() {
 
       return [...parents, ...teachers];
     },
-    enabled: !!user?.center_id && user?.role === "center",
+    enabled: !!user?.center_id || isAdmin && user?.role === "center",
   });
 
   const createConversationMutation = useMutation({
@@ -211,7 +212,8 @@ export default function Messaging() {
         payload.teacher_user_id = recipient.id;
       }
 
-      let query = supabase.from("chat_conversations").select("id").eq("center_id", user.center_id);
+      let query = supabase.from("chat_conversations").select("id");
+      if (!isAdmin) query = query.eq("center_id", user.center_id);
 
       if (recipient.type === 'parent') {
         query = query.eq("student_id", recipient.student_id).eq("parent_user_id", recipient.id);

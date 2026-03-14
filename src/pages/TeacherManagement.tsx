@@ -34,6 +34,7 @@ interface BulkTeacherEntry {
 export default function TeacherManagement() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
 
@@ -62,9 +63,9 @@ export default function TeacherManagement() {
   const [classTeacherGrade, setClassTeacherGrade] = useState("select-grade");
 
   const { data: teachers = [], isLoading } = useQuery({
-    queryKey: ["teachers", user?.center_id],
+    queryKey: ["teachers", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("teachers")
         .select("*, users!teachers_user_id_fkey(id, username, is_active)")
@@ -73,25 +74,27 @@ export default function TeacherManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch students for unique grades
   const { data: students = [] } = useQuery({
-    queryKey: ["students-grades", user?.center_id],
+    queryKey: ["students-grades", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("students").select("grade").eq("center_id", user.center_id);
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("students").select("grade");
+      if (!isAdmin) query = query.eq("center_id", user.center_id);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
   const uniqueGrades = Array.from(new Set(students.map(s => s.grade).filter(Boolean))).sort();
 
   // Fetch class teacher assignments
   const { data: classTeacherAssignments = [] } = useQuery({
-    queryKey: ["class-teacher-assignments", user?.center_id],
+    queryKey: ["class-teacher-assignments", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("class_teacher_assignments")
         .select("*, teachers(name)")
@@ -99,7 +102,7 @@ export default function TeacherManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const getClassTeacherGrades = (teacherId: string) => {
     return classTeacherAssignments.filter((a: any) => a.teacher_id === teacherId).map((a: any) => a.grade);

@@ -46,6 +46,7 @@ interface QuestionMark {
 export default function Tests() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isAddingTest, setIsAddingTest] = useState(false);
   const [selectedTest, setSelectedTest] = useState<string>("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -77,7 +78,7 @@ export default function Tests() {
   const { data: tests = [] } = useQuery({
     queryKey: ["tests", user?.center_id, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("tests")
         .select("*, lesson_plans(id, subject, chapter, topic, grade)") // Fetch lesson_plans details
@@ -94,9 +95,9 @@ export default function Tests() {
 
   // Fetch lesson plans for the dropdown
   const { data: lessonPlans = [] } = useQuery({
-    queryKey: ["lesson-plans-for-tests", user?.center_id],
+    queryKey: ["lesson-plans-for-tests", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("lesson_plans")
         .select("id, subject, chapter, topic, grade")
@@ -105,13 +106,13 @@ export default function Tests() {
       if (error) throw error;
       return data as LessonPlan[];
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const { data: teacherAssignments = [] } = useQuery({
     queryKey: ["teacher-assignments-tests", user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("period_schedules")
         .select("subject, grade")
@@ -125,7 +126,7 @@ export default function Tests() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const assignedSubjects = Array.from(new Set(teacherAssignments.map(a => a.subject))).sort();
@@ -133,9 +134,9 @@ export default function Tests() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students", user?.center_id],
+    queryKey: ["students", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("students")
         .select("*")
@@ -145,7 +146,7 @@ export default function Tests() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   // Fetch test results for selected test

@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select"
 
 const FeeManagement = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [showHeadingDialog, setShowHeadingDialog] = useState(false);
   const [showStructureDialog, setShowStructureDialog] = useState(false);
@@ -34,7 +35,7 @@ const FeeManagement = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const { data: structures = [], isLoading: structuresLoading } = useQuery({
@@ -48,7 +49,7 @@ const FeeManagement = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const createHeadingMutation = useMutation({

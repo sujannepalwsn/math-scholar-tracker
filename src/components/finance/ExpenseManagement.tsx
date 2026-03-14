@@ -16,6 +16,7 @@ const EXPENSE_CATEGORIES = ['salaries', 'rent', 'utilities', 'materials', 'maint
 
 const ExpenseManagement = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [showExpenseDialog, setShowExpenseDialog] = useState(false);
 
@@ -38,7 +39,7 @@ const ExpenseManagement = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const createExpenseMutation = useMutation({

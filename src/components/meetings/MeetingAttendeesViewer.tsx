@@ -13,6 +13,7 @@ interface MeetingAttendeesViewerProps {
 
 export default function MeetingAttendeesViewer({ meetingId }: MeetingAttendeesViewerProps) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { data: attendees = [], isLoading } = useQuery({
     queryKey: ["meeting-attendees-viewer", meetingId, user?.center_id],
     queryFn: async () => {

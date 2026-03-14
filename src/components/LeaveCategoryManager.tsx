@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 export default function LeaveCategoryManager() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
   const [newApplicableTo, setNewApplicableTo] = useState<"student" | "teacher" | "both">("both");
@@ -89,7 +90,7 @@ export default function LeaveCategoryManager() {
       if (user?.role === 'admin') {
         query = query.is("center_id", null);
       } else {
-        query = query.eq("center_id", user?.center_id!);
+        if (!isAdmin) query = query.eq("center_id", user?.center_id!);
       }
 
       const { error } = await query;

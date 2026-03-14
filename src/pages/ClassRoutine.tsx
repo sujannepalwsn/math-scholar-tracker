@@ -31,6 +31,7 @@ const DEFAULT_GRADES = ["8", "9", "10"];
 
 export default function ClassRoutine() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [showPeriodDialog, setShowPeriodDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
@@ -68,9 +69,9 @@ export default function ClassRoutine() {
   const isValidDay = scheduleDay === "weekdays" || (scheduleDay !== "" && !isNaN(parseInt(scheduleDay)));
 
   const { data: periods = [], isLoading: periodsLoading } = useQuery({
-    queryKey: ["class-periods", user?.center_id],
+    queryKey: ["class-periods", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("class_periods")
         .select("*")
@@ -80,13 +81,13 @@ export default function ClassRoutine() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const { data: schedules = [], isLoading: schedulesLoading } = useQuery({
     queryKey: ["period-schedules", user?.center_id, selectedGrade, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("period_schedules")
         .select(`*, class_periods:class_period_id(*), teachers!left(id, name)`)
@@ -101,12 +102,12 @@ export default function ClassRoutine() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const { data: allSchedules = [], isLoading: allSchedulesLoading } = useQuery({
-    queryKey: ["all-period-schedules", user?.center_id],
+    queryKey: ["all-period-schedules", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
 
       const { data: baseSchedules, error } = await supabase
         .from("period_schedules")
@@ -130,18 +131,20 @@ export default function ClassRoutine() {
         };
       });
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const { data: teachers = [] } = useQuery({
-    queryKey: ["teachers-list", user?.center_id],
+    queryKey: ["teachers-list", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("teachers").select("id, name").eq("center_id", user.center_id).eq("is_active", true).order("name");
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("teachers").select("id, name");
+      if (!isAdmin) query = query.eq("center_id", user.center_id);
+      const { data, error } = await query.eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const createPeriodMutation = useMutation({
     mutationFn: async () => {
@@ -270,7 +273,7 @@ export default function ClassRoutine() {
 
   const today = new Date().getDay();
   const { data: todayAttendance = [] } = useQuery({
-    queryKey: ["teacher-attendance-today", user?.center_id],
+    queryKey: ["teacher-attendance-today", user?.center_id, user?.role],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teacher_attendance")
@@ -280,7 +283,7 @@ export default function ClassRoutine() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const getTeacherStatus = (teacherId: string | null) => {

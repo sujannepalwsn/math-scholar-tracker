@@ -26,6 +26,7 @@ type Teacher = Tables<'teachers'>;
 export default function EditStudentLessonRecord({ studentChapterId, onSave, onCancel }: EditStudentLessonRecordProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [teacherNotes, setTeacherNotes] = useState("");
   const [evaluationRating, setEvaluationRating] = useState<number | null>(null);

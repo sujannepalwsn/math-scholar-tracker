@@ -27,6 +27,7 @@ type MeetingConclusion = Tables<'meeting_conclusions'>;
 export default function MeetingManagement() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [showMeetingFormDialog, setShowMeetingFormDialog] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
@@ -37,9 +38,9 @@ export default function MeetingManagement() {
 
   // Fetch meetings for the current center
   const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["meetings", user?.center_id],
+    queryKey: ["meetings", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("meetings")
         .select("*, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:related_meeting_id(id, title, meeting_date)")
@@ -48,7 +49,7 @@ export default function MeetingManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const deleteMeetingMutation = useMutation({
     mutationFn: async (id: string) => {

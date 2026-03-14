@@ -38,6 +38,7 @@ type StudentInput = {
 export default function RegisterStudent() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [formData, setFormData] = useState({
     name: "",
     grade: "",
@@ -61,19 +62,17 @@ export default function RegisterStudent() {
 
   // Fetch students
   const { data: students, isLoading } = useQuery({
-    queryKey: ["students", user?.center_id],
+    queryKey: ["students", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase
-        .from("students")
-        .select("*")
-        .eq("center_id", user.center_id)
-        .order("created_at", { ascending: false });
-      const { data, error } = await query;
+      if (!user?.center_id && !isAdmin) return [];
+      let query = supabase.from("students").select("*");
+      if (!isAdmin) query = query.eq("center_id", user.center_id);
+
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return data as Student[];
     },
-    enabled: !!user?.center_id });
+    enabled: isAdmin || !!user?.center_id });
 
   // Filter students based on grade and search
   const filteredStudents = students?.filter(s => 
@@ -97,7 +96,7 @@ export default function RegisterStudent() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id] });
+      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id, user?.role] });
       setFormData({
         name: "",
         grade: "",
@@ -127,7 +126,7 @@ export default function RegisterStudent() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id] });
+      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id, user?.role] });
       setEditingId(null);
       setEditData(null);
       toast.success("Student updated successfully!");
@@ -144,7 +143,7 @@ export default function RegisterStudent() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id] });
+      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id, user?.role] });
       toast.success("Student deleted successfully!");
     },
     onError: () => {
@@ -189,7 +188,7 @@ export default function RegisterStudent() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id] });
+      queryClient.invalidateQueries({ queryKey: ["students", user?.center_id, user?.role] });
       toast.success("Bulk students added successfully");
       setCsvPreviewRows([]);
       setMultilineText("");

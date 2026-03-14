@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, role }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   if (loading) {
     return (

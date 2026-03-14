@@ -17,6 +17,7 @@ import { subYears, endOfMonth } from "date-fns";
 
 export default function PublishedResults() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const centerId = user?.center_id;
 
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -33,10 +34,11 @@ export default function PublishedResults() {
   const { data: exams = [] } = useQuery({
     queryKey: ["exams-list-results", centerId, user?.role, user?.teacher_id, dateRange],
     queryFn: async () => {
-      if (!centerId) return [];
-      let query = supabase.from("exams")
-        .select("*")
-        .eq("center_id", centerId)
+      if (!centerId && !isAdmin) return [];
+      let query = supabase.from("exams").select("*");
+      if (!isAdmin) query = query.eq("center_id", centerId);
+
+      query = query
         .gte("exam_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("exam_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"))
         .order("created_at", { ascending: false });
@@ -74,17 +76,20 @@ export default function PublishedResults() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId
+    enabled: !!centerId || isAdmin
   });
 
   const selectedExam = exams.find((e: any) => e.id === selectedExamId);
 
   // Fetch Exam Subjects
   const { data: subjects = [] } = useQuery({
-    queryKey: ["exam-subjects", selectedExamId, centerId],
+    queryKey: ["exam-subjects", selectedExamId, centerId, user?.role],
     queryFn: async () => {
       if (!selectedExamId || !centerId) return [];
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId).eq("center_id", centerId).order("subject_name");
+      let query = supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId);
+      if (!isAdmin) query = query.eq("center_id", centerId);
+
+      const { data, error } = await query.order("subject_name");
       if (error) throw error;
       return data;
     },
@@ -95,8 +100,9 @@ export default function PublishedResults() {
   const { data: students = [] } = useQuery({
     queryKey: ["students-for-results", centerId, selectedExam?.grade, user?.role, user?.id],
     queryFn: async () => {
-      if (!centerId) return [];
-      let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      if (!centerId && !isAdmin) return [];
+      let query = supabase.from("students").select("*").eq("is_active", true);
+      if (!isAdmin) query = query.eq("center_id", centerId);
 
       if (selectedExam?.grade) {
         query = query.eq("grade", selectedExam.grade);
@@ -123,15 +129,18 @@ export default function PublishedResults() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId
+    enabled: !!centerId || isAdmin
   });
 
   // Fetch Marks
   const { data: marks = [] } = useQuery({
-    queryKey: ["exam-marks", selectedExamId, centerId],
+    queryKey: ["exam-marks", selectedExamId, centerId, user?.role],
     queryFn: async () => {
       if (!selectedExamId || !centerId) return [];
-      const { data, error } = await supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId).eq("center_id", centerId);
+      let query = supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId);
+      if (!isAdmin) query = query.eq("center_id", centerId);
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

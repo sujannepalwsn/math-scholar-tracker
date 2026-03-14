@@ -17,13 +17,14 @@ import { cn } from "@/lib/utils"
 
 const AdminFinance = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
 
   // Fetch invoices summary
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices-summary', user?.center_id, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from('invoices')
         .select('total_amount, status, student_id')
@@ -44,14 +45,14 @@ const AdminFinance = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   // Fetch payments - CORRECTED to filter by invoices belonging to the center
   const { data: payments = [] } = useQuery({
     queryKey: ['payments-total', user?.center_id, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       
       // First, get all invoice IDs for the current center
       let invQuery = supabase
@@ -86,14 +87,14 @@ const AdminFinance = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   // Fetch expenses
   const { data: expenses = [] } = useQuery({
     queryKey: ['expenses-total', user?.center_id, user?.role, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from('expenses')
         .select('amount')
@@ -107,7 +108,7 @@ const AdminFinance = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const totalInvoiced = invoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);

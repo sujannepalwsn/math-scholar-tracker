@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 
 export default function ParentMessaging() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);

@@ -35,6 +35,7 @@ const severityLevels = [
 export default function DisciplineIssues() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIssue, setEditingIssue] = useState<DisciplineIssue | null>(null);
   const [gradeFilter, setGradeFilter] = useState<string>("all");
@@ -51,9 +52,9 @@ export default function DisciplineIssues() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-discipline", user?.center_id],
+    queryKey: ["students-for-discipline", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("students")
         .select("id, name, grade")
@@ -62,16 +63,16 @@ export default function DisciplineIssues() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Filtered students for the modal's student select dropdown
   const filteredStudentsForModal = students.filter(s => modalGradeFilter === "all" || s.grade === modalGradeFilter);
 
   // Fetch discipline categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["discipline-categories", user?.center_id],
+    queryKey: ["discipline-categories", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("discipline_categories")
         .select("*")
@@ -81,13 +82,13 @@ export default function DisciplineIssues() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch discipline issues
   const { data: issues = [], isLoading: issuesLoading } = useQuery({ // Destructure isLoading here
     queryKey: ["discipline-issues", user?.center_id, gradeFilter, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("discipline_issues")
         .select("*, students!inner(name, grade), discipline_categories(name)")
@@ -106,7 +107,7 @@ export default function DisciplineIssues() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const resetForm = () => {
     setSelectedStudentIds([]);

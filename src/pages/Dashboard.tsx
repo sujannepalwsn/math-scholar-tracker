@@ -50,11 +50,13 @@ export default function Dashboard() {
   }, [attendanceRange, today]);
 
   // Data Fetching
+  const isAdmin = role === "admin";
+
   const { data: students = [], isLoading: isStudentsLoading } = useQuery({
-    queryKey: ["students", centerId],
+    queryKey: ["students", centerId, role],
     queryFn: async () => {
       let query = supabase.from("students").select("*").eq("is_active", true).order("name");
-      if (role !== "admin" && centerId) query = query.eq("center_id", centerId);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -63,277 +65,281 @@ export default function Dashboard() {
   });
 
   const { data: teachers = [], isLoading: isTeachersLoading } = useQuery({
-    queryKey: ["teachers", centerId],
+    queryKey: ["teachers", centerId, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase.from("teachers").select("*").eq("center_id", centerId).eq("is_active", true);
+      let query = supabase.from("teachers").select("*").eq("is_active", true);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: pendingLeavesCount = 0 } = useQuery({
-    queryKey: ["pending-leaves-count", centerId],
+    queryKey: ["pending-leaves-count", centerId, role],
     queryFn: async () => {
-      if (!centerId) return 0;
-      const { count, error } = await supabase
+      let query = supabase
         .from("leave_applications")
         .select("*", { count: "exact", head: true })
-        .eq("center_id", centerId)
         .eq("status", "pending");
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { count, error } = await query;
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: allAttendance = [] } = useQuery({
-    queryKey: ["attendance-dashboard", centerId, today],
+    queryKey: ["attendance-dashboard", centerId, today, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase.from("attendance").select("student_id, status, date").eq("center_id", centerId).eq("date", today);
+      let query = supabase.from("attendance").select("student_id, status, date").eq("date", today);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: teacherAttendance = [] } = useQuery({
-    queryKey: ["teacher-attendance-dashboard", centerId, today],
+    queryKey: ["teacher-attendance-dashboard", centerId, today, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase.from("teacher_attendance").select("*, teachers(*)").eq("center_id", centerId).eq("date", today);
+      let query = supabase.from("teacher_attendance").select("*, teachers(*)").eq("date", today);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: homeworkStats = [] } = useQuery({
-    queryKey: ["homework-stats-dashboard", centerId, dateRange.from, dateRange.to],
+    queryKey: ["homework-stats-dashboard", centerId, dateRange.from, dateRange.to, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("student_homework_records")
         .select("status, created_at, homework!inner(center_id)")
-        .eq("center_id", centerId)
         .gte("created_at", `${dateRange.from}T00:00:00`)
         .lte("created_at", `${dateRange.to}T23:59:59`);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: evaluationStats = [] } = useQuery({
-    queryKey: ["evaluation-stats-dashboard", centerId, dateRange.from, dateRange.to],
+    queryKey: ["evaluation-stats-dashboard", centerId, dateRange.from, dateRange.to, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("student_chapters")
         .select("completed, completed_at, evaluation_rating, lesson_plans!inner(center_id)")
-        .eq("center_id", centerId)
         .gte("completed_at", `${dateRange.from}T00:00:00`)
         .lte("completed_at", `${dateRange.to}T23:59:59`);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   // Recent activities for preview card
   const { data: recentActivities = [] } = useQuery({
-    queryKey: ["recent-activities-dashboard", centerId],
+    queryKey: ["recent-activities-dashboard", centerId, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("activities")
         .select("id, name, title, grade, activity_date")
-        .eq("center_id", centerId)
         .order("activity_date", { ascending: false })
         .limit(5);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   // Recent discipline issues for preview card
   const { data: recentDiscipline = [] } = useQuery({
-    queryKey: ["recent-discipline-dashboard", centerId],
+    queryKey: ["recent-discipline-dashboard", centerId, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("discipline_issues")
         .select("id, description, severity, issue_date, students(name, grade)")
-        .eq("center_id", centerId)
         .eq("status", "open")
         .order("issue_date", { ascending: false })
         .limit(5);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: upcomingLessons = [] } = useQuery({
-    queryKey: ["upcoming-lessons-dashboard", centerId, today],
+    queryKey: ["upcoming-lessons-dashboard", centerId, today, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase.from("lesson_plans").select("*").eq("center_id", centerId).gte("lesson_date", today).order("lesson_date").limit(8);
+      let query = supabase.from("lesson_plans").select("*").gte("lesson_date", today).order("lesson_date").limit(8);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: recentTestResults = [] } = useQuery({
-    queryKey: ["recent-test-results-dashboard", centerId, dateRange.from, dateRange.to],
+    queryKey: ["recent-test-results-dashboard", centerId, dateRange.from, dateRange.to, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("test_results")
         .select("*, students(name, grade), tests(name, total_marks, subject)")
-        .eq("center_id", centerId)
         .gte("date_taken", dateRange.from)
         .lte("date_taken", dateRange.to)
         .order("date_taken", { ascending: false });
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: invoicesInRange = [] } = useQuery({
-    queryKey: ["invoices-dashboard", centerId, dateRange.from, dateRange.to],
+    queryKey: ["invoices-dashboard", centerId, dateRange.from, dateRange.to, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("invoices")
         .select("*")
-        .eq("center_id", centerId)
         .gte("invoice_date", dateRange.from)
         .lte("invoice_date", dateRange.to);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: historicalAttendance = [] } = useQuery({
-    queryKey: ["attendance-historical", centerId, dateRange.from, dateRange.to],
+    queryKey: ["attendance-historical", centerId, dateRange.from, dateRange.to, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("attendance")
         .select("date, status")
-        .eq("center_id", centerId)
         .gte("date", dateRange.from)
         .lte("date", dateRange.to)
         .order("date");
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: historicalTeacherAttendance = [] } = useQuery({
-    queryKey: ["teacher-attendance-historical", centerId, dateRange.from, dateRange.to],
+    queryKey: ["teacher-attendance-historical", centerId, dateRange.from, dateRange.to, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("teacher_attendance")
         .select("date, status")
-        .eq("center_id", centerId)
         .gte("date", dateRange.from)
         .lte("date", dateRange.to)
         .order("date");
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: testTrend = [] } = useQuery({
-    queryKey: ["test-performance-trend", centerId, dateRange.from, dateRange.to],
+    queryKey: ["test-performance-trend", centerId, dateRange.from, dateRange.to, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("test_results")
         .select("date_taken, marks_obtained, tests(total_marks)")
-        .eq("center_id", centerId)
         .gte("date_taken", dateRange.from)
         .lte("date_taken", dateRange.to)
         .order("date_taken");
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   // Today's class schedule - connected to period_schedules
   const { data: periodSchedules = [] } = useQuery({
-    queryKey: ["period-schedules-dashboard", centerId],
+    queryKey: ["period-schedules-dashboard", centerId, role],
     queryFn: async () => {
-      if (!centerId) return [];
       const dayOfWeek = new Date().getDay();
-      const { data, error } = await supabase
+      let query = supabase
         .from("period_schedules")
         .select("*, teachers(*), class_periods(*)")
-        .eq("center_id", centerId)
         .eq("day_of_week", dayOfWeek);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: substitutions = [] } = useQuery({
-    queryKey: ["class-substitutions", centerId, today],
+    queryKey: ["class-substitutions", centerId, today, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("class_substitutions")
         .select("*, substitute_teacher:substitute_teacher_id(name)")
-        .eq("center_id", centerId)
         .eq("date", today);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: leaveApplications = [] } = useQuery({
-    queryKey: ["leave-applications-dashboard", centerId],
+    queryKey: ["leave-applications-dashboard", centerId, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("leave_applications")
         .select("*, teachers(name), students(name, grade), leave_categories(name)")
-        .eq("center_id", centerId)
         .order("created_at", { ascending: false });
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   const { data: homeworkDefaulters = [] } = useQuery({
-    queryKey: ["homework-defaulters-dashboard", centerId],
+    queryKey: ["homework-defaulters-dashboard", centerId, role],
     queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("student_homework_records")
         .select("*, students(name, grade), homework(title, subject, due_date)")
-        .eq("center_id", centerId)
         .eq("status", "assigned")
         .order("created_at", { ascending: false })
         .limit(5);
+      if (!isAdmin && centerId) query = query.eq("center_id", centerId);
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId,
+    enabled: !!user && !loading,
   });
 
   // Memos

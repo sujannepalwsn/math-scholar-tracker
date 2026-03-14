@@ -14,6 +14,7 @@ type DisciplineIssue = Tables<'discipline_issues'>;
 
 export default function ParentDiscipline() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   if (!user?.student_id) {
     return (

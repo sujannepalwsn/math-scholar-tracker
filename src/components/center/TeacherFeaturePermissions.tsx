@@ -33,6 +33,7 @@ const TEACHER_FEATURES = [
 export default function TeacherFeaturePermissions({ teacherId, teacherName }: { teacherId: string; teacherName: string }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const { data: permissions, isLoading: permissionsLoading } = useQuery({
     queryKey: ['teacher-feature-permissions', teacherId],

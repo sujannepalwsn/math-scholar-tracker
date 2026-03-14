@@ -12,13 +12,14 @@ import { getGradeFormal } from "@/lib/utils";
 
 export default function ResultsDashboard() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const centerId = user?.center_id;
   const [selectedExamId, setSelectedExamId] = useState<string>("");
 
   const { data: exams = [] } = useQuery({
     queryKey: ["exams-list-dashboard", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId && !isAdmin) return [];
       let query = supabase
         .from("exams")
         .select("*")
@@ -47,7 +48,7 @@ export default function ResultsDashboard() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   const { data: subjects = [] } = useQuery({

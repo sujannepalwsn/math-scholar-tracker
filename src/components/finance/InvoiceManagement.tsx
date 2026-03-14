@@ -16,6 +16,7 @@ import { format } from "date-fns"
 
 const InvoiceManagement = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showBulkGenerateDialog, setShowBulkGenerateDialog] = useState(false);
@@ -40,7 +41,7 @@ const InvoiceManagement = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const uniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
@@ -56,7 +57,7 @@ const InvoiceManagement = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id || isAdmin
   });
 
   const createInvoiceMutation = useMutation({

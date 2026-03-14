@@ -20,6 +20,7 @@ const grades = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
 export default function ExamManagement() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const centerId = user?.center_id;
@@ -44,11 +45,9 @@ export default function ExamManagement() {
   const { data: exams = [], isLoading } = useQuery({
     queryKey: ["exams", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!centerId) return [];
-      let query = supabase
-        .from("exams")
-        .select("*")
-        .eq("center_id", centerId);
+      if (!centerId && !isAdmin) return [];
+      let query = supabase.from("exams").select("*");
+      if (!isAdmin) query = query.eq("center_id", centerId);
 
       if (user?.role === 'teacher' && user?.teacher_id) {
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id).eq('center_id', centerId);
@@ -65,7 +64,7 @@ export default function ExamManagement() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   const { data: subjects = [] } = useQuery({
@@ -87,7 +86,7 @@ export default function ExamManagement() {
   const { data: routineSubjects = [] } = useQuery({
     queryKey: ["routine-subjects", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId && !isAdmin) return [];
       let query = supabase
         .from("period_schedules")
         .select("subject")
@@ -101,7 +100,7 @@ export default function ExamManagement() {
       if (error) throw error;
       return Array.from(new Set(data.map(d => d.subject))).sort();
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   const createExam = useMutation({

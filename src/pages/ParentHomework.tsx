@@ -16,6 +16,7 @@ type StudentHomeworkRecord = Tables<'student_homework_records'>;
 
 export default function ParentHomework() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   if (!user?.student_id) {
     return (

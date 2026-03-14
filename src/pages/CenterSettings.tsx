@@ -26,6 +26,7 @@ interface CenterTheme {
 
 export default function CenterSettings() {
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
 
   const [name, setName] = useState("");
@@ -48,7 +49,7 @@ export default function CenterSettings() {
 
   // Fetch center details
   const { data: center, isLoading } = useQuery({
-    queryKey: ["center-details", user?.center_id],
+    queryKey: ["center-details", user?.center_id, user?.role],
     queryFn: async () => {
       if (!user?.center_id) return null;
       const { data, error } = await supabase
@@ -59,7 +60,7 @@ export default function CenterSettings() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Populate form when center data loads
   useEffect(() => {

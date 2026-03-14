@@ -41,6 +41,7 @@ interface GroupedLessonRecord {
 
 export default function LessonTracking() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   // State for recording new lessons
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -68,17 +69,18 @@ export default function LessonTracking() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students", user?.center_id],
+    queryKey: ["students", user?.center_id, user?.role],
     queryFn: async () => {
-      let query = supabase.from("students").select("id, name, grade").order("name");
+      let query = supabase.from("students").select("id, name, grade");
+      query = query.order("name");
       if (user?.role !== "admin" && user?.center_id) {
-        query = query.eq("center_id", user.center_id);
+        if (!isAdmin) query = query.eq("center_id", user.center_id);
       }
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.center_id, // Ensure this is enabled for center users
+    enabled: !!user?.center_id || isAdmin, // Ensure this is enabled for center users
   });
 
   // Fetch lesson plans for dropdown and listing
@@ -88,8 +90,10 @@ export default function LessonTracking() {
       let query = supabase
         .from("lesson_plans")
         .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
-        .eq("center_id", user?.center_id!)
-        .order("lesson_date", { ascending: false });
+
+      if (!isAdmin) query = query.eq("center_id", user?.center_id);
+
+      query = query.order("lesson_date", { ascending: false });
 
       if (filterSubject !== "all") query = query.eq("subject", filterSubject);
 
@@ -101,14 +105,14 @@ export default function LessonTracking() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id, // Ensure this is enabled for center users
+    enabled: !!user?.center_id || isAdmin, // Ensure this is enabled for center users
   });
 
   // Fetch student_chapters (now linked to lesson_plans)
   const { data: studentLessonRecordsRaw = [] } = useQuery({
     queryKey: ["student-lesson-records", user?.center_id, filterSubject, filterStudent, filterGrade, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("student_chapters")
         .select(`
@@ -117,7 +121,8 @@ export default function LessonTracking() {
           lesson_plans!inner(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
           recorded_by_teacher:recorded_by_teacher_id(name)
         `)
-        .eq("center_id", user.center_id);
+
+       ; if (!isAdmin) query = query.eq("center_id", user.center_id);
 
       if (filterStudent !== "all") query = query.eq("student_id", filterStudent);
       if (filterGrade !== "all") query = query.eq("students.grade", filterGrade);
@@ -133,13 +138,13 @@ export default function LessonTracking() {
       // Filter out records where student or lesson_plan data might be missing
       return data?.filter((d: any) => d.students && d.lesson_plans) || [];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // NEW: Fetch all test results for the center, including test details and linked lesson_plan_id
   const { data: allTestResults = [] } = useQuery({
-    queryKey: ["all-test-results-for-lesson-tracking", user?.center_id],
+    queryKey: ["all-test-results-for-lesson-tracking", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("test_results")
         .select(`
@@ -148,17 +153,17 @@ export default function LessonTracking() {
           marks_obtained,
           tests(id, name, subject, total_marks, lesson_plan_id)
         `) // Removed lesson_plans(chapter) as it's not directly on tests
-        .eq("center_id", user.center_id); // Ensure tests belong to the same center
+       ; if (!isAdmin) query = query.eq("center_id", user.center_id); // Ensure tests belong to the same center
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // NEW: Fetch all student homework records for the center, including homework details and linked lesson_plan_id
   const { data: allHomeworkRecords = [] } = useQuery({
-    queryKey: ["all-homework-records-for-lesson-tracking", user?.center_id],
+    queryKey: ["all-homework-records-for-lesson-tracking", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("student_homework_records")
         .select(`
@@ -168,11 +173,11 @@ export default function LessonTracking() {
           teacher_remarks,
           homework(id, title, subject, due_date, lesson_plan_id)
         `)
-        .eq("center_id", user.center_id); // Ensure homework belongs to the same center
+       ; if (!isAdmin) query = query.eq("center_id", user.center_id); // Ensure homework belongs to the same center
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Group studentLessonRecords by lesson_plan
   const groupedLessonRecords: GroupedLessonRecord[] = useMemo(() => {
@@ -234,11 +239,15 @@ export default function LessonTracking() {
     queryFn: async () => {
       const studentIds = students.map((s: any) => s.id);
       if (!studentIds.length) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("attendance")
-        .select("*").eq('center_id', user?.center_id)
+        .select("*")
         .in("student_id", studentIds)
         .eq("date", date);
+
+      if (!isAdmin) query = query.eq("center_id", user?.center_id);
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },

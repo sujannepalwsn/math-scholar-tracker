@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 
 export default function ParentLessonTracking() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
 
   if (!user || user.role !== 'parent' || !user.student_id) {

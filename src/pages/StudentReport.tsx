@@ -36,6 +36,7 @@ interface ChapterPerformance {
 
 export default function StudentReport() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
 
   const [selectedStudentId, setSelectedStudentId] = useState<string>("none"); // Changed initial state to "none"
@@ -54,10 +55,10 @@ export default function StudentReport() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students", user?.center_id],
+    queryKey: ["students", user?.center_id, user?.role],
     queryFn: async () => {
       let query = supabase.from("students").select("*").order("name");
-      if (user?.role !== "admin" && user?.center_id) query = query.eq("center_id", user.center_id);
+      if (user?.role !== "admin" && user?.center_id) if (!isAdmin) query = query.eq("center_id", user.center_id);
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -75,7 +76,7 @@ export default function StudentReport() {
   const { data: attendanceData = [], isLoading: isAttendanceLoading } = useQuery({
     queryKey: ["student-attendance", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase
         .from("attendance")
         .select("*")
@@ -97,13 +98,13 @@ export default function StudentReport() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch lesson plans (needed for grouping)
   const { data: allLessonPlans = [] } = useQuery({
-    queryKey: ["all-lesson-plans-for-report", user?.center_id],
+    queryKey: ["all-lesson-plans-for-report", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("lesson_plans")
         .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
@@ -112,13 +113,13 @@ export default function StudentReport() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch student_chapters (lesson evaluations)
   const { data: studentChapters = [], isLoading: isChaptersLoading } = useQuery({
     queryKey: ["student-lesson-records-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.teacher_id, user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase.from("student_chapters").select(`
         *,
         lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url),
@@ -155,7 +156,7 @@ export default function StudentReport() {
   const { data: testResults = [], isLoading: isTestsLoading } = useQuery({
     queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.id, user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase.from("test_results").select("*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions, created_by)")
         .eq("center_id", user.center_id)
         .gte("date_taken", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
@@ -187,7 +188,7 @@ export default function StudentReport() {
   const { data: homeworkStatus = [], isLoading: isHomeworkLoading } = useQuery({
     queryKey: ["student-homework-status-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase.from("student_homework_records").select("*, homework!inner(id, title, subject, due_date, lesson_plan_id, teacher_id)")
         .eq("center_id", user.center_id)
         .gte("homework.due_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
@@ -219,7 +220,7 @@ export default function StudentReport() {
   const { data: activities = [], isLoading: isAllActivitiesLoading } = useQuery({
     queryKey: ["center-activities", user?.center_id, gradeFilter, dateRange],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase.from("activities")
         .select("*")
         .eq("center_id", user.center_id)
@@ -234,13 +235,13 @@ export default function StudentReport() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch preschool activities (student participations)
   const { data: preschoolActivities = [], isLoading: isActivitiesLoading } = useQuery({
     queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds, user?.role, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase.from("student_activities").select("*, activities!inner(title, description, activity_date, photo_url, video_url, activity_type_id, created_by, activity_types(name))")
         .eq("center_id", user.center_id)
         .gte("created_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
@@ -268,7 +269,7 @@ export default function StudentReport() {
   const { data: disciplineIssues = [], isLoading: isDisciplineLoading } = useQuery({
     queryKey: ["student-discipline-issues-report", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       let query = supabase.from("discipline_issues").select("*, discipline_categories(name)")
         .eq("center_id", user.center_id)
         .gte("issue_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
@@ -288,7 +289,7 @@ export default function StudentReport() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch Exam Schedules & Results
   const { data: studentExams = [] } = useQuery({
@@ -381,7 +382,7 @@ export default function StudentReport() {
         };
       });
     },
-    enabled: !!user?.center_id && selectedStudentId !== "none"
+    enabled: !!user?.center_id || isAdmin && selectedStudentId !== "none"
   });
 
   // Fetch finance data (keep student-specific for now, or generalize if needed)

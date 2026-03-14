@@ -27,6 +27,7 @@ type ActivityType = Tables<'activity_types'>;
 export default function PreschoolActivities() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<StudentActivity | null>(null);
   const [gradeFilter, setGradeFilter] = useState<string>("all");
@@ -44,9 +45,9 @@ export default function PreschoolActivities() {
 
   // Fetch students
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-activities", user?.center_id],
+    queryKey: ["students-for-activities", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("students")
         .select("id, name, grade")
@@ -55,16 +56,16 @@ export default function PreschoolActivities() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Filtered students for the modal's student select dropdown
   const filteredStudentsForModal = students.filter(s => modalGradeFilter === "all" || s.grade === modalGradeFilter);
 
   // Fetch activity types for the center
   const { data: activityTypesFromDb = [], isLoading: activityTypesLoading } = useQuery({
-    queryKey: ["activity-types", user?.center_id],
+    queryKey: ["activity-types", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("activity_types")
         .select("*")
@@ -73,13 +74,13 @@ export default function PreschoolActivities() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch activities - now properly filtered by center and teacher
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       
       let query = supabase
         .from("student_activities")
@@ -95,7 +96,7 @@ export default function PreschoolActivities() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   const resetForm = () => {
     setSelectedStudentIds([]);

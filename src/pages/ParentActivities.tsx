@@ -14,6 +14,7 @@ type Activity = Tables<'activities'>;
 
 export default function ParentActivities() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   if (!user?.student_id) {
     return (

@@ -38,6 +38,7 @@ interface ChapterPerformanceGroup {
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const today = new Date().toISOString().split("T")[0];
@@ -109,7 +110,7 @@ export default function TeacherDashboard() {
     queryKey: ["teacher-students", teacherId, user?.role, centerId],
     queryFn: async () => {
       if (!teacherId || !centerId) return [];
-      let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      let query = supabase.from("students").select("*").eq("is_active", true);
 
       if (user?.role === 'teacher') {
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', teacherId).eq('center_id', centerId);
@@ -248,12 +249,12 @@ export default function TeacherDashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId && !!user?.id });
+    enabled: !!centerId || isAdmin && !!user?.id });
 
   const { data: historicalAttendance = [] } = useQuery({
     queryKey: ["teacher-student-attendance-historical", teacherId, dateRange.from, dateRange.to, user?.role, user?.id],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId && !isAdmin) return [];
       let query = supabase
         .from("attendance")
         .select("date, status")
@@ -269,7 +270,7 @@ export default function TeacherDashboard() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!centerId });
+    enabled: !!centerId || isAdmin });
 
   const { data: lessonRecords = [] } = useQuery({
     queryKey: ['teacher-lesson-records', teacherId, dateRange.from, dateRange.to],
@@ -319,7 +320,7 @@ export default function TeacherDashboard() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId && !!user?.id });
+    enabled: !!centerId || isAdmin && !!user?.id });
 
   const { data: preschoolActivities = [] } = useQuery({
     queryKey: ["teacher-activities", user?.id, dateRange],
@@ -335,7 +336,7 @@ export default function TeacherDashboard() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId && !!user?.id });
+    enabled: !!centerId || isAdmin && !!user?.id });
 
   const attendanceTrend = useMemo(() => {
     const range = eachDayOfInterval({ start: new Date(dateRange.from), end: new Date(dateRange.to) });

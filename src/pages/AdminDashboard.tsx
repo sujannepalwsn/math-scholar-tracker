@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils"
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();

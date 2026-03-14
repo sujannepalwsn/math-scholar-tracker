@@ -10,6 +10,7 @@ interface CenterLogoProps {
 
 export default function CenterLogo({ size = "md", showName = true }: CenterLogoProps) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const { data: center } = useQuery({
     queryKey: ["center-logo", user?.center_id],
@@ -23,7 +24,7 @@ export default function CenterLogo({ size = "md", showName = true }: CenterLogoP
       if (error) return null;
       return data;
     },
-    enabled: !!user?.center_id,
+    enabled: !!user?.center_id || isAdmin,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 

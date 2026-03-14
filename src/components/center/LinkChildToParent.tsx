@@ -17,6 +17,7 @@ interface LinkChildToParentProps {
 
 export default function LinkChildToParent({ open, onOpenChange }: LinkChildToParentProps) {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [selectedParentId, setSelectedParentId] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -25,7 +26,7 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
   const { data: parentUsers = [] } = useQuery({
     queryKey: ["parent-users", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("users")
         .select("id, username, student_id")
@@ -36,13 +37,13 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id && open });
+    enabled: !!user?.center_id || isAdmin && open });
 
   // Fetch all students in this center
   const { data: students = [] } = useQuery({
     queryKey: ["students-for-linking", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("students")
         .select("id, name, grade")
@@ -52,13 +53,13 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id && open });
+    enabled: !!user?.center_id || isAdmin && open });
 
   // Fetch existing parent-student links for the center
   const { data: existingLinks = [], refetch: refetchLinks } = useQuery({
     queryKey: ["parent-student-links", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       
       // Get all students in this center first
       const { data: centerStudents } = await supabase
@@ -84,7 +85,7 @@ export default function LinkChildToParent({ open, onOpenChange }: LinkChildToPar
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.center_id && open });
+    enabled: !!user?.center_id || isAdmin && open });
 
   // Get linked students for a parent
   const getLinkedStudentsForParent = (parentId: string) => {

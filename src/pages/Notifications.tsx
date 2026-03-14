@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 
 export default function Notifications() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
@@ -65,7 +66,7 @@ export default function Notifications() {
 
       return combined.slice(0, 100);
     },
-    enabled: !!user?.center_id && !!user?.id,
+    enabled: !!user?.center_id || isAdmin && !!user?.id,
     refetchInterval: 10000, // Real-timeish polling
   });
 

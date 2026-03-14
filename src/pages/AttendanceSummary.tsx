@@ -31,6 +31,7 @@ interface AttendanceStats {
 
 export default function AttendanceSummary() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState('all');
@@ -38,7 +39,8 @@ export default function AttendanceSummary() {
   const { data: students = [] } = useQuery({
     queryKey: ['students', user?.center_id, user?.role, user?.teacher_id],
     queryFn: async () => {
-      let query = supabase.from('students').select('id, name, grade').order('name');
+      let query = supabase.from('students').select('id, name, grade');
+      query = query.order('name');
       if (user?.role !== 'admin' && user?.center_id) {
         query = query.eq('center_id', user.center_id);
       }
@@ -71,10 +73,12 @@ export default function AttendanceSummary() {
 
       let query = supabase
         .from('attendance')
-        .select('*, students(name, grade)').eq('center_id', user?.center_id)
+        .select('*, students(name, grade)')
         .in('student_id', studentIds)
         .gte('date', startDate)
         .lte('date', endDate);
+
+      if (!isAdmin) query = query.eq('center_id', user?.center_id);
 
       if (user?.role === 'teacher') {
         query = query.eq('marked_by', user.id);

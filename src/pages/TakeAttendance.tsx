@@ -39,66 +39,82 @@ export default function TakeAttendance() {
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
+  const isAdmin = user?.role === 'admin';
+  const isTeacher = user?.role === 'teacher';
+  const isCenter = user?.role === 'center';
+
   // Fetch class teacher assignments if teacher role
   const { data: classTeacherGrades = [] } = useQuery({
-    queryKey: ["my-class-teacher-grades", user?.teacher_id],
+    queryKey: ["my-class-teacher-grades", user?.teacher_id, user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.teacher_id || !user?.center_id) return [];
-      const { data, error } = await supabase
+      if (!user?.teacher_id || (!user?.center_id && !isAdmin)) return [];
+      let query = supabase
         .from("class_teacher_assignments")
         .select("grade")
-        .eq("center_id", user.center_id)
         .eq("teacher_id", user.teacher_id);
+
+      if (!isAdmin && user?.center_id) if (!isAdmin) query = query.eq("center_id", user.center_id);
+
+      const { data, error } = await query;
       if (error) throw error;
       return data.map(d => d.grade);
     },
     enabled: !!user?.teacher_id && user?.role === 'teacher' });
 
-  const isTeacher = user?.role === 'teacher';
-  const isCenter = user?.role === 'center';
-
   const { data: students } = useQuery({
-    queryKey: ["students", user?.center_id],
+    queryKey: ["students", user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
       let query = supabase
         .from("students")
         .select("id, name, grade")
-        .eq("center_id", user.center_id)
         .eq("is_active", true)
         .order("name");
+
+      if (!isAdmin) {
+        if (!user?.center_id && !isAdmin) return [];
+        if (!isAdmin) query = query.eq("center_id", user.center_id);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data as Student[];
     },
-    enabled: !!user?.center_id });
+    enabled: !!user });
 
   const { data: approvedLeaves = [] } = useQuery({
-    queryKey: ["approved-leaves", dateStr, user?.center_id],
+    queryKey: ["approved-leaves", dateStr, user?.center_id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("leave_applications")
         .select("student_id, category_id, leave_categories(name)")
-        .eq("center_id", user.center_id)
         .eq("status", "approved")
         .lte("start_date", dateStr)
         .gte("end_date", dateStr);
+
+      if (!isAdmin) {
+        if (!user?.center_id && !isAdmin) return [];
+        if (!isAdmin) query = query.eq("center_id", user.center_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!dateStr && !!user?.center_id
+    enabled: !!dateStr && !!user
   });
 
   const { data: existingAttendance } = useQuery({
-    queryKey: ["attendance", dateStr, user?.center_id, user?.id],
+    queryKey: ["attendance", dateStr, user?.center_id, user?.id, user?.role],
     queryFn: async () => {
-      if (!user?.center_id) return [];
       let query = supabase
         .from("attendance")
         .select("student_id, status, time_in, time_out, is_locked")
-        .eq("date", dateStr)
-        .eq("center_id", user.center_id);
+        .eq("date", dateStr);
+
+      if (!isAdmin) {
+        if (!user?.center_id && !isAdmin) return [];
+        if (!isAdmin) query = query.eq("center_id", user.center_id);
+      }
 
       if (user?.role === 'teacher') {
         query = query.eq('marked_by', user.id);
@@ -108,7 +124,7 @@ export default function TakeAttendance() {
       if (error) throw error;
       return data;
     },
-    enabled: !!dateStr && !!user?.center_id });
+    enabled: !!dateStr && !!user });
 
   // Check if attendance is locked for this date
   const isLocked = existingAttendance?.some((a: any) => a.is_locked) || false;

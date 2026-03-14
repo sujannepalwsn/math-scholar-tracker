@@ -27,6 +27,7 @@ interface MeetingFormProps {
 export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -60,7 +61,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
   const { data: allStudents = [], isLoading: studentsLoading } = useQuery({
     queryKey: ["all-students-for-meeting-form", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("students")
         .select("id, name, grade")
@@ -69,13 +70,13 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch all active teachers for the current center
   const { data: allTeachers = [], isLoading: teachersLoading } = useQuery({
     queryKey: ["all-teachers-for-meeting-form", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("teachers")
         .select("id, name, user_id")
@@ -85,13 +86,13 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Fetch previous meetings for "follow-up" linking
   const { data: previousMeetings = [] } = useQuery({
     queryKey: ["previous-meetings-for-linking", user?.center_id],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id && !isAdmin) return [];
       const { data, error } = await supabase
         .from("meetings")
         .select("id, title, meeting_date, meeting_type")
@@ -101,7 +102,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id || isAdmin });
 
   // Filter students based on search input
   const filteredStudents = allStudents.filter(student =>

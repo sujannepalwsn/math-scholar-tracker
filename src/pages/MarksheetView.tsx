@@ -15,6 +15,7 @@ import { cn, getGradeFormal } from "@/lib/utils";
 
 export default function MarksheetView() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const centerId = user?.center_id;
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -23,19 +24,19 @@ export default function MarksheetView() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: center } = useQuery({
-    queryKey: ["center-info", centerId],
+    queryKey: ["center-info", centerId, user?.role],
     queryFn: async () => {
       if (!centerId) return null;
       const { data } = await supabase.from("centers").select("*").eq("id", centerId).single();
       return data;
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   const { data: exams = [] } = useQuery({
     queryKey: ["exams-all-marksheet", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId && !isAdmin) return [];
       let query = supabase.from("exams")
         .select("*")
         .eq("center_id", centerId)
@@ -63,7 +64,7 @@ export default function MarksheetView() {
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId,
+    enabled: !!centerId || isAdmin,
   });
 
   const selectedExam = exams.find((e: any) => e.id === selectedExamId);
@@ -72,11 +73,13 @@ export default function MarksheetView() {
     queryKey: ["students-marksheet", centerId, selectedExam?.grade],
     queryFn: async () => {
       if (!centerId || !selectedExam?.grade) return [];
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", centerId).eq("grade", selectedExam.grade).eq("is_active", true).order("name");
+      let query = supabase.from("students").select("*");
+      if (!isAdmin) query = query.eq("center_id", centerId);
+      const { data, error } = await query.eq("grade", selectedExam.grade).eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId && !!selectedExam?.grade,
+    enabled: !!centerId || isAdmin && !!selectedExam?.grade,
   });
 
   const filteredStudents = students.filter((s: any) =>

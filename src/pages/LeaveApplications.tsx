@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 
 export default function LeaveApplications() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -82,7 +83,7 @@ export default function LeaveApplications() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id,
+    enabled: !!user?.center_id || isAdmin,
   });
 
   // Fetch linked students if parent

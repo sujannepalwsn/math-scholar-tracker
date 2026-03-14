@@ -12,6 +12,7 @@ import ThemeSelector from "@/components/ThemeSelector";
 
 export default function GeneralSettings() {
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
