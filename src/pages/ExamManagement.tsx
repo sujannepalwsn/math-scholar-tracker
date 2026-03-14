@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Calendar, Edit, GraduationCap, Plus, Trash2, ListChecks, CheckCircle2 } from "lucide-react";
+import { BookOpen, Calendar, Edit, GraduationCap, Plus, Trash2, ListChecks, CheckCircle2, ChevronDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,11 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn, safeFormatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
 
-const grades = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+const grades = ["Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
 export default function ExamManagement() {
   const { user } = useAuth();
@@ -28,9 +30,11 @@ export default function ExamManagement() {
   const [editingExam, setEditingExam] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
-    grade: "",
+    applicable_grades: [] as string[],
     academic_year: "2025/2026",
-    exam_date: "",
+    start_date: "",
+    end_date: "",
+    description: "",
     status: "draft",
   });
 
@@ -75,7 +79,8 @@ export default function ExamManagement() {
         ...data,
         center_id: centerId!,
         created_by: user?.id,
-        exam_date: data.exam_date || null,
+        // Keep grade for backward compatibility if needed, using the first one or a summary
+        grade: data.applicable_grades[0] || "",
       };
       if (editingExam) {
         const { error } = await supabase.from("exams").update(payload).eq("id", editingExam.id);
@@ -126,16 +131,16 @@ export default function ExamManagement() {
       if (subjError) throw subjError;
       if (!subjects || subjects.length === 0) throw new Error("No subjects defined for this exam. Please add subjects first.");
 
-      // 2. Get active students for this grade
+      // 2. Get active students for all applicable grades
       const { count: studentCount, error: studError } = await supabase
         .from("students")
         .select("*", { count: 'exact', head: true })
         .eq("center_id", centerId!)
-        .eq("grade", exam.grade)
+        .in("grade", exam.applicable_grades || [exam.grade])
         .eq("is_active", true);
 
       if (studError) throw studError;
-      if (!studentCount || studentCount === 0) throw new Error("No active students found for this grade.");
+      if (!studentCount || studentCount === 0) throw new Error("No active students found for the selected grades.");
 
       const expectedMarksCount = studentCount * subjects.length;
 
@@ -153,6 +158,29 @@ export default function ExamManagement() {
 
       const { error } = await supabase.from("exams").update({ status: "results_published" }).eq("id", exam.id);
       if (error) throw error;
+
+      // Notify Parents/Students
+      const { data: students, error: studError2 } = await supabase
+        .from("students")
+        .select("user_id")
+        .eq("center_id", centerId!)
+        .in("grade", exam.applicable_grades || [exam.grade])
+        .eq("is_active", true);
+
+      if (!studError2 && students) {
+        const studentUserIds = students.map(s => s.user_id).filter(Boolean);
+        if (studentUserIds.length > 0) {
+          const notifications = studentUserIds.map(uid => ({
+            user_id: uid,
+            center_id: centerId!,
+            title: "Exam Results Published",
+            message: `Results for ${exam.name} are now available.`,
+            type: "marks",
+            link: "/parent-results"
+          }));
+          await supabase.from("notifications").insert(notifications);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
@@ -193,7 +221,15 @@ export default function ExamManagement() {
   });
 
   const resetForm = () => {
-    setFormData({ name: "", grade: "", academic_year: "2025/2026", exam_date: "", status: "draft" });
+    setFormData({
+      name: "",
+      applicable_grades: [],
+      academic_year: "2025/2026",
+      start_date: "",
+      end_date: "",
+      description: "",
+      status: "draft"
+    });
     setEditingExam(null);
     setShowForm(false);
   };
@@ -201,13 +237,26 @@ export default function ExamManagement() {
   const handleEdit = (exam: any) => {
     setFormData({
       name: exam.name,
-      grade: exam.grade,
+      applicable_grades: exam.applicable_grades || (exam.grade ? [exam.grade] : []),
       academic_year: exam.academic_year,
-      exam_date: exam.exam_date || "",
+      start_date: exam.start_date || exam.exam_date || "",
+      end_date: exam.end_date || exam.exam_date || "",
+      description: exam.description || "",
       status: exam.status,
     });
     setEditingExam(exam);
     setShowForm(true);
+  };
+
+  const toggleGrade = (grade: string) => {
+    setFormData(prev => {
+      const current = prev.applicable_grades;
+      if (current.includes(grade)) {
+        return { ...prev, applicable_grades: current.filter(g => g !== grade) };
+      } else {
+        return { ...prev, applicable_grades: [...current, grade] };
+      }
+    });
   };
 
   return (
@@ -233,21 +282,49 @@ export default function ExamManagement() {
               <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. First Term Exam" />
             </div>
             <div>
-              <Label>Grade</Label>
-              <Select value={formData.grade} onValueChange={(v) => setFormData({ ...formData, grade: v })}>
-                <SelectTrigger><SelectValue placeholder="Select grade" /></SelectTrigger>
-                <SelectContent>{grades.map(g => <SelectItem key={g} value={g}>Grade {g}</SelectItem>)}</SelectContent>
-              </Select>
+              <Label>Applicable Grades</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between font-normal">
+                    {formData.applicable_grades.length === 0
+                      ? "Select grades"
+                      : formData.applicable_grades.length === 1
+                        ? `Grade ${formData.applicable_grades[0]}`
+                        : `${formData.applicable_grades.length} grades selected`}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0" align="start">
+                  <div className="p-2 space-y-2 max-h-[300px] overflow-y-auto">
+                    {grades.map(g => (
+                      <div key={g} className="flex items-center space-x-2 p-1 hover:bg-slate-100 rounded cursor-pointer" onClick={() => toggleGrade(g)}>
+                        <Checkbox checked={formData.applicable_grades.includes(g)} onCheckedChange={() => toggleGrade(g)} />
+                        <span className="text-sm font-medium">Grade {g}</span>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label>Academic Year</Label>
               <Input value={formData.academic_year} onChange={(e) => setFormData({ ...formData, academic_year: e.target.value })} />
             </div>
-            <div>
-              <Label>Exam Date</Label>
-              <Input type="date" value={formData.exam_date} onChange={(e) => setFormData({ ...formData, exam_date: e.target.value })} />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Start Date</Label>
+                <Input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <Input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
+              </div>
             </div>
-            <Button className="w-full" onClick={() => createExam.mutate(formData)} disabled={!formData.name || !formData.grade}>
+            <div>
+              <Label>Description (Optional)</Label>
+              <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Exam details..." />
+            </div>
+            <Button className="w-full" onClick={() => createExam.mutate(formData)} disabled={!formData.name || formData.applicable_grades.length === 0 || !formData.start_date || !formData.end_date}>
               {editingExam ? "Update Exam" : "Create Exam"}
             </Button>
           </div>
@@ -333,10 +410,22 @@ export default function ExamManagement() {
                         {exam.status === "results_published" ? "Results Published" : exam.status === "published" ? "Routine Published" : "Draft"}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Grade {exam.grade} • {exam.academic_year}
-                      {exam.exam_date && ` • ${safeFormatDate(exam.exam_date, "MMM dd, yyyy")}`}
-                    </p>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>
+                        Grades: {exam.applicable_grades?.join(", ") || exam.grade} • {exam.academic_year}
+                      </p>
+                      <p className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {exam.start_date ? (
+                          <>
+                            {safeFormatDate(exam.start_date, "MMM dd")} - {safeFormatDate(exam.end_date, "MMM dd, yyyy")}
+                          </>
+                        ) : (
+                          exam.exam_date && safeFormatDate(exam.exam_date, "MMM dd, yyyy")
+                        )}
+                      </p>
+                      {exam.description && <p className="italic">"{exam.description}"</p>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Button variant="outline" size="sm" onClick={() => { setSelectedExamId(exam.id); setShowSubjectDialog(true); }}>

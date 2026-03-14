@@ -1,5 +1,6 @@
 import React from "react";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, Trash2, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +13,7 @@ import { PageHeader } from "@/components/ui/page-header";
 
 export default function Notifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
@@ -36,6 +38,15 @@ export default function Notifications() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-notifications"] }),
   });
+
+  const handleNotificationClick = (n: any) => {
+    if (!n.is_read) {
+      markReadMutation.mutate(n.id);
+    }
+    if (n.link) {
+      navigate(n.link);
+    }
+  };
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
@@ -62,6 +73,8 @@ export default function Notifications() {
       exam: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
       leave_request: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
       leave_status: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      homework: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+      lesson_plan: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
       info: "bg-muted text-muted-foreground",
     };
     return colors[type] || colors.info;
@@ -90,7 +103,14 @@ export default function Notifications() {
       ) : (
         <div className="space-y-2">
           {notifications.map((n: any) => (
-            <Card key={n.id} className={cn("transition-colors", !n.is_read && "border-primary/30 bg-primary/5")}>
+            <Card
+              key={n.id}
+              className={cn(
+                "transition-all duration-200 cursor-pointer hover:shadow-md",
+                !n.is_read ? "border-primary/30 bg-primary/5" : "hover:bg-muted/50"
+              )}
+              onClick={() => handleNotificationClick(n)}
+            >
               <CardContent className="p-4 flex items-start gap-3">
                 <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", getTypeColor(n.type))}>
                   <Bell className="h-5 w-5" />
@@ -109,12 +129,20 @@ export default function Notifications() {
                     <span className="text-[11px] text-muted-foreground">
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                     </span>
-                    {!n.is_read && (
-                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => markReadMutation.mutate(n.id)}>
-                        Mark read
-                      </Button>
+                    {n.link && (
+                      <div className="flex items-center text-[11px] font-bold text-primary uppercase tracking-tighter">
+                        <ExternalLink className="h-3 w-3 mr-1" /> View Detail
+                      </div>
                     )}
-                    <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive" onClick={() => deleteMutation.mutate(n.id)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs text-destructive ml-auto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteMutation.mutate(n.id);
+                      }}
+                    >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>

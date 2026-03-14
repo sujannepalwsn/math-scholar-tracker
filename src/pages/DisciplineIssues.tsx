@@ -135,6 +135,20 @@ export default function DisciplineIssues() {
 
       const { error } = await supabase.from("discipline_issues").insert(issueRecords);
       if (error) throw error;
+
+      // Notify Parents
+      const { data: parentUsers } = await supabase.from('users').select('id, student_id').in('student_id', selectedStudentIds).eq('role', 'parent');
+      if (parentUsers && parentUsers.length > 0) {
+        const notifications = parentUsers.map(pu => ({
+          user_id: pu.id,
+          center_id: user.center_id!,
+          title: "Behavioral Incident Logged",
+          message: `A new discipline issue has been recorded for ${students.find(s => s.id === pu.student_id)?.name}.`,
+          type: "info",
+          link: "/parent-discipline"
+        }));
+        await supabase.from('notifications').insert(notifications);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discipline-issues"] });

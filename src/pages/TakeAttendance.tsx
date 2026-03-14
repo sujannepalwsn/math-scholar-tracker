@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CalendarIcon, ChevronDown, Lock, Users } from "lucide-react";
+import { CalendarIcon, ChevronDown, Lock, Users, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import { cn } from "@/lib/utils"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface Student {
   id: string;
@@ -38,6 +39,24 @@ export default function TakeAttendance() {
   const [gradeFilter, setGradeFilter] = useState<string>("all");
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+  const { data: schoolDay } = useQuery({
+    queryKey: ["school-day-status", dateStr, user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return null;
+      const { data, error } = await supabase
+        .from("school_days")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .eq("date", dateStr)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!dateStr && !!user?.center_id
+  });
+
+  const isOperationalDay = schoolDay ? schoolDay.is_school_day : true;
 
   // Fetch class teacher assignments if teacher role
   const { data: classTeacherGrades = [] } = useQuery({
@@ -114,7 +133,7 @@ export default function TakeAttendance() {
     if (isTeacher && classTeacherGrades.length === 1 && gradeFilter === "all") {
       setGradeFilter(classTeacherGrades[0]);
     }
-  }, [isTeacher, classTeacherGrades]);
+  }, [isTeacher, classTeacherGrades, gradeFilter]);
 
   useEffect(() => {
     if (students) {
@@ -188,6 +207,25 @@ export default function TakeAttendance() {
       }));
       const { error } = await supabase.from("attendance").insert(records);
       if (error) throw error;
+
+      // Notify Parents of Absentees
+      const absentees = filteredStudents.filter(s => !attendance[s.id]?.present);
+      if (absentees.length > 0) {
+        const absenteeIds = absentees.map(s => s.id);
+        const { data: parentUsers } = await supabase.from('users').select('id, student_id').in('student_id', absenteeIds).eq('role', 'parent');
+
+        if (parentUsers && parentUsers.length > 0) {
+          const notifications = parentUsers.map(pu => ({
+            user_id: pu.id,
+            center_id: user.center_id!,
+            title: "Absence Alert",
+            message: `Your child ${absentees.find(a => a.id === pu.student_id)?.name} is marked ABSENT today (${dateStr}).`,
+            type: "attendance",
+            link: "/parent-dashboard"
+          }));
+          await supabase.from('notifications').insert(notifications);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
@@ -197,6 +235,10 @@ export default function TakeAttendance() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isOperationalDay) {
+      toast.error("Cannot mark attendance on a non-school day.");
+      return;
+    }
     if (isLocked && !canEdit) {
       toast.error("Attendance is locked. Only center admin can edit.");
       return;
@@ -227,7 +269,17 @@ export default function TakeAttendance() {
         </div>
       </div>
 
-      {isLocked && !canEdit && (
+      {!isOperationalDay && (
+        <Alert variant="destructive" className="rounded-2xl border-2 animate-in slide-in-from-top-2">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle className="font-black uppercase text-xs tracking-widest">Attendance Disabled</AlertTitle>
+          <AlertDescription className="text-sm font-bold">
+            Not a school day. Reason: {schoolDay?.reason || "Institutional Closure"}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isLocked && !canEdit && isOperationalDay && (
         <div className="flex items-center gap-3 p-4 bg-orange-50/50 backdrop-blur-sm border border-orange-200 rounded-2xl text-orange-700 shadow-soft animate-in slide-in-from-top-2">
           <div className="p-2 rounded-xl bg-orange-100">
             <Lock className="h-4 w-4" />
@@ -293,10 +345,10 @@ export default function TakeAttendance() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" size="sm" onClick={markAllPresent} disabled={isLocked && !canEdit} className="rounded-xl border-2 hover:bg-green-50 hover:border-green-200 hover:text-green-600 h-10 px-4">
+              <Button variant="outline" size="sm" onClick={markAllPresent} disabled={(isLocked && !canEdit) || !isOperationalDay} className="rounded-xl border-2 hover:bg-green-50 hover:border-green-200 hover:text-green-600 h-10 px-4">
                 Mark All Present
               </Button>
-              <Button variant="outline" size="sm" onClick={markAllAbsent} disabled={isLocked && !canEdit} className="rounded-xl border-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 h-10 px-4">
+              <Button variant="outline" size="sm" onClick={markAllAbsent} disabled={(isLocked && !canEdit) || !isOperationalDay} className="rounded-xl border-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 h-10 px-4">
                 Mark All Absent
               </Button>
             </div>
@@ -345,7 +397,7 @@ export default function TakeAttendance() {
                         id={student.id}
                         checked={attendance[student.id]?.present || false}
                         onCheckedChange={() => handleToggle(student.id)}
-                        disabled={isLocked && !canEdit}
+                        disabled={(isLocked && !canEdit) || !isOperationalDay}
                         className="h-7 w-7 rounded-xl border-2 border-slate-300 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                       />
                     </div>
@@ -357,7 +409,7 @@ export default function TakeAttendance() {
                           type="time"
                           value={attendance[student.id]?.timeIn || ""}
                           onChange={(e) => handleTimeChange(student.id, "timeIn", e.target.value)}
-                          disabled={isLocked && !canEdit}
+                          disabled={(isLocked && !canEdit) || !isOperationalDay}
                           className="h-10 bg-card/40 rounded-xl text-xs font-bold"
                         />
                       </div>
@@ -367,7 +419,7 @@ export default function TakeAttendance() {
                           type="time"
                           value={attendance[student.id]?.timeOut || ""}
                           onChange={(e) => handleTimeChange(student.id, "timeOut", e.target.value)}
-                          disabled={isLocked && !canEdit}
+                          disabled={(isLocked && !canEdit) || !isOperationalDay}
                           className="h-10 bg-card/40 rounded-xl text-xs font-bold"
                         />
                       </div>
@@ -378,13 +430,15 @@ export default function TakeAttendance() {
               <Button
                 type="submit"
                 className="w-full h-16 text-xl font-black shadow-strong rounded-[2rem] bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.01] transition-all duration-300"
-                disabled={saveMutation.isPending || (isLocked && !canEdit)}
+                disabled={saveMutation.isPending || (isLocked && !canEdit) || !isOperationalDay}
               >
                 {saveMutation.isPending ? (
                   <div className="flex items-center gap-3">
                     <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                     <span>SECURELY SAVING...</span>
                   </div>
+                ) : !isOperationalDay ? (
+                  "ATTENDANCE DISABLED - NOT A SCHOOL DAY"
                 ) : (
                   `COMMIT ROLL CALL (${presentCount} PRESENT / ${absentCount} ABSENT)`
                 )}

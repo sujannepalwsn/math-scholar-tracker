@@ -431,9 +431,12 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          latitude: number | null
           logo_url: string | null
+          longitude: number | null
           name: string
           phone: string | null
+          radius_meters: number | null
           theme: Json | null
           updated_at: string
         }
@@ -443,9 +446,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name: string
           phone?: string | null
+          radius_meters?: number | null
           theme?: Json | null
           updated_at?: string
         }
@@ -455,9 +461,12 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           name?: string
           phone?: string | null
+          radius_meters?: number | null
           theme?: Json | null
           updated_at?: string
         }
@@ -567,6 +576,7 @@ export type Database = {
           end_time: string
           id: string
           is_active: boolean | null
+          is_published: boolean | null
           period_number: number
           start_time: string
           updated_at: string | null
@@ -577,6 +587,7 @@ export type Database = {
           end_time: string
           id?: string
           is_active?: boolean | null
+          is_published?: boolean | null
           period_number: number
           start_time: string
           updated_at?: string | null
@@ -587,6 +598,7 @@ export type Database = {
           end_time?: string
           id?: string
           is_active?: boolean | null
+          is_published?: boolean | null
           period_number?: number
           start_time?: string
           updated_at?: string | null
@@ -874,37 +886,49 @@ export type Database = {
       exams: {
         Row: {
           academic_year: string
+          applicable_grades: string[] | null
           center_id: string
           created_at: string
           created_by: string | null
+          description: string | null
+          end_date: string | null
           exam_date: string | null
           grade: string
           id: string
           name: string
+          start_date: string | null
           status: string
           updated_at: string
         }
         Insert: {
           academic_year?: string
+          applicable_grades?: string[] | null
           center_id: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          end_date?: string | null
           exam_date?: string | null
           grade: string
           id?: string
           name: string
+          start_date?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           academic_year?: string
+          applicable_grades?: string[] | null
           center_id?: string
           created_at?: string
           created_by?: string | null
+          description?: string | null
+          end_date?: string | null
           exam_date?: string | null
           grade?: string
           id?: string
           name?: string
+          start_date?: string | null
           status?: string
           updated_at?: string
         }
@@ -1353,6 +1377,140 @@ export type Database = {
           },
         ]
       }
+      leave_applications: {
+        Row: {
+          admin_notes: string | null
+          category_id: string | null
+          center_id: string
+          created_at: string
+          document_url: string | null
+          end_date: string
+          end_time: string | null
+          id: string
+          leave_type: string | null
+          reason: string | null
+          start_date: string
+          start_time: string | null
+          status: string
+          student_id: string | null
+          teacher_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          category_id?: string | null
+          center_id: string
+          created_at?: string
+          document_url?: string | null
+          end_date: string
+          end_time?: string | null
+          id?: string
+          leave_type?: string | null
+          reason?: string | null
+          start_date: string
+          start_time?: string | null
+          status?: string
+          student_id?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          category_id?: string | null
+          center_id?: string
+          created_at?: string
+          document_url?: string | null
+          end_date?: string
+          end_time?: string | null
+          id?: string
+          leave_type?: string | null
+          reason?: string | null
+          start_date?: string
+          start_time?: string | null
+          status?: string
+          student_id?: string | null
+          teacher_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_applications_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "leave_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_applications_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_applications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_applications_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_categories: {
+        Row: {
+          applicable_to: string
+          center_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          applicable_to?: string
+          center_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          applicable_to?: string
+          center_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_categories_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_attendees: {
         Row: {
           attendance_status: string | null
@@ -1657,6 +1815,74 @@ export type Database = {
           },
         ]
       }
+      class_substitutions: {
+        Row: {
+          center_id: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          original_teacher_id: string | null
+          period_schedule_id: string
+          status: string
+          substitute_teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          original_teacher_id?: string | null
+          period_schedule_id: string
+          status?: string
+          substitute_teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          original_teacher_id?: string | null
+          period_schedule_id?: string
+          status?: string
+          substitute_teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_substitutions_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_substitutions_original_teacher_id_fkey"
+            columns: ["original_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_substitutions_period_schedule_id_fkey"
+            columns: ["period_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "period_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_substitutions_substitute_teacher_id_fkey"
+            columns: ["substitute_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       period_schedules: {
         Row: {
           center_id: string
@@ -1886,6 +2112,41 @@ export type Database = {
             columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "teachers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_days: {
+        Row: {
+          center_id: string
+          created_at: string
+          date: string
+          id: string
+          is_school_day: boolean
+          reason: string | null
+        }
+        Insert: {
+          center_id: string
+          created_at?: string
+          date: string
+          id?: string
+          is_school_day?: boolean
+          reason?: string | null
+        }
+        Update: {
+          center_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          is_school_day?: boolean
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_days_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
             referencedColumns: ["id"]
           },
         ]
@@ -2257,6 +2518,8 @@ export type Database = {
           contact_number: string | null
           created_at: string
           email: string | null
+          expected_check_in: string | null
+          expected_check_out: string | null
           hire_date: string | null
           id: string
           is_active: boolean | null
@@ -2274,6 +2537,8 @@ export type Database = {
           contact_number?: string | null
           created_at?: string
           email?: string | null
+          expected_check_in?: string | null
+          expected_check_out?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean | null
@@ -2291,6 +2556,8 @@ export type Database = {
           contact_number?: string | null
           created_at?: string
           email?: string | null
+          expected_check_in?: string | null
+          expected_check_out?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean | null

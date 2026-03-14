@@ -8,6 +8,7 @@ import { eachDayOfInterval, endOfMonth, format, isFuture, isPast, isToday, start
 import { cn, formatCurrency, safeFormatDate } from "@/lib/utils"
 import { KPICard } from "@/components/dashboard/KPICard"
 import { AlertList } from "@/components/dashboard/AlertList"
+import { ClassSchedule } from "@/components/dashboard/ClassSchedule"
 import CenterLogo from "@/components/CenterLogo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -220,6 +221,24 @@ const ParentDashboardContent = () => {
     },
     enabled: !!user?.center_id });
 
+  const { data: studentRoutine = [] } = useQuery({
+    queryKey: ["student-routine", student?.grade, user?.center_id],
+    queryFn: async () => {
+      if (!student?.grade || !user?.center_id) return [];
+      const dayOfWeek = new Date().getDay();
+      const { data, error } = await supabase
+        .from("period_schedules")
+        .select("*, teachers(name), class_periods!inner(*)")
+        .eq("center_id", user.center_id)
+        .eq("grade", student.grade)
+        .eq("day_of_week", dayOfWeek)
+        .eq("class_periods.is_published", true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!student?.grade && !!user?.center_id
+  });
+
   const attendanceTrend = useMemo(() => {
     const range = eachDayOfInterval({ start: new Date(dateRange.from), end: new Date(dateRange.to) });
     return range.map(day => {
@@ -268,31 +287,31 @@ const ParentDashboardContent = () => {
     });
   }, [homeworkStatus]);
 
+  const formattedRoutine = useMemo(() => {
+    return studentRoutine.map((ps: any) => ({
+      id: ps.id,
+      time: ps.class_periods ? `${ps.class_periods.start_time?.slice(0, 5)} - ${ps.class_periods.end_time?.slice(0, 5)}` : "N/A",
+      grade: ps.grade,
+      teacher: ps.teachers?.name || "Unassigned",
+      subject: ps.subject,
+      status: (() => {
+        if (!ps.class_periods) return "upcoming" as const;
+        const now = new Date();
+        const [sh, sm] = (ps.class_periods.start_time || "").split(":").map(Number);
+        const [eh, em] = (ps.class_periods.end_time || "").split(":").map(Number);
+        const startMin = sh * 60 + sm;
+        const endMin = eh * 60 + em;
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        if (nowMin >= endMin) return "completed" as const;
+        if (nowMin >= startMin) return "running" as const;
+        return "upcoming" as const;
+      })()
+    })).sort((a: any, b: any) => a.time.localeCompare(b.time));
+  }, [studentRoutine]);
+
   const getRatingStars = (rating: number | null) => {
     if (rating === null) return "N/A";
     return Array(rating).fill("⭐").join("");
-  };
-
-  const getHomeworkStatusIcon = (status: StudentHomeworkRecord['status']) => {
-    switch (status) {
-      case 'completed':
-      case 'checked':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'in_progress':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'assigned':
-      default:
-        return <XCircle className="h-4 w-4 text-red-600" />;
-    }
-  };
-
-  const getSeverityColor = (severity: Tables<'discipline_issues'>['severity']) => {
-    switch (severity) {
-      case "low": return "text-green-600";
-      case "medium": return "text-orange-600";
-      case "high": return "text-red-600";
-      default: return "text-gray-600";
-    }
   };
 
   const scrollToSection = (id: string) => {
@@ -563,15 +582,24 @@ const ParentDashboardContent = () => {
         <AlertList alerts={parentAlerts} onViewAll={() => navigate("/parent-messages")} />
       </div>
 
-      <div className="flex justify-center py-4">
-        <Button
-          variant="outline"
-          className="rounded-2xl border-2 font-black uppercase tracking-widest text-[10px] h-12 px-8 shadow-soft bg-white hover:bg-slate-50"
-          onClick={() => navigate("/parent-student-report")}
-        >
-          <BarChart3 className="mr-2 h-4 w-4 text-primary" />
-          View Comprehensive Academic Report
-        </Button>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <ClassSchedule classes={formattedRoutine} title="Daily Learning Schedule" />
+        <Card className="md:col-span-2 border-none shadow-soft bg-card/60 backdrop-blur-md rounded-2xl border border-border/20">
+          <CardHeader><CardTitle className="text-lg font-bold">Educational Milestones</CardTitle></CardHeader>
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground italic">Comprehensive tracking of your child's educational journey and institutional engagements.</p>
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="outline"
+                className="rounded-2xl border-2 font-black uppercase tracking-widest text-[10px] h-12 px-8 shadow-soft bg-white hover:bg-slate-50 w-full"
+                onClick={() => navigate("/parent-student-report")}
+              >
+                <BarChart3 className="mr-2 h-4 w-4 text-primary" />
+                Open Academic Dossier
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div id="printable-report" className="space-y-12 animate-in slide-in-from-bottom-8 duration-700">

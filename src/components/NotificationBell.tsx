@@ -72,6 +72,10 @@ export default function NotificationBell() {
       attendance: "bg-green-100 text-green-600",
       marks: "bg-purple-100 text-purple-600",
       exam: "bg-orange-100 text-orange-600",
+      leave_request: "bg-amber-100 text-amber-600",
+      leave_status: "bg-emerald-100 text-emerald-600",
+      homework: "bg-indigo-100 text-indigo-600",
+      lesson_plan: "bg-rose-100 text-rose-600",
       info: "bg-muted text-muted-foreground",
     };
     return colors[type] || colors.info;

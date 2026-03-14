@@ -239,6 +239,20 @@ export default function Tests() {
         console.error("Supabase error saving test result:", error);
         throw error;
       }
+
+      // Notify Parent/Student
+      const student = students.find(s => s.id === selectedStudentId);
+      if (student?.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: student.user_id,
+          center_id: user?.center_id,
+          title: `Test Marks Recorded: ${selectedTestData?.name}`,
+          message: `Score: ${resultData.marks_obtained}/${selectedTestData?.total_marks} in ${selectedTestData?.subject}`,
+          type: 'marks',
+          link: '/parent-results'
+        });
+      }
+
       console.log("Test result saved successfully:", data);
       return data;
     },
@@ -293,6 +307,24 @@ export default function Tests() {
         console.error("Supabase error inserting bulk marks:", error);
         throw error;
       }
+
+      // Notify Parents
+      const { data: parentUsers } = await supabase.from('users').select('id, student_id').in('student_id', studentIdsInBatch).eq('role', 'parent');
+      if (parentUsers && parentUsers.length > 0) {
+        const notifications = parentUsers.map(pu => {
+          const studentMark = marks.find(m => m.studentId === pu.student_id);
+          return {
+            user_id: pu.id,
+            center_id: user?.center_id!,
+            title: `Test Marks Recorded: ${selectedTestData?.name}`,
+            message: `Score: ${studentMark?.marks}/${selectedTestData?.total_marks} in ${selectedTestData?.subject}`,
+            type: 'marks',
+            link: '/parent-results'
+          };
+        });
+        await supabase.from('notifications').insert(notifications);
+      }
+
       console.log("Bulk marks saved successfully.");
     },
     onSuccess: () => {

@@ -99,6 +99,16 @@ export default function TeacherMessaging() {
         .from("chat_conversations")
         .update({ updated_at: new Date().toISOString() })
         .eq("id", conversation.id);
+
+      // Notify Center Admin
+      await supabase.from('notifications').insert({
+        center_id: user.center_id,
+        user_id: null, // Broadcast to center
+        title: `New message from teacher: ${user.username}`,
+        message: newMessage.trim().substring(0, 50) + (newMessage.length > 50 ? '...' : ''),
+        type: 'info',
+        link: '/messages'
+      });
     },
     onSuccess: () => {
       setNewMessage("");

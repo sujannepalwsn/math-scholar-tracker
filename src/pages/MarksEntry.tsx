@@ -31,6 +31,7 @@ export default function MarksEntry() {
 
   const [selectedExamId, setSelectedExamId] = useState<string>(searchParams.get("examId") || "");
   const [marksData, setMarksData] = useState<Record<string, Record<string, string>>>({});
+  const [filterGrade, setFilterGrade] = useState<string>("all");
 
   const { data: exams = [] } = useQuery({
     queryKey: ["exams-entry-list", centerId],
@@ -57,6 +58,16 @@ export default function MarksEntry() {
 
   const selectedExam = exams.find((e: any) => e.id === selectedExamId);
 
+  // Set initial filter grade when exam is selected
+  useEffect(() => {
+    if (selectedExam) {
+      const examGrades = selectedExam.applicable_grades || (selectedExam.grade ? [selectedExam.grade] : []);
+      if (examGrades.length > 0 && !examGrades.includes(filterGrade) && filterGrade !== "all") {
+        setFilterGrade("all");
+      }
+    }
+  }, [selectedExam]);
+
   const { data: subjects = [] } = useQuery({
     queryKey: ["exam-subjects-entry", selectedExamId],
     queryFn: async () => {
@@ -72,21 +83,33 @@ export default function MarksEntry() {
     enabled: !!selectedExamId,
   });
 
+  const examGrades = useMemo(() => {
+    if (!selectedExam) return [];
+    return selectedExam.applicable_grades || (selectedExam.grade ? [selectedExam.grade] : []);
+  }, [selectedExam]);
+
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-exam", centerId, selectedExam?.grade],
+    queryKey: ["students-for-exam", centerId, selectedExamId, filterGrade],
     queryFn: async () => {
-      if (!centerId || !selectedExam?.grade) return [];
-      const { data, error } = await supabase
+      if (!centerId || !selectedExamId || !selectedExam) return [];
+
+      let query = supabase
         .from("students")
         .select("*")
         .eq("center_id", centerId)
-        .eq("grade", selectedExam.grade)
-        .eq("is_active", true)
-        .order("name");
+        .eq("is_active", true);
+
+      if (filterGrade !== "all") {
+        query = query.eq("grade", filterGrade);
+      } else {
+        query = query.in("grade", examGrades);
+      }
+
+      const { data, error } = await query.order("grade").order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!centerId && !!selectedExam?.grade,
+    enabled: !!centerId && !!selectedExamId && !!selectedExam,
   });
 
   // Load existing marks
@@ -165,8 +188,9 @@ export default function MarksEntry() {
       let hasMarks = false;
 
       subjects.forEach((subj: any) => {
-        const marks = parseFloat(studentMarks[subj.id] || "0");
-        if (studentMarks[subj.id]) {
+        const marksString = studentMarks[subj.id];
+        if (marksString !== undefined && marksString !== "") {
+          const marks = parseFloat(marksString);
           hasMarks = true;
           totalObtained += marks;
           totalFull += subj.full_marks;
@@ -192,22 +216,42 @@ export default function MarksEntry() {
       <PageHeader title="Marks Entry" description="Enter student marks for exams" />
 
       <Card>
-        <CardContent className="p-4">
-          <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select an exam" />
-            </SelectTrigger>
-            <SelectContent>
-              {exams.map((exam: any) => (
-                <SelectItem key={exam.id} value={exam.id}>
-                  {exam.name} - Grade {exam.grade} ({exam.academic_year})
-                  <span className="ml-2 text-[10px] uppercase text-muted-foreground">
-                    ({exam.status === 'published' ? 'Routine Published' : 'Draft'})
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Select Exam</Label>
+            <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an exam" />
+              </SelectTrigger>
+              <SelectContent>
+                {exams.map((exam: any) => (
+                  <SelectItem key={exam.id} value={exam.id}>
+                    {exam.name} ({exam.applicable_grades?.join(", ") || exam.grade})
+                    <span className="ml-2 text-[10px] uppercase text-muted-foreground">
+                      ({exam.status === 'published' ? 'Routine Published' : 'Draft'})
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedExam && examGrades.length > 1 && (
+            <div className="space-y-1.5">
+              <Label>Filter Grade</Label>
+              <Select value={filterGrade} onValueChange={setFilterGrade}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades ({examGrades.join(", ")})</SelectItem>
+                  {examGrades.map(g => (
+                    <SelectItem key={g} value={g}>Grade {g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -241,7 +285,7 @@ export default function MarksEntry() {
                   <TableRow key={student.id}>
                     <TableCell className="sticky left-0 bg-card z-10 font-medium">
                       {student.name}
-                      <div className="text-[10px] text-muted-foreground">Roll: {student.roll_number || "-"}</div>
+                      <div className="text-[10px] text-muted-foreground">Grade {student.grade} • Roll: {student.roll_number || "-"}</div>
                     </TableCell>
                     {subjects.map((subj: any) => (
                       <TableCell key={subj.id} className="text-center">
@@ -281,6 +325,14 @@ export default function MarksEntry() {
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             No subjects configured for this exam. Add subjects first from Exam Management.
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedExamId && subjects.length > 0 && students.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            No active students found for the selected grade filter.
           </CardContent>
         </Card>
       )}

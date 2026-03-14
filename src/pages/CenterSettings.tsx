@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Building, ImageIcon, KeyRound, Loader2, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User } from "lucide-react";
+import { Building, ImageIcon, KeyRound, Loader2, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User, Locate } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,10 @@ export default function CenterSettings() {
   const [email, setEmail] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [radiusMeters, setRadiusMeters] = useState("100");
+
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -70,6 +74,10 @@ export default function CenterSettings() {
       setEmail(center.email || "");
       setContactPerson((center as any).contact_person || "");
       setLogoUrl((center as any).logo_url || "");
+      setLatitude((center as any).latitude?.toString() || "");
+      setLongitude((center as any).longitude?.toString() || "");
+      setRadiusMeters((center as any).radius_meters?.toString() || "100");
+
       const savedTheme = (center as any).theme;
       if (savedTheme && typeof savedTheme === 'object') {
         setTheme({
@@ -79,10 +87,28 @@ export default function CenterSettings() {
           foreground: savedTheme.foreground || "#1e293b",
           cardBackground: savedTheme.cardBackground || "#ffffff",
           mutedForeground: savedTheme.mutedForeground || "#64748b" });
-        // Do NOT apply theme here - it should only be applied on Save
       }
     }
   }, [center]);
+
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    toast.info("Fetching current coordinates...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude.toString());
+        setLongitude(position.coords.longitude.toString());
+        toast.success("Coordinates updated!");
+      },
+      (error) => {
+        toast.error("Failed to get location: " + error.message);
+      }
+    );
+  };
 
   // Function to apply theme to CSS variables
   const applyTheme = (themeData: CenterTheme) => {
@@ -153,6 +179,9 @@ export default function CenterSettings() {
           email: email || null,
           contact_person: contactPerson || null,
           logo_url: logoUrl || null,
+          latitude: latitude ? parseFloat(latitude) : null,
+          longitude: longitude ? parseFloat(longitude) : null,
+          radius_meters: radiusMeters ? parseInt(radiusMeters) : 100,
           theme } as any)
         .eq("id", user.center_id);
       if (error) throw error;
@@ -166,18 +195,6 @@ export default function CenterSettings() {
     onError: (error: any) => {
       toast.error(error.message || "Failed to update settings");
     } });
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user?.center_id) return;
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${user.center_id}/logo.${fileExt}`;
-
-    // Try to upload to a general bucket or use a public URL
-    // For now, just accept a URL input
-    toast.info("Please enter the logo URL directly. File upload coming soon.");
-  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,6 +342,40 @@ export default function CenterSettings() {
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Location Tracking Card */}
+        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+              <div className="p-2 rounded-xl bg-primary/10">
+              <MapPin className="h-6 w-6 text-primary" />
+              </div>
+              Geofencing Protocols
+            </CardTitle>
+            <CardDescription className="font-medium">Define institutional perimeter for faculty attendance tracking.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Latitude</Label>
+                <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="0.0000" />
+              </div>
+              <div className="space-y-2">
+                <Label>Longitude</Label>
+                <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="0.0000" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Geofence Radius (Meters)</Label>
+              <Input type="number" value={radiusMeters} onChange={(e) => setRadiusMeters(e.target.value)} placeholder="100" />
+              <p className="text-[10px] text-muted-foreground italic">Faculty must be within this range to mark attendance.</p>
+            </div>
+            <Button variant="outline" className="w-full rounded-xl gap-2 font-bold" onClick={getCurrentLocation}>
+              <Locate className="h-4 w-4" />
+              FETCH CURRENT COORDINATES
+            </Button>
           </CardContent>
         </Card>
 

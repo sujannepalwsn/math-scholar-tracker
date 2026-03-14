@@ -145,6 +145,21 @@ export default function MeetingManagement() {
         console.error("Error inserting meeting attendees:", attendeeInsertError);
         toast.error("Failed to save meeting attendees.");
       }
+
+      // Notify Attendees
+      const notificationType = meetingData.meeting_type === 'parents' ? 'parent' : 'teacher';
+      const notificationLink = meetingData.meeting_type === 'parents' ? '/parent-meetings' : '/teacher-meetings';
+
+      const notifications = attendeesToInsert.map(att => ({
+        user_id: att.user_id,
+        center_id: meetingData.center_id,
+        title: `New Meeting Scheduled: ${meetingData.title}`,
+        message: `A new meeting has been scheduled for ${format(new Date(meetingData.meeting_date), "PPP p")}`,
+        type: 'info',
+        link: notificationLink
+      }));
+
+      await supabase.from('notifications').insert(notifications);
     }
 
     queryClient.invalidateQueries({ queryKey: ["meetings"] });

@@ -140,6 +140,20 @@ export default function HomeworkManagement() {
         const studentHomeworkRecords = studentsInGrade.map(s => ({ student_id: s.id, homework_id: newHomework.id, status: 'assigned' as const }));
         const { error: assignError } = await supabase.from("student_homework_records").insert(studentHomeworkRecords);
         if (assignError) throw assignError;
+
+        // Notify Parents/Students
+        const studentUserIds = studentsInGrade.map(s => s.user_id).filter(Boolean);
+        if (studentUserIds.length > 0) {
+          const notifications = studentUserIds.map(uid => ({
+            user_id: uid,
+            center_id: user.center_id,
+            title: "New Homework Assigned",
+            message: `New homework for ${subject}: ${title}`,
+            type: "homework",
+            link: "/parent-homework"
+          }));
+          await supabase.from("notifications").insert(notifications);
+        }
       }
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["homework"] }); toast.success("Homework created!"); setIsDialogOpen(false); resetForm(); },

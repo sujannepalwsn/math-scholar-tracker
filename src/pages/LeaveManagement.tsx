@@ -125,6 +125,7 @@ export default function LeaveManagement() {
         title: `Leave Application ${status.toUpperCase()}`,
         message: `Your leave application has been ${status}.`,
         type: "leave_status",
+        link: selectedApp.teacher_id ? "/teacher/leave" : "/parent-leave"
       });
 
       if (error) {

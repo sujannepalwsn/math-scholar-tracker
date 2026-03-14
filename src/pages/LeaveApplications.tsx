@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, addDays, isBefore, startOfDay, parseISO } from "date-fns";
 import {
   Calendar as CalendarIcon,
   FileText,
@@ -13,7 +13,8 @@ import {
   Paperclip,
   Loader2,
   Trash2,
-  User
+  User,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,6 +40,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 export default function LeaveApplications() {
   const { user } = useAuth();
@@ -53,6 +55,10 @@ export default function LeaveApplications() {
   const [reason, setReason] = useState("");
   const [studentId, setStudentId] = useState("");
   const [documentUrl, setDocumentUrl] = useState("");
+  const [leaveType, setLeaveType] = useState<"regular" | "emergency">("regular");
+  const [isMidDay, setIsMidDay] = useState(false);
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("17:00");
 
   const isParent = user?.role === 'parent';
   const isTeacher = user?.role === 'teacher';
@@ -143,17 +149,34 @@ export default function LeaveApplications() {
     }
   };
 
+  const validateLeave = () => {
+    if (leaveType === "regular") {
+      const minDate = addDays(startOfDay(new Date()), 3);
+      const selectedDate = startOfDay(parseISO(startDate));
+      if (isBefore(selectedDate, minDate)) {
+        toast.error("Regular leave must be applied at least 3 days in advance.");
+        return false;
+      }
+    }
+    return true;
+  };
+
   const submitMutation = useMutation({
     mutationFn: async () => {
+      if (!validateLeave()) return;
+
       const payload: any = {
         center_id: user?.center_id,
         user_id: user?.id,
         start_date: startDate,
-        end_date: endDate,
+        end_date: isMidDay ? startDate : endDate,
         category_id: categoryId,
         reason,
         document_url: documentUrl,
         status: 'pending',
+        leave_type: leaveType,
+        start_time: isMidDay ? startTime : null,
+        end_time: isMidDay ? endTime : null,
       };
 
       if (isParent) {
@@ -170,8 +193,6 @@ export default function LeaveApplications() {
       toast.success("Leave application submitted successfully");
       setIsDialogOpen(false);
       resetForm();
-
-      // Send notification to admin (conceptual, as per instructions)
       createNotificationMutation.mutate();
     },
     onError: (error: any) => {
@@ -186,9 +207,10 @@ export default function LeaveApplications() {
       const { error } = await supabase.from("notifications").insert({
         center_id: user.center_id,
         title: "New Leave Application",
-        message: `${user?.username || 'A user'} has submitted a new leave application.`,
+        message: `${user?.username || 'A user'} has submitted a new ${leaveType} leave application.`,
         type: "leave_request",
         user_id: null, // Broadcast to center admins
+        link: "/leave-management"
       });
 
       if (error) {
@@ -204,6 +226,10 @@ export default function LeaveApplications() {
     setReason("");
     setStudentId("");
     setDocumentUrl("");
+    setLeaveType("regular");
+    setIsMidDay(false);
+    setStartTime("09:00");
+    setEndTime("17:00");
   };
 
   const getStatusBadge = (status: string) => {
@@ -237,14 +263,25 @@ export default function LeaveApplications() {
               NEW APPLICATION
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] rounded-3xl">
+          <DialogContent className="sm:max-w-[500px] rounded-3xl max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl font-black">Submit Leave Request</DialogTitle>
               <DialogDescription className="font-medium">
-                Fill in the details for your leave application. All fields are required.
+                Fill in the details for your leave application.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-black uppercase tracking-wider">Emergency Leave</Label>
+                  <p className="text-[10px] text-muted-foreground font-medium italic">Can be applied same day</p>
+                </div>
+                <Switch
+                  checked={leaveType === "emergency"}
+                  onCheckedChange={(checked) => setLeaveType(checked ? "emergency" : "regular")}
+                />
+              </div>
+
               {isParent && (
                 <div className="space-y-2">
                   <Label htmlFor="student" className="text-xs font-bold uppercase tracking-wider">Select Student</Label>
@@ -261,9 +298,22 @@ export default function LeaveApplications() {
                 </div>
               )}
 
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-blue-50/50 border border-blue-100">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-black uppercase tracking-wider text-blue-700">Mid-Day Leave</Label>
+                  <p className="text-[10px] text-blue-600/70 font-medium italic">Leave during school hours</p>
+                </div>
+                <Switch
+                  checked={isMidDay}
+                  onCheckedChange={setIsMidDay}
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate" className="text-xs font-bold uppercase tracking-wider">Start Date</Label>
+                  <Label htmlFor="startDate" className="text-xs font-bold uppercase tracking-wider">
+                    {isMidDay ? "Leave Date" : "Start Date"}
+                  </Label>
                   <Input
                     id="startDate"
                     type="date"
@@ -272,17 +322,42 @@ export default function LeaveApplications() {
                     className="h-11 rounded-xl bg-card/50 border-muted-foreground/10"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate" className="text-xs font-bold uppercase tracking-wider">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="h-11 rounded-xl bg-card/50 border-muted-foreground/10"
-                  />
-                </div>
+                {!isMidDay && (
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate" className="text-xs font-bold uppercase tracking-wider">End Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="h-11 rounded-xl bg-card/50 border-muted-foreground/10"
+                    />
+                  </div>
+                )}
               </div>
+
+              {isMidDay && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider">From Time</Label>
+                    <Input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="h-11 rounded-xl bg-card/50 border-muted-foreground/10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider">To Time</Label>
+                    <Input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="h-11 rounded-xl bg-card/50 border-muted-foreground/10"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider">Leave Category</Label>
@@ -305,12 +380,12 @@ export default function LeaveApplications() {
                   placeholder="Explain the reason for leave..."
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="rounded-xl bg-card/50 border-muted-foreground/10 min-h-[100px]"
+                  className="rounded-xl bg-card/50 border-muted-foreground/10 min-h-[80px]"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider">Supporting Document (Optional)</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider">Supporting Document</Label>
                 <div className="flex items-center gap-4">
                   <Button
                     type="button"
@@ -343,7 +418,7 @@ export default function LeaveApplications() {
               <Button
                 className="rounded-xl font-black px-8 bg-gradient-to-r from-primary to-violet-600 shadow-soft"
                 onClick={() => submitMutation.mutate()}
-                disabled={submitMutation.isPending || !startDate || !endDate || !categoryId}
+                disabled={submitMutation.isPending || !startDate || (!isMidDay && !endDate) || !categoryId}
               >
                 {submitMutation.isPending ? "SUBMITTING..." : "SUBMIT REQUEST"}
               </Button>
@@ -386,12 +461,22 @@ export default function LeaveApplications() {
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4 text-primary/60" />
                         <span className="text-xs font-black text-primary/80 uppercase tracking-widest">
-                          {format(new Date(app.start_date), "MMM d")} - {format(new Date(app.end_date), "MMM d, yyyy")}
+                          {format(new Date(app.start_date), "MMM d")}
+                          {app.start_date !== app.end_date && ` - ${format(new Date(app.end_date), "MMM d, yyyy")}`}
                         </span>
+                        {app.leave_type === "emergency" && (
+                          <Badge variant="destructive" className="h-5 px-1.5 text-[8px] font-black uppercase">Emergency</Badge>
+                        )}
                       </div>
                       <CardTitle className="text-xl font-black">
                         {app.leave_categories?.name}
                       </CardTitle>
+                      {app.start_time && (
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase tracking-tight">
+                          <Clock className="w-3 h-3" />
+                          {app.start_time.slice(0, 5)} - {app.end_time?.slice(0, 5)}
+                        </div>
+                      )}
                     </div>
                     {getStatusBadge(app.status)}
                   </div>

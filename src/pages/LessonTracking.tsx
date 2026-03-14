@@ -266,6 +266,21 @@ export default function LessonTracking() {
       const { error: linkError } = await supabase.from("student_chapters").insert(studentLessonRecordsToInsert);
       if (linkError) throw linkError;
 
+      // Notify Parents
+      const { data: parentUsers } = await supabase.from('users').select('id, student_id').in('student_id', selectedStudentIds).eq('role', 'parent');
+      if (parentUsers && parentUsers.length > 0) {
+        const lessonPlan = lessonPlans.find(lp => lp.id === selectedLessonPlanId);
+        const notifications = parentUsers.map(pu => ({
+          user_id: pu.id,
+          center_id: user.center_id!,
+          title: "New Lesson Recorded",
+          message: `Your child ${students.find(s => s.id === pu.student_id)?.name} completed lesson: ${lessonPlan?.topic || 'Academic Session'}.`,
+          type: "lesson_plan",
+          link: "/parent-lesson-tracking"
+        }));
+        await supabase.from('notifications').insert(notifications);
+      }
+
       return true;
     },
     onSuccess: () => {

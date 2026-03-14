@@ -148,6 +148,20 @@ export default function Messaging() {
       });
       if (error) throw error;
       await supabase.from("chat_conversations").update({ updated_at: new Date().toISOString() }).eq("id", selectedConversation.id);
+
+      // Notify recipient
+      const recipientId = user.role === 'parent' ? null : selectedConversation.parent_user_id;
+      const title = user.role === 'parent' ? `New message from parent` : `New message from center`;
+      const link = user.role === 'parent' ? '/messages' : '/parent-messages';
+
+      await supabase.from('notifications').insert({
+        center_id: user.center_id,
+        user_id: recipientId,
+        title: title,
+        message: newMessage.trim().substring(0, 50) + (newMessage.length > 50 ? '...' : ''),
+        type: 'info',
+        link: link
+      });
     },
     onSuccess: () => {
       setNewMessage("");

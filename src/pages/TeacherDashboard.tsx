@@ -105,7 +105,7 @@ export default function TeacherDashboard() {
       const dayOfWeek = new Date(dateRange.to).getDay();
 
       // Get regular schedules
-      const { data: regular, error } = await supabase.from("period_schedules").select("*, class_periods(*)").eq("teacher_id", teacherId).eq("day_of_week", dayOfWeek);
+      const { data: regular, error } = await supabase.from("period_schedules").select("*, class_periods!inner(*)").eq("teacher_id", teacherId).eq("day_of_week", dayOfWeek).eq("class_periods.is_published", true);
       if (error) throw error;
 
       // Get substitutions for today
@@ -554,7 +554,7 @@ export default function TeacherDashboard() {
               </CardContent>
            </Card>
         </div>
-        <AlertList alerts={teacherAlerts} onViewAll={() => navigate("/teacher-messaging")} />
+        <AlertList alerts={teacherAlerts} onViewAll={() => navigate("/teacher-messages")} />
       </div>
 
       {/* Bottom Section */}
@@ -578,7 +578,7 @@ export default function TeacherDashboard() {
                      <div
                         key={att.id}
                         className="p-4 rounded-xl bg-white border border-slate-100 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                        onClick={() => navigate("/teacher/meetings")}
+                        onClick={() => navigate("/teacher-meetings")}
                      >
                         <div className="space-y-1">
                            <p className="text-sm font-bold text-foreground/90">{att.meetings?.title}</p>

@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { CalendarIcon, CheckCircle2, Clock, Download, Eye, MinusCircle, Printer, TrendingUp, User, X, XCircle } from "lucide-react";
+import {
+  CalendarIcon, CheckCircle2, Clock, Download, Eye,
+  MinusCircle, Printer, TrendingUp, User, X, XCircle,
+  MapPin, Locate, Loader2, ShieldCheck, AlertCircle
+} from "lucide-react";
 import { cn, safeFormatDate } from "@/lib/utils"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -9,12 +13,13 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { toast } from "sonner"
 import { addMonths, endOfMonth, format, isValid, isWithinInterval, parseISO, startOfMonth, subMonths } from "date-fns"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 import { Database, Tables } from "@/integrations/supabase/types"
 import { Badge } from "@/components/ui/badge"
@@ -45,13 +50,20 @@ interface TeacherDetailAttendance {
 export default function TeacherAttendancePage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  const isTeacher = user?.role === 'teacher';
+  const isCenter = user?.role === 'center';
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, TeacherAttendance>>({});
   const [reportMonthFilter, setReportMonthFilter] = useState<string>(format(new Date(), "yyyy-MM"));
   const [showTeacherDetailDialog, setShowTeacherDetailDialog] = useState(false);
   const [selectedTeacherDetail, setSelectedTeacherDetail] = useState<Teacher | null>(null);
   const [detailMonthFilter, setDetailMonthFilter] = useState<Date>(new Date());
+  const [isVerifying, setIsVerifying] = useState(false);
+
   const dateStr = format(selectedDate, "yyyy-MM-dd");
+  const todayStr = format(new Date(), "yyyy-MM-dd");
 
   // Fetch active teachers for the center
   const { data: teachers = [], isLoading: teachersLoading } = useQuery({
@@ -60,7 +72,7 @@ export default function TeacherAttendancePage() {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("teachers")
-        .select("id, name")
+        .select("*")
         .eq("center_id", user.center_id)
         .eq("is_active", true)
         .order("name");
@@ -84,6 +96,21 @@ export default function TeacherAttendancePage() {
       return data;
     },
     enabled: !!user?.center_id && teachers.length > 0 });
+
+  const { data: center } = useQuery({
+    queryKey: ["center-location", user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return null;
+      const { data, error } = await supabase
+        .from("centers")
+        .select("latitude, longitude, radius_meters")
+        .eq("id", user.center_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id
+  });
 
   const { data: approvedLeaves = [] } = useQuery({
     queryKey: ["teacher-approved-leaves", dateStr, user?.center_id],
@@ -109,7 +136,7 @@ export default function TeacherAttendancePage() {
       const { data, error } = await supabase
         .from("teacher_attendance")
         .select("*, teachers(name)")
-        .eq("teachers.center_id", user.center_id);
+        .eq("center_id", user.center_id);
       if (error) throw error;
       return data;
     },
@@ -140,7 +167,7 @@ export default function TeacherAttendancePage() {
     if (showTeacherDetailDialog && selectedTeacherDetail?.id) {
       refetchTeacherDetailAttendance();
     }
-  }, [showTeacherDetailDialog, selectedTeacherDetail?.id, detailMonthFilter]);
+  }, [showTeacherDetailDialog, selectedTeacherDetail?.id, detailMonthFilter, refetchTeacherDetailAttendance]);
 
   // Initialize attendance state when teachers or existing attendance changes
   useEffect(() => {
@@ -159,7 +186,7 @@ export default function TeacherAttendancePage() {
         created_at: new Date().toISOString() };
     });
     setAttendanceRecords(initialRecords);
-  }, [teachers, existingAttendance, dateStr]);
+  }, [teachers, existingAttendance, dateStr, user?.center_id]);
 
   const handleStatusChange = (teacherId: string, status: TeacherAttendance['status']) => {
     setAttendanceRecords(prev => ({
@@ -181,51 +208,112 @@ export default function TeacherAttendancePage() {
     }));
   };
 
-  const saveAttendanceMutation = useMutation({
-    mutationFn: async () => {
-      if (!user?.center_id) throw new Error("Center ID not found");
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Earth radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
 
-      const recordsToInsert: Database['public']['Tables']['teacher_attendance']['Insert'][] = [];
-      const recordsToUpdate: Tables<'teacher_attendance'>[] = [];
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-      for (const teacherId in attendanceRecords) {
-        const record = attendanceRecords[teacherId];
-        if (record.id) {
-          // Existing record, update
-          recordsToUpdate.push(record);
-        } else {
-          // New record, insert
-          recordsToInsert.push({
-            teacher_id: record.teacher_id,
-            center_id: user.center_id!,
-            date: record.date,
-            status: record.status,
-            time_in: record.time_in,
-            time_out: record.time_out,
-            notes: record.notes });
+    return R * c;
+  };
+
+  const markAttendanceMutation = useMutation({
+    mutationFn: async (type: 'in' | 'out') => {
+      setIsVerifying(true);
+
+      // 1. Check Geolocation
+      if (!navigator.geolocation) {
+        throw new Error("Geolocation is not supported by your browser");
+      }
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      if (center?.latitude && center?.longitude) {
+        const distance = calculateDistance(latitude, longitude, center.latitude, center.longitude);
+        if (distance > (center.radius_meters || 100)) {
+          throw new Error(`You are outside school premises (${Math.round(distance)}m away). Allowed radius: ${center.radius_meters}m.`);
         }
       }
 
-      if (recordsToInsert.length > 0) {
-        const { error: insertError } = await supabase.from("teacher_attendance").insert(recordsToInsert);
-        if (insertError) throw insertError;
+      // 2. Mark Attendance
+      const timeStr = format(new Date(), "HH:mm:ss");
+      const teacherProfile = teachers.find(t => t.user_id === user?.id);
+      if (!teacherProfile) throw new Error("Teacher profile not found");
+
+      // Enforce shift boundaries
+      const currentTime = format(new Date(), "HH:mm");
+      if (teacherProfile.regular_in_time && teacherProfile.regular_out_time) {
+        if (currentTime < teacherProfile.regular_in_time || currentTime > teacherProfile.regular_out_time) {
+          throw new Error(`You can only mark attendance between ${teacherProfile.regular_in_time} and ${teacherProfile.regular_out_time}.`);
+        }
       }
 
-      if (recordsToUpdate.length > 0) {
-        // Perform updates one by one or in a batch if Supabase supports it easily
-        for (const record of recordsToUpdate) {
-          const { error: updateError } = await supabase.from("teacher_attendance").update({
-            status: record.status,
-            time_in: record.time_in,
-            time_out: record.time_out,
-            notes: record.notes }).eq("id", record.id);
-          if (updateError) throw updateError;
-        }
+      if (type === 'in') {
+        const { error } = await supabase.from("teacher_attendance").upsert({
+          teacher_id: teacherProfile.id,
+          center_id: user?.center_id!,
+          date: todayStr,
+          status: 'present',
+          time_in: timeStr,
+        }, { onConflict: 'teacher_id,date' });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("teacher_attendance").update({
+          time_out: timeStr,
+        }).eq("teacher_id", teacherProfile.id).eq("date", todayStr);
+        if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teacher-attendance"] });
-      queryClient.invalidateQueries({ queryKey: ["all-teacher-attendance"] }); // Invalidate all attendance for report
+      queryClient.invalidateQueries({ queryKey: ["all-teacher-attendance"] });
+      toast.success("Attendance recorded successfully!");
+      setIsVerifying(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message);
+      setIsVerifying(false);
+    }
+  });
+
+  const saveAttendanceMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.center_id) throw new Error("Center ID not found");
+
+      const recordsToUpsert: any[] = [];
+
+      for (const teacherId in attendanceRecords) {
+        const record = attendanceRecords[teacherId];
+        recordsToUpsert.push({
+          id: record.id || undefined,
+          teacher_id: record.teacher_id,
+          center_id: user.center_id!,
+          date: record.date,
+          status: record.status,
+          time_in: record.time_in,
+          time_out: record.time_out,
+          notes: record.notes
+        });
+      }
+
+      if (recordsToUpsert.length > 0) {
+        const { error } = await supabase.from("teacher_attendance").upsert(recordsToUpsert, { onConflict: 'teacher_id,date' });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["all-teacher-attendance"] });
       toast.success("Teacher attendance saved successfully!");
     },
     onError: (error: any) => {
@@ -259,24 +347,6 @@ export default function TeacherAttendancePage() {
         time_out: null };
     });
     setAttendanceRecords(updatedRecords);
-  };
-
-  const formatTimeValue = (timeVal: string | null) => {
-    if (!timeVal) return '-';
-
-    // Attempt to create a Date object from the time string.
-    // Prepend a dummy date to ensure it's parsed as a full datetime.
-    const dummyDateString = `2000-01-01T${timeVal}`;
-    const dateObj = new Date(dummyDateString);
-
-    // Check if the resulting Date object is valid
-    if (isNaN(dateObj.getTime())) {
-      // If it's an invalid date, return the original value or a placeholder
-      return timeVal; // Or '-' if you prefer to hide malformed data
-    }
-
-    // Format the valid date object
-    return format(dateObj, 'HH:mm');
   };
 
   // Prepare data for the report section
@@ -441,6 +511,92 @@ export default function TeacherAttendancePage() {
     };
   }, [teacherDetailAttendance]);
 
+  const teacherProfile = teachers.find(t => t.user_id === user?.id);
+  const myTodayAttendance = existingAttendance.find(a => a.teacher_id === teacherProfile?.id);
+  const isWithinTimeBoundary = useMemo(() => {
+    if (!teacherProfile?.regular_in_time || !teacherProfile?.regular_out_time) return true;
+    const currentTime = format(new Date(), "HH:mm");
+    return currentTime >= teacherProfile.regular_in_time && currentTime <= teacherProfile.regular_out_time;
+  }, [teacherProfile]);
+
+  // If teacher role, show check-in interface
+  if (isTeacher) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in duration-1000">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-black tracking-tight text-primary uppercase tracking-widest">Daily Check-In</h1>
+          <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-[0.2em]">Verify location and record presence</p>
+        </div>
+
+        {!isWithinTimeBoundary && (
+          <Alert variant="destructive" className="rounded-2xl border-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="font-black uppercase text-xs tracking-widest">Outside Shift Hours</AlertTitle>
+            <AlertDescription className="text-xs font-bold">
+              You can only mark attendance between {teacherProfile?.regular_in_time} and {teacherProfile?.regular_out_time}.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Card className="border-none shadow-strong rounded-[2.5rem] bg-card/40 backdrop-blur-xl overflow-hidden">
+          <CardHeader className="bg-primary/5 border-b border-primary/10 text-center pb-8">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+              <Clock className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-4xl font-black">{format(today, "hh:mm a")}</CardTitle>
+            <CardDescription className="font-bold uppercase tracking-widest text-[10px]">
+              {format(today, "EEEE, MMMM do")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-8 space-y-8">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-1 text-center p-4 rounded-3xl bg-muted/30 border border-muted-foreground/5">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Shift In</p>
+                <p className="text-xl font-black">{teacherProfile?.regular_in_time || "09:00"}</p>
+              </div>
+              <div className="space-y-1 text-center p-4 rounded-3xl bg-muted/30 border border-muted-foreground/5">
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Shift Out</p>
+                <p className="text-xl font-black">{teacherProfile?.regular_out_time || "17:00"}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                className="w-full h-20 text-xl font-black rounded-[1.5rem] shadow-strong bg-gradient-to-r from-emerald-500 to-teal-600 hover:scale-[1.02] transition-all disabled:opacity-50"
+                disabled={!!myTodayAttendance?.time_in || !isWithinTimeBoundary || isVerifying}
+                onClick={() => markAttendanceMutation.mutate('in')}
+              >
+                {isVerifying ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Locate className="mr-2 h-6 w-6" />}
+                {myTodayAttendance?.time_in ? `IN AT ${myTodayAttendance.time_in.slice(0, 5)}` : "CHECK IN"}
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full h-20 text-xl font-black rounded-[1.5rem] border-2 shadow-soft hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-all disabled:opacity-50"
+                disabled={!myTodayAttendance?.time_in || !!myTodayAttendance?.time_out || !isWithinTimeBoundary || isVerifying}
+                onClick={() => markAttendanceMutation.mutate('out')}
+              >
+                {myTodayAttendance?.time_out ? `OUT AT ${myTodayAttendance.time_out.slice(0, 5)}` : "CHECK OUT"}
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              SECURE GEOLOCATION TRACKING ACTIVE
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="text-center">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-40">
+            Institutional Perimeter: {center?.latitude ? `${center.latitude}, ${center.longitude}` : "GLOBAL ACCESS"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin view (Rest of the original file)
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

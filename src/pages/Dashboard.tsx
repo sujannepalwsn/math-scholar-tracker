@@ -72,6 +72,7 @@ export default function Dashboard() {
       return data || [];
     },
     enabled: !!centerId,
+    refetchInterval: 30000,
   });
 
   const { data: pendingLeavesCount = 0 } = useQuery({
@@ -98,6 +99,7 @@ export default function Dashboard() {
       return data || [];
     },
     enabled: !!centerId,
+    refetchInterval: 30000,
   });
 
   const { data: teacherAttendance = [] } = useQuery({
@@ -109,6 +111,7 @@ export default function Dashboard() {
       return data || [];
     },
     enabled: !!centerId,
+    refetchInterval: 30000,
   });
 
   const { data: homeworkStats = [] } = useQuery({
@@ -125,6 +128,7 @@ export default function Dashboard() {
       return data || [];
     },
     enabled: !!centerId,
+    refetchInterval: 30000,
   });
 
   const { data: evaluationStats = [] } = useQuery({
@@ -139,6 +143,21 @@ export default function Dashboard() {
         .lte("completed_at", `${dateRange.to}T23:59:59`);
       if (error) throw error;
       return data || [];
+    },
+    enabled: !!centerId,
+  });
+
+  const { data: pendingLessonPlansCount = 0 } = useQuery({
+    queryKey: ["pending-lesson-plans-count", centerId],
+    queryFn: async () => {
+      if (!centerId) return 0;
+      const { count, error } = await supabase
+        .from("lesson_plans")
+        .select("*", { count: "exact", head: true })
+        .eq("center_id", centerId)
+        .eq("status", "pending");
+      if (error) throw error;
+      return count || 0;
     },
     enabled: !!centerId,
   });
@@ -279,9 +298,10 @@ export default function Dashboard() {
       const dayOfWeek = new Date().getDay();
       const { data, error } = await supabase
         .from("period_schedules")
-        .select("*, teachers(*), class_periods(*)")
+        .select("*, teachers(*), class_periods!inner(*)")
         .eq("center_id", centerId)
-        .eq("day_of_week", dayOfWeek);
+        .eq("day_of_week", dayOfWeek)
+        .eq("class_periods.is_published", true);
       if (error) throw error;
       return data || [];
     },
@@ -497,6 +517,14 @@ export default function Dashboard() {
       timestamp: new Date().toISOString(),
       onClick: () => navigate("/leave-management")
     }] : []),
+    ...(pendingLessonPlansCount > 0 ? [{
+      id: "pending-lesson-plans",
+      title: `${pendingLessonPlansCount} Pending Lesson Plans`,
+      description: "Needs pedagogical review",
+      type: "info" as const,
+      timestamp: new Date().toISOString(),
+      onClick: () => navigate("/lesson-plans")
+    }] : []),
     ...todayClasses.filter(c => c.isVacant && !c.isSubstitution && c.status !== 'completed').map(c => ({
       id: `vacant-${c.id}`,
       title: `Vacant Class: Grade ${c.grade} ${c.subject}`,
@@ -579,7 +607,8 @@ export default function Dashboard() {
           center_id: centerId,
           title: 'New Substitution Assigned',
           message: `You have been assigned to cover Grade ${selectedVacantClass.grade} ${selectedVacantClass.subject} at ${selectedVacantClass.time}.`,
-          type: 'info'
+          type: 'info',
+          link: '/teacher/class-routine'
         });
       }
     },
@@ -684,13 +713,15 @@ export default function Dashboard() {
         {/* Left/Main Column */}
         <div className="lg:col-span-8 space-y-6">
           {/* KPI Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            <KPICard title="Student Attendance" value={`${studentAttendanceRate}%`} description={`${presentCount} / ${totalStudents} Present`} icon={Users} color="green" trendData={attendanceTrend} onClick={() => navigate("/attendance-summary")} secondaryIcon={CheckCircle2} secondaryIconColor="text-green-500" />
-            <KPICard title="Teacher Attendance" value={`${teacherAttendanceRate}%`} description={`${teacherPresentCount} / ${teachers.length} Present`} icon={Clock} color="blue" trendData={teacherAttendanceTrend} onClick={() => navigate("/teacher-attendance")} secondaryIcon={Search} secondaryIconColor="text-blue-500" />
-            <KPICard title="Test Performance" value={`${avgTestScore}%`} description="Average Score" icon={TrendingUp} color="purple" trendData={performanceTrend} onClick={() => navigate("/tests")} secondaryIcon={TrendingUp} secondaryIconColor="text-purple-500" />
-            <KPICard title="Homework Completion" value={`${homeworkRate}%`} description="Global completion rate" icon={Book} color="orange" onClick={() => navigate("/homework")} secondaryIcon={BookOpen} secondaryIconColor="text-orange-500" />
-            <KPICard title="Evaluation Rate" value={`${evaluationRate}%`} description="Syllabus coverage" icon={CheckCircle2} color="rose" onClick={() => navigate("/lesson-tracking")} secondaryIcon={CheckCircle2} secondaryIconColor="text-rose-500" />
-            <KPICard title="Upcoming Lessons" value={upcomingLessons.length} description="Planned for this week" icon={FileText} color="indigo" onClick={() => navigate("/lesson-plans")} secondaryIcon={CalendarIcon} secondaryIconColor="text-primary" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <KPICard title="Students" value={totalStudents} description="Active Enrollments" icon={Users} color="indigo" onClick={() => navigate("/register")} />
+            <KPICard title="Teachers" value={teachers.length} description="Active Faculty" icon={Users} color="blue" onClick={() => navigate("/teachers")} />
+            <KPICard title="Student Attendance" value={`${studentAttendanceRate}%`} description="Presence Index" icon={CheckCircle2} color="green" trendData={attendanceTrend} onClick={() => navigate("/attendance")} />
+            <KPICard title="Teacher Attendance" value={`${teacherAttendanceRate}%`} description="Daily Logging" icon={Clock} color="orange" trendData={teacherAttendanceTrend} onClick={() => navigate("/teacher-attendance")} />
+            <KPICard title="Lesson Plans" value={upcomingLessons.length} description="Pedagogical Assets" icon={FileText} color="purple" onClick={() => navigate("/lesson-plans")} />
+            <KPICard title="Approvals" value={pendingLessonPlansCount} description="Pending Review" icon={CheckCircle2} color="yellow" onClick={() => navigate("/lesson-plans")} />
+            <KPICard title="Leave Requests" value={pendingLeavesCount} description="Pending Applications" icon={Calendar} color="rose" onClick={() => navigate("/leave-management")} />
+            <KPICard title="Messages" value="View" description="Communication Hub" icon={Bell} color="pink" onClick={() => navigate("/messages")} />
           </div>
 
           {/* Attendance Overview Chart with functional selectors */}

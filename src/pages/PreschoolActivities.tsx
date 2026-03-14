@@ -173,6 +173,20 @@ export default function PreschoolActivities() {
 
       const { error: saError } = await supabase.from("student_activities").insert(studentActivityRecords);
       if (saError) throw saError;
+
+      // Notify Parents
+      const { data: parentUsers } = await supabase.from('users').select('id, student_id').in('student_id', selectedStudentIds).eq('role', 'parent');
+      if (parentUsers && parentUsers.length > 0) {
+        const notifications = parentUsers.map(pu => ({
+          user_id: pu.id,
+          center_id: user.center_id!,
+          title: "New Student Activity",
+          message: `Your child ${students.find(s => s.id === pu.student_id)?.name} participated in: ${title}.`,
+          type: "info",
+          link: "/parent-activities"
+        }));
+        await supabase.from('notifications').insert(notifications);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["preschool-activities"] });
