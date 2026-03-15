@@ -523,7 +523,7 @@ export default function Dashboard() {
       description: "Needs pedagogical review",
       type: "info" as const,
       timestamp: new Date().toISOString(),
-      onClick: () => navigate("/lesson-plans")
+      onClick: () => navigate("/lesson-plan-management")
     }] : []),
     ...todayClasses.filter(c => c.isVacant && !c.isSubstitution && c.status !== 'completed').map(c => ({
       id: `vacant-${c.id}`,
