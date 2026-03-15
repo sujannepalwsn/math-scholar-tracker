@@ -132,8 +132,9 @@ export default function LessonPlans() {
         lesson_date: lessonDate,
         notes: notes || null,
         lesson_file_url: fileUrl,
-        status: submit ? 'pending' : 'draft',
-        submitted_at: submit ? new Date().toISOString() : null
+        status: submit ? 'pending' : (editingLessonPlan?.status === 'rejected' ? 'draft' : (editingLessonPlan?.status || 'draft')),
+        submitted_at: submit ? new Date().toISOString() : (editingLessonPlan?.submitted_at || null),
+        updated_at: new Date().toISOString()
       };
 
       if (editingLessonPlan) {
@@ -151,7 +152,7 @@ export default function LessonPlans() {
           title: "New Lesson Plan Submitted",
           message: `${user?.username || 'A teacher'} has submitted a lesson plan for approval.`,
           type: "lesson_plan",
-          link: "/lesson-plans"
+          link: "/lesson-plan-management"
         });
       }
     },
@@ -193,7 +194,7 @@ export default function LessonPlans() {
 
   const handleViewClick = (lp: LessonPlan) => {
     setViewingLessonPlan(lp);
-    setAdminRemarks(lp.status === 'rejected' ? lp.rejection_reason || "" : lp.principal_remarks || "");
+    setAdminRemarks(lp.principal_remarks || "");
     setIsViewOpen(true);
   };
 
@@ -494,12 +495,14 @@ export default function LessonPlans() {
                            {viewingLessonPlan.status === 'approved' ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                         </div>
                         <div>
-                           <h4 className="text-sm font-black uppercase tracking-widest">{viewingLessonPlan.status === 'approved' ? "Approval Record" : "Rejection Dossier"}</h4>
-                           <p className="text-[10px] font-bold text-muted-foreground uppercase">Certified on {format(new Date(viewingLessonPlan.approved_at || viewingLessonPlan.updated_at), "PPP p")}</p>
+                           <h4 className="text-sm font-black uppercase tracking-widest">{viewingLessonPlan.status === 'approved' ? "Institutional Decision" : "Rejection Record"}</h4>
+                           <p className="text-[10px] font-bold text-muted-foreground uppercase">
+                             Certified on {viewingLessonPlan.approval_date ? format(new Date(viewingLessonPlan.approval_date), "PPP p") : format(new Date(viewingLessonPlan.updated_at), "PPP p")}
+                           </p>
                         </div>
                      </div>
                      <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
-                        "{viewingLessonPlan.status === 'approved' ? viewingLessonPlan.principal_remarks : viewingLessonPlan.rejection_reason || 'No remarks provided.'}"
+                        "{viewingLessonPlan.principal_remarks || 'No specific feedback provided.'}"
                      </p>
                   </div>
                )}
