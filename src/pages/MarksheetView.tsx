@@ -1,3 +1,4 @@
+import { cn, getGradeFormal } from "@/lib/utils"
 import React, { useMemo, useRef, useState } from "react";
 import { Download, Printer, Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +12,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/ui/page-header";
-import { cn, getGradeFormal } from "@/lib/utils";
 
 export default function MarksheetView() {
   const { user } = useAuth();

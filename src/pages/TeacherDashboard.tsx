@@ -1,3 +1,4 @@
+import { cn, formatCurrency, safeFormatDate } from "@/lib/utils"
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, BarChart3, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle, CheckCircle2, ClipboardCheck, Clock, DollarSign, Download, Eye, FileText, GraduationCap, Home, Info, MessageSquare, Paintbrush, Printer, Star, Target, TrendingUp, User, Users, Wallet, XCircle } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query"
@@ -5,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
 import { eachDayOfInterval, endOfMonth, format, isFuture, isPast, isToday, startOfDay, subDays, subYears } from "date-fns"
-import { cn, formatCurrency, safeFormatDate } from "@/lib/utils"
 import { KPICard } from "@/components/dashboard/KPICard"
 import { AlertList } from "@/components/dashboard/AlertList"
 import { ClassSchedule } from "@/components/dashboard/ClassSchedule"

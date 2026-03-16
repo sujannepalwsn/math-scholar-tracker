@@ -17,24 +17,24 @@ export const DEFAULT_NAV_CATEGORIES = [
 ];
 
 export const DEFAULT_NAV_ITEMS = [
-  { name: "Dashboard", route: "/", icon: "Home", category: null, order: 0, feature_name: "dashboard_access" },
+  { name: "Dashboard", route: "/", icon: "Home", category: null, order: 0, feature_name: "dashboard_access", role: "center" },
 
-  { name: "Students Registration", route: "/register", icon: "UserPlus", category: "Student Management", order: 0, feature_name: "can_manage_students" },
-  { name: "Student ID Cards", route: "/student-id-cards", icon: "IdCard", category: "Student Management", order: 1, feature_name: "can_manage_id_cards" },
+  { name: "Students Registration", route: "/register", icon: "UserPlus", category: "Student Management", order: 0, feature_name: "can_manage_students", role: "center" },
+  { name: "Student ID Cards", route: "/student-id-cards", icon: "IdCard", category: "Student Management", order: 1, feature_name: "can_manage_id_cards", role: "center" },
 
-  { name: "Teachers Registration", route: "/teachers", icon: "Users", category: "Teacher Management", order: 0, feature_name: "can_manage_teachers" },
-  { name: "Teachers Attendance", route: "/teacher-attendance", icon: "CheckSquare", category: "Teacher Management", order: 1, feature_name: "can_manage_attendance" },
+  { name: "Teachers Registration", route: "/teachers", icon: "Users", category: "Teacher Management", order: 0, feature_name: "can_manage_teachers", role: "center" },
+  { name: "Teachers Attendance", route: "/teacher-attendance", icon: "CheckSquare", category: "Teacher Management", order: 1, feature_name: "can_manage_attendance", role: "center" },
 
-  { name: "Leave Management", route: "/leave-management", icon: "Calendar", category: "HR Management", order: 0, feature_name: "can_manage_leave" },
-  { name: "Payroll", route: "/hr-management", icon: "DollarSign", category: "HR Management", order: 1, feature_name: "can_manage_hr" },
+  { name: "Leave Management", route: "/leave-management", icon: "Calendar", category: "HR Management", order: 0, feature_name: "can_manage_leave", role: "center" },
+  { name: "Payroll", route: "/hr-management", icon: "DollarSign", category: "HR Management", order: 1, feature_name: "can_manage_hr", role: "center" },
 
-  { name: "School Days", route: "/school-days", icon: "CalendarDays", category: "Academic", order: 0, feature_name: "can_manage_school_days" },
-  { name: "Exams", route: "/exams", icon: "GraduationCap", category: "Academic", order: 1, feature_name: "exams_results" },
-  { name: "Lesson Plans", route: "/lesson-plans", icon: "BookOpen", category: "Academic", order: 2, feature_name: "lesson_plans" },
+  { name: "School Days", route: "/school-days", icon: "CalendarDays", category: "Academic", order: 0, feature_name: "can_manage_school_days", role: "center" },
+  { name: "Exams", route: "/exams", icon: "GraduationCap", category: "Academic", order: 1, feature_name: "exams_results", role: "center" },
+  { name: "Lesson Plans", route: "/lesson-plans", icon: "BookOpen", category: "Academic", order: 2, feature_name: "lesson_plans", role: "center" },
 
-  { name: "Transport & Tracking", route: "/transport", icon: "Bus", category: "Transport", order: 0, feature_name: "can_manage_transport" },
+  { name: "Transport & Tracking", route: "/transport", icon: "Bus", category: "Transport", order: 0, feature_name: "can_manage_transport", role: "center" },
 
-  { name: "Inventory & Assets", route: "/inventory", icon: "Archive", category: "Finance", order: 0, feature_name: "can_manage_inventory" },
+  { name: "Inventory & Assets", route: "/inventory", icon: "Archive", category: "Finance", order: 0, feature_name: "can_manage_inventory", role: "center" },
 
-  { name: "Settings", route: "/settings", icon: "Settings", category: "Administration", order: 0, feature_name: "can_manage_settings" },
+  { name: "Settings", route: "/settings", icon: "Settings", category: "Administration", order: 0, feature_name: "can_manage_settings", role: "center" },
 ];

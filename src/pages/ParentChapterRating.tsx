@@ -1,3 +1,4 @@
+import { cn, safeFormatDate } from "@/lib/utils"
 import React, { useMemo, useState } from "react";
 import { BookOpen, Calendar, Info, Star, Target, TrendingUp, User, Zap } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -8,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Tables } from "@/integrations/supabase/types"
-import { cn, safeFormatDate } from "@/lib/utils"
 
 type LessonPlan = Tables<'lesson_plans'>;
 type StudentChapter = Tables<'student_chapters'>;

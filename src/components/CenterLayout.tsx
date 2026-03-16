@@ -105,7 +105,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
           to: it.route,
           label: it.name,
           icon: getIcon(it.icon),
-          role: it.role as any,
+          role: (it.role || 'center') as any,
           featureName: it.feature_name,
           category: cat?.name,
           unreadCount: it.route === "/messages" ? unreadMessageCount : undefined,

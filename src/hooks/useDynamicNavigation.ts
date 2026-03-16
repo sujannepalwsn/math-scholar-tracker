@@ -77,6 +77,7 @@ export function useDynamicNavigation() {
         icon: item.icon,
         order: item.order,
         feature_name: (item as any).feature_name,
+        role: (item as any).role || 'center',
         category_id: cat ? dynamicCategories.find(dc => dc.name === cat.name)?.id : null,
         is_active: true
       };

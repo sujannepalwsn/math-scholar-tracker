@@ -1,3 +1,4 @@
+import { cn, safeFormatDate } from "@/lib/utils"
 "use client";
 import { Book, BookOpen, Calendar, CheckCircle, Clock, ExternalLink, FileText, Info, Star, Target, User, XCircle } from "lucide-react";
 
@@ -5,7 +6,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { cn, safeFormatDate } from "@/lib/utils"
 import { supabase } from "@/integrations/supabase/client"
 import { Tables } from "@/integrations/supabase/types"
 

@@ -48,9 +48,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const parsedUser: User = JSON.parse(storedUser);
           setUser(parsedUser);
-          // Permissions are now fetched by the Edge Function during login,
-          // but we can keep this for initial load if needed, or remove for simplicity.
-          // For now, let's assume the stored user has the latest permissions.
+
+          // Refresh permissions on session load
+          refreshPermissions(parsedUser);
         } catch (e) {
           console.error("Failed to parse auth_user from localStorage", e);
           localStorage.removeItem('auth_user');
@@ -100,6 +100,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Log the full error object for more details
       console.error('AuthContext: Full client-side error object:', JSON.stringify(error, null, 2));
       return { success: false, error: error.message || 'Login failed' };
+    }
+  };
+
+  const refreshPermissions = async (currentUser: User) => {
+    if (!currentUser.center_id) return;
+
+    try {
+      // Get center permissions
+      const { data: centerPerms } = await supabase
+        .from('center_feature_permissions')
+        .select('*')
+        .eq('center_id', currentUser.center_id)
+        .maybeSingle();
+
+      // Get teacher permissions if applicable
+      let teacherPerms = null;
+      if (currentUser.teacher_id) {
+        const { data: tPerms } = await supabase
+          .from('teacher_feature_permissions')
+          .select('*')
+          .eq('teacher_id', currentUser.teacher_id)
+          .maybeSingle();
+        teacherPerms = tPerms;
+      }
+
+      const updatedUser = {
+        ...currentUser,
+        centerPermissions: centerPerms || currentUser.centerPermissions,
+        teacherPermissions: teacherPerms || currentUser.teacherPermissions
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.error("Failed to refresh permissions", e);
     }
   };
 

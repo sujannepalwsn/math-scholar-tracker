@@ -41,7 +41,13 @@ export default function Sidebar({
   const [expandedCategories, setExpandedCategories] = useState<string[]>([
     'Academics',
     'Administration',
-    'Reports and Communication'
+    'Reports and Communication',
+    'Student Management',
+    'Teacher Management',
+    'HR Management',
+    'Academic',
+    'Transport',
+    'Finance'
   ]);
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
@@ -138,8 +144,12 @@ export default function Sidebar({
 
     items.forEach((item, index) => {
       if (item.category !== currentCategory) {
-        if (currentCategory) {
-          renderedItems.push(flushCategory(currentCategory, [...currentCategoryItems]));
+        if (currentCategoryItems.length > 0) {
+          if (currentCategory) {
+            renderedItems.push(flushCategory(currentCategory, [...currentCategoryItems]));
+          } else {
+            renderedItems.push(...currentCategoryItems);
+          }
           currentCategoryItems = [];
         }
         currentCategory = item.category;
@@ -213,8 +223,12 @@ export default function Sidebar({
         renderedItems.push(link);
       }
 
-      if (index === items.length - 1 && currentCategory) {
-        renderedItems.push(flushCategory(currentCategory, [...currentCategoryItems]));
+      if (index === items.length - 1) {
+        if (currentCategory) {
+          renderedItems.push(flushCategory(currentCategory, [...currentCategoryItems]));
+        } else {
+          renderedItems.push(...currentCategoryItems);
+        }
       }
     });
 
