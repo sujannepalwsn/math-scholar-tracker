@@ -560,7 +560,7 @@ export default function TeacherManagement() {
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleHRClick(teacher)} title="HR & Documents">
                               <FileText className="h-3.5 w-3.5 text-blue-600" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleManagePermissionsClick(teacher)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleManagePermissionsClick(teacher)} title="Manage Permissions">
                               <Settings className="h-3.5 w-3.5 text-slate-500" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft hover:bg-destructive/10" onClick={() => deleteTeacherMutation.mutate(teacher.id)}>

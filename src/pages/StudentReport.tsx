@@ -41,13 +41,14 @@ export default function StudentReport() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlStudentId = searchParams.get("student_id");
+  const urlGrade = searchParams.get("grade");
 
   const [selectedStudentId, setSelectedStudentId] = useState<string>(urlStudentId || "none"); // Changed initial state to "none"
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: subYears(new Date(), 1), // Default to last year
     to: endOfMonth(new Date()) });
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
-  const [gradeFilter, setGradeFilter] = useState<string>("all");
+  const [gradeFilter, setGradeFilter] = useState<string>(urlGrade || "all");
   const [aiSummary, setAiSummary] = useState<string>("");
   const [selectedDisciplineIssue, setSelectedDisciplineIssue] = useState<any>(null);
   const [selectedChapterDetail, setSelectedChapterDetail] = useState<ChapterPerformance | null>(null);

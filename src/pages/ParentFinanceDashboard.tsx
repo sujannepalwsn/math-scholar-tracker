@@ -117,8 +117,12 @@ const ParentFinanceDashboard = () => {
   };
 
   const handleOnlinePayment = async (invoiceId: string, amount: number) => {
+    if (!student?.center_id) {
+      toast.error("Center identification failed. Contact support.");
+      return;
+    }
     // 1. Fetch gateway settings for this center
-    const { data: settings } = await supabase.from('payment_gateway_settings').select('provider, api_key').eq('center_id', student?.center_id).eq('is_active', true).maybeSingle();
+    const { data: settings } = await supabase.from('payment_gateway_settings').select('provider, api_key').eq('center_id', student.center_id).eq('is_active', true).maybeSingle();
 
     if (!settings) {
       toast.error("Online payment is not configured for this center. Please contact school admin.");

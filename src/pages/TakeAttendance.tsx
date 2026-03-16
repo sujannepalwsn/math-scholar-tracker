@@ -72,13 +72,11 @@ export default function TakeAttendance() {
   const isTeacher = user?.role === 'teacher';
   const isCenter = user?.role === 'center';
 
-  const { data: students } = useQuery({
+  const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("id, name, grade").eq("is_active", true).order("name");
-      if (user?.role !== "admin" && user?.center_id) {
-        query = query.eq("center_id", user.center_id);
-      }
+      if (!user?.center_id) return [];
+      let query = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).eq("is_active", true).order("name");
       const { data, error } = await query;
       if (error) throw error;
       return data as Student[];

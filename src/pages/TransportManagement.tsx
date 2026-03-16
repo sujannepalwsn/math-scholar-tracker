@@ -6,10 +6,34 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import TransportManagement from "@/components/center/TransportManagement";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function TransportManagementPage() {
   const { user } = useAuth();
   const centerId = user?.center_id || "";
+
+  const { data: center } = useQuery({
+    queryKey: ["center-details", centerId],
+    queryFn: async () => {
+      if (!centerId) return null;
+      const { data, error } = await supabase.from("centers").select("mapbox_token").eq("id", centerId).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!centerId
+  });
+
+  const mapboxToken = center?.mapbox_token;
+  const { data: centerCoords } = useQuery({
+    queryKey: ["center-coords", centerId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("centers").select("latitude, longitude").eq("id", centerId).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!centerId
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
@@ -68,9 +92,23 @@ export default function TransportManagementPage() {
         <TabsContent value="tracking" className="outline-none">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
              <Card className="lg:col-span-8 rounded-[2.5rem] border-none shadow-strong bg-slate-900 overflow-hidden relative min-h-[600px]">
-                <div className="absolute inset-0 opacity-20 bg-[url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/0,0,1,0,0/800x600?access_token=none')] bg-cover"></div>
+                {mapboxToken ? (
+                  <iframe
+                    title="Live Fleet Map"
+                    className="absolute inset-0 w-full h-full border-none opacity-80"
+                    src={`https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${centerCoords?.longitude || 0},${centerCoords?.latitude || 0},12,0,0/800x600?access_token=${mapboxToken}`}
+                  ></iframe>
+                ) : (
+                  <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80')] bg-cover bg-center"></div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
                 <div className="relative p-12 flex flex-col items-center justify-center h-full text-center space-y-6">
+                   {!mapboxToken && (
+                     <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl mb-4 max-w-md">
+                        <p className="text-amber-400 text-xs font-bold uppercase tracking-widest">Configuration Required</p>
+                        <p className="text-amber-200/60 text-[10px] mt-1">Please provide a Mapbox Access Token in Center Settings to enable real-time fleet visualization.</p>
+                     </div>
+                   )}
                    <div className="p-4 rounded-full bg-emerald-500/20 animate-pulse">
                       <Navigation className="h-12 w-12 text-emerald-400" />
                    </div>

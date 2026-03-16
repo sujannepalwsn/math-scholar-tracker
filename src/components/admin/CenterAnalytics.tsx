@@ -16,10 +16,10 @@ export default function CenterAnalytics() {
 
       const results = await Promise.all(centers.map(async (center) => {
         const [{ count: students }, { count: teachers }, { count: parents }, { data: activeUsers }] = await Promise.all([
-          supabase.from("students").select("*", { count: "exact", head: true }).eq("center_id", center.id),
-          supabase.from("teachers").select("*", { count: "exact", head: true }).eq("center_id", center.id),
-          supabase.from("users").select("*", { count: "exact", head: true }).eq("center_id", center.id).eq("role", "parent"),
-          supabase.from("users").select("id").eq("center_id", center.id).gte("last_active_at", new Date(Date.now() - 15 * 60 * 1000).toISOString())
+          supabase.from("students").select("*", { count: "exact", head: true }).eq("center_id", center.id).eq("is_active", true),
+          supabase.from("teachers").select("*", { count: "exact", head: true }).eq("center_id", center.id).eq("is_active", true),
+          supabase.from("users").select("*", { count: "exact", head: true }).eq("center_id", center.id).eq("role", "parent").eq("is_active", true),
+          supabase.from("users").select("id").eq("center_id", center.id).eq("is_active", true).gte("last_active_at", new Date(Date.now() - 15 * 60 * 1000).toISOString())
         ]);
 
         return {

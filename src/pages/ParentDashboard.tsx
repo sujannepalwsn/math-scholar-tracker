@@ -238,6 +238,19 @@ const ParentDashboardContent = () => {
     enabled: !!activeStudentId
   });
 
+  const { data: centerDetails } = useQuery({
+    queryKey: ["center-details", user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return null;
+      const { data, error } = await supabase.from("centers").select("mapbox_token").eq("id", user.center_id).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id
+  });
+
+  const mapboxToken = centerDetails?.mapbox_token;
+
   const { data: studentRoutine = [] } = useQuery({
     queryKey: ["student-routine", student?.grade, user?.center_id],
     queryFn: async () => {
@@ -610,7 +623,15 @@ const ParentDashboardContent = () => {
             </CardHeader>
             <CardContent className="p-0">
                <div className="h-48 bg-slate-100 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-[url('https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/pin-s+ff0000(0,0)/0,0,1,0,0/400x200?access_token=none')] bg-cover bg-center opacity-40"></div>
+                  {mapboxToken ? (
+                    <img
+                      src={`https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/pin-s+ff0000(${transportAssignment.vehicles?.last_longitude || 0},${transportAssignment.vehicles?.last_latitude || 0})/${transportAssignment.vehicles?.last_longitude || 0},${transportAssignment.vehicles?.last_latitude || 0},14,0/400x200?access_token=${mapboxToken}`}
+                      alt="Vehicle Location"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40"></div>
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center">
                      <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-xl border shadow-lg text-center">
                         <p className="text-[10px] font-black uppercase text-slate-400 leading-none mb-1">Current Position</p>

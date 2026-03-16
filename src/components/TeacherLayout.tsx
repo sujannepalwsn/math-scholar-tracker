@@ -92,23 +92,22 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     enabled: !!user?.id && !!user?.center_id,
     refetchInterval: 10000 });
 
-  const updatedNavItems = dynamicItems.filter(it => it.role === 'teacher').length > 0
-    ? dynamicItems.filter(it => it.role === 'teacher').map(it => {
-        const cat = dynamicCategories.find(c => c.id === it.category_id);
-        return {
-          to: it.route,
-          label: it.name,
-          icon: getIcon(it.icon),
-          role: it.role as any,
-          featureName: it.feature_name,
-          category: cat?.name,
-          unreadCount: it.route === "/teacher-messages" ? unreadMessageCount : undefined,
-          is_active: it.is_active
-        };
-      }).filter(it => it.is_active !== false)
-    : navItems.map(item =>
-        item.to === "/teacher-messages" ? { ...item, unreadCount: unreadMessageCount } : item
-      );
+  const updatedNavItems = dynamicItems.map(it => {
+    const cat = dynamicCategories.find(c => c.id === it.category_id);
+    // Determine the role for filtering: default items might be 'center' but can be allowed for teachers via admin flags
+    const itemRole = it.role || (it.feature_name?.startsWith('can_manage_') ? 'teacher' : 'center');
+
+    return {
+      to: it.route,
+      label: it.name,
+      icon: getIcon(it.icon),
+      role: itemRole as any,
+      featureName: it.feature_name,
+      category: cat?.name,
+      unreadCount: it.route === "/teacher-messages" ? unreadMessageCount : undefined,
+      is_active: it.is_active
+    };
+  });
 
   const headerContent = (
     <CenterLogo size="md" showName={true} />

@@ -86,6 +86,7 @@ import LessonPlanManagement from "./pages/LessonPlanManagement";
 import InventoryManagement from "./pages/InventoryManagement";
 import HRManagement from "./pages/HRManagement";
 import TransportManagementPage from "./pages/TransportManagement";
+import AdminRecovery from "./pages/AdminRecovery";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +127,7 @@ const App = () => (
 
               {/* Authentication & Public */}
               <Route path="/init-admin" element={<InitAdmin />} />
+              <Route path="/admin-recovery" element={<ProtectedRoute><AdminRecovery /></ProtectedRoute>} />
               <Route path="/login" element={<Login />} />
               <Route path="/login-admin" element={<AdminLogin />} />
               <Route path="/login-parent" element={<ParentLogin />} />

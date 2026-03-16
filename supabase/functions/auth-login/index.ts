@@ -180,6 +180,17 @@ serve(async (req) => {
         messaging: permissionsData?.messaging ?? true,
         class_routine: permissionsData?.class_routine ?? true,
         calendar_events: permissionsData?.calendar_events ?? true,
+        // Administrative permissions
+        can_manage_students: permissionsData?.can_manage_students ?? false,
+        can_manage_teachers: permissionsData?.can_manage_teachers ?? false,
+        can_manage_attendance: permissionsData?.can_manage_attendance ?? false,
+        can_manage_hr: permissionsData?.can_manage_hr ?? false,
+        can_manage_leave: permissionsData?.can_manage_leave ?? false,
+        can_manage_id_cards: permissionsData?.can_manage_id_cards ?? false,
+        can_manage_inventory: permissionsData?.can_manage_inventory ?? false,
+        can_manage_transport: permissionsData?.can_manage_transport ?? false,
+        can_manage_school_days: permissionsData?.can_manage_school_days ?? false,
+        can_manage_settings: permissionsData?.can_manage_settings ?? false,
       };
     }
 

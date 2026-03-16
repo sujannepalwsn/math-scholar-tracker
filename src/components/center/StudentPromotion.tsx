@@ -38,10 +38,16 @@ export default function StudentPromotion({ centerId }: { centerId: string }) {
         throw new Error("Please select target grade and at least one student.");
       }
 
-      // 1. Update students grade
+      // 1. Update students grade and check for graduation
+      const isGraduating = toGrade === 'Graduated';
       const { error: updateError } = await supabase
         .from("students")
-        .update({ grade: toGrade })
+        .update({
+          grade: toGrade,
+          status: isGraduating ? 'Graduated' : 'Active',
+          is_alumni: isGraduating,
+          is_active: !isGraduating
+        })
         .in("id", selectedStudentIds);
       if (updateError) throw updateError;
 

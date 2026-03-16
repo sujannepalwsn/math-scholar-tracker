@@ -52,6 +52,7 @@ export default function AttendanceSummary() {
   const { data: attendanceData = [] } = useQuery({
     queryKey: ['attendance-summary', selectedMonth.toISOString().slice(0, 7), user?.center_id, user?.id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       const startDate = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
       const studentIds = students.map(s => s.id);
@@ -59,7 +60,8 @@ export default function AttendanceSummary() {
 
       let query = supabase
         .from('attendance')
-        .select('*, students(name, grade)')
+        .select('*, students!inner(name, grade)')
+        .eq('center_id', user.center_id)
         .in('student_id', studentIds)
         .gte('date', startDate)
         .lte('date', endDate);

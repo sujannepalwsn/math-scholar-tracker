@@ -111,7 +111,7 @@ export default function Dashboard() {
     queryKey: ["teacher-attendance-dashboard", centerId, today],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase.from("teacher_attendance").select("*, teachers(*)").eq("center_id", centerId).eq("date", today);
+      const { data, error } = await supabase.from("teacher_attendance").select("*, teachers!inner(*)").eq("center_id", centerId).eq("date", today);
       if (error) throw error;
       return data || [];
     },
@@ -373,7 +373,13 @@ export default function Dashboard() {
     queryKey: ["homework-defaulters-dashboard", centerId],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase.from("student_homework_records").select("*, students(name, grade), homework(title, subject, due_date)").eq("status", "assigned").order("created_at", { ascending: false }).limit(5);
+      const { data, error } = await supabase
+        .from("student_homework_records")
+        .select("*, students!inner(name, grade), homework!inner(title, subject, due_date)")
+        .eq("students.center_id", centerId)
+        .eq("status", "assigned")
+        .order("created_at", { ascending: false })
+        .limit(5);
       if (error) throw error;
       return data || [];
     },
@@ -839,7 +845,7 @@ export default function Dashboard() {
                     <p className="p-8 text-center text-xs italic text-muted-foreground">No data available</p>
                   ) : (
                     highestPerformers.slice(0, 10).map((r: any) => (
-                      <div key={r.id} className="p-4 flex justify-between items-center hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/student-report?student_id=${r.student_id}`)}>
+                      <div key={r.id} className="p-4 flex justify-between items-center hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/student-report?student_id=${r.student_id}&grade=${r.students?.grade}`)}>
                         <div>
                           <p className="text-sm font-bold">{r.students?.name}</p>
                           <p className="text-[10px] text-muted-foreground">{r.tests?.name}</p>
@@ -864,7 +870,7 @@ export default function Dashboard() {
                     <p className="p-8 text-center text-xs italic text-muted-foreground">No critical alerts</p>
                   ) : (
                     lowestPerformers.slice(0, 10).map((r: any) => (
-                      <div key={r.id} className="p-4 flex justify-between items-center hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/student-report?student_id=${r.student_id}`)}>
+                      <div key={r.id} className="p-4 flex justify-between items-center hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/student-report?student_id=${r.student_id}&grade=${r.students?.grade}`)}>
                         <div>
                           <p className="text-sm font-bold">{r.students?.name}</p>
                           <p className="text-[10px] text-muted-foreground">{r.tests?.name}</p>

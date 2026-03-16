@@ -73,7 +73,10 @@ export default function Sidebar({
   };
 
   const filteredNavItems = navItems.filter(item => {
+    // 1. Role Check
     if (item.role && user?.role !== item.role) return false;
+
+    // 3. Permissions Check
     if (item.featureName) {
       if (user?.role === 'center' && user.centerPermissions) {
         return user.centerPermissions[item.featureName] !== false;
@@ -81,7 +84,10 @@ export default function Sidebar({
       if (user?.role === 'teacher') {
         // Teachers can have their own specific feature permissions (administrative toggles)
         if (user.teacherPermissions && user.teacherPermissions[item.featureName] !== undefined) {
-          return user.teacherPermissions[item.featureName] === true;
+          // If it's an admin flag, it MUST be true. If it's a regular feature, default to true.
+          const isAdminFeature = item.featureName.startsWith('can_manage_');
+          if (isAdminFeature) return user.teacherPermissions[item.featureName] === true;
+          return user.teacherPermissions[item.featureName] !== false;
         }
         // Fallback to default teacher permissions if not explicitly set
         return user.teacherPermissions?.[item.featureName] !== false;

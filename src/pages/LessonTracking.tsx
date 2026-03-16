@@ -71,10 +71,8 @@ export default function LessonTracking() {
   const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("id, name, grade").order("name");
-      if (user?.role !== "admin" && user?.center_id) {
-        query = query.eq("center_id", user.center_id);
-      }
+      if (!user?.center_id) return [];
+      let query = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).eq("is_active", true).order("name");
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -109,15 +107,16 @@ export default function LessonTracking() {
   const { data: studentLessonRecordsRaw = [] } = useQuery({
     queryKey: ["student-lesson-records", user?.center_id, filterSubject, filterStudent, filterGrade, user?.teacher_id],
     queryFn: async () => {
+      if (!user?.center_id) return [];
       let query = supabase
         .from("student_chapters")
         .select(`
           *,
-          students(id, name, grade, center_id),
-          lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
+          students!inner(id, name, grade, center_id),
+          lesson_plans!inner(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
           recorded_by_teacher:recorded_by_teacher_id(name)
         `)
-        .eq("students.center_id", user?.center_id!);
+        .eq("students.center_id", user.center_id);
 
       if (filterStudent !== "all") query = query.eq("student_id", filterStudent);
       if (filterGrade !== "all") query = query.eq("students.grade", filterGrade);

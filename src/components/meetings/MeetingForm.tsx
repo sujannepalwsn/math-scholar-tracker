@@ -65,6 +65,7 @@ export default function MeetingForm({ meeting, onSave, onCancel }: MeetingFormPr
         .from("students")
         .select("id, name, grade")
         .eq("center_id", user.center_id)
+        .eq("is_active", true)
         .order("name");
       if (error) throw error;
       return data;

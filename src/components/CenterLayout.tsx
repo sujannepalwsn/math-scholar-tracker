@@ -111,7 +111,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
           unreadCount: it.route === "/messages" ? unreadMessageCount : undefined,
           is_active: it.is_active
         };
-      }).filter(it => it.is_active !== false)
+      })
     : navItems.map(item =>
         item.to === "/messages" ? { ...item, unreadCount: unreadMessageCount } : item
       );

@@ -25,12 +25,18 @@ export default function AlumniManagement({ centerId }: { centerId: string }) {
   const { data: students, isLoading } = useQuery({
     queryKey: ["alumni-students", centerId, statusFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("students")
         .select("*")
-        .eq("center_id", centerId)
-        .eq("status", statusFilter)
-        .order("name");
+        .eq("center_id", centerId);
+
+      if (statusFilter === 'Graduated') {
+        query = query.or('status.eq.Graduated,is_alumni.eq.true');
+      } else {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data, error } = await query.order("name");
       if (error) throw error;
       return data;
     },

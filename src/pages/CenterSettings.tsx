@@ -19,6 +19,7 @@ import TimetableAutomation from "@/components/center/TimetableAutomation";
 import AcademicYearManagement from "@/components/center/AcademicYearManagement";
 import NavigationManager from "@/components/center/NavigationManager";
 import PayrollSettings from "@/components/center/PayrollSettings";
+import CenterBillingHistory from "@/components/center/CenterBillingHistory";
 
 interface CenterTheme {
   primary: string;
@@ -41,6 +42,7 @@ export default function CenterSettings() {
   const [contactPerson, setContactPerson] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [shortCode, setShortCode] = useState("");
+  const [mapboxToken, setMapboxToken] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [radiusMeters, setRadiusMeters] = useState("100");
@@ -82,6 +84,7 @@ export default function CenterSettings() {
       setContactPerson((center as any).contact_person || "");
       setLogoUrl((center as any).logo_url || "");
       setShortCode((center as any).short_code || "");
+      setMapboxToken((center as any).mapbox_token || "");
       setLatitude((center as any).latitude?.toString() || "");
       setLongitude((center as any).longitude?.toString() || "");
       setRadiusMeters((center as any).radius_meters?.toString() || "100");
@@ -203,6 +206,7 @@ export default function CenterSettings() {
           contact_person: contactPerson || null,
           logo_url: logoUrl || null,
           short_code: shortCode || null,
+          mapbox_token: mapboxToken || null,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
           radius_meters: radiusMeters ? parseInt(radiusMeters) : 100,
@@ -285,6 +289,7 @@ export default function CenterSettings() {
       <Tabs defaultValue="general" className="space-y-8">
         <TabsList className="bg-card/40 border border-border/40 p-1.5 rounded-2xl h-14 shadow-soft backdrop-blur-md overflow-x-auto">
           <TabsTrigger value="general" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">General</TabsTrigger>
+          <TabsTrigger value="billing" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">License & Billing</TabsTrigger>
           <TabsTrigger value="navigation" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Navigation</TabsTrigger>
           <TabsTrigger value="payroll" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Payroll Config</TabsTrigger>
           <TabsTrigger value="academic" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Academic Cycles</TabsTrigger>
@@ -443,6 +448,16 @@ export default function CenterSettings() {
                 onChange={(e) => setLogoUrl(e.target.value)}
                 placeholder="https://example.com/logo.png"
               />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mapboxToken">Mapbox Access Token</Label>
+                <Input
+                  id="mapboxToken"
+                  value={mapboxToken}
+                  onChange={(e) => setMapboxToken(e.target.value)}
+                  placeholder="pk.ey..."
+                />
+                <p className="text-[10px] text-muted-foreground italic">Required for live transport tracking and fleet visualization.</p>
               {logoUrl && (
                 <div className="mt-2 p-4 border rounded-lg bg-muted/50">
                   <img
@@ -717,6 +732,23 @@ export default function CenterSettings() {
             </CardHeader>
             <CardContent className="p-8">
               <PayrollSettings centerId={user?.center_id || ""} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="billing" className="outline-none">
+          <Card className="border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden">
+            <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+              <CardTitle className="text-xl font-black flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <DollarSign className="h-6 w-6 text-primary" />
+                </div>
+                Institutional Billing History
+              </CardTitle>
+              <CardDescription className="font-medium text-slate-500">View and manage your center's subscription invoices.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+               <CenterBillingHistory centerId={user?.center_id || ""} />
             </CardContent>
           </Card>
         </TabsContent>

@@ -53,7 +53,8 @@ export default function ConsumablesManagement({ centerId }: { centerId: string }
     queryFn: async () => {
       const { data, error } = await supabase
         .from("consumable_logs")
-        .select("*, students(name, grade), teachers(name), consumables(name)")
+        .select("*, students!inner(name, grade), teachers(name), consumables(name)")
+        .eq("center_id", centerId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;

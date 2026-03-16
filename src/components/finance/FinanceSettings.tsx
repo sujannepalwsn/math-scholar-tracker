@@ -18,10 +18,12 @@ export default function FinanceSettings({ centerId }: { centerId: string }) {
   const { data: gatewaySettings } = useQuery({
     queryKey: ["payment-gateway-settings", centerId],
     queryFn: async () => {
+      if (!centerId) return null;
       const { data, error } = await supabase.from("payment_gateway_settings").select("*").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },
+    enabled: !!centerId,
   });
 
   const saveGatewayMutation = useMutation({

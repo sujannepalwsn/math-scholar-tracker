@@ -28,11 +28,11 @@ export default function Summary() {
   const [monthFilter, setMonthFilter] = useState<string>(format(new Date(), "yyyy-MM"));
 
   // Fetch students
-  const { data: students } = useQuery({
+  const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("name");
-      if (user?.role !== "admin" && user?.center_id) query = query.eq("center_id", user.center_id);
+      if (!user?.center_id) return [];
+      let query = supabase.from("students").select("*").eq("center_id", user.center_id).eq("is_active", true).order("name");
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -40,13 +40,14 @@ export default function Summary() {
 
   // Fetch attendance
   const studentIds = students?.map((s) => s.id) || [];
-  const { data: allAttendance } = useQuery({
+  const { data: allAttendance = [] } = useQuery({
     queryKey: ["all-attendance", user?.center_id, studentIds.length > 0 ? studentIds.join(",") : "", user?.role, user?.id],
     queryFn: async () => {
-      if (!studentIds.length) return [];
+      if (!user?.center_id || !studentIds.length) return [];
       let query = supabase
         .from("attendance")
         .select("*")
+        .eq("center_id", user.center_id)
         .in("student_id", studentIds);
 
       if (user?.role === 'teacher') {

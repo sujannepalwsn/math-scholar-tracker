@@ -97,11 +97,17 @@ export default function MeetingAttendanceRecorder({ meetingId, onClose }: Meetin
       let fetchedParticipants: (PartialStudent | PartialTeacher | PartialUser)[] = [];
 
       if (meetingDetails.meeting_type === "parents" || meetingDetails.meeting_type === "general") {
-        const { data, error } = await supabase
+        let query = supabase
           .from("students")
           .select("id, name, grade")
           .eq("center_id", user.center_id)
-          .order("name");
+          .eq("is_active", true);
+
+        if (gradeFilter !== "all") {
+          query = query.eq("grade", gradeFilter);
+        }
+
+        const { data, error } = await query.order("name");
         
         if (error) throw error;
         fetchedParticipants = data || [];

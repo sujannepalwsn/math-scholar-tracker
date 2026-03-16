@@ -36,6 +36,7 @@ type StudentInput = {
   school_name: string;
   parent_name: string;
   contact_number: string;
+  roll_number?: string;
   center_id?: string | null;
 };
 
@@ -72,13 +73,11 @@ export default function RegisterStudent() {
   const [showLinkChildDialog, setShowLinkChildDialog] = useState(false);
 
   // Fetch students
-  const { data: students, isLoading } = useQuery({
+  const { data: students = [], isLoading } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("created_at", { ascending: false });
-      if (user?.role !== "admin" && user?.center_id) {
-        query = query.eq("center_id", user.center_id);
-      }
+      if (!user?.center_id) return [];
+      let query = supabase.from("students").select("*").eq("center_id", user.center_id).order("created_at", { ascending: false });
       const { data, error } = await query;
       if (error) throw error;
       return data as Student[];
@@ -213,7 +212,8 @@ export default function RegisterStudent() {
           gender: student.gender,
           blood_group: student.blood_group,
           address: student.address,
-          photo_url
+          photo_url,
+          roll_number: student.roll_number
         })
         .eq("id", student.id);
       if (error) throw error;
@@ -340,6 +340,7 @@ export default function RegisterStudent() {
       "school_name",
       "parent_name",
       "contact_number",
+      "roll_number",
     ];
     const matchesHeader = expectedFields.every((f) => header.includes(f));
     if (matchesHeader) {
@@ -362,15 +363,17 @@ export default function RegisterStudent() {
           grade: (rowObj["grade"] || "").trim(),
           school_name: (rowObj["school_name"] || rowObj["school"] || "").trim(),
           parent_name: (rowObj["parent_name"] || rowObj["parent"] || "").trim(),
-          contact_number: (rowObj["contact_number"] || rowObj["contact"] || "").trim() };
+          contact_number: (rowObj["contact_number"] || rowObj["contact"] || "").trim(),
+          roll_number: (rowObj["roll_number"] || rowObj["roll"] || "").trim() };
       } else {
-        const [name = "", grade = "", school_name = "", parent_name = "", contact_number = ""] = cols;
+        const [name = "", grade = "", school_name = "", parent_name = "", contact_number = "", roll_number = ""] = cols;
         student = {
           name: name.trim(),
           grade: grade.trim(),
           school_name: school_name.trim(),
           parent_name: parent_name.trim(),
-          contact_number: contact_number.trim() };
+          contact_number: contact_number.trim(),
+          roll_number: roll_number.trim() };
       }
       const rowNumber = i + 1;
       const rowErrors: string[] = [];
@@ -431,8 +434,8 @@ export default function RegisterStudent() {
   };
 
   const downloadTemplate = () => {
-    const header = ["name", "grade", "school_name", "parent_name", "contact_number"];
-    const example = ["John Doe", "6", "ABC School", "Robert Doe", "9812345678"];
+    const header = ["name", "grade", "school_name", "parent_name", "contact_number", "roll_number"];
+    const example = ["John Doe", "6", "ABC School", "Robert Doe", "9812345678", "01"];
     const csv = [header.join(","), example.join(",")].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -785,6 +788,12 @@ export default function RegisterStudent() {
                               <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
+                          <Input
+                            placeholder="Roll No"
+                            value={(editData as any)?.roll_number}
+                            className="h-8 text-[8px]"
+                            onChange={(e) => setEditData((prev: any) => prev ? { ...prev, roll_number: e.target.value } : null)}
+                          />
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
@@ -949,6 +958,7 @@ export default function RegisterStudent() {
               <TableHeader className="bg-slate-50">
                 <TableRow>
                   <TableHead className="font-black uppercase text-[9px] tracking-widest">Name</TableHead>
+                  <TableHead className="font-black uppercase text-[9px] tracking-widest">Roll</TableHead>
                   <TableHead className="font-black uppercase text-[9px] tracking-widest">Grade</TableHead>
                   <TableHead className="font-black uppercase text-[9px] tracking-widest">Academy</TableHead>
                   <TableHead className="font-black uppercase text-[9px] tracking-widest">Guardian</TableHead>
@@ -959,6 +969,7 @@ export default function RegisterStudent() {
                 {csvPreviewRows.map((row, idx) => (
                   <TableRow key={idx} className="border-b last:border-none">
                     <TableCell className="text-xs font-bold">{row.name}</TableCell>
+                    <TableCell className="text-xs font-bold">{row.roll_number || '-'}</TableCell>
                     <TableCell className="text-xs font-bold"><Badge variant="outline" className="text-[9px] font-black">{row.grade}</Badge></TableCell>
                     <TableCell className="text-[10px] font-medium text-slate-500">{row.school_name}</TableCell>
                     <TableCell className="text-xs font-black uppercase text-slate-600">{row.parent_name}</TableCell>

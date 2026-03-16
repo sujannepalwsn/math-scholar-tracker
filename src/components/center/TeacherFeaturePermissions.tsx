@@ -21,20 +21,28 @@ const TEACHER_FEATURES = [
   { name: 'published_results', label: 'Published Results' },
   { name: 'preschool_activities', label: 'Activities' },
   { name: 'discipline_issues', label: 'Discipline' },
-  { name: 'teachers_attendance', label: 'Teachers Attendance' },
-  { name: 'leave_management', label: 'Leave Management' },
-  { name: 'inventory_assets', label: 'Inventory & Assets' },
-  { name: 'school_days', label: 'School Days' },
   { name: 'communications_access', label: 'Reports & Communication' },
   { name: 'messaging', label: 'Messages' },
   { name: 'meetings_management', label: 'Meetings' },
   { name: 'calendar_events', label: 'Calendar & Events' },
-  { name: 'student_report', label: 'Student Report' }, // Aligned with center permissions
+  { name: 'student_report', label: 'Student Report' },
   { name: 'attendance_summary', label: 'Attendance Summary' },
   { name: 'summary', label: 'Summary' },
   { name: 'teacher_reports', label: 'Teacher Reports' },
   { name: 'chapter_performance', label: 'Chapter Performance' },
   { name: 'view_records', label: 'View Records' },
+
+  // Administrative Permissions
+  { name: 'can_manage_students', label: 'Admin: Student Registration', isAdmin: true },
+  { name: 'can_manage_id_cards', label: 'Admin: Student ID Cards', isAdmin: true },
+  { name: 'can_manage_teachers', label: 'Admin: Teachers Registration', isAdmin: true },
+  { name: 'can_manage_attendance', label: 'Admin: Teachers Attendance', isAdmin: true },
+  { name: 'can_manage_hr', label: 'Admin: HR & Payroll', isAdmin: true },
+  { name: 'can_manage_leave', label: 'Admin: Leave Management', isAdmin: true },
+  { name: 'can_manage_inventory', label: 'Admin: Inventory & Assets', isAdmin: true },
+  { name: 'can_manage_transport', label: 'Admin: Transport & Tracking', isAdmin: true },
+  { name: 'can_manage_school_days', label: 'Admin: School Days', isAdmin: true },
+  { name: 'can_manage_settings', label: 'Admin: Settings', isAdmin: true },
 ];
 
 export default function TeacherFeaturePermissions({ teacherId, teacherName }: { teacherId: string; teacherName: string }) {
@@ -115,6 +123,7 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
           </TableHeader>
           <TableBody>
             {TEACHER_FEATURES.filter(f => {
+              if ((f as any).isAdmin) return true; // Administrative toggles always visible if center admin is editing
               if (!centerPermissions) return true;
               const centerVal = centerPermissions[f.name as keyof typeof centerPermissions];
               return centerVal !== false;
@@ -122,11 +131,15 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
               // Map student_report to student_report_access for the database update if necessary
               // but for consistency let's use the DB names.
               const dbFieldName = feature.name === 'student_report' ? 'student_report_access' : feature.name;
-              const isEnabled = permissions?.[dbFieldName as keyof typeof permissions] ?? true;
+              // Default to false for administrative features, true for regular ones
+              const isEnabled = permissions?.[dbFieldName as keyof typeof permissions] ?? !((feature as any).isAdmin);
 
               return (
-                <TableRow key={feature.name}>
-                  <TableCell className="font-medium">{feature.label}</TableCell>
+                <TableRow key={feature.name} className={(feature as any).isAdmin ? "bg-slate-50" : ""}>
+                  <TableCell className="font-medium">
+                    {feature.label}
+                    {(feature as any).isAdmin && <Badge variant="outline" className="ml-2 text-[8px] uppercase">Admin</Badge>}
+                  </TableCell>
                   <TableCell className="text-center">
                     <Switch
                       checked={Boolean(isEnabled)}

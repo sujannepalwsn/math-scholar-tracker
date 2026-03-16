@@ -98,16 +98,6 @@ export default function NavigationManager({ centerId }: { centerId: string }) {
     },
   });
 
-  const toggleItemActiveMutation = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string, is_active: boolean }) => {
-      const { error } = await supabase.from("nav_items").update({ is_active }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["nav-items"] });
-    },
-  });
-
   const handleDragStart = (e: React.DragEvent, type: 'category' | 'item', id: string) => {
     setDraggedItem({ type, id });
     e.dataTransfer.setData('text/plain', id);
@@ -270,14 +260,6 @@ export default function NavigationManager({ centerId }: { centerId: string }) {
                 />
                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-600">{cat.name}</CardTitle>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-rose-500 hover:bg-rose-50"
-                onClick={() => deleteCategoryMutation.mutate(cat.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
             </CardHeader>
             <CardContent className="p-2 bg-white">
               <div className="space-y-1 min-h-[40px]">
@@ -296,10 +278,6 @@ export default function NavigationManager({ centerId }: { centerId: string }) {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-[10px] text-slate-400 font-medium">{item.route}</span>
-                      <Switch
-                        checked={item.is_active}
-                        onCheckedChange={(checked) => toggleItemActiveMutation.mutate({ id: item.id, is_active: checked })}
-                      />
                     </div>
                   </div>
                 ))}
