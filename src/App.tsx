@@ -87,6 +87,7 @@ import InventoryManagement from "./pages/InventoryManagement";
 import HRManagement from "./pages/HRManagement";
 import TransportManagementPage from "./pages/TransportManagement";
 import AdminRecovery from "./pages/AdminRecovery";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 
 const queryClient = new QueryClient();
 
@@ -111,7 +112,9 @@ const ActivityTracker = () => {
   return null;
 };
 
-const App = () => (
+const App = () => {
+  usePushNotifications();
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ActivityTracker />
@@ -248,6 +251,7 @@ const App = () => (
       </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

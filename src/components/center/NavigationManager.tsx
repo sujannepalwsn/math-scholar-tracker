@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { GripVertical, Plus, Trash2, Save, FolderPlus, ChevronRight, ChevronDown } from "lucide-react";
+import { GripVertical, Plus, FolderPlus, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
 
 interface NavCategory {
   id: string;
@@ -229,10 +228,6 @@ export default function NavigationManager({ centerId }: { centerId: string }) {
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-[10px] text-slate-400 font-medium">{item.route}</span>
-                    <Switch
-                      checked={item.is_active}
-                      onCheckedChange={(checked) => toggleItemActiveMutation.mutate({ id: item.id, is_active: checked })}
-                    />
                   </div>
                 </div>
               ))}
