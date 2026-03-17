@@ -11,6 +11,25 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useDynamicNavigation } from "@/hooks/useDynamicNavigation";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  TouchSensor,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
 
 interface NavItem {
   to: string;
@@ -31,6 +50,30 @@ interface SidebarProps {
   onMobileOpenChange?: (open: boolean) => void;
 }
 
+function SortableItem({ id, children, isEditMode }: { id: string, children: React.ReactNode, isEditMode: boolean }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: !isEditMode });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+}
+
 export default function Sidebar({
   navItems,
   headerContent,
@@ -44,7 +87,23 @@ export default function Sidebar({
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [categoryNameInput, setCategoryNameInput] = useState("");
-  const [draggedItem, setDraggedItem] = useState<{ type: 'category' | 'item', id: string, role?: string } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const {
     dynamicCategories,
@@ -91,57 +150,44 @@ export default function Sidebar({
     );
   };
 
-  const handleDragStart = (e: React.DragEvent, type: 'category' | 'item', id: string, role?: string) => {
-    if (!isEditMode) return;
-    setDraggedItem({ type, id, role });
-    e.dataTransfer.setData('text/plain', id);
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-  const handleDragOver = (e: React.DragEvent) => {
-    if (!isEditMode) return;
-    e.preventDefault();
-  };
+    // Check if we are dragging a category or an item
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
-  const handleDrop = async (e: React.DragEvent, targetType: 'category' | 'item', targetId: string, targetCategoryName?: string) => {
-    if (!isEditMode || !draggedItem) return;
-    e.preventDefault();
+    const activeCat = dynamicCategories.find(c => c.id === activeId);
+    const overCat = dynamicCategories.find(c => c.id === overId);
 
-    const role = draggedItem.role || user?.role;
-    const itemsForRole = dynamicItems.filter(it => it.role === role);
-
-    if (draggedItem.type === 'category' && targetType === 'category') {
-      const newCategories = [...dynamicCategories];
-      const draggedIdx = newCategories.findIndex(c => c.id === draggedItem.id);
-      const targetIdx = newCategories.findIndex(c => c.id === targetId);
-      const [removed] = newCategories.splice(draggedIdx, 1);
-      newCategories.splice(targetIdx, 0, removed);
+    if (activeCat && overCat) {
+      // Reordering categories
+      const oldIndex = dynamicCategories.findIndex(c => c.id === activeId);
+      const newIndex = dynamicCategories.findIndex(c => c.id === overId);
+      const newCategories = arrayMove(dynamicCategories, oldIndex, newIndex);
       updateOrders.mutate({
         type: 'categories',
         updates: newCategories.map((c, i) => ({ id: c.id, order: i, name: c.name, center_id: user?.center_id }))
       });
-    } else if (draggedItem.type === 'item') {
-      const draggedItemObj = dynamicItems.find(it => it.id === draggedItem.id);
-      if (!draggedItemObj) return;
+    } else {
+      // Reordering items
+      const activeItem = dynamicItems.find(it => it.id === activeId);
+      const overItem = dynamicItems.find(it => it.id === overId);
 
-      if (targetType === 'category') {
-        updateOrders.mutate({
-          type: 'items',
-          updates: [{ ...draggedItemObj, category_id: targetId }]
-        });
-      } else if (targetType === 'item') {
-        const targetItem = dynamicItems.find(it => it.id === targetId);
-        if (!targetItem) return;
+      if (activeItem && overItem) {
+        const itemsForRole = dynamicItems.filter(it => it.role === activeItem.role);
+        const oldIndex = itemsForRole.findIndex(it => it.id === activeId);
+        const newIndex = itemsForRole.findIndex(it => it.id === overId);
 
-        const newItems = [...itemsForRole];
-        const draggedIdx = newItems.findIndex(it => it.id === draggedItem.id);
-        const targetIdx = newItems.findIndex(it => it.id === targetId);
-        const [removed] = newItems.splice(draggedIdx, 1);
-        removed.category_id = targetItem.category_id;
-        newItems.splice(targetIdx, 0, removed);
+        const newItems = arrayMove(itemsForRole, oldIndex, newIndex);
+        // Also update category_id if it changed
+        const updatedItem = { ...activeItem, category_id: overItem.category_id };
+        const finalItems = newItems.map(it => it.id === activeId ? updatedItem : it);
 
         updateOrders.mutate({
           type: 'items',
-          updates: newItems.map((it, i) => ({
+          updates: finalItems.map((it, i) => ({
             id: it.id,
             order: i,
             category_id: it.category_id,
@@ -150,9 +196,14 @@ export default function Sidebar({
             route: it.route
           }))
         });
+      } else if (activeItem && overCat) {
+        // Moving item to category (drop on header)
+        updateOrders.mutate({
+          type: 'items',
+          updates: [{ ...activeItem, category_id: overCat.id }]
+        });
       }
     }
-    setDraggedItem(null);
   };
 
   const filteredNavItems = navItems.filter(item => {
@@ -184,20 +235,7 @@ export default function Sidebar({
       const catObj = dynamicCategories.find(c => c.name === category);
 
       const categoryHeader = (
-        <div
-          className="flex items-center group/cat"
-          draggable={isEditMode && !!catObj}
-          onDragStart={(e) => catObj && handleDragStart(e, 'category', catObj.id)}
-          onDragOver={handleDragOver}
-          onDrop={(e) => {
-            if (catObj) {
-              handleDrop(e, 'category', catObj.id);
-            } else if (isEditMode) {
-              // Handle drop on static categories that might not be in DB yet
-              e.preventDefault();
-            }
-          }}
-        >
+        <div className="flex items-center group/cat">
           {isEditMode && catObj && (
             <GripVertical className="h-3 w-3 text-muted-foreground/30 mr-1 cursor-grab active:cursor-grabbing" />
           )}
@@ -249,25 +287,27 @@ export default function Sidebar({
         </div>
       );
 
-      if (isMobile) {
-        return (
-          <div key={`mob-cat-group-${category}`} className="space-y-0.5 mt-4 first:mt-0">
-            {categoryHeader}
-            {isExpanded && children}
-          </div>
-        );
-      } else {
-        return (
-          <div key={`cat-group-${category}`} className="space-y-0.5 mt-5 first:mt-0">
-            {!isCollapsed ? (
-              categoryHeader
-            ) : (
-              <div className="mx-3 border-t border-border my-3 first:hidden" />
-            )}
+      const content = (
+        <div key={`cat-group-${category}`} className="space-y-0.5 mt-5 first:mt-0">
+          {!isCollapsed ? (
+            catObj ? (
+              <SortableItem id={catObj.id} isEditMode={isEditMode}>
+                {categoryHeader}
+              </SortableItem>
+            ) : categoryHeader
+          ) : (
+            <div className="mx-3 border-t border-border my-3 first:hidden" />
+          )}
+          <SortableContext
+            items={dynamicItems.filter(it => it.category_id === catObj?.id).map(it => it.id)}
+            strategy={verticalListSortingStrategy}
+          >
             {(isExpanded || isCollapsed) && children}
-          </div>
-        );
-      }
+          </SortableContext>
+        </div>
+      );
+
+      return content;
     };
 
     items.forEach((item, index) => {
@@ -285,18 +325,11 @@ export default function Sidebar({
       const dItem = dynamicItems.find(it => it.route === item.to && it.role === (item.role || user?.role));
       const isItemActive = (item as any).is_active !== false;
 
-      const link = isMobile ? (
-        <div
-          key={item.to}
-          className="flex items-center group/item"
-          draggable={isEditMode && !!dItem}
-          onDragStart={(e) => dItem && handleDragStart(e, 'item', dItem.id, dItem.role)}
-          onDragOver={handleDragOver}
-          onDrop={(e) => dItem && handleDrop(e, 'item', dItem.id)}
-        >
-          {isEditMode && dItem && (
+      const itemContent = (
+        <div className="flex items-center group/item w-full">
+          {isEditMode && dItem && !isCollapsed && (
             <div className="flex flex-col gap-1 mr-2" onClick={e => e.stopPropagation()}>
-              <GripVertical className="h-3 w-3 text-muted-foreground/30 cursor-grab" />
+              <GripVertical className="h-3.5 w-3.5 text-muted-foreground/30 cursor-grab" />
               <Switch
                 className="scale-50 h-3 w-6"
                 checked={isItemActive}
@@ -306,66 +339,43 @@ export default function Sidebar({
           )}
           <Link
             to={item.to}
-            onClick={handleMobileClose}
+            onClick={isMobile ? handleMobileClose : undefined}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors flex-1",
               isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              isCollapsed && !isMobile ? "justify-center px-0" : "",
               !isItemActive && "opacity-50 grayscale"
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span className="flex items-center justify-between flex-1 truncate">
-              {item.label}
-              {item.unreadCount && item.unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-auto text-[10px] px-1.5 py-0">
-                  {item.unreadCount}
-                </Badge>
-              )}
-            </span>
+            {!isCollapsed || isMobile ? (
+              <span className="flex items-center justify-between flex-1 truncate">
+                {item.label}
+                {item.unreadCount && item.unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-auto text-[10px] px-1.5 py-0">
+                    {item.unreadCount}
+                  </Badge>
+                )}
+              </span>
+            ) : null}
           </Link>
         </div>
+      );
+
+      const link = isMobile ? (
+        dItem ? (
+          <SortableItem key={item.to} id={dItem.id} isEditMode={isEditMode}>
+            {itemContent}
+          </SortableItem>
+        ) : <div key={item.to}>{itemContent}</div>
       ) : (
         <Tooltip key={item.to} delayDuration={0}>
           <TooltipTrigger asChild>
-            <div
-              className="flex items-center group/item"
-              draggable={isEditMode && !!dItem}
-              onDragStart={(e) => dItem && handleDragStart(e, 'item', dItem.id, dItem.role)}
-              onDragOver={handleDragOver}
-              onDrop={(e) => dItem && handleDrop(e, 'item', dItem.id)}
-            >
-              {isEditMode && dItem && !isCollapsed && (
-                <div className="flex flex-col gap-1 mr-2" onClick={e => e.stopPropagation()}>
-                  <GripVertical className="h-3 w-3 text-muted-foreground/30 cursor-grab" />
-                  <Switch
-                    className="scale-50 h-3 w-6"
-                    checked={isItemActive}
-                    onCheckedChange={(checked) => toggleItemActive.mutate({ id: dItem.id, is_active: checked })}
-                  />
-                </div>
-              )}
-              <Link
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors flex-1",
-                  isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  isCollapsed ? "justify-center px-0" : "",
-                  !isItemActive && "opacity-50 grayscale"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!isCollapsed && (
-                  <span className="flex items-center justify-between w-full truncate">
-                    {item.label}
-                    {item.unreadCount && item.unreadCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto text-[10px] px-1.5 py-0">
-                        {item.unreadCount}
-                      </Badge>
-                    )}
-                  </span>
-                )}
-              </Link>
-            </div>
+            {dItem ? (
+              <SortableItem id={dItem.id} isEditMode={isEditMode}>
+                {itemContent}
+              </SortableItem>
+            ) : itemContent}
           </TooltipTrigger>
           {isCollapsed && (
             <TooltipContent side="right">
@@ -396,6 +406,24 @@ export default function Sidebar({
     return renderedItems;
   };
 
+  const sidebarNav = (isMobile: boolean) => (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+      modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
+    >
+      <SortableContext
+        items={dynamicCategories.map(c => c.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+          {renderNavLinks(filteredNavItems, isMobile)}
+        </nav>
+      </SortableContext>
+    </DndContext>
+  );
+
   const desktopSidebar = (
     <TooltipProvider>
       <div
@@ -412,9 +440,7 @@ export default function Sidebar({
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          {renderNavLinks(filteredNavItems, false)}
-        </nav>
+        {sidebarNav(false)}
         <div className="mt-auto p-4 border-t space-y-4">
           {user?.role === 'center' && (
             <div className="space-y-2">
@@ -473,9 +499,7 @@ export default function Sidebar({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          {renderNavLinks(filteredNavItems, true)}
-        </nav>
+        {sidebarNav(true)}
         <div className="border-t p-4">
           <div className="text-sm text-muted-foreground">{footerContent}</div>
         </div>
