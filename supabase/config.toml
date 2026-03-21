@@ -32,3 +32,12 @@ verify_jwt = false
 
 [functions.ai-student-summary]
 verify_jwt = false
+
+[functions.change-password]
+verify_jwt = false
+
+[functions.create-teacher-login]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = false

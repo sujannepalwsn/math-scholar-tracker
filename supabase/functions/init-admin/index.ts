@@ -32,8 +32,12 @@ serve(async (req) => {
       );
     }
 
-    // Hash the password "precioussn" using bcryptjs
-    const passwordHash = await bcrypt.hash('precioussn', 12);
+    // Hash the admin password from environment variable using bcryptjs
+    const adminPassword = Deno.env.get('ADMIN_PASSWORD');
+    if (!adminPassword) {
+      throw new Error('ADMIN_PASSWORD environment variable is not set');
+    }
+    const passwordHash = await bcrypt.hash(adminPassword, 12);
 
     // Create admin user
     const { data: admin, error } = await supabase

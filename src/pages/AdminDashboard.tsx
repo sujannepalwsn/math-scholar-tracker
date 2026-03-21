@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
-import * as bcrypt from 'bcryptjs';
 import CenterFeaturePermissions from '@/components/admin/CenterFeaturePermissions';
 import SubscriptionManagement from '@/components/admin/SubscriptionManagement';
 import CenterAnalytics from '@/components/admin/CenterAnalytics';
@@ -52,38 +51,29 @@ const AdminDashboard = () => {
 
   const createCenterMutation = useMutation({
     mutationFn: async () => {
-      const hashedPassword = await bcrypt.hash(newCenter.password, 12);
-
-      const { data: centerData, error: centerError } = await supabase
-        .from('centers')
-        .insert({
-          name: newCenter.centerName,
-          address: newCenter.address || null,
-          phone: newCenter.phone || null
-        })
-        .select()
-        .single();
-
-      if (centerError) throw centerError;
-
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
+      // Use Edge Function for server-side hashing and center creation
+      const { data, error } = await supabase.functions.invoke('admin-create-center', {
+        body: {
+          centerName: newCenter.centerName,
+          address: newCenter.address,
+          contactNumber: newCenter.phone,
           username: newCenter.username,
-          password_hash: hashedPassword,
-          role: 'center',
-          center_id: centerData.id,
-          is_active: true
-        });
+          password: newCenter.password
+        }
+      });
 
-      if (userError) throw userError;
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to create center');
 
-      // Create default permissions
+      // Create default permissions (might be better inside Edge Function too)
       const { error: permError } = await supabase.from('center_feature_permissions').insert({
-        center_id: centerData.id });
-      if (permError) console.error('Error seeding permissions:', permError);
+        center_id: data.center.id
+      });
+      if (permError && permError.code !== '23505') { // Ignore if already exists
+        console.error('Error seeding permissions:', permError);
+      }
 
-      return centerData;
+      return data.center;
     },
     onSuccess: () => {
       toast({ title: 'Center created', description: 'New center has been created successfully' });

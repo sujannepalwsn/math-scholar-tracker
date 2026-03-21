@@ -25,4 +25,12 @@ dist-ssr
 
 # Supabase
 supabase/.temp/
-supabase_project_backup/ # Add this line
+supabase_project_backup/
+supabase_cli.tar.gz
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

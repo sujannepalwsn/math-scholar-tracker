@@ -16,10 +16,28 @@ serve(async (req) => {
     const { username, password, studentId, centerId } = await req.json();
     console.log('Create parent account request:', { username, studentId, centerId });
 
+    // Server-side validation
     if (!username || !password || !studentId || !centerId) {
       console.error('Missing required fields:', { username: !!username, password: !!password, studentId: !!studentId, centerId: !!centerId });
       return new Response(
         JSON.stringify({ success: false, error: 'All fields are required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Email/Username format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(username)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid email format' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Password must be at least 8 characters long' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }

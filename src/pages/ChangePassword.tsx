@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
-import * as bcrypt from 'bcryptjs';
 
 export default function ChangePassword() {
   const { user, logout } = useAuth();
@@ -43,35 +42,19 @@ export default function ChangePassword() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast({ title: 'Error', description: 'New password must be at least 6 characters long.', variant: 'destructive' });
+    if (newPassword.length < 8) {
+      toast({ title: 'Error', description: 'New password must be at least 8 characters long.', variant: 'destructive' });
       setLoading(false);
       return;
     }
 
     try {
-      const { data: userData, error: fetchError } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('id', user.id)
-        .single();
+      const { data, error: invokeError } = await supabase.functions.invoke('change-password', {
+        body: { userId: user.id, oldPassword, newPassword }
+      });
 
-      if (fetchError || !userData) throw new Error('Failed to fetch user data.');
-
-      const passwordMatch = await bcrypt.compare(oldPassword, userData.password_hash);
-      if (!passwordMatch) {
-        toast({ title: 'Error', description: 'Old password is incorrect.', variant: 'destructive' });
-        setLoading(false);
-        return;
-      }
-
-      const hashedPassword = await bcrypt.hash(newPassword, 12);
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ password_hash: hashedPassword, updated_at: new Date().toISOString() })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
+      if (invokeError) throw invokeError;
+      if (!data.success) throw new Error(data.error || 'Failed to change password');
 
       toast({ title: 'Success', description: 'Password changed successfully. Please log in again.' });
       logout();
