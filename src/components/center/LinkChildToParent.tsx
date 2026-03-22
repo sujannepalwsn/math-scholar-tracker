@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UserPlus, Users } from "lucide-react";
+import { Check, UserPlus, Users } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"

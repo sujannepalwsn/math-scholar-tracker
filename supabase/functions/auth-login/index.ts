@@ -9,7 +9,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -22,10 +22,9 @@ serve(async (req) => {
       );
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch user by username
     const { data: userData, error: userError } = await supabaseClient
@@ -53,7 +52,7 @@ serve(async (req) => {
     }
 
     // Build user object with related data
-    const user: Record<string, any> = {
+    const loggedInUser: Record<string, any> = {
       id: userData.id,
       username: userData.username,
       role: userData.role,
@@ -62,7 +61,7 @@ serve(async (req) => {
       teacher_id: userData.teacher_id,
     };
 
-    // Fetch center name if center_id exists
+    // Fetch center name
     if (userData.center_id) {
       const { data: centerData } = await supabaseClient
         .from('centers')
@@ -71,11 +70,11 @@ serve(async (req) => {
         .single();
       
       if (centerData) {
-        user.center_name = centerData.name;
+        loggedInUser.center_name = centerData.name;
       }
     }
 
-    // Fetch student name if student_id exists (for single student)
+    // Fetch student name
     if (userData.student_id) {
       const { data: studentData } = await supabaseClient
         .from('students')
@@ -84,11 +83,11 @@ serve(async (req) => {
         .single();
       
       if (studentData) {
-        user.student_name = studentData.name;
+        loggedInUser.student_name = studentData.name;
       }
     }
 
-    // Fetch all linked students for parent (from junction table)
+    // Fetch all linked students for parent
     if (userData.role === 'parent') {
       const { data: linkedStudents } = await supabaseClient
         .from('parent_students')
@@ -96,7 +95,7 @@ serve(async (req) => {
         .eq('parent_user_id', userData.id);
       
       if (linkedStudents && linkedStudents.length > 0) {
-        user.linked_students = linkedStudents.map((ls: any) => ({
+        loggedInUser.linked_students = linkedStudents.map((ls: any) => ({
           id: ls.students?.id,
           name: ls.students?.name,
           grade: ls.students?.grade,
@@ -104,7 +103,7 @@ serve(async (req) => {
       }
     }
 
-    // Fetch teacher name if teacher_id exists
+    // Fetch teacher name
     if (userData.teacher_id) {
       const { data: teacherData } = await supabaseClient
         .from('teachers')
@@ -113,11 +112,11 @@ serve(async (req) => {
         .single();
       
       if (teacherData) {
-        user.teacher_name = teacherData.name;
+        loggedInUser.teacher_name = teacherData.name;
       }
     }
 
-    // Fetch center feature permissions if role is center
+    // Fetch permissions
     if (userData.role === 'center' && userData.center_id) {
       const { data: permissionsData } = await supabaseClient
         .from('center_feature_permissions')
@@ -126,8 +125,7 @@ serve(async (req) => {
         .maybeSingle();
       
       if (permissionsData) {
-        // Map boolean columns to permissions object
-        user.centerPermissions = {
+        loggedInUser.centerPermissions = {
           register_student: permissionsData.register_student ?? true,
           take_attendance: permissionsData.take_attendance ?? true,
           attendance_summary: permissionsData.attendance_summary ?? true,
@@ -152,7 +150,6 @@ serve(async (req) => {
       }
     }
 
-    // Fetch teacher feature permissions if role is teacher
     if (userData.role === 'teacher' && userData.teacher_id) {
       const { data: permissionsData } = await supabaseClient
         .from('teacher_feature_permissions')
@@ -160,8 +157,7 @@ serve(async (req) => {
         .eq('teacher_id', userData.teacher_id)
         .maybeSingle();
       
-      // Set permissions, defaulting to true if not explicitly set to false
-      user.teacherPermissions = {
+      loggedInUser.teacherPermissions = {
         take_attendance: permissionsData?.take_attendance ?? true,
         attendance_summary: permissionsData?.attendance_summary ?? true,
         lesson_plans: permissionsData?.lesson_plans ?? true,
@@ -192,15 +188,14 @@ serve(async (req) => {
       .eq('id', userData.id);
 
     return new Response(
-      JSON.stringify({ success: true, user }),
+      JSON.stringify({ success: true, user: loggedInUser }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Login error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

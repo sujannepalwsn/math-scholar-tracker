@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import * as bcrypt from 'bcryptjs';
 import ThemeSelector from "@/components/ThemeSelector";
 
 export default function GeneralSettings() {
@@ -33,35 +32,19 @@ export default function GeneralSettings() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters long.');
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters long.');
       setLoading(false);
       return;
     }
 
     try {
-      const { data: userData, error: fetchError } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('id', user.id)
-        .single();
+      const { data, error: invokeError } = await supabase.functions.invoke('change-password', {
+        body: { userId: user.id, oldPassword, newPassword }
+      });
 
-      if (fetchError || !userData) throw new Error('Failed to fetch user data.');
-
-      const passwordMatch = await bcrypt.compare(oldPassword, userData.password_hash);
-      if (!passwordMatch) {
-        toast.error('Old password is incorrect.');
-        setLoading(false);
-        return;
-      }
-
-      const hashedPassword = await bcrypt.hash(newPassword, 12);
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ password_hash: hashedPassword, updated_at: new Date().toISOString() } as any)
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
+      if (invokeError) throw invokeError;
+      if (!data.success) throw new Error(data.error || 'Failed to change password');
 
       toast.success('Password changed successfully. Please log in again.');
       setTimeout(() => logout(), 2000);
@@ -140,7 +123,7 @@ export default function GeneralSettings() {
                   required
                   disabled={loading}
                   className="h-12 rounded-xl bg-card/50"
-                  placeholder="Minimum 6 characters"
+                  placeholder="Minimum 8 characters"
                 />
               </div>
               <div className="space-y-2">

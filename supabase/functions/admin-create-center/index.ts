@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
-import * as bcrypt from "https://esm.sh/bcryptjs"; // Import bcryptjs
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import * as bcrypt from "https://esm.sh/bcryptjs";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,8 +13,32 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing authorization header' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+
+    // Check if the requesting user is a super admin
+    // Note: Since we are using a custom users table, we check role there
+    const { data: userData, error: userError } = await supabaseClient.from('users').select('role').eq('id', user?.id).single();
+    if (userError || userData?.role !== 'admin') {
+      return new Response(JSON.stringify({ success: false, error: 'Admin access required' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { centerName, address, contactNumber, username, password } = await req.json();
 
+    // Server-side validation
     if (!centerName || !username || !password) {
       return new Response(
         JSON.stringify({ success: false, error: 'Center name, username, and password are required' }),
@@ -22,12 +46,25 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Email/Username format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(username)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid email format' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Password strength validation
+    if (password.length < 8) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Password must be at least 8 characters long' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
 
     // Check if username already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await supabaseClient
       .from('users')
       .select('id')
       .eq('username', username)
@@ -41,12 +78,12 @@ serve(async (req) => {
     }
 
     // Create center
-    const { data: center, error: centerError } = await supabase
+    const { data: center, error: centerError } = await supabaseClient
       .from('centers')
       .insert({
-        center_name: centerName,
+        name: centerName,
         address: address || null,
-        contact_number: contactNumber || null
+        phone: contactNumber || null
       })
       .select()
       .single();
@@ -57,7 +94,7 @@ serve(async (req) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     // Create user
-    const { data: user, error: userError } = await supabase
+    const { data: newUser, error: userError2 } = await supabaseClient
       .from('users')
       .insert({
         username,
@@ -69,16 +106,16 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (userError) {
+    if (userError2) {
       // Rollback: delete the center if user creation fails
-      await supabase.from('centers').delete().eq('id', center.id);
-      throw userError;
+      await supabaseClient.from('centers').delete().eq('id', center.id);
+      throw userError2;
     }
 
     console.log('Center created successfully:', center.id);
 
     return new Response(
-      JSON.stringify({ success: true, center, user: { id: user.id, username: user.username } }),
+      JSON.stringify({ success: true, center, user: { id: newUser.id, username: newUser.username } }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {

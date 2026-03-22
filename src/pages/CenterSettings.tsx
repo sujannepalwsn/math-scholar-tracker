@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Building, ImageIcon, KeyRound, Loader2, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User, Locate } from "lucide-react";
+import { Building, ImageIcon, KeyRound, Loader2, Locate, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import ThemeSelector from "@/components/ThemeSelector";
-import * as bcrypt from 'bcryptjs';
 import NotificationSettings from "@/components/center/NotificationSettings";
 import RegulatoryReports from "@/components/center/RegulatoryReports";
 import TimetableAutomation from "@/components/center/TimetableAutomation";
@@ -239,35 +238,19 @@ export default function CenterSettings() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters long.');
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters long.');
       setPasswordLoading(false);
       return;
     }
 
     try {
-      const { data: userData, error: fetchError } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('id', user.id)
-        .single();
+      const { data, error: invokeError } = await supabase.functions.invoke('change-password', {
+        body: { userId: user.id, oldPassword, newPassword }
+      });
 
-      if (fetchError || !userData) throw new Error('Failed to fetch user data.');
-
-      const passwordMatch = await bcrypt.compare(oldPassword, userData.password_hash);
-      if (!passwordMatch) {
-        toast.error('Old password is incorrect.');
-        setPasswordLoading(false);
-        return;
-      }
-
-      const hashedPassword = await bcrypt.hash(newPassword, 12);
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ password_hash: hashedPassword, updated_at: new Date().toISOString() } as any)
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
+      if (invokeError) throw invokeError;
+      if (!data.success) throw new Error(data.error || 'Failed to change password');
 
       toast.success('Password changed successfully. Please log in again.');
       setTimeout(() => logout(), 2000);
@@ -580,7 +563,7 @@ export default function CenterSettings() {
                   required
                   disabled={passwordLoading}
                   className="h-12 rounded-xl bg-card/50"
-                  placeholder="Minimum 6 characters"
+                  placeholder="Minimum 8 characters"
                 />
               </div>
               <div className="space-y-2">

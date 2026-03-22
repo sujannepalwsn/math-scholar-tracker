@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import React, { useState } from "react";
 import { Clock, DollarSign, Edit, FileText, GraduationCap, Loader2, Plus, Settings, Trash2, Upload, UserPlus, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button"
@@ -10,14 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
-import * as bcrypt from 'bcryptjs';
 import TeacherFeaturePermissions from '@/components/center/TeacherFeaturePermissions';
 import StaffHRModule from '@/components/center/StaffHRModule';
 
@@ -225,12 +224,18 @@ export default function TeacherManagement() {
   const createTeacherLoginMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTeacherForLogin || !user?.center_id) throw new Error("Missing info");
-      const { data: existingUser, error: existingUserError } = await supabase.from('users').select('id').eq('username', teacherUsername).single();
-      if (existingUserError && existingUserError.code !== 'PGRST116') throw existingUserError;
-      if (existingUser) throw new Error('Username already exists.');
-      const hashedPassword = await bcrypt.hash(teacherPassword, 12);
-      const { error } = await supabase.from("users").insert({ username: teacherUsername, password_hash: hashedPassword, role: 'teacher', center_id: user.center_id, teacher_id: selectedTeacherForLogin.id, is_active: true });
+
+      const { data, error } = await supabase.functions.invoke('create-teacher-login', {
+        body: {
+          teacherId: selectedTeacherForLogin.id,
+          username: teacherUsername,
+          password: teacherPassword,
+          centerId: user.center_id
+        }
+      });
+
       if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Failed to create login');
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["teachers"] }); toast.success("Login created!"); setIsCreatingTeacherLogin(false); setSelectedTeacherForLogin(null); setTeacherUsername(""); setTeacherPassword(""); },
     onError: (error: any) => toast.error(error.message) });

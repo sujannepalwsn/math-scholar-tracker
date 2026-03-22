@@ -1,6 +1,6 @@
+import { Badge } from "@/components/ui/badge";
 import React, { useEffect, useState } from "react";
-import { CalendarIcon, Calendar as CalendarIconLucide, ChevronDown, Lock, Users, ShieldAlert, Check, X, Clock, CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge"
+import { Calendar as CalendarIconLucide, CalendarIcon, Check, CheckCircle2, ChevronDown, Clock, Lock, Settings, ShieldAlert, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
