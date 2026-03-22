@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Building, ImageIcon, KeyRound, Loader2, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User, Locate } from "lucide-react";
+import { Building, ImageIcon, KeyRound, Loader2, Locate, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";

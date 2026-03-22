@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
-import * as bcrypt from "https://esm.sh/bcryptjs"; // Import bcryptjs
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import * as bcrypt from "https://esm.sh/bcryptjs";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,16 +13,47 @@ serve(async (req) => {
   }
 
   try {
-    const { username, password, studentId, centerId } = await req.json();
-    console.log('Create parent account request:', { username, studentId, centerId });
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing authorization header' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    // Server-side validation
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if the requesting user is a center admin or super admin
+    const { data: userData, error: userError } = await supabaseClient.from('users').select('role, center_id').eq('id', user.id).single();
+    if (userError || !['admin', 'center'].includes(userData?.role || '')) {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { username, password, studentId, centerId } = await req.json();
+
     if (!username || !password || !studentId || !centerId) {
-      console.error('Missing required fields:', { username: !!username, password: !!password, studentId: !!studentId, centerId: !!centerId });
       return new Response(
-        JSON.stringify({ success: false, error: 'All fields are required' }),
+        JSON.stringify({ success: false, error: 'Missing required fields' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
+    }
+
+    // If center admin, verify they belong to the same center
+    if (userData.role === 'center' && userData.center_id !== centerId) {
+       return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Email/Username format validation
@@ -42,119 +73,55 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Check if username already exists
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await supabaseClient
       .from('users')
       .select('id')
       .eq('username', username)
       .single();
 
     if (existingUser) {
-      console.error('Username already exists:', username);
       return new Response(
         JSON.stringify({ success: false, error: 'Username already exists' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    // Verify student exists (with more flexible center_id check)
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, center_id, name')
-      .eq('id', studentId)
-      .single();
-
-    if (studentError || !student) {
-      console.error('Student not found:', studentId, studentError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Student not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      );
-    }
-
-    console.log('Student found:', { id: student.id, name: student.name, center_id: student.center_id });
-
-    // If student's center_id is NULL, update it to the provided centerId
-    if (!student.center_id) {
-      console.log('Student has NULL center_id, updating to:', centerId);
-      const { error: updateError } = await supabase
-        .from('students')
-        .update({ center_id: centerId })
-        .eq('id', studentId);
-
-      if (updateError) {
-        console.error('Failed to update student center_id:', updateError);
-        throw new Error('Failed to assign student to center');
-      }
-      console.log('Student center_id updated successfully');
-    } else if (student.center_id !== centerId) {
-      // If student belongs to a different center, deny access
-      console.error('Student belongs to different center:', { student_center: student.center_id, requested_center: centerId });
-      return new Response(
-        JSON.stringify({ success: false, error: 'Student belongs to a different tuition center' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
-      );
-    }
-
-    // Hash the password using bcryptjs
+    // Hash the password
     const passwordHash = await bcrypt.hash(password, 12);
-    console.log('Password hashed successfully');
 
     // Create parent user
-    const { data: parentUser, error } = await supabase
+    const { data: parentUser, error } = await supabaseClient
       .from('users')
       .insert({
         username,
         password_hash: passwordHash,
         role: 'parent',
         center_id: centerId,
-        student_id: studentId, // Keep for backwards compatibility
+        student_id: studentId,
         is_active: true
       })
       .select()
       .single();
 
-    if (error) {
-      console.error('Failed to create parent user:', error);
-      throw error;
-    }
+    if (error) throw error;
 
-    // Also insert into parent_students junction table for multi-child support
-    const { error: junctionError } = await supabase
+    // Also insert into parent_students junction table
+    await supabaseClient
       .from('parent_students')
       .insert({
         parent_user_id: parentUser.id,
         student_id: studentId
       });
 
-    if (junctionError) {
-      console.error('Failed to create parent-student link:', junctionError);
-      // Don't fail the whole operation, just log
-    }
-
-    console.log('Parent user created successfully:', { userId: parentUser.id, username: parentUser.username, studentId });
-
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Parent account created successfully',
-        user: {
-          id: parentUser.id,
-          username: parentUser.username,
-          role: parentUser.role
-        }
-      }),
+      JSON.stringify({ success: true, user: { id: parentUser.id, username: parentUser.username } }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Create parent account error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

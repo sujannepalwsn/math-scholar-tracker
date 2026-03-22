@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertCircle, ArrowLeft, Check, CreditCard, Download, Eye, FileText, Info, PieChart, Receipt, TrendingUp, Wallet } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, CreditCard, DollarSign, Download, Eye, FileText, Info, PieChart, Receipt, TrendingUp, Wallet } from "lucide-react";
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

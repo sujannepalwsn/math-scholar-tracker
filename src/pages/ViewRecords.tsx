@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { CalendarIcon, Calendar as CalendarIconLucide, Clock, Download, Printer, TrendingUp, User, X, FileText } from "lucide-react";
+import { Calendar as CalendarIconLucide, CalendarIcon, Clock, Download, FileText, Printer, TrendingUp, User, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"

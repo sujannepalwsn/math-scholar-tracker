@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,57 +12,77 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing authorization header' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser(token);
+    if (authError || !authUser) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if the requesting user is a center admin or super admin
+    const { data: userData, error: userLookupError } = await supabaseClient.from('users').select('role, center_id').eq('id', authUser.id).single();
+    if (userLookupError || !['admin', 'center'].includes(userData?.role || '')) {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { teacherId, featureName, isEnabled } = await req.json();
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Supabase environment variables not configured");
+    if (!teacherId || !featureName || typeof isEnabled !== 'boolean') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing required fields' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // If center admin, verify the teacher belongs to the same center
+    if (userData.role === 'center') {
+      const { data: teacherData, error: teacherError } = await supabaseClient
+        .from('teachers')
+        .select('center_id')
+        .eq('id', teacherId)
+        .single();
 
-    // Check if permission record exists
-    const { data: existingPerm } = await supabase
+      if (teacherError || teacherData?.center_id !== userData.center_id) {
+        return new Response(JSON.stringify({ success: false, error: 'Forbidden: Teacher does not belong to your center' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Upsert permission record
+    const { data, error } = await supabaseClient
       .from("teacher_feature_permissions")
-      .select("id")
-      .eq("teacher_id", teacherId)
-      .maybeSingle();
+      .upsert({
+        teacher_id: teacherId,
+        [featureName]: isEnabled,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'teacher_id' })
+      .select()
+      .single();
 
-    if (existingPerm) {
-      // Update existing permission
-      const { data, error } = await supabase
-        .from("teacher_feature_permissions")
-        .update({ [featureName]: isEnabled })
-        .eq("teacher_id", teacherId)
-        .select()
-        .single();
+    if (error) throw error;
 
-      if (error) throw error;
-
-      return new Response(JSON.stringify({ success: true, data }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } else {
-      // Insert new permission record
-      const { data, error } = await supabase
-        .from("teacher_feature_permissions")
-        .insert({ teacher_id: teacherId, [featureName]: isEnabled })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return new Response(JSON.stringify({ success: true, data }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-  } catch (error: unknown) {
+    return new Response(JSON.stringify({ success: true, data }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error: any) {
     console.error("Error in center-toggle-teacher-feature:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: error.message }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

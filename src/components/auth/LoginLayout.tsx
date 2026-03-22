@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Shield, CheckCircle2, HelpCircle, ArrowRight, ExternalLink, Loader2 } from "lucide-react";
+import { Shield, CheckCircle2, HelpCircle, ArrowRight, ExternalLink, Loader2, User, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,10 +33,10 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
   const primaryColor = settings?.primary_color || '#4f46e5';
   const bgColor = settings?.background_color || '#f8fafc';
 
-  const backgroundUrls = settings?.background_urls || (settings?.background_url ? [settings.background_url] : []);
-  const features = (settings?.features as any[]) || [];
-  const devInfo = (settings?.developer_info as any) || { name: "Developer", website: "#", copyright: "© 2024" };
-  const helpInfo = (settings?.help_info as any) || { text: "Need help?", link: "#" };
+  const backgroundUrls = Array.isArray(settings?.background_urls) ? settings.background_urls : (settings?.background_url ? [settings.background_url] : []);
+  const features = Array.isArray(settings?.features) ? settings.features : [];
+  const devInfo = (settings?.developer_info && typeof settings.developer_info === 'object' && !Array.isArray(settings.developer_info)) ? settings.developer_info as any : { name: "Developer", website: "#", copyright: "© 2024" };
+  const helpInfo = (settings?.help_info && typeof settings.help_info === 'object' && !Array.isArray(settings.help_info)) ? settings.help_info as any : { text: "Need help?", link: "#" };
 
   useEffect(() => {
     if (backgroundUrls.length > 1) {
@@ -83,7 +83,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
         {/* Left Side: Marketing Info */}
         <div className="flex-1 text-white space-y-8 max-w-xl text-center md:text-left animate-in fade-in slide-in-from-left-8 duration-700">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-sm font-bold tracking-wider uppercase mb-4">
-             <DynamicIcon name="Sparkles" className="h-4 w-4 text-yellow-400" />
+             <Sparkles className="h-4 w-4 text-yellow-400" />
              <span>School Management Software</span>
           </div>
 
@@ -160,7 +160,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
                    </Label>
                    <div className="relative group">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-primary">
-                        <Icons.User className="h-5 w-5" />
+                        <User className="h-5 w-5" />
                       </div>
                       <Input
                         id="username"
@@ -183,7 +183,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
                    </div>
                    <div className="relative group">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-primary">
-                        <Icons.Lock className="h-5 w-5" />
+                        <Lock className="h-5 w-5" />
                       </div>
                       <Input
                         id="password"

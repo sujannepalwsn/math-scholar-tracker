@@ -1,11 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
-import {
-  CalendarIcon, Calendar, Clock, Edit, Plus, Trash2, Download,
-  FileSpreadsheet, FileText, Printer, CheckCircle, XCircle,
-  Upload, AlertCircle, Loader2, UserMinus, UserCheck, RefreshCw,
-  BookOpen
-} from "lucide-react";
+import { AlertCircle, BookOpen, Calendar, CalendarIcon, CheckCircle, Clock, Download, Edit, FileSpreadsheet, FileText, Loader2, Plus, Printer, RefreshCw, Trash2, Upload, UserCheck, UserMinus, XCircle } from "lucide-react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"

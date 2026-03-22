@@ -1,3 +1,5 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import React, { useMemo, useState, useEffect } from "react";
 import { AlertTriangle, ArrowRight, Bell, Book, BookOpen, Bus, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Package, Search, TrendingUp, Users, Wallet, GripVertical, Settings2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +20,6 @@ import CenterLogo from "@/components/CenterLogo";
 import NotificationBell from "@/components/NotificationBell";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,6 @@ import LibraryManagement from "@/components/center/LibraryManagement";
 import TransportManagement from "@/components/center/TransportManagement";
 import AssetTracking from "@/components/center/AssetTracking";
 import DigitalNoticeBoard from "@/components/center/NoticeBoard";
-
 type AttendanceRange = "weekly" | "monthly" | "yearly" | "overall";
 
 export default function Dashboard() {

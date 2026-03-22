@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, User } from "lucide-react";
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
@@ -50,7 +50,7 @@ export default function ChangePassword() {
 
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('change-password', {
-        body: { userId: user.id, oldPassword, newPassword }
+        body: { oldPassword, newPassword }
       });
 
       if (invokeError) throw invokeError;

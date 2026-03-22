@@ -1,6 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { BookOpen, TrendingUp } from "lucide-react";
+import { BookOpen, Check, TrendingUp } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
