@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 
@@ -26,6 +29,8 @@ const PaymentTracking = ({ canEdit }: { canEdit?: boolean }) => {
     payment_method: 'cash',
     reference_number: ''
   });
+
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Fetch unpaid invoices
   const { data: unpaidInvoices = [] } = useQuery({
@@ -44,31 +49,40 @@ const PaymentTracking = ({ canEdit }: { canEdit?: boolean }) => {
   });
 
   // Fetch payments - filtered by center through invoices
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
-    queryKey: ['payments', user?.center_id],
+  const { data: paymentsData, isLoading: paymentsLoading } = useQuery({
+    queryKey: ['payments', user?.center_id, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id) return { data: [], count: 0 };
+
       // First get invoice IDs for this center
       const { data: centerInvoices } = await supabase
         .from('invoices')
         .select('id')
         .eq('center_id', user.center_id);
       
-      if (!centerInvoices || centerInvoices.length === 0) return [];
+      if (!centerInvoices || centerInvoices.length === 0) return { data: [], count: 0 };
       
       const invoiceIds = centerInvoices.map(i => i.id);
-      
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from('payments')
-        .select('*, invoices(invoice_number, center_id, students(name))')
+        .select('*, invoices(invoice_number, center_id, students(name))', { count: "exact" })
         .in('invoice_id', invoiceIds)
         .order('payment_date', { ascending: false })
-        .limit(50);
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
   });
+
+  const payments = paymentsData?.data || [];
+  const totalRows = paymentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const recordPaymentMutation = useMutation({
     mutationFn: async () => {
@@ -142,7 +156,7 @@ const PaymentTracking = ({ canEdit }: { canEdit?: boolean }) => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Amount (₹) *</Label>
+                    <Label>Amount (Rs.) *</Label>
                     <Input type="number" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} />
                   </div>
                   <div className="space-y-2">
@@ -169,39 +183,47 @@ const PaymentTracking = ({ canEdit }: { canEdit?: boolean }) => {
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          {paymentsLoading ? (
-            <p>Loading payments...</p>
+        <CardContent className="p-0">
+          {paymentsLoading && !payments.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
           ) : payments.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No payments recorded yet</p>
           ) : (
             <div className="overflow-x-auto">
-  <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Reference</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{(payment as any).invoices?.invoice_number || '-'}</TableCell>
-                    <TableCell>{(payment as any).invoices?.students?.name || '-'}</TableCell>
-                    <TableCell>{formatCurrency(payment.amount)}</TableCell>
-                    <TableCell>{payment.payment_method?.replace('_', ' ') || '-'}</TableCell>
-                    <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{payment.reference_number || '-'}</TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-6 py-4">Invoice</TableHead>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="pr-6">Reference</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-</div>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium px-6 py-4">{(payment as any).invoices?.invoice_number || '-'}</TableCell>
+                      <TableCell>{(payment as any).invoices?.students?.name || '-'}</TableCell>
+                      <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                      <TableCell>{payment.payment_method?.replace('_', ' ') || '-'}</TableCell>
+                      <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
+                      <TableCell className="pr-6">{payment.reference_number || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
     </div>

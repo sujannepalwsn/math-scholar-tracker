@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner";
 import { FileText, Plus, Trash2, Upload, ExternalLink, ShieldCheck, UserCheck, DollarSign, PieChart, Calendar, AlertCircle, Award, FileCheck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +37,8 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
     allowance: "0",
     deduction: "0"
   }));
+
+  const { page: payrollPage, setPage: setPayrollPage, pageSize: payrollPageSize, setPageSize: setPayrollPageSize } = usePagination();
 
   const { data: centerSettings } = useQuery({
     queryKey: ["center-settings-payroll", authCenterId],
@@ -84,14 +89,27 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
     },
   });
 
-  const { data: payrollLogs } = useQuery({
-    queryKey: ["payroll-logs", teacherId],
+  const { data: payrollLogsData, isLoading: payrollLoading } = useQuery({
+    queryKey: ["payroll-logs", teacherId, payrollPage, payrollPageSize],
     queryFn: async () => {
-      const { data, error } = await supabase.from("payroll_logs").select("*").eq("teacher_id", teacherId).order("created_at", { ascending: false });
+      const from = (payrollPage - 1) * payrollPageSize;
+      const to = from + payrollPageSize - 1;
+
+      const { data, error, count } = await supabase
+        .from("payroll_logs")
+        .select("*", { count: "exact" })
+        .eq("teacher_id", teacherId)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
   });
+
+  const payrollLogs = payrollLogsData?.data || [];
+  const totalRows = payrollLogsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / payrollPageSize);
 
   const addDocMutation = useMutation({
     mutationFn: async () => {
@@ -409,7 +427,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
                 </CardHeader>
                 <CardContent className="p-8 flex flex-col items-center justify-center space-y-4">
                    <div className="text-center">
-                      <p className="text-3xl font-black text-slate-700">₹{payrollLogs?.reduce((acc: number, curr: any) => acc + (curr.net_payable || 0), 0).toLocaleString()}</p>
+                      <p className="text-3xl font-black text-slate-700">Rs. {payrollLogs?.reduce((acc: number, curr: any) => acc + (curr.net_payable || 0), 0).toLocaleString()}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Disbursed (All Time)</p>
                    </div>
                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -493,7 +511,13 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payrollLogs && payrollLogs.length > 0 ? (
+                {payrollLoading && !payrollLogs.length ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <TableSkeleton columns={6} rows={payrollPageSize} />
+                    </TableCell>
+                  </TableRow>
+                ) : payrollLogs && payrollLogs.length > 0 ? (
                   payrollLogs.map((p: any) => (
                     <TableRow key={p.id}>
                       <TableCell className="px-6 py-4">
@@ -502,10 +526,10 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
                             <span className="font-bold text-slate-700">{p.month} {p.year}</span>
                          </div>
                       </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-500">₹{p.basic_pay.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs font-medium text-emerald-600">+ ₹{p.allowances.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs font-medium text-rose-500">- ₹{p.deductions.toLocaleString()}</TableCell>
-                      <TableCell className="font-black text-slate-700">₹{p.net_payable.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-500">Rs. {p.basic_pay.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-medium text-emerald-600">+ Rs. {p.allowances.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-medium text-rose-500">- Rs. {p.deductions.toLocaleString()}</TableCell>
+                      <TableCell className="font-black text-slate-700">Rs. {p.net_payable.toLocaleString()}</TableCell>
                       <TableCell className="text-right px-6">
                          <Button variant="ghost" size="sm" className="h-8 rounded-lg text-blue-600 hover:bg-blue-50 font-black text-[10px] uppercase">
                             <FileText className="h-3.5 w-3.5 mr-1" /> PDF
@@ -522,6 +546,14 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
             </Table>
 </div>
           </div>
+          <ServerPagination
+            currentPage={payrollPage}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={payrollPageSize}
+            onPageChange={setPayrollPage}
+            onPageSizeChange={setPayrollPageSize}
+          />
         </TabsContent>
 
         <TabsContent value="contracts" className="pt-4 space-y-4">
@@ -575,7 +607,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
                     <TableCell className="font-bold">{c.contract_type}</TableCell>
                     <TableCell className="text-xs">{c.start_date}</TableCell>
                     <TableCell className="text-xs">{c.end_date || 'N/A'}</TableCell>
-                    <TableCell className="font-bold text-slate-700">₹{c.salary?.toLocaleString()}</TableCell>
+                    <TableCell className="font-bold text-slate-700">Rs. {c.salary?.toLocaleString()}</TableCell>
                     <TableCell><Badge variant="outline" className="text-[9px] font-black">{c.status}</Badge></TableCell>
                   </TableRow>
                 ))}

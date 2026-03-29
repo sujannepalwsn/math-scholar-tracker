@@ -23,6 +23,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from "sonner"
 import { Tables } from "@/integrations/supabase/types"
 import { Invoice, Payment } from "@/integrations/supabase/finance-types"
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 type StudentHomeworkRecord = Tables<'student_homework_records'>;
 type LessonPlan = Tables<'lesson_plans'>;
@@ -56,6 +59,7 @@ export default function ParentDashboard() {
 
   const [selectedChapterDetail, setSelectedChapterDetail] = useState<ChapterPerformanceGroup | null>(null);
   const [selectedDisciplineIssue, setSelectedDisciplineIssue] = useState<any>(null);
+  const { page, setPage, pageSize, setPageSize } = usePagination(10);
 
   useEffect(() => {
     if (!selectedStudentId && linkedStudents.length > 0) {
@@ -133,19 +137,27 @@ export default function ParentDashboard() {
     },
     enabled: !!activeStudentId });
 
-  const { data: lessonRecords = [] } = useQuery({
-    queryKey: ['student-lesson-records', activeStudentId],
+  const { data: lessonRecordsData, isLoading: lessonRecordsLoading } = useQuery({
+    queryKey: ['student-lesson-records', activeStudentId, page, pageSize],
     queryFn: async () => {
-      if (!activeStudentId) return [];
-      const { data, error } = await supabase.from('student_chapters').select(`
+      if (!activeStudentId) return { data: [], count: 0 };
+      const { data, error, count } = await supabase.from('student_chapters').select(`
         *,
         lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url, grade, notes),
         recorded_by_teacher:recorded_by_teacher_id(name)
-      `).eq('student_id', activeStudentId).order('completed_at', { ascending: false });
+      `, { count: 'exact' })
+      .eq('student_id', activeStudentId)
+      .order('completed_at', { ascending: false })
+      .range((page - 1) * pageSize, page * pageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!activeStudentId });
+
+  const lessonRecords = lessonRecordsData?.data || [];
+  const totalRows = lessonRecordsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // Fetch activities (participations)
   const { data: preschoolActivities = [] } = useQuery({
@@ -497,7 +509,7 @@ export default function ParentDashboard() {
         <KPICard title="Avg Performance" value={`${avgPerformance}%`} description="Evaluation Synthesis" icon={TrendingUp} color="purple" trendData={performanceTrend} onClick={() => scrollToSection("tests-section")} />
         <KPICard title="Homework Pending" value={homeworkPendingCount} description="Active Assignments" icon={Book} color="orange" onClick={() => scrollToSection("overdue-homework-section")} />
         <KPICard title="Apply Leave" value="Request" description="Absence Portal" icon={CalendarIcon} color="blue" onClick={() => navigate("/parent-leave")} />
-        <KPICard title="Fees Payable" value={`₹${outstandingDues}`} description="Outstanding Liability" icon={Wallet} color="rose" onClick={() => scrollToSection("finance-section")} />
+        <KPICard title="Fees Payable" value={`Rs. ${outstandingDues}`} description="Outstanding Liability" icon={Wallet} color="rose" onClick={() => scrollToSection("finance-section")} />
       </div>
 
       {/* Subject Wise Performance Cards */}
@@ -556,72 +568,94 @@ export default function ParentDashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="max-h-[400px] overflow-auto custom-scrollbar">
-                <table className="w-full text-sm text-left min-w-[700px]">
-                  <thead className="bg-muted/50 border-b sticky top-0 z-10 shadow-sm">
-                    <tr>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
-                      <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {chapterPerformanceData.map((chapterGroup) => {
-                      const evaluation = chapterGroup.studentChapters[0];
-                      const testResult = chapterGroup.testResults[0];
-                      const homework = chapterGroup.homeworkRecords[0];
-
-                      const avgPct = chapterGroup.testResults.length > 0
-                        ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
-                        : null;
-
-                      return (
-                        <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
-                          <td className="px-6 py-4">
-                            <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
-                            <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
-                          </td>
-                          <td className="px-6 py-4">
-                            {homework ? (
-                              <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
-                                {homework.status}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground italic text-xs">N/A</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 font-bold">
-                            {avgPct !== null ? (
-                              <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
-                                {avgPct}%
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground italic text-xs">N/A</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
-                              onClick={() => setSelectedChapterDetail(chapterGroup)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </td>
+              {lessonRecordsLoading && !chapterPerformanceData.length ? (
+                <TableSkeleton columns={6} rows={pageSize} />
+              ) : (
+                <>
+                  <div className="max-h-[400px] overflow-auto custom-scrollbar">
+                    <table className="w-full text-sm text-left min-w-[700px]">
+                      <thead className="bg-muted/50 border-b sticky top-0 z-10 shadow-sm">
+                        <tr>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className="divide-y">
+                        {chapterPerformanceData.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground italic font-medium">
+                              No instructional milestones discovered in the archives for the selected period.
+                            </td>
+                          </tr>
+                        ) : (
+                          chapterPerformanceData.map((chapterGroup) => {
+                            const evaluation = chapterGroup.studentChapters[0];
+                            const testResult = chapterGroup.testResults[0];
+                            const homework = chapterGroup.homeworkRecords[0];
+
+                            const avgPct = chapterGroup.testResults.length > 0
+                              ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
+                              : null;
+
+                            return (
+                              <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
+                                <td className="px-6 py-4">
+                                  <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
+                                  <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
+                                </td>
+                                <td className="px-6 py-4">
+                                  {homework ? (
+                                    <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
+                                      {homework.status}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground italic text-xs">N/A</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 font-bold">
+                                  {avgPct !== null ? (
+                                    <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
+                                      {avgPct}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground italic text-xs">N/A</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
+                                    onClick={() => setSelectedChapterDetail(chapterGroup)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <ServerPagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalRows={totalRows}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

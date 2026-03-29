@@ -13,7 +13,10 @@ import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { Invoice, Payment } from "@/integrations/supabase/finance-types"
 import { format, isPast } from "date-fns"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 
 const ParentFinanceDashboard = () => {
@@ -21,6 +24,9 @@ const ParentFinanceDashboard = () => {
   const navigate = useNavigate();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+
+  const { page: invPage, pageSize: invPageSize, setPage: setInvPage, setPageSize: setInvPageSize } = usePagination(10);
+  const { page: payPage, pageSize: payPageSize, setPage: setPayPage, setPageSize: setPayPageSize } = usePagination(10);
 
   // Check if user is parent with student
   if (user?.role !== 'parent' || !user?.student_id) {
@@ -44,71 +50,52 @@ const ParentFinanceDashboard = () => {
   });
 
   // Fetch student's invoices
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ['student-invoices', user.student_id],
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
+    queryKey: ['student-invoices', user.student_id, invPage, invPageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('invoices')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('student_id', user.student_id!)
-        .order('invoice_date', { ascending: false });
+        .order('invoice_date', { ascending: false })
+        .range((invPage - 1) * invPageSize, invPage * invPageSize - 1);
 
       if (error) throw error;
-      return data as Invoice[];
+      return { data: data as Invoice[], count: count || 0 };
     }
   });
 
-  // Calculate summary - handle null paid_amount
-  const summary = {
-    total_invoiced: invoices.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0),
-    total_paid: invoices.reduce((sum, inv) => sum + Number(inv.paid_amount || 0), 0),
-    total_outstanding: invoices.reduce((sum, inv) => sum + (Number(inv.total_amount || 0) - Number(inv.paid_amount || 0)), 0),
-    overdue_count: invoices.filter(inv => 
-      inv.status === 'overdue' || 
-      (inv.due_date && isPast(new Date(inv.due_date)) && ['issued', 'partial'].includes(inv.status || ''))
-    ).length
-  };
+  const invoices = invoicesData?.data || [];
+  const totalInvRows = invoicesData?.count || 0;
+  const totalInvPages = Math.ceil(totalInvRows / invPageSize);
 
-  // Fetch payment history via invoices
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
-    queryKey: ['student-payments', user.student_id],
+  // Fetch student's payments
+  const { data: paymentsData, isLoading: paymentsLoading } = useQuery({
+    queryKey: ['student-payments', user.student_id, payPage, payPageSize],
     queryFn: async () => {
-      const { data: studentInvoices, error: invError } = await supabase
-        .from('invoices')
-        .select('id')
-        .eq('student_id', user.student_id!);
-      
-      if (invError) throw invError;
-      if (!studentInvoices || studentInvoices.length === 0) return [];
-      
-      const invoiceIds = studentInvoices.map(inv => inv.id);
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('payments')
-        .select('*')
-        .in('invoice_id', invoiceIds)
-        .order('payment_date', { ascending: false });
+        .select('*', { count: 'exact' })
+        .eq('student_id', user.student_id!)
+        .order('payment_date', { ascending: false })
+        .range((payPage - 1) * payPageSize, payPage * payPageSize - 1);
 
       if (error) throw error;
-      return data;
+      return { data: data as Payment[], count: count || 0 };
     }
   });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0 }).format(amount);
-  };
+  const payments = paymentsData?.data || [];
+  const totalPayRows = paymentsData?.count || 0;
+  const totalPayPages = Math.ceil(totalPayRows / payPageSize);
 
   const getStatusStyles = (status: string) => {
-    const styles: Record<string, string> = {
-      paid: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-      partial: 'bg-amber-50 text-amber-700 border-amber-100',
-      overdue: 'bg-rose-50 text-rose-700 border-rose-100',
-      issued: 'bg-primary/5 text-primary/70 border-primary/10',
-      cancelled: 'bg-slate-50 text-slate-700 border-slate-100'
-    };
-    return styles[status] || 'bg-slate-50 text-slate-700 border-slate-100';
+    switch (status) {
+      case 'paid': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'partial': return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'unpaid': return 'bg-rose-50 text-rose-700 border-rose-100';
+      default: return 'bg-slate-50 text-slate-700 border-slate-100';
+    }
   };
 
   const handleViewInvoice = (invoice: Invoice) => {
@@ -116,206 +103,230 @@ const ParentFinanceDashboard = () => {
     setShowInvoiceDialog(true);
   };
 
-  const handleOnlinePayment = async (invoiceId: string, amount: number) => {
-    // 1. Fetch gateway settings for this center
-    const { data: settings } = await supabase.from('payment_gateway_settings').select('provider, api_key').eq('center_id', student?.center_id).eq('is_active', true).maybeSingle();
-
-    if (!settings) {
-      toast.error("Online payment is not configured for this center. Please contact school admin.");
-      return;
-    }
-
-    toast.info(`Redirecting to ${settings.provider} for amount ${formatCurrency(amount)}...`);
-    // Framework for integration logic goes here
-  };
-
   const handleDownloadPdf = (invoiceId: string) => {
-    alert(`Generating cryptographically signed PDF...`);
+    window.open(`${supabase.functions.getURL('generate-invoice-pdf')}?id=${invoiceId}`, '_blank');
   };
 
-  if (studentLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-      </div>
-    );
-  }
+  const handleOnlinePayment = (invoiceId: string, amount: number) => {
+    // Logic for online payment integration
+    alert(`Initiating payment of ${formatCurrency(amount)} for invoice ${invoiceId}`);
+  };
+
+  const totalOutstanding = invoices.reduce((acc, inv) => {
+    if (inv.status !== 'paid') {
+      return acc + (Number(inv.total_amount) - Number(inv.paid_amount));
+    }
+    return acc;
+  }, 0);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-            Treasury Matrix
+            Financial Portfolio
           </h1>
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <p className="text-muted-foreground text-sm font-medium">Financial oversight for <span className="text-slate-700 font-bold">{student?.name}</span></p>
+            <p className="text-muted-foreground text-sm font-medium">Monitoring tuition liquidity and institutional settlements.</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Button variant="ghost" onClick={() => navigate('/parent-dashboard')} className="rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-card/60">
-            <ArrowLeft className="h-4 w-4 mr-2" /> EXIT TO HUB
-          </Button>
+        <div className="flex items-center gap-3">
           <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10">
               <Wallet className="h-5 w-5 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Net Balance</span>
-              <span className="font-black text-slate-700 text-sm">{formatCurrency(summary.total_outstanding)}</span>
+              <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Outstanding</span>
+              <span className="font-black text-rose-600 text-sm">{formatCurrency(totalOutstanding)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Critical Alerts */}
-      {summary.overdue_count > 0 && (
-        <div className="bg-rose-500/10 backdrop-blur-md border border-rose-200 p-4 rounded-3xl flex items-center gap-4 animate-bounce-subtle">
-          <div className="h-10 w-10 rounded-2xl bg-rose-500 flex items-center justify-center shadow-lg shadow-rose-500/20">
-            <AlertCircle className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <p className="font-black text-rose-900 text-sm uppercase tracking-tight">Financial Protocol Breach</p>
-            <p className="text-xs font-medium text-rose-700 opacity-80">{summary.overdue_count} overdue invoice(s) require immediate settlement.</p>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-none shadow-strong rounded-3xl bg-white overflow-hidden group hover:scale-[1.02] transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                <FileText className="h-6 w-6" />
+              </div>
+              <Badge variant="outline" className="border-primary/20 text-primary font-bold">TOTAL BILLED</Badge>
+            </div>
+            <p className="text-2xl font-black text-slate-700">{formatCurrency(invoices.reduce((acc, inv) => acc + Number(inv.total_amount), 0))}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Gross Liability</p>
+          </CardContent>
+        </Card>
 
-      {/* Summary Matrix */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { title: "Institutional Fees", value: formatCurrency(summary.total_invoiced), icon: Receipt, color: "text-blue-600", bgColor: "bg-blue-500/10" },
-          { title: "Settled Amount", value: formatCurrency(summary.total_paid), icon: TrendingUp, color: "text-emerald-600", bgColor: "bg-emerald-500/10" },
-          { title: "Outstanding", value: formatCurrency(summary.total_outstanding), icon: Wallet, color: "text-orange-600", bgColor: "bg-orange-500/10" },
-          { title: "Liquidity Index", value: summary.total_invoiced > 0 ? `${Math.round((summary.total_paid / summary.total_invoiced) * 100)}%` : '100%', icon: PieChart, color: "text-violet-600", bgColor: "bg-violet-500/10" },
-        ].map((stat) => (
-          <Card key={stat.title} className="border-none shadow-strong rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 group hover:translate-y-[-4px] transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className={cn("p-2.5 rounded-2xl transition-transform group-hover:rotate-12", stat.bgColor)}>
-                  <stat.icon className={cn("h-5 w-5", stat.color)} />
-                </div>
-                <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+        <Card className="border-none shadow-strong rounded-3xl bg-white overflow-hidden group hover:scale-[1.02] transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <Check className="h-6 w-6" />
               </div>
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.title}</p>
-                <p className="text-2xl font-black text-slate-700 tracking-tight">{stat.value}</p>
+              <Badge variant="outline" className="border-emerald-200 text-emerald-600 font-bold">SETTLED</Badge>
+            </div>
+            <p className="text-2xl font-black text-slate-700">{formatCurrency(invoices.reduce((acc, inv) => acc + Number(inv.paid_amount), 0))}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Total Liquidated</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-strong rounded-3xl bg-white overflow-hidden group hover:scale-[1.02] transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                <TrendingUp className="h-6 w-6" />
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <Badge variant="outline" className="border-amber-200 text-amber-600 font-bold">EFFICIENCY</Badge>
+            </div>
+            <p className="text-2xl font-black text-slate-700">
+              {invoices.length > 0 ? Math.round((invoices.reduce((acc, inv) => acc + Number(inv.paid_amount), 0) / invoices.reduce((acc, inv) => acc + Number(inv.total_amount), 0)) * 100) : 100}%
+            </p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Payment Ratio</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-strong rounded-3xl bg-white overflow-hidden group hover:scale-[1.02] transition-all duration-300">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-2xl bg-violet-500/10 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                <Receipt className="h-6 w-6" />
+              </div>
+              <Badge variant="outline" className="border-violet-200 text-violet-600 font-bold">DOCUMENTS</Badge>
+            </div>
+            <p className="text-2xl font-black text-slate-700">{totalInvRows}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Invoices Issued</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Ledger */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
         <Tabs defaultValue="invoices" className="w-full">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <CardTitle className="text-xl font-black flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
-                Account Ledger
-              </CardTitle>
-              <TabsList className="flex flex-nowrap overflow-x-auto w-full bg-slate-200/50 p-1 rounded-2xl">
-                <TabsTrigger value="invoices" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-soft px-6">Invoices</TabsTrigger>
-                <TabsTrigger value="payments" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-soft px-6">Payments</TabsTrigger>
-              </TabsList>
-            </div>
+          <CardHeader className="border-b border-muted/20 bg-white/40 p-0">
+            <TabsList className="w-full h-16 bg-transparent rounded-none p-0 flex">
+              <TabsTrigger value="invoices" className="flex-1 h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-primary/5 font-black uppercase text-[10px] tracking-widest transition-all">
+                <FileText className="h-4 w-4 mr-2" /> Billing History
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="flex-1 h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-primary/5 font-black uppercase text-[10px] tracking-widest transition-all">
+                <CreditCard className="h-4 w-4 mr-2" /> Transaction Log
+              </TabsTrigger>
+            </TabsList>
           </CardHeader>
           <CardContent className="p-0">
             <TabsContent value="invoices" className="m-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/5">
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Document ID</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Billing Cycle</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Total Liability</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Outstanding</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Due Protocol</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Status</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">View</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoicesLoading ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent animate-spin mx-auto"/></TableCell></TableRow>
-                    ) : invoices.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground font-medium italic">No financial documents identified.</TableCell></TableRow>
-                    ) : (
-                      invoices.map((invoice) => (
-                        <TableRow key={invoice.id} className="group transition-all duration-300 hover:bg-card/60">
-                          <TableCell className="px-6 py-4 font-black text-slate-700 text-xs">#{invoice.invoice_number}</TableCell>
-                          <TableCell className="px-6 py-4 text-xs font-bold text-slate-500">{format(new Date(invoice.invoice_year, invoice.invoice_month - 1), "MMMM yyyy")}</TableCell>
-                          <TableCell className="px-6 py-4 font-black text-slate-700 text-xs">{formatCurrency(Number(invoice.total_amount))}</TableCell>
-                          <TableCell className="px-6 py-4">
-                            <span className={cn("font-black text-xs", Number(invoice.total_amount) - Number(invoice.paid_amount) > 0 ? "text-orange-600" : "text-emerald-600")}>
-                              {formatCurrency(Number(invoice.total_amount) - Number(invoice.paid_amount))}
-                            </span>
-                          </TableCell>
-                          <TableCell className="px-6 py-4 text-xs font-bold text-slate-500">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</TableCell>
-                          <TableCell className="px-6 py-4">
-                            <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter", getStatusStyles(invoice.status))}>
-                              {invoice.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-6 py-4 text-right">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleViewInvoice(invoice)}>
-                              <Eye className="h-4 w-4 text-primary" />
-                            </Button>
-                          </TableCell>
+              {invoicesLoading && !invoices.length ? (
+                <TableSkeleton columns={7} rows={invPageSize} />
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/5">
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Invoice #</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Billing Period</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Liability</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Outstanding</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Deadline</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Protocol</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Actions</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {invoices.length === 0 ? (
+                          <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground font-medium italic">No billing records identified.</TableCell></TableRow>
+                        ) : (
+                          invoices.map((invoice: any) => (
+                            <TableRow key={invoice.id} className="group transition-all duration-300 hover:bg-card/60">
+                              <TableCell className="px-6 py-4 font-black text-primary text-xs">#{invoice.invoice_number}</TableCell>
+                              <TableCell className="px-6 py-4 text-xs font-bold text-slate-500">{format(new Date(invoice.invoice_year, invoice.invoice_month - 1), "MMMM yyyy")}</TableCell>
+                              <TableCell className="px-6 py-4 font-black text-slate-700 text-xs">{formatCurrency(Number(invoice.total_amount))}</TableCell>
+                              <TableCell className="px-6 py-4">
+                                <span className={cn("font-black text-xs", Number(invoice.total_amount) - Number(invoice.paid_amount) > 0 ? "text-orange-600" : "text-emerald-600")}>
+                                  {formatCurrency(Number(invoice.total_amount) - Number(invoice.paid_amount))}
+                                </span>
+                              </TableCell>
+                              <TableCell className="px-6 py-4 text-xs font-bold text-slate-500">{format(new Date(invoice.due_date), "MMM dd, yyyy")}</TableCell>
+                              <TableCell className="px-6 py-4">
+                                <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter", getStatusStyles(invoice.status))}>
+                                  {invoice.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="px-6 py-4 text-right">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleViewInvoice(invoice)}>
+                                  <Eye className="h-4 w-4 text-primary" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <ServerPagination
+                    currentPage={invPage}
+                    totalPages={totalInvPages}
+                    totalRows={totalInvRows}
+                    pageSize={invPageSize}
+                    onPageChange={setInvPage}
+                    onPageSizeChange={setInvPageSize}
+                  />
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="payments" className="m-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/5">
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Transaction Date</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Settled Amount</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Payment Method</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Reference Protocol</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Verification</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paymentsLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-12"><div className="h-6 w-6 border-2 border-primary border-t-transparent animate-spin mx-auto"/></TableCell></TableRow>
-                    ) : payments.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground font-medium italic">No transaction history found.</TableCell></TableRow>
-                    ) : (
-                      payments.map((payment: any) => (
-                        <TableRow key={payment.id} className="group transition-all duration-300 hover:bg-card/60">
-                          <TableCell className="px-6 py-4 text-xs font-bold text-slate-700">{format(new Date(payment.payment_date), "MMM dd, yyyy")}</TableCell>
-                          <TableCell className="px-6 py-4 font-black text-emerald-600 text-sm">{formatCurrency(Number(payment.amount))}</TableCell>
-                          <TableCell className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <CreditCard className="h-3.5 w-3.5 text-primary" />
-                              <span className="font-black text-[10px] uppercase tracking-widest text-slate-500">{(payment.payment_method || 'cash').replace('_', ' ')}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-4 font-mono text-[10px] font-bold text-slate-400">{payment.reference_number || 'INTERNAL_LEDGER'}</TableCell>
-                          <TableCell className="px-6 py-4 text-right">
-                            <div className="inline-flex items-center gap-1 text-emerald-600 font-black text-[10px] uppercase tracking-tighter">
-                              <Check className="h-3 w-3" /> VERIFIED
-                            </div>
-                          </TableCell>
+              {paymentsLoading && !payments.length ? (
+                <TableSkeleton columns={5} rows={payPageSize} />
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/5">
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Transaction Date</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Settled Amount</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Payment Method</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Reference Protocol</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Verification</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {payments.length === 0 ? (
+                          <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground font-medium italic">No transaction history found.</TableCell></TableRow>
+                        ) : (
+                          payments.map((payment: any) => (
+                            <TableRow key={payment.id} className="group transition-all duration-300 hover:bg-card/60">
+                              <TableCell className="px-6 py-4 text-xs font-bold text-slate-700">{format(new Date(payment.payment_date), "MMM dd, yyyy")}</TableCell>
+                              <TableCell className="px-6 py-4 font-black text-emerald-600 text-sm">{formatCurrency(Number(payment.amount))}</TableCell>
+                              <TableCell className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  <CreditCard className="h-3.5 w-3.5 text-primary" />
+                                  <span className="font-black text-[10px] uppercase tracking-widest text-slate-500">{(payment.payment_method || 'cash').replace('_', ' ')}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-4 font-mono text-[10px] font-bold text-slate-400">{payment.reference_number || 'INTERNAL_LEDGER'}</TableCell>
+                              <TableCell className="px-6 py-4 text-right">
+                                <div className="inline-flex items-center gap-1 text-emerald-600 font-black text-[10px] uppercase tracking-tighter">
+                                  <Check className="h-3 w-3" /> VERIFIED
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <ServerPagination
+                    currentPage={payPage}
+                    totalPages={totalPayPages}
+                    totalRows={totalPayRows}
+                    pageSize={payPageSize}
+                    onPageChange={setPayPage}
+                    onPageSizeChange={setPayPageSize}
+                  />
+                </>
+              )}
             </TabsContent>
           </CardContent>
         </Tabs>

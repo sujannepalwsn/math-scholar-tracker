@@ -11,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -44,6 +47,7 @@ export default function PreschoolActivities() {
   const [video, setVideo] = useState<File | null>(null);
   const [involvementRating, setInvolvementRating] = useState<number | null>(null);
   const [modalGradeFilter, setModalGradeFilter] = useState<string>("all"); // New state for grade filter inside modal
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Fetch students
   const { data: students = [] } = useQuery({
@@ -94,35 +98,51 @@ export default function PreschoolActivities() {
     enabled: !!user?.center_id });
 
   // Fetch activities - now properly filtered by center and teacher
-  const { data: activities = [], isLoading } = useQuery({
-    queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id, isRestricted],
+  const { data: activitiesData, isLoading } = useQuery({
+    queryKey: ["preschool-activities", user?.center_id, gradeFilter, user?.id, isRestricted, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      // First get student IDs for this center
+      if (!user?.center_id) return { data: [], count: 0 };
+
+      // Get student IDs for this center to filter activities
       const { data: centerStudents } = await supabase
         .from("students")
         .select("id")
         .eq("center_id", user.center_id);
       
-      if (!centerStudents || centerStudents.length === 0) return [];
+      if (!centerStudents || centerStudents.length === 0) return { data: [], count: 0 };
       
       const studentIds = centerStudents.map(s => s.id);
       
       let query = supabase
         .from("student_activities")
-        .select("*, students(name, grade, center_id), activities!inner(*), activity_types(name)")
+        .select("*, students(name, grade, center_id), activities!inner(*), activity_types(name)", { count: "exact" })
         .in("student_id", studentIds);
 
       if (isRestricted) {
         query = query.eq('activities.created_by', user?.id);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      if (gradeFilter !== "all") {
+        query = query.eq("students.grade", gradeFilter);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      return data || [];
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const activities = activitiesData?.data || [];
+  const totalRows = activitiesData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const resetForm = () => {
     setSelectedStudentIds([]);
@@ -343,7 +363,7 @@ export default function PreschoolActivities() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+          <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[140px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
@@ -507,11 +527,9 @@ export default function PreschoolActivities() {
             Activity Stream
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-            </div>
+        <CardContent className="p-0">
+          {isLoading && !activities.length ? (
+            <TableSkeleton columns={5} rows={pageSize} />
           ) : activities.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <div className="mx-auto w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center">
@@ -598,6 +616,14 @@ export default function PreschoolActivities() {
               </Table>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

@@ -22,7 +22,7 @@ export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'NPR',
-    maximumFractionDigits: 0 }).format(amount);
+    maximumFractionDigits: 0 }).format(amount).replace('NPR', 'Rs.');
 };
 
 export const getGradeFormal = (pct: number) => {

@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
@@ -69,19 +72,18 @@ export default function ExamManagement() {
   });
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
-  const { data: exams = [], isLoading } = useQuery({
-    queryKey: ["exams", centerId, isRestricted, user?.teacher_id, user?.id],
+  const { data: examsData, isLoading } = useQuery({
+    queryKey: ["exams", centerId, isRestricted, user?.teacher_id, user?.id, page, pageSize],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId) return { data: [], count: 0 };
       let query = supabase
         .from("exams")
-        .select("*")
-        .eq("center_id", centerId)
-        .order("created_at", { ascending: false });
+        .select("*", { count: "exact" })
+        .eq("center_id", centerId);
 
       if (isRestricted) {
-        // Teacher restricted mode: only exams they created OR exams for their assigned grades
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
         const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
         const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
@@ -96,12 +98,23 @@ export default function ExamManagement() {
         query = query.or(conditions.join(','));
       }
 
-      const { data, error } = await query;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
+
+  const exams = examsData?.data || [];
+  const totalRows = examsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["exam-subjects", selectedExamId],
@@ -496,8 +509,16 @@ export default function ExamManagement() {
 
       {/* Exam List */}
       <div className="grid gap-6">
-        {isLoading ? (
-          <Card className="border-none shadow-strong bg-card/40 backdrop-blur-md rounded-3xl"><CardContent className="p-12 text-center text-muted-foreground font-medium italic">Synchronizing exam registry...</CardContent></Card>
+        {isLoading && !exams.length ? (
+          <Card className="border-none shadow-strong bg-card/40 backdrop-blur-md rounded-3xl">
+            <CardContent className="p-12">
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-24 w-full rounded-2xl bg-slate-200/50 animate-pulse" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         ) : exams.length === 0 ? (
           <Card className="border-none shadow-strong bg-card/40 backdrop-blur-md rounded-3xl"><CardContent className="p-12 text-center text-muted-foreground font-medium italic">No examinations identified in the current session.</CardContent></Card>
         ) : (
@@ -589,6 +610,14 @@ export default function ExamManagement() {
             </Card>
           ))
         )}
+        <ServerPagination
+          currentPage={page}
+          totalPages={totalPages}
+          totalRows={totalRows}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </div>
         </TabsContent>
         <TabsContent value="settings" className="outline-none">

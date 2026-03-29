@@ -8,6 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Package, Plus, Trash2, Search, Filter, MinusCircle, Info, Printer, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +22,9 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
   const [showDistribute, setShowDistribute] = useState<string | null>(null);
   const [distForm, setDistForm] = useState({ amount: "1", recipientType: "student", recipientId: "", notes: "" });
   const [form, setForm] = useState({ name: "", category: "Stationery", unit: "Packs", stock: "0", min: "5", price: "0" });
+
+  const { page: inventoryPage, setPage: setInventoryPage, pageSize: inventoryPageSize, setPageSize: setInventoryPageSize } = usePagination();
+  const { page: logsPage, setPage: setLogsPage, pageSize: logsPageSize, setPageSize: setLogsPageSize } = usePagination();
 
   const { data: students } = useQuery({
     queryKey: ["active-students-inventory", centerId],
@@ -38,28 +44,59 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
     },
   });
 
-  const { data: consumables, isLoading } = useQuery({
-    queryKey: ["consumables", centerId],
+  const { data: consumablesData, isLoading } = useQuery({
+    queryKey: ["consumables", centerId, inventoryPage, inventoryPageSize, search],
     queryFn: async () => {
-      const { data, error } = await supabase.from("consumables").select("*").eq("center_id", centerId);
+      let query = supabase
+        .from("consumables")
+        .select("*", { count: "exact" })
+        .eq("center_id", centerId);
+
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,category.ilike.%${search}%`);
+      }
+
+      const from = (inventoryPage - 1) * inventoryPageSize;
+      const to = from + inventoryPageSize - 1;
+
+      const { data, error, count } = await query
+        .order("name")
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
 
-  const { data: logs, isLoading: logsLoading } = useQuery({
-    queryKey: ["consumable-logs", centerId],
+  const consumables = consumablesData?.data || [];
+  const inventoryTotalRows = consumablesData?.count || 0;
+  const inventoryTotalPages = Math.ceil(inventoryTotalRows / inventoryPageSize);
+
+  const { data: logsData, isLoading: logsLoading } = useQuery({
+    queryKey: ["consumable-logs", centerId, logsPage, logsPageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (logsPage - 1) * logsPageSize;
+      const to = from + logsPageSize - 1;
+
+      const { data, error, count } = await supabase
         .from("consumable_logs")
-        .select("*, students(name, grade), teachers(name), consumables(name)")
-        .order("created_at", { ascending: false });
+        .select("*, students(name, grade), teachers(name), consumables(name)", { count: "exact" })
+        .eq("center_id", centerId)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
+
+  const logs = logsData?.data || [];
+  const logsTotalRows = logsData?.count || 0;
+  const logsTotalPages = Math.ceil(logsTotalRows / logsPageSize);
 
   const distributeMutation = useMutation({
     mutationFn: async () => {
@@ -262,7 +299,7 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
                     placeholder="Search consumables..."
                     className="pl-10 rounded-xl"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   />
                 </div>
                 {canEdit && (
@@ -316,33 +353,47 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? (
-                        <TableRow><TableCell colSpan={selectedItem ? 3 : 4} className="text-center py-12">Loading...</TableCell></TableRow>
-                      ) : filtered?.map((c: any) => (
-                        <TableRow
-                          key={c.id}
-                          className={cn(
-                            "group/row cursor-pointer transition-all",
-                            selectedItem?.id === c.id ? "bg-primary/5" : "hover:bg-primary/5"
-                          )}
-                          onClick={() => setSelectedItem(c)}
-                        >
-                          <TableCell className="px-6 py-4 font-black text-slate-700">{c.name}</TableCell>
-                          <TableCell>
-                            <Badge variant={c.current_stock <= c.min_stock_level ? "destructive" : "pulse"}>
-                              {c.current_stock} {c.unit}
-                            </Badge>
-                          </TableCell>
-                          {!selectedItem && <TableCell><Badge variant="secondary" className="text-[9px] uppercase font-black">{c.category}</Badge></TableCell>}
-                          <TableCell className="text-right px-6">
-                             <Button variant="ghost" size="icon" className="opacity-0 group-hover/row:opacity-100 transition-all"><Info className="h-4 w-4" /></Button>
+                      {isLoading && !consumables.length ? (
+                        <TableRow>
+                          <TableCell colSpan={selectedItem ? 3 : 4} className="p-0">
+                            <TableSkeleton columns={selectedItem ? 3 : 4} rows={inventoryPageSize} />
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        consumables.map((c: any) => (
+                          <TableRow
+                            key={c.id}
+                            className={cn(
+                              "group/row cursor-pointer transition-all",
+                              selectedItem?.id === c.id ? "bg-primary/5" : "hover:bg-primary/5"
+                            )}
+                            onClick={() => setSelectedItem(c)}
+                          >
+                            <TableCell className="px-6 py-4 font-black text-slate-700">{c.name}</TableCell>
+                            <TableCell>
+                              <Badge variant={c.current_stock <= c.min_stock_level ? "destructive" : "pulse"}>
+                                {c.current_stock} {c.unit}
+                              </Badge>
+                            </TableCell>
+                            {!selectedItem && <TableCell><Badge variant="secondary" className="text-[9px] uppercase font-black">{c.category}</Badge></TableCell>}
+                            <TableCell className="text-right px-6">
+                               <Button variant="ghost" size="icon" className="opacity-0 group-hover/row:opacity-100 transition-all"><Info className="h-4 w-4" /></Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
               </div>
+              <ServerPagination
+                currentPage={inventoryPage}
+                totalPages={inventoryTotalPages}
+                totalRows={inventoryTotalRows}
+                pageSize={inventoryPageSize}
+                onPageChange={setInventoryPage}
+                onPageSizeChange={setInventoryPageSize}
+              />
             </div>
 
             {selectedItem && (
@@ -372,7 +423,7 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
                       </div>
                       <div className="space-y-1">
                         <p className="label-caps">Unit Price</p>
-                        <p className="text-2xl font-black text-slate-700">₹{selectedItem.unit_price}</p>
+                        <p className="text-2xl font-black text-slate-700">Rs. {selectedItem.unit_price}</p>
                       </div>
                     </div>
 
@@ -464,39 +515,53 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logsLoading ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-xs">Loading logs...</TableCell></TableRow>
-                ) : logs?.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-400 italic text-xs">No distribution records discovered.</TableCell></TableRow>
-                ) : logs?.map((log: any) => (
-                  <TableRow key={log.id}>
-                    <TableCell className="px-6 py-4 text-xs font-medium text-slate-500">{new Date(log.created_at).toLocaleString()}</TableCell>
-                    <TableCell className="font-bold">{log.consumables?.name}</TableCell>
-                    <TableCell>
-                      {log.students ? (
-                        <div className="flex flex-col">
-                          <span className="font-bold text-indigo-600 text-xs">{log.students.name}</span>
-                          <span className="text-[8px] uppercase font-black text-slate-400">Student (Grade {log.students.grade})</span>
-                        </div>
-                      ) : log.teachers ? (
-                        <div className="flex flex-col">
-                          <span className="font-bold text-emerald-600 text-xs">{log.teachers.name}</span>
-                          <span className="text-[8px] uppercase font-black text-slate-400">Teacher</span>
-                        </div>
-                      ) : <span className="text-slate-400 italic text-xs">Internal / Disposal</span>}
-                    </TableCell>
-                    <TableCell className="font-black text-xs">{log.quantity}</TableCell>
-                    <TableCell className="text-right px-6">
-                      <Badge variant="outline" className="text-[9px] uppercase font-black border-slate-200">
-                        {log.action_type}
-                      </Badge>
+                {logsLoading && !logs.length ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <TableSkeleton columns={5} rows={logsPageSize} />
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : logs?.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-400 italic text-xs">No distribution records discovered.</TableCell></TableRow>
+                ) : (
+                  logs.map((log: any) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="px-6 py-4 text-xs font-medium text-slate-500">{new Date(log.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="font-bold">{log.consumables?.name}</TableCell>
+                      <TableCell>
+                        {log.students ? (
+                          <div className="flex flex-col">
+                            <span className="font-bold text-indigo-600 text-xs">{log.students.name}</span>
+                            <span className="text-[8px] uppercase font-black text-slate-400">Student (Grade {log.students.grade})</span>
+                          </div>
+                        ) : log.teachers ? (
+                          <div className="flex flex-col">
+                            <span className="font-bold text-emerald-600 text-xs">{log.teachers.name}</span>
+                            <span className="text-[8px] uppercase font-black text-slate-400">Teacher</span>
+                          </div>
+                        ) : <span className="text-slate-400 italic text-xs">Internal / Disposal</span>}
+                      </TableCell>
+                      <TableCell className="font-black text-xs">{log.quantity}</TableCell>
+                      <TableCell className="text-right px-6">
+                        <Badge variant="outline" className="text-[9px] uppercase font-black border-slate-200">
+                          {log.action_type}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
 </div>
           </div>
+          <ServerPagination
+            currentPage={logsPage}
+            totalPages={logsTotalPages}
+            totalRows={logsTotalRows}
+            pageSize={logsPageSize}
+            onPageChange={setLogsPage}
+            onPageSizeChange={setLogsPageSize}
+          />
         </TabsContent>
       </Tabs>
     </div>

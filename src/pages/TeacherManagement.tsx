@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
@@ -97,28 +100,44 @@ export default function TeacherManagement() {
   const [classTeacherGrade, setClassTeacherGrade] = useState("select-grade");
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
-  const { data: teachers = [], isLoading } = useQuery({
-    queryKey: ["teachers", user?.center_id, isRestricted, user?.teacher_id],
+  const { data: teachersData, isLoading } = useQuery({
+    queryKey: ["teachers", user?.center_id, isRestricted, user?.teacher_id, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id) return { data: [], count: 0 };
       let query = supabase
         .from("teachers")
-        .select("*, users!teachers_user_id_fkey(id, username, is_active)")
+        .select("*, users!teachers_user_id_fkey(id, username, is_active)", { count: "exact" })
         .eq("center_id", user.center_id);
 
       if (isRestricted) {
         query = query.eq('id', user?.teacher_id);
       }
 
-      const { data, error } = await query.order("name");
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("name")
+        .range(from, to);
+
       if (error) {
         console.error("Error fetching teachers:", error);
         throw error;
       }
-      return data || [];
+      return {
+        data: data || [],
+        count: count || 0
+      };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const teachers = teachersData?.data || [];
+  const totalRows = teachersData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // Fetch students for unique grades
   const { data: students = [] } = useQuery({
@@ -571,7 +590,7 @@ export default function TeacherManagement() {
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Monthly Payroll</span>
-              <span className="font-black text-slate-700 text-sm">₹{totalMonthlySalary.toLocaleString()}</span>
+              <span className="font-black text-slate-700 text-sm">Rs. {totalMonthlySalary.toLocaleString()}</span>
             </div>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
@@ -774,7 +793,7 @@ export default function TeacherManagement() {
                                 <TableCell className="font-bold">{entry.name}</TableCell>
                                 <TableCell>{entry.email}</TableCell>
                                 <TableCell>{entry.contactNumber}</TableCell>
-                                <TableCell>₹{entry.monthlySalary}</TableCell>
+                                <TableCell>Rs. {entry.monthlySalary}</TableCell>
                                 <TableCell>{entry.regularInTime}-{entry.regularOutTime}</TableCell>
                               </TableRow>
                             ))}
@@ -810,10 +829,8 @@ export default function TeacherManagement() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex justify-center py-12">
-                  <div className="h-8 w-8 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-                </div>
+              {isLoading && !teachers.length ? (
+                <TableSkeleton columns={selectedTeacher ? 3 : 5} rows={pageSize} />
               ) : teachers.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground font-medium italic">No active faculty profiles identified.</p>
@@ -852,7 +869,7 @@ export default function TeacherManagement() {
                             )}
                             {!selectedTeacher && (
                               <TableCell className="hidden sm:table-cell px-6 py-4">
-                                <span className="font-black text-slate-600 text-xs">{teacher.monthly_salary ? `₹${teacher.monthly_salary.toLocaleString()}` : '-'}</span>
+                                <span className="font-black text-slate-600 text-xs">{teacher.monthly_salary ? `Rs. ${teacher.monthly_salary.toLocaleString()}` : '-'}</span>
                               </TableCell>
                             )}
                             <TableCell className="px-6 py-4">
@@ -893,6 +910,14 @@ export default function TeacherManagement() {
                   </Table>
                 </div>
               )}
+              <ServerPagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalRows={totalRows}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
             </CardContent>
           </Card>
         </div>
@@ -929,7 +954,7 @@ export default function TeacherManagement() {
                    </div>
                    <div className="space-y-1">
                       <p className="label-caps">Monthly Salary</p>
-                      <p className="font-black text-slate-700">₹{selectedTeacher.monthly_salary?.toLocaleString() || '0'}</p>
+                      <p className="font-black text-slate-700">Rs. {selectedTeacher.monthly_salary?.toLocaleString() || '0'}</p>
                    </div>
                    <div className="space-y-1">
                       <p className="label-caps">Hire Date</p>

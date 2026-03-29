@@ -96,7 +96,7 @@ export default function SubscriptionPlans() {
                     {p.name}
                   </Badge>
                   <div className="flex items-baseline gap-1 mt-2">
-                    <span className="text-4xl font-black tracking-tighter">₹{p.price}</span>
+                    <span className="text-4xl font-black tracking-tighter">Rs. {p.price}</span>
                     <span className="text-sm font-bold text-slate-400">/mo</span>
                   </div>
                 </div>

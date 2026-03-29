@@ -11,6 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn, getGradeFormal } from "@/lib/utils";
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export default function MarksheetView() {
   const { user } = useAuth();
@@ -20,6 +23,7 @@ export default function MarksheetView() {
   const [selectedExamId, setSelectedExamId] = useState<string>("");
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const { page, pageSize, setPage, setPageSize } = usePagination(24); // Multiple of 2 and 3 for grid
 
   const { data: center } = useQuery({
     queryKey: ["center-info", centerId],
@@ -67,21 +71,33 @@ export default function MarksheetView() {
 
   const selectedExam = exams.find((e: any) => e.id === selectedExamId);
 
-  const { data: students = [] } = useQuery({
-    queryKey: ["students-marksheet", centerId, selectedExam?.grade],
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
+    queryKey: ["students-marksheet", centerId, selectedExam?.grade, searchQuery, page, pageSize],
     queryFn: async () => {
-      if (!centerId || !selectedExam?.grade) return [];
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", centerId).eq("grade", selectedExam.grade).eq("is_active", true).order("name");
+      if (!centerId || !selectedExam?.grade) return { data: [], count: 0 };
+      let query = supabase.from("students")
+        .select("*", { count: 'exact' })
+        .eq("center_id", centerId)
+        .eq("grade", selectedExam.grade)
+        .eq("is_active", true);
+
+      if (searchQuery) {
+        query = query.ilike('name', `%${searchQuery}%`);
+      }
+
+      const { data, error, count } = await query
+        .order("name")
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!centerId && !!selectedExam?.grade,
   });
 
-  const filteredStudents = students.filter((s: any) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.roll_number || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["marksheet-subjects", selectedExamId],
@@ -104,49 +120,47 @@ export default function MarksheetView() {
   });
 
   const { data: marks = [] } = useQuery({
-    queryKey: ["marksheet-marks", selectedExamId],
+    queryKey: ["marks-all-marksheet", selectedExamId, selectedStudentId],
     queryFn: async () => {
-      if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId);
+      if (!selectedExamId || !selectedStudentId) return [];
+      const { data, error } = await supabase.from("student_marks").select("*").eq("exam_id", selectedExamId).eq("student_id", selectedStudentId);
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedExamId,
+    enabled: !!selectedExamId && !!selectedStudentId,
   });
 
   const marksheetData = useMemo(() => {
-    const student = students.find((s: any) => s.id === selectedStudentId);
-    if (!student || !subjects.length) return null;
+    if (!selectedStudentId || !selectedExamId || marks.length === 0) return null;
 
-    const studentMarks = marks.filter((m: any) => m.student_id === selectedStudentId);
-    if (!studentMarks.length) return null;
+    const student = students.find((s: any) => s.id === selectedStudentId);
+    if (!student) return null;
 
     let totalObtained = 0;
     let totalFull = 0;
     let allPassed = true;
 
     const subjectResults = subjects.map((subj: any) => {
-      const mark = studentMarks.find((m: any) => m.exam_subject_id === subj.id);
+      const mark = marks.find((m: any) => m.subject_id === subj.id);
       const obtained = mark?.marks_obtained || 0;
-      totalObtained += obtained;
-      totalFull += subj.full_marks;
       const passed = obtained >= subj.pass_marks;
       if (!passed) allPassed = false;
-      return { ...subj, obtained, passed };
+
+      totalObtained += obtained;
+      totalFull += subj.full_marks;
+
+      return {
+        ...subj,
+        obtained,
+        passed,
+      };
     });
 
     const percentage = totalFull > 0 ? (totalObtained / totalFull) * 100 : 0;
 
-    // Rank calculation
-    const allStudentScores = students.map(s => {
-      const sMarks = marks.filter((m: any) => m.student_id === s.id);
-      const total = sMarks.reduce((acc, m) => acc + (m.marks_obtained || 0), 0);
-      return { id: s.id, total };
-    }).sort((a, b) => b.total - a.total);
+    // Rank calculation (mock for now, would need all students' marks)
+    const rank = "N/A";
 
-    const rank = allStudentScores.findIndex(s => s.id === selectedStudentId) + 1;
-
-    // Use dynamic grading system if available
     const gradingSystem = gradingSystems?.find((gs: any) => gs.id === selectedExam?.grading_system_id);
     let calculatedGrade = getGradeFormal(percentage);
     let calculatedGPA = "0.0";
@@ -221,7 +235,7 @@ export default function MarksheetView() {
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Examination Context</label>
-              <Select value={selectedExamId} onValueChange={(v) => { setSelectedExamId(v); setSelectedStudentId(""); }}>
+              <Select value={selectedExamId} onValueChange={(v) => { setSelectedExamId(v); setSelectedStudentId(""); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Select an exam" />
                 </SelectTrigger>
@@ -245,7 +259,7 @@ export default function MarksheetView() {
                     placeholder="Search by name or roll number..."
                     className="pl-9 h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                   />
                 </div>
               </div>
@@ -255,26 +269,44 @@ export default function MarksheetView() {
       </div>
 
       {selectedExamId && !selectedStudentId && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((s: any) => (
-            <Card
-              key={s.id}
-              className="border-none shadow-medium bg-card/40 backdrop-blur-md rounded-3xl cursor-pointer hover:shadow-strong hover:scale-[1.02] transition-all duration-300 border border-white/20 group"
-              onClick={() => setSelectedStudentId(s.id)}
-            >
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300">
-                  <Search className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-black text-slate-700 leading-none">{s.name}</p>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1.5">Roll: {s.roll_number || "-"} • Grade {s.grade}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filteredStudents.length === 0 && (
-            <div className="col-span-full py-12 text-center text-muted-foreground font-medium italic">No scholars identified matching your criteria.</div>
+        <div className="space-y-8">
+          {studentsLoading && !students.length ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-24 bg-muted/20 animate-pulse rounded-3xl" />)}
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {students.map((s: any) => (
+                  <Card
+                    key={s.id}
+                    className="border-none shadow-medium bg-card/40 backdrop-blur-md rounded-3xl cursor-pointer hover:shadow-strong hover:scale-[1.02] transition-all duration-300 border border-white/20 group"
+                    onClick={() => setSelectedStudentId(s.id)}
+                  >
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                        <Search className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-700 leading-none">{s.name}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1.5">Roll: {s.roll_number || "-"} • Grade {s.grade}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {students.length === 0 && (
+                  <div className="col-span-full py-12 text-center text-muted-foreground font-medium italic">No scholars identified matching your criteria.</div>
+                )}
+              </div>
+              <ServerPagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalRows={totalRows}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </>
           )}
         </div>
       )}

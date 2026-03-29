@@ -24,6 +24,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge"
 import LinkChildToParent from "@/components/center/LinkChildToParent";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -96,12 +99,31 @@ export default function RegisterStudent() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
-  // Fetch students
-  const { data: students, isLoading } = useQuery({
-    queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id],
+  // Fetch unique grades for filtering
+  const { data: uniqueGrades = [] } = useQuery({
+    queryKey: ["unique-grades", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("students")
+        .select("grade")
+        .eq("center_id", user?.center_id || "");
+      if (error) throw error;
+      return Array.from(new Set(data.map(s => s.grade))).sort();
+    },
+    enabled: !!user?.center_id
+  });
+
+  // Fetch students with pagination and server-side filtering
+  const { data: studentsData, isLoading } = useQuery({
+    queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id, page, pageSize, gradeFilter, searchFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("students")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false });
+
       if (user?.role !== "admin" && user?.center_id) {
         query = query.eq("center_id", user.center_id);
       }
@@ -114,25 +136,36 @@ export default function RegisterStudent() {
         if (myGrades.length > 0) {
           query = query.in('grade', myGrades);
         } else {
-          return [];
+          return { data: [], count: 0 };
         }
       }
 
-      const { data, error } = await query;
+      // Server-side filtering
+      if (gradeFilter !== "all") {
+        query = query.eq("grade", gradeFilter);
+      }
+
+      if (searchFilter) {
+        query = query.or(`name.ilike.%${searchFilter}%,parent_name.ilike.%${searchFilter}%,contact_number.ilike.%${searchFilter}%`);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query.range(from, to);
       if (error) throw error;
-      return data as Student[];
-    } });
 
-  // Filter students based on grade and search
-  const filteredStudents = students?.filter(s => 
-    (gradeFilter === "all" || s.grade === gradeFilter) &&
-    (searchFilter === "" || 
-      s.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      s.parent_name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      s.contact_number.includes(searchFilter))
-  );
+      return {
+        data: data as Student[],
+        count: count || 0
+      };
+    },
+    placeholderData: (previousData) => previousData
+  });
 
-  const uniqueGrades = Array.from(new Set(students?.map(s => s.grade) || [])).sort();
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const handlePhotoChange = (file: File | null) => {
     setPhotoFile(file);
@@ -913,7 +946,7 @@ export default function RegisterStudent() {
             </div>
             <div className="flex flex-wrap gap-4 items-center">
               <div className="flex items-center gap-2 bg-card/60 p-1.5 rounded-2xl border border-border/40 shadow-soft">
-                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                  <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
                     <SelectTrigger className="w-[140px] h-10 border-none bg-transparent shadow-none font-black text-[10px] uppercase tracking-widest focus:ring-0">
                       <SelectValue placeholder="Grade" />
                     </SelectTrigger>
@@ -929,7 +962,7 @@ export default function RegisterStudent() {
                     <Input
                       placeholder="SYNCHRONIZED SEARCH..."
                       value={searchFilter}
-                      onChange={(e) => setSearchFilter(e.target.value)}
+                      onChange={(e) => { setSearchFilter(e.target.value); setPage(1); }}
                       className="w-[220px] h-10 border-none bg-transparent shadow-none font-black text-[10px] uppercase tracking-widest focus-visible:ring-0 pl-8"
                     />
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
@@ -939,89 +972,97 @@ export default function RegisterStudent() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/5 border-b border-slate-100">
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Student Identity</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academic Level</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academy</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Guardian</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Telecom Link</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4 text-right">Operations</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-20"><div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell>
+          {isLoading && !students.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/5 border-b border-slate-100">
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Student Identity</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academic Level</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academy</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Guardian</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Telecom Link</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4 text-right">Operations</TableHead>
                   </TableRow>
-                ) : filteredStudents && filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="group transition-all duration-300 hover:bg-card/60">
-                      <TableCell className="px-8 py-5">
-                        <div className="flex items-center gap-3">
-                           <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-primary/10 transition-colors overflow-hidden">
-                              {(student as any).photo_url ? (
-                                <img src={(student as any).photo_url.startsWith('http') ? (student as any).photo_url : supabase.storage.from('activity-photos').getPublicUrl((student as any).photo_url).data.publicUrl} alt="" className="h-8 w-8 object-cover" />
-                              ) : (
-                                <UserIcon className="h-4 w-4 text-slate-400 group-hover:text-primary" />
-                              )}
-                           </div>
-                           <p className="font-black text-slate-700 text-sm group-hover:text-primary transition-colors leading-none">{student.name}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <div className="space-y-1">
-                           <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[10px] font-black uppercase tracking-tighter">Grade {student.grade}</Badge>
-                           {(student as any).roll_number && <span className="ml-2 text-[10px] font-bold text-slate-400">Roll: {(student as any).roll_number}</span>}
-                           {(student as any).blood_group && <p className="text-[9px] font-bold text-rose-500">{(student as any).blood_group}</p>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-slate-500">{student.school_name}</p>
-                          {(student as any).address && <p className="text-[10px] text-slate-400 truncate max-w-[100px]">{(student as any).address}</p>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <p className="text-xs font-black text-slate-600 uppercase tracking-tight">{student.parent_name}</p>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <p className="text-xs font-black text-primary">{student.contact_number}</p>
-                      </TableCell>
-                      <TableCell className="px-8 py-5 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {hasFullAccess && (
-                            <>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleEdit(student)}>
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleCreateParentAccount(student)}>
-                                <UserPlus className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-xl bg-white shadow-soft text-rose-500 hover:bg-rose-50"
-                                onClick={() => setStudentToDelete(student)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+                </TableHeader>
+                <TableBody>
+                  {students && students.length > 0 ? (
+                    students.map((student) => (
+                      <TableRow key={student.id} className="group transition-all duration-300 hover:bg-card/60">
+                        <TableCell className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                             <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-primary/10 transition-colors overflow-hidden">
+                                {(student as any).photo_url ? (
+                                  <img src={(student as any).photo_url.startsWith('http') ? (student as any).photo_url : supabase.storage.from('activity-photos').getPublicUrl((student as any).photo_url).data.publicUrl} alt="" className="h-8 w-8 object-cover" />
+                                ) : (
+                                  <UserIcon className="h-4 w-4 text-slate-400 group-hover:text-primary" />
+                                )}
+                             </div>
+                             <p className="font-black text-slate-700 text-sm group-hover:text-primary transition-colors leading-none">{student.name}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <div className="space-y-1">
+                             <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[10px] font-black uppercase tracking-tighter">Grade {student.grade}</Badge>
+                             {(student as any).roll_number && <span className="ml-2 text-[10px] font-bold text-slate-400">Roll: {(student as any).roll_number}</span>}
+                             {(student as any).blood_group && <p className="text-[9px] font-bold text-rose-500">{(student as any).blood_group}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-500">{student.school_name}</p>
+                            {(student as any).address && <p className="text-[10px] text-slate-400 truncate max-w-[100px]">{(student as any).address}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <p className="text-xs font-black text-slate-600 uppercase tracking-tight">{student.parent_name}</p>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <p className="text-xs font-black text-primary">{student.contact_number}</p>
+                        </TableCell>
+                        <TableCell className="px-8 py-5 text-right">
+                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {hasFullAccess && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleEdit(student)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleCreateParentAccount(student)}>
+                                  <UserPlus className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-xl bg-white shadow-soft text-rose-500 hover:bg-rose-50"
+                                  onClick={() => setStudentToDelete(student)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-20 italic text-slate-400 font-medium">No enrolment records discovered for the current parameters.</TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-20 italic text-slate-400 font-medium">No enrolment records discovered for the current parameters.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

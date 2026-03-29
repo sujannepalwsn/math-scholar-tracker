@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 
@@ -26,20 +29,32 @@ const ExpenseManagement = ({ canEdit }: { canEdit?: boolean }) => {
     vendor: ''
   });
 
-  const { data: expenses = [], isLoading: expensesLoading } = useQuery({
-    queryKey: ['expenses', user?.center_id],
+  const { page, setPage, pageSize, setPageSize } = usePagination();
+
+  const { data: expensesData, isLoading: expensesLoading } = useQuery({
+    queryKey: ['expenses', user?.center_id, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!user?.center_id) return { data: [], count: 0 };
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from('expenses')
-        .select('*')
-        .eq('center_id', user?.center_id!)
-        .order('expense_date', { ascending: false });
+        .select('*', { count: "exact" })
+        .eq('center_id', user.center_id)
+        .order('expense_date', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
   });
+
+  const expenses = expensesData?.data || [];
+  const totalRows = expensesData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const createExpenseMutation = useMutation({
     mutationFn: async () => {
@@ -128,7 +143,7 @@ const ExpenseManagement = ({ canEdit }: { canEdit?: boolean }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Amount (₹) *</Label>
+                    <Label htmlFor="amount">Amount (Rs.) *</Label>
                     <Input
                       id="amount"
                       type="number"
@@ -160,41 +175,49 @@ const ExpenseManagement = ({ canEdit }: { canEdit?: boolean }) => {
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          {expensesLoading ? (
-            <p>Loading expenses...</p>
+        <CardContent className="p-0">
+          {expensesLoading && !expenses.length ? (
+            <TableSkeleton columns={5} rows={pageSize} />
           ) : expenses.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No expenses recorded yet</p>
           ) : (
             <div className="overflow-x-auto">
-  <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Vendor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="font-medium">{expense.description}</TableCell>
-                    <TableCell>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(expense.category)}`}>
-                        {expense.category}
-                      </span>
-                    </TableCell>
-                    <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                    <TableCell>{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{expense.vendor || '-'}</TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-6 py-4">Description</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="pr-6">Vendor</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-</div>
+                </TableHeader>
+                <TableBody>
+                  {expenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                      <TableCell className="font-medium px-6 py-4">{expense.description}</TableCell>
+                      <TableCell>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(expense.category)}`}>
+                          {expense.category}
+                        </span>
+                      </TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                      <TableCell>{new Date(expense.expense_date).toLocaleDateString()}</TableCell>
+                      <TableCell className="pr-6">{expense.vendor || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
     </div>

@@ -9,6 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Package, Plus, Trash2, Search, MapPin, User, Settings, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -17,13 +20,45 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
   const [search, setSearch] = useState("");
   const [showAddAsset, setShowAddAsset] = useState(false);
   const [assetForm, setAssetForm] = useState({ name: "", category: "", location: "", condition: "Good", serial_number: "", purchase_price: "", purchase_date: "", warranty_expiry: "" });
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
-  const { data: assets, isLoading } = useQuery({
-    queryKey: ["school-assets", centerId],
+  const { data: assetsData, isLoading } = useQuery({
+    queryKey: ["school-assets", centerId, page, pageSize, search],
     queryFn: async () => {
-      const { data, error } = await supabase.from("assets").select("*").eq("center_id", centerId);
+      let query = supabase
+        .from("assets")
+        .select("*", { count: "exact" })
+        .eq("center_id", centerId);
+
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,category.ilike.%${search}%,asset_tag.ilike.%${search}%`);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
+    },
+    enabled: !!centerId,
+    placeholderData: (previousData) => previousData
+  });
+
+  const assets = assetsData?.data || [];
+  const totalRows = assetsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
+
+  // Still need total valuation for the stats card
+  const { data: totalValuationData } = useQuery({
+    queryKey: ["school-assets-valuation", centerId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("assets").select("purchase_price").eq("center_id", centerId);
+      if (error) throw error;
+      return data.reduce((acc, curr) => acc + (curr.purchase_price || 0), 0);
     },
     enabled: !!centerId,
   });
@@ -56,9 +91,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
     }
   });
 
-  const filteredAssets = assets?.filter(a => a.name.toLowerCase().includes(search.toLowerCase()) || a.category?.toLowerCase().includes(search.toLowerCase()));
-
-  const totalValuation = assets?.reduce((acc, curr) => acc + (curr.purchase_price || 0), 0) || 0;
+  const totalValuation = totalValuationData || 0;
 
   const updateAssetStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: string }) => {
@@ -85,11 +118,11 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="rounded-3xl border-none shadow-soft bg-blue-50 p-6">
            <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest mb-1">Total Assets</p>
-           <p className="text-3xl font-black text-blue-700">{assets?.length || 0}</p>
+           <p className="text-3xl font-black text-blue-700">{totalRows}</p>
         </Card>
         <Card className="rounded-3xl border-none shadow-soft bg-emerald-50 p-6">
            <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-1">Registry Valuation</p>
-           <p className="text-3xl font-black text-emerald-700">₹{totalValuation.toLocaleString()}</p>
+           <p className="text-3xl font-black text-emerald-700">Rs. {totalValuation.toLocaleString()}</p>
         </Card>
         <Card className="rounded-3xl border-none shadow-soft bg-amber-50 p-6">
            <p className="text-[10px] font-black uppercase text-amber-600 tracking-widest mb-1">Avg. Condition</p>
@@ -104,7 +137,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
             placeholder="Search assets (e.g. Projector, Lab Equipment)..."
             className="pl-10 rounded-xl"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
         {canEdit && (
@@ -142,7 +175,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
                 <Input type="date" value={assetForm.purchase_date} onChange={e => setAssetForm({...assetForm, purchase_date: e.target.value})} className="h-10 rounded-lg bg-white" />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Cost (₹)</Label>
+                <Label className="text-[10px] font-black uppercase text-slate-400">Cost (Rs.)</Label>
                 <Input type="number" value={assetForm.purchase_price} onChange={e => setAssetForm({...assetForm, purchase_price: e.target.value})} className="h-10 rounded-lg bg-white" placeholder="0.00" />
               </div>
               <div className="space-y-1">
@@ -176,62 +209,76 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={selectedAsset ? 3 : 5} className="text-center py-12">Loading inventory...</TableCell></TableRow>
-            ) : filteredAssets?.map((a: any) => (
-              <TableRow
-                key={a.id}
-                className={cn(
-                  "group/row cursor-pointer transition-all",
-                  selectedAsset?.id === a.id ? "bg-primary/5" : "hover:bg-primary/5"
-                )}
-                onClick={() => setSelectedAsset(a)}
-              >
-                <TableCell className="px-6 py-4">
-                  <div className="flex flex-col">
-                    <span className="font-black text-slate-700 leading-tight">{a.name}</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{a.category || "UNCATEGORIZED"}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                    <Badge variant={a.status === 'Active' ? 'pulse' : 'destructive'}>
-                        {a.status}
-                    </Badge>
-                </TableCell>
-                {!selectedAsset && (
-                  <>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                          <Badge variant="secondary" className="w-fit text-[9px] font-black tracking-widest bg-indigo-50 text-indigo-700 border-none">
-                            TAG: {a.asset_tag || "N/A"}
-                          </Badge>
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                            <MapPin className="h-3 w-3" /> {a.location || "UNASSIGNED"}
-                          </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                          <span className="text-xs font-black text-slate-600">₹{a.purchase_price || "0.00"}</span>
-                          <span className="text-[9px] font-medium text-slate-400 uppercase">{a.purchase_date ? new Date(a.purchase_date).toLocaleDateString() : "DATE UNSET"}</span>
-                      </div>
-                    </TableCell>
-                  </>
-                )}
-                <TableCell className="text-right px-6">
-                   <div className="flex justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-all">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft"><Settings className="h-3.5 w-3.5 text-slate-400" /></Button>
-                   </div>
+            {isLoading && !assets.length ? (
+              <TableRow>
+                <TableCell colSpan={selectedAsset ? 3 : 5} className="p-0">
+                  <TableSkeleton columns={selectedAsset ? 3 : 5} rows={pageSize} />
                 </TableCell>
               </TableRow>
-            ))}
-            {filteredAssets?.length === 0 && (
+            ) : (
+              assets.map((a: any) => (
+                <TableRow
+                  key={a.id}
+                  className={cn(
+                    "group/row cursor-pointer transition-all",
+                    selectedAsset?.id === a.id ? "bg-primary/5" : "hover:bg-primary/5"
+                  )}
+                  onClick={() => setSelectedAsset(a)}
+                >
+                  <TableCell className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-black text-slate-700 leading-tight">{a.name}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">{a.category || "UNCATEGORIZED"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                      <Badge variant={a.status === 'Active' ? 'pulse' : 'destructive'}>
+                          {a.status}
+                      </Badge>
+                  </TableCell>
+                  {!selectedAsset && (
+                    <>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                            <Badge variant="secondary" className="w-fit text-[9px] font-black tracking-widest bg-indigo-50 text-indigo-700 border-none">
+                              TAG: {a.asset_tag || "N/A"}
+                            </Badge>
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                              <MapPin className="h-3 w-3" /> {a.location || "UNASSIGNED"}
+                            </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-black text-slate-600">Rs. {a.purchase_price || "0.00"}</span>
+                            <span className="text-[9px] font-medium text-slate-400 uppercase">{a.purchase_date ? new Date(a.purchase_date).toLocaleDateString() : "DATE UNSET"}</span>
+                        </div>
+                      </TableCell>
+                    </>
+                  )}
+                  <TableCell className="text-right px-6">
+                     <div className="flex justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-all">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft"><Settings className="h-3.5 w-3.5 text-slate-400" /></Button>
+                     </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+            {!isLoading && assets.length === 0 && (
               <TableRow><TableCell colSpan={5} className="text-center py-12 text-slate-400 italic">No assets discovered in inventory.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
 </div>
       </div>
+      <ServerPagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalRows={totalRows}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
       </div>
 
       {/* Detail View */}
@@ -250,7 +297,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
               </CardHeader>
               <CardContent className="p-8 space-y-8">
                  <div className="grid grid-cols-2 gap-8">
-                    <DetailBlock label="Procurement Cost" value={`₹${selectedAsset.purchase_price?.toLocaleString() || '0.00'}`} icon={DollarSign} />
+                    <DetailBlock label="Procurement Cost" value={`Rs. ${selectedAsset.purchase_price?.toLocaleString() || '0.00'}`} icon={DollarSign} />
                     <DetailBlock label="Registry Tag" value={selectedAsset.asset_tag || 'N/A'} icon={Package} />
                     <DetailBlock label="Current Location" value={selectedAsset.location || 'Unassigned'} icon={MapPin} />
                     <DetailBlock label="Condition" value={selectedAsset.condition} icon={Settings} />

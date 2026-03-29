@@ -54,6 +54,9 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import LeaveCategoryManager from "@/components/LeaveCategoryManager";
@@ -77,11 +80,14 @@ export default function LeaveManagement() {
   const [adminNotes, setAdminNotes] = useState("");
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Fetch all leave applications for the center
-  const { data: applications = [], isLoading } = useQuery({
-    queryKey: ["center-leave-applications", user?.center_id],
+  const { data: applicationsData, isLoading } = useQuery({
+    queryKey: ["center-leave-applications", user?.center_id, page, pageSize, searchTerm, statusFilter],
     queryFn: async () => {
+      if (!user?.center_id) return { data: [], count: 0 };
+
       let query = supabase
         .from("leave_applications")
         .select(`
@@ -90,16 +96,38 @@ export default function LeaveManagement() {
           students(id, name, grade, center_id),
           users!leave_applications_user_id_fkey(username),
           teachers(id, name)
-        `)
-        .eq("center_id", user?.center_id!)
-        .order("created_at", { ascending: false });
+        `, { count: "exact" })
+        .eq("center_id", user.center_id);
 
-      const { data, error } = await query;
+      if (statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      if (searchTerm) {
+        // Since we can't easily filter by joined tables in PostgREST .or() without complex setup,
+        // we'll filter by main table columns or use a separate strategy.
+        // For simplicity, let's filter by student_id or teacher_id if we had their IDs,
+        // but here we'll just search in reason and admin_notes for now if name search is too complex.
+        query = query.or(`reason.ilike.%${searchTerm}%,admin_notes.ilike.%${searchTerm}%`);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
   });
+
+  const applications = applicationsData?.data || [];
+  const totalRows = applicationsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const createNotificationMutation = useMutation({
     mutationFn: async ({ userId, status, teacherId }: { userId: string; status: string; teacherId: string | null }) => {
@@ -153,16 +181,7 @@ export default function LeaveManagement() {
     },
   });
 
-  const filteredApps = applications.filter((app: any) => {
-    const nameMatch =
-      (app.students?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (app.teachers?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (app.users?.username || "").toLowerCase().includes(searchTerm.toLowerCase());
-
-    const statusMatch = statusFilter === "all" || app.status === statusFilter;
-
-    return nameMatch && statusMatch;
-  });
+  const filteredApps = applications;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -291,10 +310,10 @@ export default function LeaveManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isLoading && !applications.length ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-40 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary/40" />
+                  <TableCell colSpan={6} className="p-0">
+                    <TableSkeleton columns={6} rows={pageSize} />
                   </TableCell>
                 </TableRow>
               ) : filteredApps.length === 0 ? (
@@ -361,6 +380,14 @@ export default function LeaveManagement() {
             </TableBody>
           </Table>
 </div>
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

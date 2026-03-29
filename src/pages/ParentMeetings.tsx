@@ -11,6 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +25,7 @@ export default function ParentMeetings() {
   const { user } = useAuth();
   const [showConclusionDialog, setShowConclusionDialog] = useState(false);
   const [selectedMeetingConclusion, setSelectedMeetingConclusion] = useState<MeetingConclusion | null>(null);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   if (!user?.student_id) {
     return (
@@ -35,10 +39,13 @@ export default function ParentMeetings() {
   }
 
   // Fetch meetings relevant to the parent's student
-  const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["parent-meetings", user.student_id],
+  const { data: meetingsData, isLoading } = useQuery({
+    queryKey: ["parent-meetings", user.student_id, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from("meeting_attendees")
         .select(`
           *,
@@ -46,13 +53,21 @@ export default function ParentMeetings() {
             id, title, agenda, meeting_date, meeting_type, status, location,
             meeting_conclusions(conclusion_notes, recorded_at)
           )
-        `)
-        .eq("student_id", user.student_id!);
+        `, { count: "exact" })
+        .eq("student_id", user.student_id!)
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      return data?.filter((d: any) => d.meetings) || [];
+      return { data: data?.filter((d: any) => d.meetings) || [], count: count || 0 };
     },
-    enabled: !!user.student_id });
+    placeholderData: (previousData) => previousData,
+    enabled: !!user.student_id
+  });
+
+  const meetings = meetingsData?.data || [];
+  const totalRows = meetingsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const getStatusStyles = (status: Meeting['status']) => {
     switch (status) {
@@ -109,10 +124,8 @@ export default function ParentMeetings() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center py-20">
-              <div className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-            </div>
+          {isLoading && !meetings.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
           ) : meetings.length === 0 ? (
             <div className="text-center py-20 px-6">
               <div className="mx-auto w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
@@ -121,77 +134,87 @@ export default function ParentMeetings() {
               <p className="text-muted-foreground font-bold italic">No institutional consultations scheduled for your profile.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/5">
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Title/Objective</TableHead>
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Schedule Protocol</TableHead>
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Medium/Location</TableHead>
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Status</TableHead>
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Participation</TableHead>
-                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Conclusion</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {meetings.map((attendee: any) => {
-                    const meeting = attendee.meetings;
-                    const conclusion = meeting.meeting_conclusions?.[0];
-                    return (
-                      <TableRow key={attendee.id} className="group transition-all duration-300 hover:bg-card/60">
-                        <TableCell className="px-6 py-4">
-                          <div className="space-y-1">
-                            <p className="font-black text-slate-700 text-xs leading-none">{meeting.title}</p>
-                            <p className="text-[10px] font-black uppercase tracking-tighter text-primary/60">{meeting.meeting_type}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 font-bold text-slate-600 text-xs">
-                              <CalendarDays className="h-3 w-3 text-slate-400" />
-                              {format(new Date(meeting.meeting_date), "MMM dd, yyyy")}
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/5">
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Title/Objective</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Schedule Protocol</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Medium/Location</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Status</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Participation</TableHead>
+                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Conclusion</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {meetings.map((attendee: any) => {
+                      const meeting = attendee.meetings;
+                      const conclusion = meeting.meeting_conclusions?.[0];
+                      return (
+                        <TableRow key={attendee.id} className="group transition-all duration-300 hover:bg-card/60">
+                          <TableCell className="px-6 py-4">
+                            <div className="space-y-1">
+                              <p className="font-black text-slate-700 text-xs leading-none">{meeting.title}</p>
+                              <p className="text-[10px] font-black uppercase tracking-tighter text-primary/60">{meeting.meeting_type}</p>
                             </div>
-                            <div className="flex items-center gap-1.5 font-bold text-slate-400 text-[10px]">
-                              <Clock className="h-3 w-3" />
-                              {format(new Date(meeting.meeting_date), "p")}
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 font-bold text-slate-600 text-xs">
+                                <CalendarDays className="h-3 w-3 text-slate-400" />
+                                {format(new Date(meeting.meeting_date), "MMM dd, yyyy")}
+                              </div>
+                              <div className="flex items-center gap-1.5 font-bold text-slate-400 text-[10px]">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(meeting.meeting_date), "p")}
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                             {meeting.location?.toLowerCase().includes('zoom') || meeting.location?.toLowerCase().includes('google') ? (
-                               <Video className="h-3.5 w-3.5 text-primary" />
-                             ) : (
-                               <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                             )}
-                             <span className="font-black text-[10px] uppercase tracking-tighter text-slate-500 max-w-[120px] truncate">{meeting.location || 'Protocol Specified'}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter", getStatusStyles(meeting.status))}>
-                            {meeting.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter", getAttendanceStyles(attendee.attendance_status))}>
-                            {attendee.attendance_status || 'pending'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-right">
-                          {conclusion ? (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleViewConclusion(conclusion)}>
-                              <Eye className="h-4 w-4 text-primary" />
-                            </Button>
-                          ) : (
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Awaiting Log</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                               {meeting.location?.toLowerCase().includes('zoom') || meeting.location?.toLowerCase().includes('google') ? (
+                                 <Video className="h-3.5 w-3.5 text-primary" />
+                               ) : (
+                                 <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                               )}
+                               <span className="font-black text-[10px] uppercase tracking-tighter text-slate-500 max-w-[120px] truncate">{meeting.location || 'Protocol Specified'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter", getStatusStyles(meeting.status))}>
+                              {meeting.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter", getAttendanceStyles(attendee.attendance_status))}>
+                              {attendee.attendance_status || 'pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right">
+                            {conclusion ? (
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft" onClick={() => handleViewConclusion(conclusion)}>
+                                <Eye className="h-4 w-4 text-primary" />
+                              </Button>
+                            ) : (
+                              <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Awaiting Log</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <ServerPagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalRows={totalRows}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </>
           )}
         </CardContent>
       </Card>

@@ -10,6 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Button } from "@/components/ui/button"
 
 type Meeting = Tables<'meetings'>;
@@ -20,17 +23,21 @@ export default function TeacherMeetings() {
   const { user } = useAuth();
   const [showConclusionDialog, setShowConclusionDialog] = useState(false);
   const [selectedMeetingConclusion, setSelectedMeetingConclusion] = useState<MeetingConclusion | null>(null);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   if (!user?.teacher_id) {
     return <div className="p-6 text-center text-muted-foreground">Please log in as a teacher to view meetings.</div>;
   }
 
   // Fetch meetings relevant to the logged-in teacher - check both user_id and teacher_id
-  const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["teacher-meetings", user.teacher_id, user.id],
+  const { data: meetingsData, isLoading } = useQuery({
+    queryKey: ["teacher-meetings", user.teacher_id, user.id, page, pageSize],
     queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       // Try fetching by teacher_id first (more reliable)
-      let { data, error } = await supabase
+      let { data, error, count } = await supabase
         .from("meeting_attendees")
         .select(`
           *,
@@ -38,9 +45,10 @@ export default function TeacherMeetings() {
             id, title, description, meeting_date, meeting_type, status,
             meeting_conclusions(conclusion_notes, recorded_at)
           )
-        `)
+        `, { count: "exact" })
         .eq("teacher_id", user.teacher_id!)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
       
@@ -54,17 +62,25 @@ export default function TeacherMeetings() {
               id, title, description, meeting_date, meeting_type, status,
               meeting_conclusions(conclusion_notes, recorded_at)
             )
-          `)
+          `, { count: "exact" })
           .eq("user_id", user.id!)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .range(from, to);
         
         if (result.error) throw result.error;
         data = result.data;
+        count = result.count;
       }
       
-      return data || [];
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user.teacher_id || !!user.id });
+    placeholderData: (previousData) => previousData,
+    enabled: !!user.teacher_id || !!user.id
+  });
+
+  const meetings = meetingsData?.data || [];
+  const totalRows = meetingsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const getStatusColor = (status: Meeting['status']) => {
     switch (status) {
@@ -75,9 +91,9 @@ export default function TeacherMeetings() {
     }
   };
 
-  const getAttendanceStatusColor = (attended: boolean | null) => {
-    if (attended === true) return 'text-green-600';
-    if (attended === false) return 'text-red-600';
+  const getAttendanceStatusColor = (attended: string | null) => {
+    if (attended === 'present') return 'text-green-600';
+    if (attended === 'absent') return 'text-red-600';
     return 'text-gray-600';
   };
 
@@ -117,59 +133,69 @@ export default function TeacherMeetings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p>Loading meetings...</p>
+          {isLoading && !meetings.length ? (
+            <TableSkeleton columns={7} rows={pageSize} />
           ) : meetings.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No meetings scheduled for you.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Your Attendance</TableHead>
-                    <TableHead>Conclusion</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {meetings.map((attendee: any) => {
-                    const meeting = attendee.meetings;
-                    const conclusion = meeting.meeting_conclusions?.[0];
-                    return (
-                      <TableRow key={attendee.id}>
-                        <TableCell className="font-medium">{meeting.title}</TableCell>
-                        <TableCell>{format(new Date(meeting.meeting_date), "PPP")}</TableCell>
-                        <TableCell>{format(new Date(meeting.meeting_date), "p")}</TableCell>
-                        <TableCell>{meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}</TableCell>
-                        <TableCell>
-                          <span className={`font-semibold ${getStatusColor(meeting.status)}`}>
-                            {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`font-semibold ${getAttendanceStatusColor(attendee.attendance_status)}`}>
-                            {attendee.attendance_status.charAt(0).toUpperCase() + attendee.attendance_status.slice(1)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {conclusion ? (
-                            <Button variant="ghost" size="sm" onClick={() => handleViewConclusion(conclusion)}>
-                              <Eye className="h-4 w-4 mr-1" /> View
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Your Attendance</TableHead>
+                      <TableHead>Conclusion</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {meetings.map((attendee: any) => {
+                      const meeting = attendee.meetings;
+                      const conclusion = meeting.meeting_conclusions?.[0];
+                      return (
+                        <TableRow key={attendee.id}>
+                          <TableCell className="font-medium">{meeting.title}</TableCell>
+                          <TableCell>{format(new Date(meeting.meeting_date), "PPP")}</TableCell>
+                          <TableCell>{format(new Date(meeting.meeting_date), "p")}</TableCell>
+                          <TableCell>{meeting.meeting_type ? meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1) : '-'}</TableCell>
+                          <TableCell>
+                            <span className={`font-semibold ${getStatusColor(meeting.status)}`}>
+                              {meeting.status ? meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1) : '-'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`font-semibold ${getAttendanceStatusColor(attendee.attendance_status)}`}>
+                              {attendee.attendance_status ? attendee.attendance_status.charAt(0).toUpperCase() + attendee.attendance_status.slice(1) : 'Pending'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {conclusion ? (
+                              <Button variant="ghost" size="sm" onClick={() => handleViewConclusion(conclusion)}>
+                                <Eye className="h-4 w-4 mr-1" /> View
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              <ServerPagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalRows={totalRows}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </>
           )}
         </CardContent>
       </Card>

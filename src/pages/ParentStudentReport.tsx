@@ -18,6 +18,9 @@ import { toast } from "sonner"
 import { Tables } from "@/integrations/supabase/types"
 import { Invoice, Payment } from "@/integrations/supabase/finance-types"
 import { formatCurrency, safeFormatDate, getGradeFormal } from "@/lib/utils" // Import safeFormatDate, formatCurrency, getGradeFormal
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 type LessonPlan = Tables<'lesson_plans'>;
 type StudentHomeworkRecord = Tables<'student_homework_records'>;
@@ -57,6 +60,11 @@ export default function ParentStudentReport() {
   const [selectedPublishedExamId, setSelectedPublishedExamId] = useState<string>("none");
   const [selectedAttendanceDetail, setSelectedAttendanceDetail] = useState<any>(null);
 
+  const { page: attPage, setPage: setAttPage, pageSize: attPageSize, setPageSize: setAttPageSize } = usePagination(10);
+  const { page: chapterPage, setPage: setChapterPage, pageSize: chapterPageSize, setPageSize: setChapterPageSize } = usePagination(10);
+  const { page: testPage, setPage: setTestPage, pageSize: testPageSize, setPageSize: setTestPageSize } = usePagination(10);
+  const { page: activityPage, setPage: setActivityPage, pageSize: activityPageSize, setPageSize: setActivityPageSize } = usePagination(10);
+
   // Students for parent are already in user context, but let's fetch to be safe/consistent
   const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id, user?.id, linkedStudents],
@@ -77,13 +85,13 @@ export default function ParentStudentReport() {
   }, [selectedStudentId, filteredStudents]);
 
   // Fetch attendance
-  const { data: attendanceData = [], isLoading: isAttendanceLoading } = useQuery({
-    queryKey: ["student-attendance", selectedStudentId, gradeFilter, dateRange, user?.center_id],
+  const { data: attendanceResult, isLoading: isAttendanceLoading } = useQuery({
+    queryKey: ["student-attendance", selectedStudentId, gradeFilter, dateRange, user?.center_id, attPage, attPageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id) return { data: [], count: 0 };
       let query = supabase
         .from("attendance")
-        .select("*")
+        .select("*", { count: 'exact' })
         .eq("center_id", user.center_id)
         .gte("date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
@@ -94,11 +102,18 @@ export default function ParentStudentReport() {
         query = query.in("student_id", studentIds);
       }
 
-      const { data, error } = await query.order("date");
+      const { data, error, count } = await query
+        .order("date", { ascending: false })
+        .range((attPage - 1) * attPageSize, attPage * attPageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!user?.center_id });
+
+  const attendanceData = attendanceResult?.data || [];
+  const totalAttRows = attendanceResult?.count || 0;
+  const totalAttPages = Math.ceil(totalAttRows / attPageSize);
 
   // Fetch lesson plans (needed for grouping)
   const { data: allLessonPlans = [] } = useQuery({
@@ -116,14 +131,14 @@ export default function ParentStudentReport() {
     enabled: !!user?.center_id });
 
   // Fetch student_chapters (lesson evaluations)
-  const { data: studentChapters = [], isLoading: isChaptersLoading } = useQuery({
-    queryKey: ["student-lesson-records-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds],
+  const { data: chaptersResult, isLoading: isChaptersLoading } = useQuery({
+    queryKey: ["student-lesson-records-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, chapterPage, chapterPageSize],
     queryFn: async () => {
       let query = supabase.from("student_chapters").select(`
         *,
         lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url),
         recorded_by_teacher:recorded_by_teacher_id(name)
-      `)
+      `, { count: 'exact' })
         .gte("completed_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("completed_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -140,17 +155,24 @@ export default function ParentStudentReport() {
         query = query.eq("lesson_plans.subject", subjectFilter);
       }
 
-      const { data, error } = await query.order("completed_at", { ascending: false });
+      const { data, error, count } = await query
+        .order("completed_at", { ascending: false })
+        .range((chapterPage - 1) * chapterPageSize, chapterPage * chapterPageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: studentIds.length > 0 });
 
+  const studentChapters = chaptersResult?.data || [];
+  const totalChapterRows = chaptersResult?.count || 0;
+  const totalChapterPages = Math.ceil(totalChapterRows / chapterPageSize);
+
   // Fetch test results
-  const { data: testResults = [], isLoading: isTestsLoading } = useQuery({
-    queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds],
+  const { data: testsResult, isLoading: isTestsLoading } = useQuery({
+    queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, testPage, testPageSize],
     queryFn: async () => {
-      let query = supabase.from("test_results").select("*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions)")
+      let query = supabase.from("test_results").select("*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions)", { count: 'exact' })
         .gte("date_taken", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("date_taken", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -166,11 +188,18 @@ export default function ParentStudentReport() {
         query = query.eq("tests.subject", subjectFilter);
       }
 
-      const { data, error } = await query.order("date_taken", { ascending: false });
+      const { data, error, count } = await query
+        .order("date_taken", { ascending: false })
+        .range((testPage - 1) * testPageSize, testPage * testPageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: studentIds.length > 0 });
+
+  const testResults = testsResult?.data || [];
+  const totalTestRows = testsResult?.count || 0;
+  const totalTestPages = Math.ceil(totalTestRows / testPageSize);
 
   // Fetch homework status
   const { data: homeworkStatus = [], isLoading: isHomeworkLoading } = useQuery({
@@ -220,10 +249,10 @@ export default function ParentStudentReport() {
     enabled: !!user?.center_id });
 
   // Fetch preschool activities (student participations)
-  const { data: preschoolActivities = [], isLoading: isActivitiesLoading } = useQuery({
-    queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds],
+  const { data: activitiesResult, isLoading: isActivitiesLoading } = useQuery({
+    queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds, activityPage, activityPageSize],
     queryFn: async () => {
-      let query = supabase.from("student_activities").select("*, activities(title, description, activity_date, photo_url, video_url, activity_type_id, activity_types(name))")
+      let query = supabase.from("student_activities").select("*, activities(title, description, activity_date, photo_url, video_url, activity_type_id, activity_types(name))", { count: 'exact' })
         .gte("created_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("created_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -235,11 +264,18 @@ export default function ParentStudentReport() {
         query = query.in("student_id", studentIds);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range((activityPage - 1) * activityPageSize, activityPage * activityPageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: studentIds.length > 0 });
+
+  const preschoolActivities = activitiesResult?.data || [];
+  const totalActivityRows = activitiesResult?.count || 0;
+  const totalActivityPages = Math.ceil(totalActivityRows / activityPageSize);
 
   // Fetch discipline issues
   const { data: disciplineIssues = [], isLoading: isDisciplineLoading } = useQuery({
@@ -1227,7 +1263,11 @@ export default function ParentStudentReport() {
           <div className="flex flex-wrap gap-8 items-end">
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</label>
-          <Select value={selectedStudentId} onValueChange={(val) => { setSelectedStudentId(val); setSelectedPublishedExamId("none"); }}>
+          <Select value={selectedStudentId} onValueChange={(val) => {
+            setSelectedStudentId(val);
+            setSelectedPublishedExamId("none");
+            setAttPage(1); setChapterPage(1); setTestPage(1); setActivityPage(1);
+          }}>
             <SelectTrigger className="w-[220px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Select Student" />
             </SelectTrigger>
@@ -1267,7 +1307,10 @@ export default function ParentStudentReport() {
             type="date"
             className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
             value={safeFormatDate(dateRange.from, "yyyy-MM-dd")}
-            onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
+            onChange={(e) => {
+              setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }));
+              setAttPage(1); setChapterPage(1); setTestPage(1); setActivityPage(1);
+            }}
           />
         </div>
 
@@ -1277,13 +1320,16 @@ export default function ParentStudentReport() {
             type="date"
             className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
             value={safeFormatDate(dateRange.to, "yyyy-MM-dd")}
-            onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
+            onChange={(e) => {
+              setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }));
+              setAttPage(1); setChapterPage(1); setTestPage(1); setActivityPage(1);
+            }}
           />
         </div>
 
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</label>
-          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+          <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setChapterPage(1); setTestPage(1); }}>
             <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
@@ -1507,42 +1553,60 @@ export default function ParentStudentReport() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-4 gap-4 mb-4">
-                <div>Total Days: {totalDays}</div>
-                <div>Present: {presentDays}</div>
-                <div>Absent: {totalDays - presentDays}</div>
-                <div>Attendance %: {attendancePercentage}%</div>
+                <div>Total Records: {totalAttRows}</div>
+                <div>Present: {attendanceData.filter(a => a.status === 'present').length} (Page)</div>
+                <div>Absent: {attendanceData.filter(a => a.status === 'absent').length} (Page)</div>
+                <div>Attendance: {attendancePercentage}%</div>
               </div>
-              <div className="overflow-x-auto max-h-80">
-                <table className="w-full border text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border px-2 py-1">Date</th>
-                      <th className="border px-2 py-1">Status</th>
-                      <th className="border px-2 py-1">Time In</th>
-                      <th className="border px-2 py-1">Time Out</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendanceData.map((record) => (
-                      <tr
-                        key={record.id}
-                        className={cn(record.remarks?.includes('Approved Leave') && "bg-orange-50 cursor-pointer hover:bg-orange-100")}
-                        onClick={() => record.remarks && setSelectedAttendanceDetail(record)}
-                      >
-                        <td className="border px-2 py-1">
-                          <div className="flex items-center justify-between">
-                            {safeFormatDate(record.date, "PPP")}
-                            {record.remarks?.includes('Approved Leave') && <Badge variant="outline" className="text-[8px] h-4 bg-white text-orange-600 border-orange-200">LEAVE</Badge>}
-                          </div>
-                        </td>
-                        <td className="border px-2 py-1 capitalize">{record.status}</td>
-                        <td className="border px-2 py-1">{record.time_in || "-"}</td>
-                        <td className="border px-2 py-1">{record.time_out || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {isAttendanceLoading && !attendanceData.length ? (
+                <TableSkeleton columns={4} rows={attPageSize} />
+              ) : (
+                <>
+                  <div className="overflow-x-auto max-h-80">
+                    <table className="w-full border text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="border px-2 py-1">Date</th>
+                          <th className="border px-2 py-1">Status</th>
+                          <th className="border px-2 py-1">Time In</th>
+                          <th className="border px-2 py-1">Time Out</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attendanceData.length === 0 ? (
+                          <tr><td colSpan={4} className="p-4 text-center text-muted-foreground italic">No attendance records found.</td></tr>
+                        ) : (
+                          attendanceData.map((record) => (
+                            <tr
+                              key={record.id}
+                              className={cn(record.remarks?.includes('Approved Leave') && "bg-orange-50 cursor-pointer hover:bg-orange-100")}
+                              onClick={() => record.remarks && setSelectedAttendanceDetail(record)}
+                            >
+                              <td className="border px-2 py-1">
+                                <div className="flex items-center justify-between">
+                                  {safeFormatDate(record.date, "PPP")}
+                                  {record.remarks?.includes('Approved Leave') && <Badge variant="outline" className="text-[8px] h-4 bg-white text-orange-600 border-orange-200">LEAVE</Badge>}
+                                </div>
+                              </td>
+                              <td className="border px-2 py-1 capitalize">{record.status}</td>
+                              <td className="border px-2 py-1">{record.time_in || "-"}</td>
+                              <td className="border px-2 py-1">{record.time_out || "-"}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <ServerPagination
+                    currentPage={attPage}
+                    totalPages={totalAttPages}
+                    totalRows={totalAttRows}
+                    pageSize={attPageSize}
+                    onPageChange={setAttPage}
+                    onPageSizeChange={setAttPageSize}
+                  />
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -1557,75 +1621,87 @@ export default function ParentStudentReport() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {chapterPerformanceData.length === 0 ? (
+              {isChaptersLoading && !chapterPerformanceData.length ? (
+                <TableSkeleton columns={6} rows={chapterPageSize} />
+              ) : chapterPerformanceData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground italic">No chapter performance data available for the selected filters.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-muted/50 border-b">
-                      <tr>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {chapterPerformanceData.map((chapterGroup) => {
-                        const evaluation = chapterGroup.studentChapters[0];
-                        const testResult = chapterGroup.testResults[0];
-                        const homework = chapterGroup.homeworkRecords[0];
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-muted/50 border-b">
+                        <tr>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
+                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {chapterPerformanceData.map((chapterGroup) => {
+                          const evaluation = chapterGroup.studentChapters[0];
+                          const testResult = chapterGroup.testResults[0];
+                          const homework = chapterGroup.homeworkRecords[0];
 
-                        const avgPct = chapterGroup.testResults.length > 0
-                          ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
-                          : null;
+                          const avgPct = chapterGroup.testResults.length > 0
+                            ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
+                            : null;
 
-                        return (
-                          <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
-                            <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
-                            <td className="px-6 py-4">
-                              <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
-                              <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
-                            </td>
-                            <td className="px-6 py-4">
-                              {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
-                            </td>
-                            <td className="px-6 py-4">
-                              {homework ? (
-                                <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
-                                  {homework.status}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">N/A</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 font-bold">
-                              {avgPct !== null ? (
-                                <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
-                                  {avgPct}%
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">N/A</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
-                                onClick={() => setSelectedChapterDetail(chapterGroup)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                          return (
+                            <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
+                              <td className="px-6 py-4">
+                                <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
+                                <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
+                              </td>
+                              <td className="px-6 py-4">
+                                {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
+                              </td>
+                              <td className="px-6 py-4">
+                                {homework ? (
+                                  <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
+                                    {homework.status}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground italic text-xs">N/A</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 font-bold">
+                                {avgPct !== null ? (
+                                  <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
+                                    {avgPct}%
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground italic text-xs">N/A</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
+                                  onClick={() => setSelectedChapterDetail(chapterGroup)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <ServerPagination
+                    currentPage={chapterPage}
+                    totalPages={totalChapterPages}
+                    totalRows={totalChapterRows}
+                    pageSize={chapterPageSize}
+                    onPageChange={setChapterPage}
+                    onPageSizeChange={setChapterPageSize}
+                  />
+                </>
               )}
             </CardContent>
           </Card>
@@ -1820,7 +1896,9 @@ export default function ParentStudentReport() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {testResults.length === 0 ? (
+              {isTestsLoading && !testResults.length ? (
+                <TableSkeleton columns={7} rows={testPageSize} />
+              ) : testResults.length === 0 ? (
                 <p className="text-muted-foreground">No test results found for the selected filters.</p>
               ) : (
                 <>
@@ -1873,10 +1951,18 @@ export default function ParentStudentReport() {
                       </tbody>
                     </table>
                   </div>
+                  <ServerPagination
+                    currentPage={testPage}
+                    totalPages={totalTestPages}
+                    totalRows={totalTestRows}
+                    pageSize={testPageSize}
+                    onPageChange={setTestPage}
+                    onPageSizeChange={setTestPageSize}
+                  />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4 border-t">
                     <div>
                       <p className="text-muted-foreground">Total Tests</p>
-                      <p className="font-semibold">{totalTests}</p>
+                      <p className="font-semibold">{totalTestRows}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Average Score</p>
@@ -1980,43 +2066,55 @@ export default function ParentStudentReport() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {preschoolActivities.length === 0 ? (
+              {isActivitiesLoading && !preschoolActivities.length ? (
+                <TableSkeleton columns={6} rows={activityPageSize} />
+              ) : preschoolActivities.length === 0 ? (
                 <p className="text-muted-foreground">No preschool activities found.</p>
               ) : (
-                <div className="overflow-x-auto max-h-80 border rounded">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="border px-2 py-1">Type</th>
-                        <th className="border px-2 py-1">Title</th>
-                        <th className="border px-2 py-1">Description</th>
-                        <th className="border px-2 py-1">Date</th>
-                        <th className="border px-2 py-1">Involvement</th>
-                        <th className="border px-2 py-1">Media</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {preschoolActivities.map((pa: any) => (
-                        <tr key={pa.id}>
-                          <td className="border px-2 py-1">{pa.activities?.activity_types?.name || 'N/A'}</td>
-                          <td className="border px-2 py-1">{pa.activities?.title || 'N/A'}</td>
-                          <td className="border px-2 py-1">{pa.activities?.description || 'N/A'}</td>
-                          <td className="border px-2 py-1">{pa.activities?.activity_date ? safeFormatDate(pa.activities.activity_date, "PPP") : 'N/A'}</td>
-                          <td className="border px-2 py-1">{pa.involvement_score || "N/A"}</td>
-                          <td className="border px-2 py-1">
-                            {pa.activities?.photo_url && (
-                              <a href={supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mr-2">Photo</a>
-                            )}
-                            {pa.activities?.video_url && (
-                              <a href={supabase.storage.from("activity-videos").getPublicUrl(pa.activities.video_url).data.publicUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Video</a>
-                            )}
-                            {!pa.activities?.photo_url && !pa.activities?.video_url && "-"}
-                          </td>
+                <>
+                  <div className="overflow-x-auto max-h-80 border rounded">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="border px-2 py-1">Type</th>
+                          <th className="border px-2 py-1">Title</th>
+                          <th className="border px-2 py-1">Description</th>
+                          <th className="border px-2 py-1">Date</th>
+                          <th className="border px-2 py-1">Involvement</th>
+                          <th className="border px-2 py-1">Media</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {preschoolActivities.map((pa: any) => (
+                          <tr key={pa.id}>
+                            <td className="border px-2 py-1">{pa.activities?.activity_types?.name || 'N/A'}</td>
+                            <td className="border px-2 py-1">{pa.activities?.title || 'N/A'}</td>
+                            <td className="border px-2 py-1">{pa.activities?.description || 'N/A'}</td>
+                            <td className="border px-2 py-1">{pa.activities?.activity_date ? safeFormatDate(pa.activities.activity_date, "PPP") : 'N/A'}</td>
+                            <td className="border px-2 py-1">{pa.involvement_score || "N/A"}</td>
+                            <td className="border px-2 py-1">
+                              {pa.activities?.photo_url && (
+                                <a href={supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mr-2">Photo</a>
+                              )}
+                              {pa.activities?.video_url && (
+                                <a href={supabase.storage.from("activity-videos").getPublicUrl(pa.activities.video_url).data.publicUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Video</a>
+                              )}
+                              {!pa.activities?.photo_url && !pa.activities?.video_url && "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <ServerPagination
+                    currentPage={activityPage}
+                    totalPages={totalActivityPages}
+                    totalRows={totalActivityRows}
+                    pageSize={activityPageSize}
+                    onPageChange={setActivityPage}
+                    onPageSizeChange={setActivityPageSize}
+                  />
+                </>
               )}
             </CardContent>
           </Card>

@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -34,14 +37,18 @@ export default function MeetingManagement() {
   const [selectedMeetingForAttendance, setSelectedMeetingForAttendance] = useState<Meeting | null>(null);
   const [showConclusionDialog, setShowConclusionDialog] = useState(false);
   const [selectedMeetingForConclusion, setSelectedMeetingForConclusion] = useState<Meeting & { meeting_conclusions: MeetingConclusion[] } | null>(null);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
   // Fetch meetings for the current center
-  const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["meetings", user?.center_id, isRestricted, user?.id],
+  const { data: meetingsData, isLoading } = useQuery({
+    queryKey: ["meetings", user?.center_id, isRestricted, user?.id, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id) return { data: [], count: 0 };
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
       if (isRestricted) {
         // Teachers in restricted mode see meetings they created OR meetings where they are an attendee
@@ -54,7 +61,7 @@ export default function MeetingManagement() {
         const meetingIds = attendedMeetings?.map(m => m.meeting_id) || [];
         let query = supabase
           .from("meetings")
-          .select("*, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:related_meeting_id(id, title, meeting_date)")
+          .select("*, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:related_meeting_id(id, title, meeting_date)", { count: "exact" })
           .eq("center_id", user.center_id);
 
         if (meetingIds.length > 0) {
@@ -63,21 +70,31 @@ export default function MeetingManagement() {
           query = query.eq("created_by", user.id);
         }
 
-        const { data, error } = await query.order("meeting_date", { ascending: false });
+        const { data, error, count } = await query
+          .order("meeting_date", { ascending: false })
+          .range(from, to);
+
         if (error) throw error;
-        return data;
+        return { data: data || [], count: count || 0 };
       }
 
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("meetings")
-        .select("*, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:related_meeting_id(id, title, meeting_date)")
+        .select("*, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:related_meeting_id(id, title, meeting_date)", { count: "exact" })
         .eq("center_id", user.center_id)
-        .order("meeting_date", { ascending: false });
+        .order("meeting_date", { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const meetings = meetingsData?.data || [];
+  const totalRows = meetingsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const handleMeetingSave = async (meetingData: Tables<'meetings'>, selectedStudentIds: string[], selectedTeacherIds: string[]) => {
     if (!canEdit) { toast.error("Access Denied: You do not have permission to save meetings."); return; }
@@ -159,7 +176,11 @@ export default function MeetingManagement() {
           <CardTitle className="text-xl font-black flex items-center gap-3"><div className="p-2 rounded-xl bg-primary/10"><CalendarDays className="h-6 w-6 text-primary" /></div> Scheduled Assemblies</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : meetings.length === 0 ? <p className="text-muted-foreground text-center py-12 italic">No meetings scheduled yet.</p> : (
+          {isLoading && !meetings.length ? (
+            <TableSkeleton columns={7} rows={pageSize} />
+          ) : meetings.length === 0 ? (
+            <p className="text-muted-foreground text-center py-12 italic">No meetings scheduled yet.</p>
+          ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Date</TableHead><TableHead>Time</TableHead><TableHead>Type</TableHead><TableHead>Status</TableHead><TableHead>Conclusion</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
@@ -185,6 +206,14 @@ export default function MeetingManagement() {
               </Table>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

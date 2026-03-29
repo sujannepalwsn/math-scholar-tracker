@@ -3,6 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Check, X, Eye, UserPlus } from "lucide-react";
@@ -15,20 +18,31 @@ import { cn } from "@/lib/utils";
 export default function AdmissionWorkflow({ centerId, canEdit }: { centerId: string, canEdit?: boolean }) {
   const queryClient = useQueryClient();
   const [selectedApp, setSelectedApp] = useState<any>(null);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
-  const { data: applications, isLoading } = useQuery({
-    queryKey: ["admission-applications", centerId],
+  const { data: applicationsData, isLoading } = useQuery({
+    queryKey: ["admission-applications", centerId, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from("admission_applications")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("center_id", centerId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
+
+  const applications = applicationsData?.data || [];
+  const totalRows = applicationsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -120,7 +134,14 @@ export default function AdmissionWorkflow({ centerId, canEdit }: { centerId: str
             </TableRow>
           </TableHeader>
           <TableBody>
-            {applications?.map((app: any) => (
+            {isLoading && !applications.length ? (
+              <TableRow>
+                <TableCell colSpan={5} className="p-0">
+                  <TableSkeleton columns={5} rows={pageSize} />
+                </TableCell>
+              </TableRow>
+            ) : (
+              applications.map((app: any) => (
               <TableRow key={app.id}>
                 <TableCell className="font-bold text-sm">{app.student_name}</TableCell>
                 <TableCell><Badge variant="outline">Grade {app.applied_grade}</Badge></TableCell>
@@ -156,11 +177,19 @@ export default function AdmissionWorkflow({ centerId, canEdit }: { centerId: str
                   )}
                 </TableCell>
               </TableRow>
-            ))}
+            )))}
           </TableBody>
         </Table>
 </div>
       </div>
+      <ServerPagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalRows={totalRows}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
 
       <Dialog open={!!selectedApp} onOpenChange={() => setSelectedApp(null)}>
         <DialogContent className="rounded-[2rem]">

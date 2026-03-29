@@ -16,6 +16,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
@@ -34,6 +37,7 @@ export default function LessonPlanManagement() {
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingLessonPlan, setViewingLessonPlan] = useState<LessonPlan & { teachers?: { name: string } } | null>(null);
   const [adminRemarks, setAdminRemarks] = useState("");
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("pending");
@@ -66,15 +70,14 @@ export default function LessonPlanManagement() {
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
-  const { data: lessonPlans = [], isLoading } = useQuery({
-    queryKey: ["lesson-plans-mgmt", user?.center_id, statusFilter, subjectFilter, gradeFilter, teacherFilter, isRestricted],
+  const { data: lessonPlansData, isLoading } = useQuery({
+    queryKey: ["lesson-plans-mgmt", user?.center_id, statusFilter, subjectFilter, gradeFilter, teacherFilter, isRestricted, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id) return { data: [], count: 0 };
       let query = supabase
         .from("lesson_plans")
-        .select("*, teachers(name)")
-        .eq("center_id", user.center_id)
-        .order("submitted_at", { ascending: false });
+        .select("*, teachers(name)", { count: "exact" })
+        .eq("center_id", user.center_id);
 
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
       if (subjectFilter !== "all") query = query.eq("subject", subjectFilter);
@@ -85,12 +88,23 @@ export default function LessonPlanManagement() {
         query = query.eq('teacher_id', user?.teacher_id);
       }
 
-      const { data, error } = await query;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("submitted_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
   });
+
+  const lessonPlans = lessonPlansData?.data || [];
+  const totalRows = lessonPlansData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, remarks }: { id: string, status: string, remarks?: string }) => {
@@ -182,7 +196,7 @@ export default function LessonPlanManagement() {
            <div className="flex flex-wrap gap-4 items-center">
               <div className="flex-1 min-w-[150px]">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Status</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
                   <SelectTrigger className="rounded-xl border-none bg-muted/30">
                     <SelectValue />
                   </SelectTrigger>
@@ -197,7 +211,7 @@ export default function LessonPlanManagement() {
               </div>
               <div className="flex-1 min-w-[150px]">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Teacher</Label>
-                <Select value={teacherFilter} onValueChange={setTeacherFilter}>
+                <Select value={teacherFilter} onValueChange={(v) => { setTeacherFilter(v); setPage(1); }}>
                   <SelectTrigger className="rounded-xl border-none bg-muted/30">
                     <SelectValue />
                   </SelectTrigger>
@@ -209,7 +223,7 @@ export default function LessonPlanManagement() {
               </div>
               <div className="flex-1 min-w-[150px]">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Grade</Label>
-                <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
                   <SelectTrigger className="rounded-xl border-none bg-muted/30">
                     <SelectValue />
                   </SelectTrigger>
@@ -224,8 +238,8 @@ export default function LessonPlanManagement() {
            </div>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          {isLoading && !lessonPlans.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
           ) : lessonPlans.length === 0 ? (
             <div className="py-20 text-center">
               <FileText className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
@@ -283,6 +297,14 @@ export default function LessonPlanManagement() {
               </Table>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

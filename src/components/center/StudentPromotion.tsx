@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Users } from "lucide-react";
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export default function StudentPromotion({ centerId, canEdit }: { centerId: string, canEdit?: boolean }) {
   const queryClient = useQueryClient();
@@ -15,22 +18,30 @@ export default function StudentPromotion({ centerId, canEdit }: { centerId: stri
   const [toGrade, setToGrade] = useState<string>("");
   const [academicYear, setAcademicYear] = useState<string>("2024-2025");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const { page, pageSize, setPage, setPageSize } = usePagination(50);
 
-  const { data: students, isLoading } = useQuery({
-    queryKey: ["students-for-promotion", centerId, fromGrade],
+  const { data: studentsData, isLoading } = useQuery({
+    queryKey: ["students-for-promotion", centerId, fromGrade, page, pageSize],
     queryFn: async () => {
-      if (!fromGrade) return [];
-      const { data, error } = await supabase
+      if (!fromGrade) return { data: [], count: 0 };
+      const { data, error, count } = await supabase
         .from("students")
-        .select("*")
+        .select("*", { count: 'exact' })
         .eq("center_id", centerId)
         .eq("grade", fromGrade)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("name")
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!centerId && !!fromGrade,
   });
+
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const promoteMutation = useMutation({
     mutationFn: async () => {
@@ -70,8 +81,6 @@ export default function StudentPromotion({ centerId, canEdit }: { centerId: stri
     },
   });
 
-  const uniqueGrades = Array.from(new Set(students?.map(s => s.grade) || [])).sort();
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedStudentIds(students?.map(s => s.id) || []);
@@ -99,7 +108,7 @@ export default function StudentPromotion({ centerId, canEdit }: { centerId: stri
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Promote From Grade</label>
-              <Select value={fromGrade} onValueChange={setFromGrade}>
+              <Select value={fromGrade} onValueChange={(v) => { setFromGrade(v); setPage(1); setSelectedStudentIds([]); }}>
                 <SelectTrigger><SelectValue placeholder="Select Source Grade" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">Grade 1</SelectItem>
@@ -147,46 +156,62 @@ export default function StudentPromotion({ centerId, canEdit }: { centerId: stri
           </div>
 
           {fromGrade && (
-            <div className="border rounded-2xl overflow-hidden shadow-soft bg-white">
-              <div className="overflow-x-auto">
-  <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={selectedStudentIds.length === (students?.length || 0) && (students?.length || 0) > 0}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead className="font-black text-[10px] uppercase tracking-widest">Student Name</TableHead>
-                    <TableHead className="font-black text-[10px] uppercase tracking-widest">Current Grade</TableHead>
-                    <TableHead className="font-black text-[10px] uppercase tracking-widest">Roll Number</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-10">Loading...</TableCell></TableRow>
-                  ) : students?.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-10">No students found in Grade {fromGrade}</TableCell></TableRow>
-                  ) : (
-                    students?.map((s: any) => (
-                      <TableRow key={s.id}>
-                        <TableCell>
+            <>
+              <div className="border rounded-2xl overflow-hidden shadow-soft bg-white">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="w-[50px]">
                           <Checkbox
-                            checked={selectedStudentIds.includes(s.id)}
-                            onCheckedChange={() => toggleStudentSelection(s.id)}
+                            checked={selectedStudentIds.length === (students?.length || 0) && (students?.length || 0) > 0}
+                            onCheckedChange={handleSelectAll}
                           />
-                        </TableCell>
-                        <TableCell className="font-bold">{s.name}</TableCell>
-                        <TableCell>Grade {s.grade}</TableCell>
-                        <TableCell>{s.roll_number || "-"}</TableCell>
+                        </TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-widest">Student Name</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-widest">Current Grade</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-widest">Roll Number</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-</div>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading && !students.length ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="p-0">
+                            <TableSkeleton columns={4} rows={pageSize} />
+                          </TableCell>
+                        </TableRow>
+                      ) : students.length === 0 ? (
+                        <TableRow><TableCell colSpan={4} className="text-center py-10">No students found in Grade {fromGrade}</TableCell></TableRow>
+                      ) : (
+                        students.map((s: any) => (
+                          <TableRow key={s.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedStudentIds.includes(s.id)}
+                                onCheckedChange={() => toggleStudentSelection(s.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="font-bold">{s.name}</TableCell>
+                            <TableCell>Grade {s.grade}</TableCell>
+                            <TableCell>{s.roll_number || "-"}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <div className="mt-4">
+                <ServerPagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalRows={totalRows}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
+            </>
           )}
 
           <div className="mt-6 flex justify-between items-center">

@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import StaffHRModule from "@/components/center/StaffHRModule";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,31 +21,47 @@ export default function HRManagement() {
   const canEdit = hasActionPermission(user, 'hr_management', 'edit');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
-  const { data: teachers = [], isLoading } = useQuery({
-    queryKey: ["teachers-hr", centerId, isRestricted, user?.teacher_id],
+  const { data: teachersData, isLoading } = useQuery({
+    queryKey: ["teachers-hr", centerId, isRestricted, user?.teacher_id, page, pageSize, searchQuery],
     queryFn: async () => {
-      let query = supabase.from("teachers").select("*").eq("center_id", centerId);
+      if (!centerId) return { data: [], count: 0 };
+      let query = supabase
+        .from("teachers")
+        .select("*", { count: "exact" })
+        .eq("center_id", centerId);
 
       if (isRestricted) {
         query = query.eq('id', user?.teacher_id);
       }
 
-      const { data, error } = await query.order("name");
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("name")
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
 
-  const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
+  const teachers = teachersData?.data || [];
+  const totalRows = teachersData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
-  const filteredTeachers = teachers.filter(t =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
+  const filteredTeachers = teachers;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
@@ -73,7 +92,7 @@ export default function HRManagement() {
               placeholder="Search faculty..."
               className="w-full h-11 pl-10 pr-4 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all shadow-soft"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
             />
           </div>
         </div>
@@ -99,7 +118,8 @@ export default function HRManagement() {
                    <p className="text-sm font-medium text-slate-400 italic px-6">No faculty members found matching your criteria.</p>
                 </div>
               ) : (
-                filteredTeachers.map((teacher) => (
+                <>
+                {filteredTeachers.map((teacher) => (
                   <div
                     key={teacher.id}
                     className={cn(
@@ -118,7 +138,18 @@ export default function HRManagement() {
                       </Badge>
                     </div>
                   </div>
-                ))
+                ))}
+                <div className="p-4 border-t">
+                  <ServerPagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalRows={totalRows}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                  />
+                </div>
+                </>
               )}
             </div>
           </CardContent>

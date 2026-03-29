@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -50,6 +53,7 @@ export default function ViewRecords() {
   const [showStudentDetailDialog, setShowStudentDetailDialog] = useState(false);
   const [selectedStudentDetail, setSelectedStudentDetail] = useState<StudentDetail | null>(null);
   const [detailMonthFilter, setDetailMonthFilter] = useState<Date>(new Date());
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
@@ -83,12 +87,12 @@ export default function ViewRecords() {
 
   const filteredStudents = students.filter(s => gradeFilter === "all" || s.grade === gradeFilter);
 
-  // Fetch attendance records for selected date & filtered students
-  const { data: records, isLoading } = useQuery({
-    queryKey: ["attendance-records", dateStr, gradeFilter, user?.center_id, user?.role, user?.id, isRestricted],
+  // Refactor to support server-side pagination
+  const { data: recordsData, isLoading } = useQuery({
+    queryKey: ["attendance-records", dateStr, gradeFilter, user?.center_id, user?.role, user?.id, isRestricted, page, pageSize],
     queryFn: async () => {
-      const studentIds = filteredStudents.map(s => s.id);
-      if (studentIds.length === 0) return [];
+      if (!user?.center_id) return { data: [], count: 0 };
+
       let query = supabase
         .from("attendance")
         .select(`
@@ -98,28 +102,53 @@ export default function ViewRecords() {
           date,
           time_in,
           time_out,
-          students (
+          students!inner (
+            id,
             name,
-            grade
+            grade,
+            center_id
           )
-        `)
-        .in("student_id", studentIds)
-        .eq("date", dateStr);
+        `, { count: "exact" })
+        .eq("date", dateStr)
+        .eq("students.center_id", user.center_id);
+
+      if (gradeFilter !== "all") {
+        query = query.eq("students.grade", gradeFilter);
+      }
+
+      if (isRestricted) {
+        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
+        const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
+        const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
+
+        if (myGrades.length > 0) {
+          query = query.in('students.grade', myGrades);
+        } else {
+          return { data: [], count: 0 };
+        }
+      }
 
       if (user?.role === 'teacher' && isRestricted) {
         query = query.eq('marked_by', user.id);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
-      // Sort by student name in JavaScript after fetching
-      const sortedData = (data as StudentAttendanceRecord[]).sort((a, b) =>
-        a.students.name.localeCompare(b.students.name)
-      );
-      return sortedData;
+      const { data, error, count } = await query
+        .order("students(name)", { ascending: true })
+        .range(from, to);
+
+      if (error) throw error;
+      return { data: data as any[], count: count || 0 };
     },
-    enabled: filteredStudents.length > 0 });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const records = recordsData?.data || [];
+  const totalRows = recordsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // Fetch all attendance for a specific student for the detail dialog
   const { data: studentDetailAttendance = [], refetch: refetchStudentDetailAttendance } = useQuery({
@@ -269,7 +298,7 @@ export default function ViewRecords() {
           <div className="flex flex-wrap gap-6 items-end">
             <div className="w-[140px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
@@ -344,11 +373,11 @@ export default function ViewRecords() {
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Snapshot: {format(selectedDate, "MMMM d, yyyy")}</p>
           </div>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p>Loading records...</p>
+        <CardContent className="p-0">
+          {isLoading && !records.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
           ) : records && records.length > 0 ? (
-            <div className="overflow-x-auto max-h-96 border rounded">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -391,10 +420,18 @@ export default function ViewRecords() {
               </Table>
             </div>
           ) : (
-            <p className="text-center text-muted-foreground">
+            <p className="text-center text-muted-foreground py-12">
               No attendance records found for this date
             </p>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

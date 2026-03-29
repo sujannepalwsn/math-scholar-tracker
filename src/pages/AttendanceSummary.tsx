@@ -18,6 +18,9 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 
 interface AttendanceStats {
@@ -34,13 +37,25 @@ export default function AttendanceSummary() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState('all');
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
-  const { data: students = [] } = useQuery({
-    queryKey: ['students', user?.center_id, isRestricted, user?.teacher_id],
+  // Fetch unique grades for filter
+  const { data: classes = [] } = useQuery({
+    queryKey: ['attendance-grades', user?.center_id],
     queryFn: async () => {
-      let query = supabase.from('students').select('id, name, grade').order('name');
+      const { data, error } = await supabase.from('students').select('grade').eq('center_id', user?.center_id || '');
+      if (error) throw error;
+      return Array.from(new Set(data.map(s => s.grade).filter(Boolean))).sort();
+    },
+    enabled: !!user?.center_id
+  });
+
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
+    queryKey: ['students-paginated', user?.center_id, isRestricted, user?.teacher_id, selectedClass, selectedStudent, page, pageSize],
+    queryFn: async () => {
+      let query = supabase.from('students').select('id, name, grade', { count: 'exact' });
       if (user?.role !== 'admin' && user?.center_id) {
         query = query.eq('center_id', user.center_id);
       }
@@ -53,19 +68,48 @@ export default function AttendanceSummary() {
         if (myGrades.length > 0) {
           query = query.in('grade', myGrades);
         } else {
-          return [];
+          return { data: [], count: 0 };
         }
       }
 
-      const { data, error } = await query;
+      if (selectedClass !== 'all') {
+        query = query.eq('grade', selectedClass);
+      }
+      if (selectedStudent !== 'all') {
+        query = query.eq('id', selectedStudent);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query.order('name').range(from, to);
+      if (error) throw error;
+      return { data: data || [], count: count || 0 };
+    },
+    enabled: !!user?.center_id
+  });
+
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
+
+  // Still need all students for the dropdown filter
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ['all-students-dropdown', user?.center_id, selectedClass],
+    queryFn: async () => {
+      let query = supabase.from('students').select('id, name, grade').eq('center_id', user?.center_id || '');
+      if (selectedClass !== 'all') {
+        query = query.eq('grade', selectedClass);
+      }
+      const { data, error } = await query.order('name');
       if (error) throw error;
       return data;
-    } });
-
-  const classes = Array.from(new Set(students.map(s => s.grade).filter(Boolean))).sort();
+    },
+    enabled: !!user?.center_id
+  });
 
   const { data: attendanceData = [] } = useQuery({
-    queryKey: ['attendance-summary', selectedMonth.toISOString().slice(0, 7), user?.center_id, user?.id, isRestricted],
+    queryKey: ['attendance-summary', selectedMonth.toISOString().slice(0, 7), user?.center_id, user?.id, isRestricted, students.map(s => s.id)],
     queryFn: async () => {
       const startDate = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
@@ -90,17 +134,10 @@ export default function AttendanceSummary() {
     },
     enabled: students.length > 0 });
 
-  const filteredStudents = students.filter(s => selectedClass === 'all' || s.grade === selectedClass);
-
   const calculateStats = (): AttendanceStats[] => {
     const statsMap = new Map<string, AttendanceStats>();
 
-    // Start with students filtered by class and optionally by a specific student
-    const studentsToProcess = filteredStudents.filter(s =>
-      selectedStudent === 'all' || s.id === selectedStudent
-    );
-
-    studentsToProcess.forEach(student => {
+    students.forEach(student => {
       const studentAttendanceRecords = attendanceData.filter(
         (record: any) => record.student_id === student.id
       );
@@ -189,7 +226,7 @@ export default function AttendanceSummary() {
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Class / Grade</Label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="All Classes" />
                 </SelectTrigger>
@@ -203,13 +240,13 @@ export default function AttendanceSummary() {
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</Label>
-              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+              <Select value={selectedStudent} onValueChange={(v) => { setSelectedStudent(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="All Students" />
                 </SelectTrigger>
                 <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Students</SelectItem>
-                  {filteredStudents.map((student) => (
+                  {allStudents.map((student) => (
                     <SelectItem key={student.id} value={student.id}>{student.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -298,7 +335,13 @@ export default function AttendanceSummary() {
         </DialogContent>
       </Dialog>
 
-      {stats.length > 0 && (
+      {studentsLoading && !stats.length ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: pageSize }).map((_, i) => (
+            <Card key={i} className="rounded-3xl h-48 bg-slate-200/50 animate-pulse" />
+          ))}
+        </div>
+      ) : stats.length > 0 ? (
         <Card className="border-none shadow-strong overflow-hidden rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
           <CardHeader className="border-b border-border/10 bg-primary/5 py-6">
             <CardTitle className="text-xl font-black flex items-center gap-3">
@@ -309,7 +352,7 @@ export default function AttendanceSummary() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               {stats.map((stat) => (
                 <div
                   key={stat.studentId}
@@ -352,7 +395,19 @@ export default function AttendanceSummary() {
                 </div>
               ))}
             </div>
+            <ServerPagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRows={totalRows}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
+        </Card>
+      ) : (
+        <Card className="p-12 text-center text-muted-foreground italic">
+          No attendance statistics discovered for the selected criteria.
         </Card>
       )}
     </div>
