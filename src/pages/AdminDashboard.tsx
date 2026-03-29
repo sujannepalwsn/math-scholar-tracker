@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Edit, Plus, Power, PowerOff, Users } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
@@ -32,23 +35,33 @@ const AdminDashboard = () => {
   const [editingCenter, setEditingCenter] = useState<any>(null);
   const [editedCenterData, setEditedCenterData] = useState({ centerName: '', address: '' });
   const [newCenter, setNewCenter] = useState({ centerName: '', address: '', phone: '', username: '', password: '' });
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   if (user?.role !== 'admin') {
     navigate('/');
     return null;
   }
 
-  const { data: centers = [], isLoading } = useQuery({
-    queryKey: ['centers-with-users'],
+  const { data: centersData, isLoading } = useQuery({
+    queryKey: ['centers-with-users', page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from('centers')
-        .select('*, users(*)')
-        .order('created_at', { ascending: false });
+        .select('*, users(*)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      return data;
-    }
+      return { data, count: count || 0 };
+    },
+    placeholderData: (previousData) => previousData
   });
+
+  const centers = centersData?.data || [];
+  const totalRows = centersData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const createCenterMutation = useMutation({
     mutationFn: async () => {
@@ -237,10 +250,8 @@ const AdminDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="h-8 w-8 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-              </div>
+          {isLoading && !centers.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
             ) : centers.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground font-medium italic">No active center registrations discovered.</p>
@@ -302,6 +313,14 @@ const AdminDashboard = () => {
                 </Table>
               </div>
             )}
+            <ServerPagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRows={totalRows}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
 

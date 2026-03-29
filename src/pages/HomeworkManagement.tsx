@@ -12,6 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ExternalLink, MessageCircle } from "lucide-react";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -51,11 +54,16 @@ export default function HomeworkManagement() {
   const [bulkStatus, setBulkStatus] = useState<StudentHomeworkRecord['status']>("completed");
   const [bulkRemarks, setBulkRemarks] = useState("");
 
-  const { data: homeworkList = [], isLoading } = useQuery({
-    queryKey: ["homework", user?.center_id, gradeFilter, subjectFilter, user?.teacher_id, isRestricted],
+  const { page, setPage, pageSize, setPageSize } = usePagination();
+
+  const { data: homeworkData, isLoading } = useQuery({
+    queryKey: ["homework", user?.center_id, gradeFilter, subjectFilter, user?.teacher_id, isRestricted, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("homework").select("*, lesson_plans(*)").eq("center_id", user.center_id).order("due_date", { ascending: false });
+      if (!user?.center_id) return { data: [], count: 0 };
+      let query = supabase
+        .from("homework")
+        .select("*, lesson_plans(*)", { count: "exact" })
+        .eq("center_id", user.center_id);
 
       if (user?.role === 'teacher' && isRestricted) {
         query = query.eq('teacher_id', user.teacher_id);
@@ -64,11 +72,23 @@ export default function HomeworkManagement() {
       if (gradeFilter !== "all") query = query.eq("grade", gradeFilter);
       if (subjectFilter !== "all") query = query.eq("subject", subjectFilter);
 
-      const { data, error } = await query;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("due_date", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const homeworkList = homeworkData?.data || [];
+  const totalRows = homeworkData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const { data: lessonPlans = [] } = useQuery({
     queryKey: ["lesson-plans-for-homework", user?.center_id, user?.teacher_id, isRestricted],
@@ -288,7 +308,7 @@ export default function HomeworkManagement() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+          <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[140px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
@@ -297,7 +317,7 @@ export default function HomeworkManagement() {
               {uniqueGrades.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+          <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[140px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
@@ -385,11 +405,9 @@ export default function HomeworkManagement() {
             Active Assignments
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+        <CardContent className="p-0">
+          {isLoading && !homeworkList.length ? (
+            <TableSkeleton columns={5} rows={pageSize} />
           ) : homeworkList.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <div className="mx-auto w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center">
@@ -473,6 +491,14 @@ export default function HomeworkManagement() {
               </Table>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>

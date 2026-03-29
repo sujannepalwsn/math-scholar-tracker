@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,6 +31,7 @@ export default function PublishedResults() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudentResult, setSelectedStudentResult] = useState<any>(null);
   const [selectedExamSchedule, setSelectedExamSchedule] = useState<any>(null);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Fetch Exams (Published for parents, All for staff)
   const { data: exams = [] } = useQuery({
@@ -93,16 +97,19 @@ export default function PublishedResults() {
   });
 
   // Fetch Students
-  const { data: students = [] } = useQuery({
-    queryKey: ["students-for-results", centerId, selectedExam?.grade, user?.role, user?.id],
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
+    queryKey: ["students-for-results", centerId, selectedExam?.grade, user?.role, user?.id, page, pageSize, searchQuery],
     queryFn: async () => {
-      if (!centerId) return [];
-      let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      if (!centerId) return { data: [], count: 0 };
+      let query = supabase
+        .from("students")
+        .select("*", { count: "exact" })
+        .eq("center_id", centerId)
+        .eq("is_active", true);
 
       if (selectedExam?.grade) {
         query = query.eq("grade", selectedExam.grade);
       } else {
-        // If no exam selected, and user is teacher, filter students by teacher's assigned grades
         const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
         if (user?.role === 'teacher' && user?.teacher_id && isRestricted) {
            const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
@@ -121,12 +128,27 @@ export default function PublishedResults() {
         query = query.in('id', studentIds);
       }
 
-      const { data, error } = await query.order("name");
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,roll_number.ilike.%${searchQuery}%`);
+      }
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("name")
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!centerId
+    enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
+
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // Fetch Marks
   const { data: marks = [] } = useQuery({
@@ -148,10 +170,6 @@ export default function PublishedResults() {
     if (!selectedExamId || subjects.length === 0) return [];
 
     return students
-      .filter(s =>
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s.roll_number || "").toLowerCase().includes(searchQuery.toLowerCase())
-      )
       .map(student => {
         const studentMarks = marks.filter(m => m.student_id === student.id);
         let totalObtained = 0;
@@ -271,7 +289,7 @@ export default function PublishedResults() {
 
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Examination Context</label>
-              <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+              <Select value={selectedExamId} onValueChange={(v) => { setSelectedExamId(v); setPage(1); }}>
                 <SelectTrigger className="w-[250px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl font-bold">
                   <SelectValue placeholder="Select an exam" />
                 </SelectTrigger>
@@ -290,7 +308,7 @@ export default function PublishedResults() {
             {user?.role !== 'parent' && (
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Cohort</label>
-                <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
                   <SelectTrigger className="w-[150px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl font-bold">
                     <SelectValue placeholder="All Grades" />
                   </SelectTrigger>
@@ -345,7 +363,9 @@ export default function PublishedResults() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {studentResults.length === 0 ? (
+            {studentsLoading && !students.length ? (
+              <TableSkeleton columns={7} rows={pageSize} />
+            ) : studentResults.length === 0 ? (
               <div className="p-12 text-center text-muted-foreground italic font-medium">No scholarship outcomes identified for the current filters.</div>
             ) : (
               <div className="overflow-x-auto">
@@ -403,6 +423,14 @@ export default function PublishedResults() {
               </Table>
               </div>
             )}
+            <ServerPagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRows={totalRows}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
       ) : (

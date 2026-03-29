@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/page-header";
@@ -37,6 +40,7 @@ export default function MarksEntry() {
   const [selectedExamId, setSelectedExamId] = useState<string>(searchParams.get("examId") || "");
   const [marksData, setMarksData] = useState<Record<string, Record<string, string>>>({});
   const [filterGrade, setFilterGrade] = useState<string>("all");
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
@@ -130,14 +134,14 @@ export default function MarksEntry() {
     return selectedExam.applicable_grades || (selectedExam.grade ? [selectedExam.grade] : []);
   }, [selectedExam]);
 
-  const { data: students = [] } = useQuery({
-    queryKey: ["students-for-exam", centerId, selectedExamId, filterGrade],
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
+    queryKey: ["students-for-exam", centerId, selectedExamId, filterGrade, page, pageSize],
     queryFn: async () => {
-      if (!centerId || !selectedExamId || !selectedExam) return [];
+      if (!centerId || !selectedExamId || !selectedExam) return { data: [], count: 0 };
 
       let query = supabase
         .from("students")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("center_id", centerId)
         .eq("is_active", true);
 
@@ -147,12 +151,24 @@ export default function MarksEntry() {
         query = query.in("grade", examGrades);
       }
 
-      const { data, error } = await query.order("grade").order("name");
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("grade")
+        .order("name")
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!centerId && !!selectedExamId && !!selectedExam,
+    placeholderData: (previousData) => previousData
   });
+
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // Load existing marks
   const { data: existingMarks = [] } = useQuery({
@@ -294,7 +310,7 @@ export default function MarksEntry() {
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Examination Session</label>
-            <Select value={selectedExamId} onValueChange={setSelectedExamId}>
+            <Select value={selectedExamId} onValueChange={(v) => { setSelectedExamId(v); setPage(1); }}>
               <SelectTrigger>
                 <SelectValue placeholder="Select an exam" />
               </SelectTrigger>
@@ -314,7 +330,7 @@ export default function MarksEntry() {
           {selectedExam && examGrades.length > 1 && (
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade Filter</label>
-              <Select value={filterGrade} onValueChange={setFilterGrade}>
+              <Select value={filterGrade} onValueChange={(v) => { setFilterGrade(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Filter by grade" />
                 </SelectTrigger>
@@ -343,6 +359,9 @@ export default function MarksEntry() {
 
           <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
           <div className="overflow-x-auto">
+            {studentsLoading && !students.length ? (
+              <TableSkeleton columns={subjects.length + 5} rows={pageSize} />
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-muted/10 bg-muted/5">
@@ -401,7 +420,16 @@ export default function MarksEntry() {
                 ))}
               </TableBody>
             </Table>
+            )}
           </div>
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
           </Card>
         </>
       )}

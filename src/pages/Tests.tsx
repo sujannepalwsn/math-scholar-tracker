@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -77,19 +80,19 @@ export default function Tests() {
   const [resultDate, setResultDate] = useState(format(new Date(), "yyyy-MM-dd"));
   // Removed resultNotes state
 
+  const { page, setPage, pageSize, setPageSize } = usePagination();
+
   // Fetch tests
-  const { data: tests = [] } = useQuery({
-    queryKey: ["tests", user?.center_id, user?.id, isRestricted],
+  const { data: testsData, isLoading: testsLoading } = useQuery({
+    queryKey: ["tests", user?.center_id, user?.id, isRestricted, page, pageSize],
     queryFn: async () => {
+      if (!user?.center_id) return { data: [], count: 0 };
+
       let query = supabase
         .from("tests")
-        .select("*, lesson_plans(id, subject, chapter, topic, grade)") // Fetch lesson_plans details
-        .order("date", { ascending: false });
+        .select("*, lesson_plans(id, subject, chapter, topic, grade)", { count: "exact" });
       
       if (user?.role === 'teacher') {
-        // Even in full mode, teachers might want to see their own first, but here we strictly follow the requirement
-        // "Full Mode (ON) -> same access as Center Admin"
-        // "Restricted Mode (OFF) -> only tests created by teacher"
         if (isRestricted) {
           query = query.eq('created_by', user.id);
         } else {
@@ -99,10 +102,23 @@ export default function Tests() {
         query = query.eq('center_id', user.center_id);
       }
       
-      const { data, error } = await query;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("date", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
-    } });
+      return { data: data || [], count: count || 0 };
+    },
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const tests = testsData?.data || [];
+  const totalRows = testsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // Fetch lesson plans for the dropdown
   const { data: lessonPlans = [] } = useQuery({
@@ -768,7 +784,14 @@ export default function Tests() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tests.map((test) => (
+            {testsLoading && !tests.length ? (
+              <TableRow>
+                <TableCell colSpan={3} className="p-0">
+                  <TableSkeleton columns={3} rows={pageSize} />
+                </TableCell>
+              </TableRow>
+            ) : (
+              tests.map((test) => (
                   <TableRow
                     key={test.id}
                     className={cn(
@@ -823,15 +846,23 @@ export default function Tests() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )))}
               </TableBody>
             </Table>
 </div>
-            {tests.length === 0 && (
+            {!testsLoading && tests.length === 0 && (
               <p className="text-muted-foreground text-center py-12 font-medium">
                 No assessments in catalog
               </p>
             )}
+            <ServerPagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRows={totalRows}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
 

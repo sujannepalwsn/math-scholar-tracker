@@ -6,6 +6,9 @@ import {
 } from "lucide-react";
 import { cn, safeFormatDate } from "@/lib/utils"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
@@ -63,6 +66,7 @@ export default function TeacherAttendancePage() {
   const [selectedTeacherDetail, setSelectedTeacherDetail] = useState<Teacher | null>(null);
   const [detailMonthFilter, setDetailMonthFilter] = useState<Date>(new Date());
   const [isVerifying, setIsVerifying] = useState(false);
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const today = new Date();
   const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -384,44 +388,76 @@ export default function TeacherAttendancePage() {
     setAttendanceRecords(updatedRecords);
   };
 
-  // Prepare data for the report section
-  const reportData: TeacherAttendanceSummary[] = useMemo(() => {
-    const start = startOfMonth(parseISO(reportMonthFilter + "-01"));
-    const end = endOfMonth(parseISO(reportMonthFilter + "-01"));
-    
-    const filteredByMonth = allTeacherAttendance.filter((att: any) => {
-      const attDate = parseISO(att.date);
-      return isWithinInterval(attDate, { start, end });
-    });
+  // Refactor report data fetching to support server-side pagination
+  const { data: reportDataResult, isLoading: reportLoading } = useQuery({
+    queryKey: ["teacher-attendance-report", user?.center_id, reportMonthFilter, page, pageSize, isRestricted],
+    queryFn: async () => {
+      if (!user?.center_id) return { data: [], count: 0 };
 
-    const summaryMap = new Map<string, TeacherAttendanceSummary>();
-    teachers.forEach(teacher => {
-      summaryMap.set(teacher.id, {
-        id: teacher.id,
-        name: teacher.name,
-        present: 0,
-        absent: 0,
-        leave: 0,
-        totalDays: 0,
-        attendancePercentage: 0 });
-    });
+      const start = format(startOfMonth(parseISO(reportMonthFilter + "-01")), "yyyy-MM-dd");
+      const end = format(endOfMonth(parseISO(reportMonthFilter + "-01")), "yyyy-MM-dd");
 
-    filteredByMonth.forEach((att: any) => {
-      const teacherSummary = summaryMap.get(att.teacher_id);
-      if (teacherSummary) {
-        teacherSummary.totalDays += 1;
-        if (att.status === 'present') teacherSummary.present += 1;
-        else if (att.status === 'absent') teacherSummary.absent += 1;
-        else if (att.status === 'leave') teacherSummary.leave += 1;
+      // 1. Get paginated teachers first
+      let teacherQuery = supabase
+        .from("teachers")
+        .select("id, name", { count: "exact" })
+        .eq("center_id", user.center_id)
+        .eq("is_active", true);
+
+      if (isRestricted) {
+        teacherQuery = teacherQuery.eq("id", user.teacher_id);
       }
-    });
 
-    summaryMap.forEach(summary => {
-      summary.attendancePercentage = summary.totalDays > 0 ? Math.round((summary.present / summary.totalDays) * 100) : 0;
-    });
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
-    return Array.from(summaryMap.values());
-  }, [allTeacherAttendance, teachers, reportMonthFilter]);
+      const { data: paginatedTeachers, count: teacherCount, error: teacherError } = await teacherQuery
+        .order("name")
+        .range(from, to);
+
+      if (teacherError) throw teacherError;
+      if (!paginatedTeachers || paginatedTeachers.length === 0) return { data: [], count: 0 };
+
+      const teacherIds = paginatedTeachers.map(t => t.id);
+
+      // 2. Get attendance for these teachers in the month
+      const { data: attendance, error: attError } = await supabase
+        .from("teacher_attendance")
+        .select("teacher_id, status")
+        .in("teacher_id", teacherIds)
+        .gte("date", start)
+        .lte("date", end);
+
+      if (attError) throw attError;
+
+      // 3. Process data
+      const summaries: TeacherAttendanceSummary[] = paginatedTeachers.map(t => {
+        const teacherAtt = attendance?.filter(a => a.teacher_id === t.id) || [];
+        const present = teacherAtt.filter(a => a.status === 'present').length;
+        const absent = teacherAtt.filter(a => a.status === 'absent').length;
+        const leave = teacherAtt.filter(a => a.status === 'leave').length;
+        const totalDays = teacherAtt.length;
+
+        return {
+          id: t.id,
+          name: t.name,
+          present,
+          absent,
+          leave,
+          totalDays,
+          attendancePercentage: totalDays > 0 ? Math.round((present / totalDays) * 100) : 0
+        };
+      });
+
+      return { data: summaries, count: teacherCount || 0 };
+    },
+    enabled: !!user?.center_id && !!reportMonthFilter,
+    placeholderData: (previousData) => previousData
+  });
+
+  const reportData = reportDataResult?.data || [];
+  const totalRows = reportDataResult?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const exportReportToCSV = () => {
     if (!reportData || reportData.length === 0) return;
@@ -899,10 +935,8 @@ export default function TeacherAttendancePage() {
                </div>
             </div>
           </div>
-          {teachersLoading || allTeacherAttendance.length === 0 ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-            </div>
+          {reportLoading && !reportData.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
           ) : reportData.length === 0 ? (
             <div className="text-center py-12 bg-muted/5 rounded-3xl border border-dashed border-muted/20">
               <p className="text-muted-foreground font-medium italic">No performance data available for this period.</p>
@@ -944,9 +978,17 @@ export default function TeacherAttendancePage() {
                   ))}
                 </TableBody>
               </Table>
-</div>
+            </div>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

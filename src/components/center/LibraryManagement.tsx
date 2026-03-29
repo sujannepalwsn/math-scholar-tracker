@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { Book, Plus, Trash2, Search, BookOpen, RotateCcw, History, Printer } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { cn } from "@/lib/utils";
 
 export default function LibraryManagement({ centerId, canEdit }: { centerId: string, canEdit?: boolean }) {
@@ -20,6 +23,9 @@ export default function LibraryManagement({ centerId, canEdit }: { centerId: str
   const [bookForm, setBookForm] = useState({ title: "", author: "", isbn: "", category: "", copies: "1" });
   const [issueForm, setIssueForm] = useState({ bookId: "", studentId: "", dueDate: "" });
 
+  const { page: catalogPage, setPage: setCatalogPage, pageSize: catalogPageSize, setPageSize: setCatalogPageSize } = usePagination();
+  const { page: loansPage, setPage: setLoansPage, pageSize: loansPageSize, setPageSize: setLoansPageSize } = usePagination();
+
   const { data: students } = useQuery({
     queryKey: ["active-students-library", centerId],
     queryFn: async () => {
@@ -29,33 +35,64 @@ export default function LibraryManagement({ centerId, canEdit }: { centerId: str
     },
   });
 
-  const { data: books, isLoading: booksLoading } = useQuery({
-    queryKey: ["library-books", centerId],
+  const { data: booksData, isLoading: booksLoading } = useQuery({
+    queryKey: ["library-books", centerId, catalogPage, catalogPageSize, bookSearch],
     queryFn: async () => {
-      const { data, error } = await supabase.from("books").select("*").eq("center_id", centerId);
+      let query = supabase
+        .from("books")
+        .select("*", { count: "exact" })
+        .eq("center_id", centerId);
+
+      if (bookSearch) {
+        query = query.or(`title.ilike.%${bookSearch}%,author.ilike.%${bookSearch}%,isbn.ilike.%${bookSearch}%`);
+      }
+
+      const from = (catalogPage - 1) * catalogPageSize;
+      const to = from + catalogPageSize - 1;
+
+      const { data, error, count } = await query
+        .order("title")
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
+    enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
 
-  const { data: loans, isLoading: loansLoading } = useQuery({
-    queryKey: ["book-loans", centerId],
+  const books = booksData?.data || [];
+  const catalogTotalRows = booksData?.count || 0;
+  const catalogTotalPages = Math.ceil(catalogTotalRows / catalogPageSize);
+
+  const { data: loansData, isLoading: loansLoading } = useQuery({
+    queryKey: ["book-loans", centerId, loansPage, loansPageSize],
     queryFn: async () => {
-      // Joining with books, users and students
-      const { data, error } = await supabase
+      const from = (loansPage - 1) * loansPageSize;
+      const to = from + loansPageSize - 1;
+
+      const { data, error, count } = await supabase
         .from("book_loans")
         .select(`
           *,
           books:book_id(title),
           users:user_id(username),
           students:student_id(name)
-        `)
+        `, { count: "exact" })
         .eq("center_id", centerId)
-        .order("issue_date", { ascending: false });
+        .order("issue_date", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
+    enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
+
+  const loans = loansData?.data || [];
+  const loansTotalRows = loansData?.count || 0;
+  const loansTotalPages = Math.ceil(loansTotalRows / loansPageSize);
 
   const issueBookMutation = useMutation({
     mutationFn: async () => {
@@ -263,31 +300,47 @@ export default function LibraryManagement({ centerId, canEdit }: { centerId: str
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {books?.map((b: any) => (
-                        <TableRow
-                          key={b.id}
-                          className={cn(
-                            "group/row cursor-pointer transition-all",
-                            selectedBook?.id === b.id ? "bg-primary/5" : "hover:bg-primary/5"
-                          )}
-                          onClick={() => setSelectedBook(b)}
-                        >
-                          <TableCell className="px-6 py-4 font-black text-slate-700">{b.title}</TableCell>
-                          {!selectedBook && <TableCell className="text-sm">{b.author}</TableCell>}
-                          <TableCell>
-                            <Badge variant={b.available_copies > 0 ? "pulse" : "destructive"}>
-                              {b.available_copies} / {b.total_copies}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right px-6">
-                            <Button variant="ghost" size="icon" className="opacity-0 group-hover/row:opacity-100 transition-all"><BookOpen className="h-4 w-4" /></Button>
+                      {booksLoading && !books.length ? (
+                        <TableRow>
+                          <TableCell colSpan={selectedBook ? 3 : 4} className="p-0">
+                            <TableSkeleton columns={selectedBook ? 3 : 4} rows={catalogPageSize} />
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        books.map((b: any) => (
+                          <TableRow
+                            key={b.id}
+                            className={cn(
+                              "group/row cursor-pointer transition-all",
+                              selectedBook?.id === b.id ? "bg-primary/5" : "hover:bg-primary/5"
+                            )}
+                            onClick={() => setSelectedBook(b)}
+                          >
+                            <TableCell className="px-6 py-4 font-black text-slate-700">{b.title}</TableCell>
+                            {!selectedBook && <TableCell className="text-sm">{b.author}</TableCell>}
+                            <TableCell>
+                              <Badge variant={b.available_copies > 0 ? "pulse" : "destructive"}>
+                                {b.available_copies} / {b.total_copies}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right px-6">
+                              <Button variant="ghost" size="icon" className="opacity-0 group-hover/row:opacity-100 transition-all"><BookOpen className="h-4 w-4" /></Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
               </div>
+              <ServerPagination
+                currentPage={catalogPage}
+                totalPages={catalogTotalPages}
+                totalRows={catalogTotalRows}
+                pageSize={catalogPageSize}
+                onPageChange={setCatalogPage}
+                onPageSizeChange={setCatalogPageSize}
+              />
             </div>
 
             {selectedBook && (
@@ -408,30 +461,46 @@ export default function LibraryManagement({ centerId, canEdit }: { centerId: str
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loans?.map((l: any) => (
-                  <TableRow key={l.id}>
-                    <TableCell className="font-bold">{l.books?.title}</TableCell>
-                    <TableCell className="text-sm">{l.students?.name || l.users?.username || 'N/A'}</TableCell>
-                    <TableCell className="text-xs">{l.issue_date}</TableCell>
-                    <TableCell className="text-xs">{l.due_date}</TableCell>
-                    <TableCell>
-                      <Badge variant={l.status === 'Returned' ? 'secondary' : 'default'} className="text-[9px] font-black uppercase">
-                        {l.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canEdit && l.status === 'Issued' && (
-                        <Button variant="outline" size="sm" onClick={() => returnBookMutation.mutate(l.id)} className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                          <RotateCcw className="h-3 w-3 mr-1" /> Return
-                        </Button>
-                      )}
+                {loansLoading && !loans.length ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <TableSkeleton columns={6} rows={loansPageSize} />
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  loans.map((l: any) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="font-bold">{l.books?.title}</TableCell>
+                      <TableCell className="text-sm">{l.students?.name || l.users?.username || 'N/A'}</TableCell>
+                      <TableCell className="text-xs">{l.issue_date}</TableCell>
+                      <TableCell className="text-xs">{l.due_date}</TableCell>
+                      <TableCell>
+                        <Badge variant={l.status === 'Returned' ? 'secondary' : 'default'} className="text-[9px] font-black uppercase">
+                          {l.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {canEdit && l.status === 'Issued' && (
+                          <Button variant="outline" size="sm" onClick={() => returnBookMutation.mutate(l.id)} className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest">
+                            <RotateCcw className="h-3 w-3 mr-1" /> Return
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
 </div>
           </div>
+          <ServerPagination
+            currentPage={loansPage}
+            totalPages={loansTotalPages}
+            totalRows={loansTotalRows}
+            pageSize={loansPageSize}
+            onPageChange={setLoansPage}
+            onPageSizeChange={setLoansPageSize}
+          />
         </TabsContent>
       </Tabs>
     </div>

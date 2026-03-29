@@ -10,6 +10,9 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Checkbox } from "@/components/ui/checkbox"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
@@ -50,6 +53,7 @@ export default function DisciplineIssues() {
   const [modalGradeFilter, setModalGradeFilter] = useState<string>("all");
   const [resolution, setResolution] = useState("");
   const [status, setStatus] = useState<string>("open");
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Fetch students
   const { data: students = [] } = useQuery({
@@ -101,15 +105,14 @@ export default function DisciplineIssues() {
     enabled: !!user?.center_id });
 
   // Fetch discipline issues
-  const { data: issues = [], isLoading: issuesLoading } = useQuery({ // Destructure isLoading here
-    queryKey: ["discipline-issues", user?.center_id, gradeFilter, user?.id, isRestricted],
+  const { data: issuesData, isLoading: issuesLoading } = useQuery({
+    queryKey: ["discipline-issues", user?.center_id, gradeFilter, user?.id, isRestricted, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
+      if (!user?.center_id) return { data: [], count: 0 };
       let query = supabase
         .from("discipline_issues")
-        .select("*, students!inner(name, grade), discipline_categories(name)")
-        .eq("center_id", user.center_id)
-        .order("issue_date", { ascending: false });
+        .select("*, students!inner(name, grade), discipline_categories(name)", { count: "exact" })
+        .eq("center_id", user.center_id);
       
       if (gradeFilter !== "all") {
         query = query.eq("students.grade", gradeFilter);
@@ -119,11 +122,23 @@ export default function DisciplineIssues() {
         query = query.eq('reported_by', user.id);
       }
 
-      const { data, error } = await query;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("issue_date", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const issues = issuesData?.data || [];
+  const totalRows = issuesData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const resetForm = () => {
     setSelectedStudentIds([]);
@@ -282,7 +297,7 @@ export default function DisciplineIssues() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+          <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[140px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
@@ -447,10 +462,8 @@ export default function DisciplineIssues() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {issuesLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-            </div>
+          {issuesLoading && !issues.length ? (
+            <TableSkeleton columns={5} rows={pageSize} />
           ) : issues.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <div className="mx-auto w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center">
@@ -529,6 +542,14 @@ export default function DisciplineIssues() {
               </Table>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -41,27 +44,37 @@ export default function SchoolDays() {
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isSchoolDay, setIsSchoolDay] = useState(true);
   const [reason, setReason] = useState("");
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
-  const { data: schoolDays = [], isLoading } = useQuery({
-    queryKey: ["school-days", centerId, selectedMonth],
+  const { data: schoolDaysData, isLoading } = useQuery({
+    queryKey: ["school-days", centerId, selectedMonth, page, pageSize],
     queryFn: async () => {
-      if (!centerId) return [];
+      if (!centerId) return { data: [], count: 0 };
       const start = format(startOfMonth(new Date(selectedMonth)), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(selectedMonth)), "yyyy-MM-dd");
 
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from("school_days")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("center_id", centerId)
         .gte("date", start)
         .lte("date", end)
-        .order("date");
+        .order("date")
+        .range(from, to);
 
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
-    enabled: !!centerId
+    enabled: !!centerId,
+    placeholderData: (previousData) => previousData
   });
+
+  const schoolDays = schoolDaysData?.data || [];
+  const totalRows = schoolDaysData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const upsertMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -197,8 +210,8 @@ export default function SchoolDays() {
             />
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          {isLoading && !schoolDays.length ? (
+            <TableSkeleton columns={4} rows={pageSize} />
             ) : schoolDays.length === 0 ? (
               <div className="text-center py-12 bg-muted/5 rounded-3xl border border-dashed border-muted/20">
                 <p className="text-muted-foreground font-medium italic">No overrides configured for this month. All days are operational by default.</p>
@@ -249,6 +262,14 @@ export default function SchoolDays() {
                 </Table>
               </div>
             )}
+            <ServerPagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalRows={totalRows}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </CardContent>
         </Card>
       </div>

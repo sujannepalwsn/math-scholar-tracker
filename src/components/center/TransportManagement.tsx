@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner";
 import { Bus, Plus, Trash2, MapPin, Navigation, User, Users, CheckSquare, Square, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,6 +26,7 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
   const [assignForm, setAssignForm] = useState({ routeId: "", vehicleId: "" });
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [filterGrade, setFilterGrade] = useState<string>("all");
+  const { page: assignmentsPage, setPage: setAssignmentsPage, pageSize: assignmentsPageSize, setPageSize: setAssignmentsPageSize } = usePagination();
 
   const { data: students } = useQuery({
     queryKey: ["students", centerId],
@@ -51,22 +55,32 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
     },
   });
 
-  const { data: assignments } = useQuery({
-    queryKey: ["transport-assignments", centerId],
+  const { data: assignmentsData, isLoading: assignmentsLoading } = useQuery({
+    queryKey: ["transport-assignments", centerId, assignmentsPage, assignmentsPageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (assignmentsPage - 1) * assignmentsPageSize;
+      const to = from + assignmentsPageSize - 1;
+
+      const { data, error, count } = await supabase
         .from("transport_assignments")
         .select(`
           *,
           students:student_id(name, grade),
           bus_routes:route_id(route_name),
           vehicles:vehicle_id(vehicle_number)
-        `)
-        .eq("center_id", centerId);
+        `, { count: "exact" })
+        .eq("center_id", centerId)
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
+    placeholderData: (previousData) => previousData
   });
+
+  const assignments = assignmentsData?.data || [];
+  const totalRows = assignmentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / assignmentsPageSize);
 
   const addRouteMutation = useMutation({
     mutationFn: async () => {
@@ -416,7 +430,14 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments?.map((a: any) => (
+                {assignmentsLoading && !assignments.length ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <TableSkeleton columns={5} rows={assignmentsPageSize} />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  assignments.map((a: any) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-bold">{a.students?.name}</TableCell>
                     <TableCell className="text-xs">Grade {a.students?.grade}</TableCell>
@@ -426,8 +447,8 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
                        <Badge variant="success" className="text-[9px] uppercase font-black">Assigned</Badge>
                     </TableCell>
                   </TableRow>
-                ))}
-                {assignments?.length === 0 && (
+                )))}
+                {!assignmentsLoading && assignments.length === 0 && (
                    <TableRow>
                      <TableCell colSpan={5} className="text-center py-12 text-slate-400 italic">No transport assignments discovered.</TableCell>
                    </TableRow>
@@ -436,6 +457,14 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
             </Table>
 </div>
           </div>
+          <ServerPagination
+            currentPage={assignmentsPage}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={assignmentsPageSize}
+            onPageChange={setAssignmentsPage}
+            onPageSizeChange={setAssignmentsPageSize}
+          />
         </TabsContent>
       </Tabs>
     </div>

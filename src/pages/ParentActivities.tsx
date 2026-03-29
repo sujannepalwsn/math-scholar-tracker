@@ -9,11 +9,14 @@ import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
 import { cn } from "@/lib/utils"
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
 
 type Activity = Tables<'activities'>;
 
 export default function ParentActivities() {
   const { user } = useAuth();
+  const { page, pageSize, setPage, setPageSize } = usePagination(9); // 3x3 grid
 
   if (!user?.student_id) {
     return (
@@ -27,18 +30,24 @@ export default function ParentActivities() {
   }
 
   // Fetch student's activities
-  const { data: activities = [], isLoading } = useQuery({
-    queryKey: ['parent-activities', user.student_id],
+  const { data: activitiesData, isLoading } = useQuery({
+    queryKey: ['parent-activities', user.student_id, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('student_activities')
-        .select('*, activities(*)')
+        .select('*, activities(*)', { count: 'exact' })
         .eq('student_id', user.student_id!)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!user.student_id });
+
+  const activities = activitiesData?.data || [];
+  const totalRows = activitiesData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
@@ -71,7 +80,7 @@ export default function ParentActivities() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
+          {isLoading && !activities.length ? (
             <div className="flex justify-center py-20">
               <div className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
             </div>
@@ -83,85 +92,97 @@ export default function ParentActivities() {
               <p className="text-muted-foreground font-bold italic">No creative milestones discovered in the archives yet.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-8">
-              {activities.map((sa: any) => {
-                const activity = sa.activities;
-                if (!activity) return null;
-                return (
-                  <Card key={sa.id} className="overflow-hidden border border-border/40 bg-card/60 shadow-soft hover:shadow-strong hover:-translate-y-2 transition-all duration-500 rounded-[2rem] group">
-                    <div className="relative aspect-video overflow-hidden">
-                      {activity.photo_url ? (
-                        <img
-                          src={supabase.storage.from("activity-photos").getPublicUrl(activity.photo_url).data.publicUrl}
-                          alt={activity.title || 'Activity'}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                      ) : activity.video_url ? (
-                        <video className="w-full h-full object-cover" muted>
-                          <source src={supabase.storage.from("activity-videos").getPublicUrl(activity.video_url).data.publicUrl} />
-                        </video>
-                      ) : (
-                        <div className="w-full h-full bg-slate-100 flex items-center justify-center">
-                           <Paintbrush className="h-12 w-12 text-slate-200" />
-                        </div>
-                      )}
-
-                      <div className="absolute top-4 left-4">
-                         <Badge className="bg-card/80 backdrop-blur-md text-foreground border-none text-[9px] font-black uppercase tracking-widest px-2.5 py-1 shadow-soft">
-                            <Calendar className="h-2.5 w-2.5 mr-1.5 inline text-primary" />
-                            {format(new Date(activity.activity_date), "MMM d, yyyy")}
-                         </Badge>
-                      </div>
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-                         <div className="flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-[0.2em]">
-                            <ExternalLink className="h-3 w-3" /> INSPECTION PROTOCOL ACTIVE
-                         </div>
-                      </div>
-                    </div>
-
-                    <CardContent className="p-6 space-y-4">
-                      <div className="space-y-1">
-                        <h3 className="font-black text-xl text-foreground/90 leading-tight group-hover:text-primary transition-colors line-clamp-1">{activity.title}</h3>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Creative Milestones</p>
-                      </div>
-
-                      <div className="h-12">
-                        <p className="text-xs font-medium text-slate-500 line-clamp-2 leading-relaxed italic">
-                          "{activity.description || 'Creative details pending institutional log...'}"
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                        {sa.involvement_score ? (
-                          <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter">
-                            <Star className="h-3.5 w-3.5 fill-current" />
-                            Engagement Lvl {sa.involvement_score}
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-8">
+                {activities.map((sa: any) => {
+                  const activity = sa.activities;
+                  if (!activity) return null;
+                  return (
+                    <Card key={sa.id} className="overflow-hidden border border-border/40 bg-card/60 shadow-soft hover:shadow-strong hover:-translate-y-2 transition-all duration-500 rounded-[2rem] group">
+                      <div className="relative aspect-video overflow-hidden">
+                        {activity.photo_url ? (
+                          <img
+                            src={supabase.storage.from("activity-photos").getPublicUrl(activity.photo_url).data.publicUrl}
+                            alt={activity.title || 'Activity'}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                        ) : activity.video_url ? (
+                          <video className="w-full h-full object-cover" muted>
+                            <source src={supabase.storage.from("activity-videos").getPublicUrl(activity.video_url).data.publicUrl} />
+                          </video>
+                        ) : (
+                          <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                             <Paintbrush className="h-12 w-12 text-slate-200" />
                           </div>
-                        ) : <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Awaiting Score</div>}
+                        )}
 
-                        <div className="flex gap-2">
-                          {activity.photo_url && (
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white shadow-soft hover:bg-primary/5 hover:text-primary transition-all" asChild>
-                              <a href={supabase.storage.from("activity-photos").getPublicUrl(activity.photo_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
-                                <Camera className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                          {activity.video_url && (
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white shadow-soft hover:bg-primary/5 hover:text-primary transition-all" asChild>
-                              <a href={supabase.storage.from("activity-videos").getPublicUrl(activity.video_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
-                                <Video className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
+                        <div className="absolute top-4 left-4">
+                           <Badge className="bg-card/80 backdrop-blur-md text-foreground border-none text-[9px] font-black uppercase tracking-widest px-2.5 py-1 shadow-soft">
+                              <Calendar className="h-2.5 w-2.5 mr-1.5 inline text-primary" />
+                              {format(new Date(activity.activity_date), "MMM d, yyyy")}
+                           </Badge>
+                        </div>
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
+                           <div className="flex items-center gap-2 text-white/90 text-[10px] font-black uppercase tracking-[0.2em]">
+                              <ExternalLink className="h-3 w-3" /> INSPECTION PROTOCOL ACTIVE
+                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+
+                      <CardContent className="p-6 space-y-4">
+                        <div className="space-y-1">
+                          <h3 className="font-black text-xl text-foreground/90 leading-tight group-hover:text-primary transition-colors line-clamp-1">{activity.title}</h3>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Creative Milestones</p>
+                        </div>
+
+                        <div className="h-12">
+                          <p className="text-xs font-medium text-slate-500 line-clamp-2 leading-relaxed italic">
+                            "{activity.description || 'Creative details pending institutional log...'}"
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                          {sa.involvement_score ? (
+                            <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tighter">
+                              <Star className="h-3.5 w-3.5 fill-current" />
+                              Engagement Lvl {sa.involvement_score}
+                            </div>
+                          ) : <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Awaiting Score</div>}
+
+                          <div className="flex gap-2">
+                            {activity.photo_url && (
+                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white shadow-soft hover:bg-primary/5 hover:text-primary transition-all" asChild>
+                                <a href={supabase.storage.from("activity-photos").getPublicUrl(activity.photo_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
+                                  <Camera className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            )}
+                            {activity.video_url && (
+                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl bg-white shadow-soft hover:bg-primary/5 hover:text-primary transition-all" asChild>
+                                <a href={supabase.storage.from("activity-videos").getPublicUrl(activity.video_url).data.publicUrl} target="_blank" rel="noopener noreferrer">
+                                  <Video className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+              <div className="p-8 pt-0">
+                <ServerPagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalRows={totalRows}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

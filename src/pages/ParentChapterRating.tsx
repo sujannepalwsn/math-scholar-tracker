@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tables } from "@/integrations/supabase/types"
 import { cn, safeFormatDate } from "@/lib/utils"
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 type LessonPlan = Tables<'lesson_plans'>;
 type StudentChapter = Tables<'student_chapters'>;
@@ -16,6 +19,7 @@ type StudentChapter = Tables<'student_chapters'>;
 export default function ParentChapterRating() {
   const { user } = useAuth();
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
+  const { page, pageSize, setPage, setPageSize } = usePagination(20);
 
   if (!user || user.role !== 'parent' || !user.student_id) {
     return (
@@ -29,52 +33,68 @@ export default function ParentChapterRating() {
   }
 
   // Fetch lesson records (student_chapters now links to lesson_plans)
-  const { data: lessonRecords = [], isLoading } = useQuery({
-    queryKey: ['student-lesson-records-parent-chapter-rating', user.student_id, subjectFilter],
+  const { data: lessonRecordsData, isLoading } = useQuery({
+    queryKey: ['student-lesson-records-parent-chapter-rating', user.student_id, subjectFilter, page, pageSize],
     queryFn: async () => {
       let query = supabase.from('student_chapters').select(`
         *,
-        lesson_plans(id, subject, chapter, topic, lesson_date, lesson_file_url),
+        lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url),
         recorded_by_teacher:recorded_by_teacher_id(name)
-      `).eq('student_id', user.student_id).order('completed_at', { ascending: false });
+      `, { count: 'exact' }).eq('student_id', user.student_id);
       
-      const { data, error } = await query;
-      if (error) throw error;
-
-      let filteredData = data;
       if (subjectFilter !== "all") {
-        filteredData = data.filter((record: any) => record.lesson_plans?.subject === subjectFilter);
+        query = query.eq('lesson_plans.subject', subjectFilter);
       }
-      return filteredData;
+
+      const { data, error, count } = await query
+        .order('completed_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
+      if (error) throw error;
+      return { data, count: count || 0 };
     } });
 
-  // Chapter Rating Calculations
+  const lessonRecords = lessonRecordsData?.data || [];
+  const totalRows = lessonRecordsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
+
+  // Fetch all subjects for the filter
+  const { data: allSubjects = [] } = useQuery({
+    queryKey: ['student-lesson-subjects-parent-rating', user.student_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('student_chapters')
+        .select('lesson_plans(subject)')
+        .eq('student_id', user.student_id!);
+
+      if (error) throw error;
+      const subjects = data?.map((lr: any) => lr.lesson_plans?.subject).filter(Boolean) || [];
+      return Array.from(new Set(subjects));
+    },
+    enabled: !!user.student_id
+  });
+
   const chapterRatingsBySubject = useMemo(() => {
-    const subjectMap = new Map<string, { totalRating: number; count: number; chapters: (StudentChapter & { lesson_plans: LessonPlan; recorded_by_teacher?: Tables<'teachers'> })[] }>();
+    const grouped: { [subject: string]: { subject: string, chapters: any[], averageRating: number } } = {};
 
     lessonRecords.forEach((record: any) => {
-      if (record.lesson_plans?.subject && record.evaluation_rating !== null) {
-        const subject = record.lesson_plans.subject;
-        if (!subjectMap.has(subject)) {
-          subjectMap.set(subject, { totalRating: 0, count: 0, chapters: [] });
-        }
-        const entry = subjectMap.get(subject)!;
-        entry.totalRating += record.evaluation_rating;
-        entry.count += 1;
-        entry.chapters.push(record);
+      const subject = record.lesson_plans?.subject || 'Domain N/A';
+      if (!grouped[subject]) {
+        grouped[subject] = { subject, chapters: [], averageRating: 0 };
+      }
+      grouped[subject].chapters.push(record);
+    });
+
+    Object.keys(grouped).forEach(subject => {
+      const chapters = grouped[subject].chapters;
+      const ratedChapters = chapters.filter(c => c.evaluation_rating !== null);
+      if (ratedChapters.length > 0) {
+        const sum = ratedChapters.reduce((acc, curr) => acc + curr.evaluation_rating, 0);
+        grouped[subject].averageRating = Number((sum / ratedChapters.length).toFixed(1));
       }
     });
 
-    return Array.from(subjectMap.entries()).map(([subject, data]) => ({
-      subject,
-      averageRating: data.count > 0 ? (data.totalRating / data.count).toFixed(1) : 'N/A',
-      chapters: data.chapters.sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime()) }));
-  }, [lessonRecords]);
-
-  const allSubjects = useMemo(() => {
-    // Need a separate logic or query for the filter if lessonRecords is filtered
-    // But since we fetch all above and filter in memory, we can use the original list if we stored it
-    return Array.from(new Set(lessonRecords.map((lr: any) => lr.lesson_plans?.subject).filter(Boolean)));
+    return Object.values(grouped).sort((a, b) => b.averageRating - a.averageRating);
   }, [lessonRecords]);
 
   const RatingStars = ({ rating }: { rating: number | null }) => {
@@ -121,7 +141,7 @@ export default function ParentChapterRating() {
                 <p className="text-[10px] font-medium text-slate-400">Isolate domain-specific performance</p>
             </div>
             <div className="w-full md:w-[250px]">
-              <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(1); }}>
                 <SelectTrigger className="h-12 bg-card/50 border-none shadow-soft focus:ring-primary/20 rounded-2xl font-bold text-xs">
                   <SelectValue placeholder="All Academic Domains" />
                 </SelectTrigger>
@@ -135,8 +155,8 @@ export default function ParentChapterRating() {
         </Card>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20"><div className="h-10 w-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" /></div>
+      {isLoading && !lessonRecords.length ? (
+        <TableSkeleton columns={5} rows={pageSize} />
       ) : chapterRatingsBySubject.length === 0 ? (
         <div className="text-center py-20 bg-card/40 backdrop-blur-md rounded-[2.5rem] border border-border/20 shadow-strong">
             <p className="text-muted-foreground font-medium italic">No proficiency data identified for the selected parameters.</p>
@@ -197,41 +217,47 @@ export default function ParentChapterRating() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {chapterRatingsBySubject.flatMap(subjectData =>
-                      subjectData.chapters.map((record: any) => (
-                        <TableRow key={record.id} className="group transition-all duration-300 hover:bg-card/60">
-                          <TableCell className="px-6 py-4">
-                            <div className="space-y-0.5">
-                                <p className="font-black text-slate-700 text-xs leading-none">{record.lesson_plans?.chapter || 'Untitled'}</p>
-                                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">{record.lesson_plans?.subject || 'Domain N/A'}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                               <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                               <span className="font-bold text-slate-600 text-xs">{safeFormatDate(record.completed_at, "MMM dd, yyyy")}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-4">
-                             <RatingStars rating={record.evaluation_rating} />
-                          </TableCell>
-                          <TableCell className="px-6 py-4 max-w-[250px]">
-                            <p className="text-[10px] font-medium text-slate-500 line-clamp-2 italic leading-relaxed">"{record.teacher_notes || 'No institutional notes provided.'}"</p>
-                          </TableCell>
-                          <TableCell className="px-6 py-4 text-right">
-                             <div className="flex items-center justify-end gap-2">
-                                <span className="font-black text-slate-700 text-[10px] uppercase tracking-tighter">{record.recorded_by_teacher?.name || 'Academic Sys'}</span>
-                                <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center">
-                                    <User className="h-3 w-3 text-slate-500" />
-                                </div>
-                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                    {lessonRecords.map((record: any) => (
+                      <TableRow key={record.id} className="group transition-all duration-300 hover:bg-card/60">
+                        <TableCell className="px-6 py-4">
+                          <div className="space-y-0.5">
+                              <p className="font-black text-slate-700 text-xs leading-none">{record.lesson_plans?.chapter || 'Untitled'}</p>
+                              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">{record.lesson_plans?.subject || 'Domain N/A'}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                             <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                             <span className="font-bold text-slate-600 text-xs">{safeFormatDate(record.completed_at, "MMM dd, yyyy")}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                           <RatingStars rating={record.evaluation_rating} />
+                        </TableCell>
+                        <TableCell className="px-6 py-4 max-w-[250px]">
+                          <p className="text-[10px] font-medium text-slate-500 line-clamp-2 italic leading-relaxed">"{record.teacher_notes || 'No institutional notes provided.'}"</p>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-right">
+                           <div className="flex items-center justify-end gap-2">
+                              <span className="font-black text-slate-700 text-[10px] uppercase tracking-tighter">{record.recorded_by_teacher?.name || 'Academic Sys'}</span>
+                              <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center">
+                                  <User className="h-3 w-3 text-slate-500" />
+                              </div>
+                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
+              <ServerPagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalRows={totalRows}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
             </CardContent>
           </Card>
         </div>

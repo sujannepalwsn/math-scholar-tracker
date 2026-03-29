@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -15,17 +17,16 @@ export default function Notifications() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
-  const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ["all-notifications", user?.id, user?.center_id],
+  const { data: notificationsData, isLoading } = useQuery({
+    queryKey: ["all-notifications", user?.id, user?.center_id, page, pageSize],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id) return { data: [], count: 0 };
 
       let query = supabase
         .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .select("*", { count: "exact" });
 
       if (user.role === 'admin') {
         // Super admin sees all
@@ -34,12 +35,23 @@ export default function Notifications() {
         query = query.or(`user_id.eq.${user.id},and(user_id.is.null,center_id.eq.${user.center_id})`);
       }
 
-      const { data, error } = await query;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data || [];
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!user?.id,
+    placeholderData: (previousData) => previousData
   });
+
+  const notifications = notificationsData?.data || [];
+  const totalRows = notificationsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -184,6 +196,14 @@ export default function Notifications() {
               </CardContent>
             </Card>
           ))}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
     </div>

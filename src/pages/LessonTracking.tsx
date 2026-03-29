@@ -16,6 +16,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
@@ -68,6 +71,7 @@ export default function LessonTracking() {
 
   // Track which lesson plans have students shown
   const [showStudentsMap, setShowStudentsMap] = useState<{ [lessonPlanId: string]: boolean }>({});
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Fetch students
   const { data: students = [] } = useQuery({
@@ -111,34 +115,50 @@ export default function LessonTracking() {
   });
 
   // Fetch student_chapters (now linked to lesson_plans)
-  const { data: studentLessonRecordsRaw = [] } = useQuery({
-    queryKey: ["student-lesson-records", user?.center_id, filterSubject, filterStudent, filterGrade, user?.teacher_id, isRestricted],
+  const { data: studentLessonRecordsData, isLoading: isRecordsLoading } = useQuery({
+    queryKey: ["student-lesson-records", user?.center_id, filterSubject, filterStudent, filterGrade, user?.teacher_id, isRestricted, page, pageSize],
     queryFn: async () => {
+      if (!user?.center_id) return { data: [], count: 0 };
+
       let query = supabase
         .from("student_chapters")
         .select(`
           *,
-          students(id, name, grade, center_id),
-          lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
+          students!inner(id, name, grade, center_id),
+          lesson_plans!inner(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
           recorded_by_teacher:recorded_by_teacher_id(name)
-        `)
-        .eq("students.center_id", user?.center_id!);
+        `, { count: "exact" })
+        .eq("students.center_id", user.center_id);
 
       if (filterStudent !== "all") query = query.eq("student_id", filterStudent);
       if (filterGrade !== "all") query = query.eq("students.grade", filterGrade);
-      if (filterSubject !== "all") query = query.eq("lesson_plans.subject", filterSubject); // Filter by lesson plan subject
+      if (filterSubject !== "all") query = query.eq("lesson_plans.subject", filterSubject);
 
       if (user?.role === 'teacher' && isRestricted) {
         query = query.eq('recorded_by_teacher_id', user.teacher_id);
       }
 
-      const { data, error } = await query.order("completed_at", { ascending: false });
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("completed_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
 
-      // Filter out records where student or lesson_plan data might be missing
-      return data?.filter((d: any) => d.students && d.lesson_plans) || [];
+      return {
+        data: data?.filter((d: any) => d.students && d.lesson_plans) || [],
+        count: count || 0
+      };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const studentLessonRecordsRaw = studentLessonRecordsData?.data || [];
+  const totalRows = studentLessonRecordsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // NEW: Fetch all test results for the center, including test details and linked lesson_plan_id
   const { data: allTestResults = [] } = useQuery({
@@ -490,7 +510,7 @@ export default function LessonTracking() {
                 {/* Grade Filter */}
                 <div className="mt-2">
                   <Label>Filter by Grade</Label>
-                  <Select value={filterGrade} onValueChange={setFilterGrade} disabled={selectedLessonPlanId !== "none"}>
+                  <Select value={filterGrade} onValueChange={(v) => { setFilterGrade(v); setPage(1); }} disabled={selectedLessonPlanId !== "none"}>
                     <SelectTrigger><SelectValue placeholder="All Grades" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Grades</SelectItem>
@@ -545,7 +565,7 @@ export default function LessonTracking() {
             {/* Filters */}
             <div className="flex-1 min-w-[150px]">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</label>
-              <Select value={filterSubject} onValueChange={setFilterSubject}>
+              <Select value={filterSubject} onValueChange={(v) => { setFilterSubject(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
@@ -557,7 +577,7 @@ export default function LessonTracking() {
             </div>
             <div className="flex-1 min-w-[150px]">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</label>
-              <Select value={filterStudent} onValueChange={setFilterStudent}>
+              <Select value={filterStudent} onValueChange={(v) => { setFilterStudent(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
@@ -569,7 +589,7 @@ export default function LessonTracking() {
             </div>
             <div className="flex-1 min-w-[150px]">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
-              <Select value={filterGrade} onValueChange={setFilterGrade}>
+              <Select value={filterGrade} onValueChange={(v) => { setFilterGrade(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
@@ -605,7 +625,14 @@ export default function LessonTracking() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groupedLessonRecords.map((group) => (
+                {isRecordsLoading && !studentLessonRecordsRaw.length ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="p-0">
+                      <TableSkeleton columns={4} rows={pageSize} />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  groupedLessonRecords.map((group) => (
                   <React.Fragment key={group.lessonPlan.id}>
                     <TableRow className="group border-muted/5 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => toggleShowStudents(group.lessonPlan.id)}>
                       <TableCell className="pl-6 py-4">
@@ -807,15 +834,23 @@ export default function LessonTracking() {
                   </TableRow>
                 )}
                   </React.Fragment>
-                ))}
+                )))}
               </TableBody>
             </Table>
-            {groupedLessonRecords.length === 0 && (
+            {!isRecordsLoading && groupedLessonRecords.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-sm text-muted-foreground italic font-medium">No instructional history recorded yet.</p>
               </div>
             )}
           </div>
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

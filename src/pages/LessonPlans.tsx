@@ -11,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
@@ -33,6 +36,7 @@ export default function LessonPlans() {
   const [adminRemarks, setAdminRemarks] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [gradeFilter, setGradeFilter] = useState<string>("all");
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   // Form Fields
   const [title, setTitle] = useState("");
@@ -64,7 +68,7 @@ export default function LessonPlans() {
         .eq("teacher_id", user.teacher_id)
         .eq("center_id", user.center_id);
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!user?.center_id && !!user?.teacher_id && isTeacher,
   });
@@ -75,7 +79,7 @@ export default function LessonPlans() {
       if (!user?.center_id) return [];
       const { data, error } = await supabase.from("students").select("grade").eq("center_id", user.center_id);
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
     enabled: !!user?.center_id });
 
@@ -110,26 +114,41 @@ export default function LessonPlans() {
 
   const isRestricted = isTeacher && user?.teacher_scope_mode !== 'full';
 
-  const { data: lessonPlans = [], isLoading } = useQuery({
-    queryKey: ["lesson-plans-all", user?.center_id, subjectFilter, gradeFilter, user?.teacher_id, isRestricted],
+  const { data: lessonPlansData, isLoading } = useQuery({
+    queryKey: ["lesson-plans-all", user?.center_id, subjectFilter, gradeFilter, user?.teacher_id, isRestricted, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("lesson_plans").select("*, teachers(name)").eq("center_id", user.center_id).order("lesson_date", { ascending: false });
+      if (!user?.center_id) return { data: [], count: 0 };
+      let query = supabase
+        .from("lesson_plans")
+        .select("*, teachers(name)", { count: "exact" })
+        .eq("center_id", user.center_id);
+
       if (subjectFilter !== "all") query = query.eq("subject", subjectFilter);
       if (gradeFilter !== "all") query = query.eq("grade", gradeFilter);
 
-      // Full access for teachers if module is enabled
       const hasFullAccess = hasPermission(user, 'lesson_plans');
 
       if (isTeacher && (isRestricted || !hasFullAccess)) {
         query = query.eq('teacher_id', user.teacher_id);
       }
 
-      const { data, error } = await query;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("lesson_date", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const lessonPlans = lessonPlansData?.data || [];
+  const totalRows = lessonPlansData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const resetForm = () => {
     setTitle("");
@@ -356,7 +375,7 @@ export default function LessonPlans() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
-          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+          <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[140px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
@@ -365,7 +384,7 @@ export default function LessonPlans() {
               {uniqueSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+          <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[130px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
@@ -392,8 +411,8 @@ export default function LessonPlans() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          {isLoading && !lessonPlans.length ? (
+            <TableSkeleton columns={5} rows={pageSize} />
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -464,6 +483,14 @@ export default function LessonPlans() {
               </Table>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

@@ -8,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Button } from "@/components/ui/button"
 import { endOfMonth, format, isWithinInterval, parseISO, startOfMonth } from "date-fns"
 
@@ -26,15 +29,17 @@ export default function Summary() {
   const { user } = useAuth();
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>(format(new Date(), "yyyy-MM"));
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
   // Fetch students
-  const { data: students } = useQuery({
-    queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id],
+  const { data: studentsData, isLoading: studentsLoading } = useQuery({
+    queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id, page, pageSize, gradeFilter],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("name");
-      if (user?.role !== "admin" && user?.center_id) query = query.eq("center_id", user.center_id);
+      if (!user?.center_id) return { data: [], count: 0 };
+      let query = supabase.from("students").select("*", { count: "exact" }).order("name");
+      if (user?.role !== "admin") query = query.eq("center_id", user.center_id);
 
       if (isRestricted) {
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
@@ -44,25 +49,43 @@ export default function Summary() {
         if (myGrades.length > 0) {
           query = query.in('grade', myGrades);
         } else {
-          return [];
+          return { data: [], count: 0 };
         }
       }
 
-      const { data, error } = await query;
+      if (gradeFilter !== "all") query = query.eq("grade", gradeFilter);
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query.range(from, to);
       if (error) throw error;
-      return data;
-    } });
+      return { data: data || [], count: count || 0 };
+    },
+    placeholderData: (previousData) => previousData,
+    enabled: !!user?.center_id
+  });
+
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // Fetch attendance
   const studentIds = students?.map((s) => s.id) || [];
-  const { data: allAttendance } = useQuery({
-    queryKey: ["all-attendance", user?.center_id, studentIds.length > 0 ? studentIds.join(",") : "", user?.role, user?.id, isRestricted],
+  const { data: allAttendance = [] } = useQuery({
+    queryKey: ["all-attendance-summary", user?.center_id, studentIds, monthFilter, user?.role, user?.id, isRestricted],
     queryFn: async () => {
       if (!studentIds.length) return [];
+
+      const start = format(startOfMonth(parseISO(monthFilter + "-01")), "yyyy-MM-dd");
+      const end = format(endOfMonth(parseISO(monthFilter + "-01")), "yyyy-MM-dd");
+
       let query = supabase
         .from("attendance")
         .select("*")
-        .in("student_id", studentIds);
+        .in("student_id", studentIds)
+        .gte("date", start)
+        .lte("date", end);
 
       if (user?.role === 'teacher' && isRestricted) {
         query = query.eq('marked_by', user.id);
@@ -74,27 +97,34 @@ export default function Summary() {
     },
     enabled: !!studentIds.length });
 
-  const grades = [...new Set(students?.map((s) => s.grade) || [])];
+  // Get grades for filter (Still need a separate query or static list for the filter)
+  const { data: allGrades = [] } = useQuery({
+    queryKey: ["all-grades-summary", user?.center_id, isRestricted],
+    queryFn: async () => {
+       if (!user?.center_id) return [];
+       let query = supabase.from("students").select("grade").eq("center_id", user.center_id);
+       if (isRestricted) {
+          const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
+          const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
+          const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
+          if (myGrades.length > 0) query = query.in('grade', myGrades);
+          else return [];
+       }
+       const { data } = await query;
+       return Array.from(new Set(data?.map(s => s.grade))).filter(Boolean).sort();
+    },
+    enabled: !!user?.center_id
+  });
 
   const summaryData: StudentSummary[] =
-    students
-      ?.map((student) => {
+    students?.map((student) => {
         const studentAttendance = allAttendance?.filter((a) => a.student_id === student.id) || [];
 
-        // Apply month filter
-        const filteredAttendance = studentAttendance.filter((a) => {
-          if (!monthFilter) return true;
-          const date = parseISO(a.date);
-          const start = startOfMonth(parseISO(monthFilter + "-01"));
-          const end = endOfMonth(parseISO(monthFilter + "-01"));
-          return isWithinInterval(date, { start, end });
-        });
-
-        const present = filteredAttendance.filter((a) => a.status === "present").length;
-        const absent = filteredAttendance.filter((a) => a.status === "absent").length;
+        const present = studentAttendance.filter((a) => a.status === "present").length;
+        const absent = studentAttendance.filter((a) => a.status === "absent").length;
         const total = present + absent;
         const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-        const absentDates = filteredAttendance
+        const absentDates = studentAttendance
           .filter((a) => a.status === "absent")
           .map((a) => a.date)
           .sort();
@@ -108,8 +138,7 @@ export default function Summary() {
           total,
           percentage,
           absentDates };
-      })
-      .filter((s) => gradeFilter === "all" || s.grade === gradeFilter) || [];
+      }) || [];
 
   const exportToCSV = () => {
     if (!summaryData || !summaryData.length) return;
@@ -169,13 +198,13 @@ export default function Summary() {
           <div className="flex flex-wrap gap-6 items-end">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
                 <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
                 <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Grades</SelectItem>
-                  {grades.map((grade) => (
+                  {allGrades.map((grade) => (
                     <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
                 </SelectContent>
@@ -205,25 +234,35 @@ export default function Summary() {
             Student Statistics
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {summaryData.length ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/5">
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest pl-6">Name</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest">Grade</TableHead>
+                  <TableHead className="text-center font-black text-[10px] uppercase tracking-widest">Present</TableHead>
+                  <TableHead className="text-center font-black text-[10px] uppercase tracking-widest">Absent</TableHead>
+                  <TableHead className="text-center font-black text-[10px] uppercase tracking-widest">Total Days</TableHead>
+                  <TableHead className="text-center font-black text-[10px] uppercase tracking-widest">Attendance %</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest pr-6">Absent Dates</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {studentsLoading && !students.length ? (
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead className="text-center">Present</TableHead>
-                    <TableHead className="text-center">Absent</TableHead>
-                    <TableHead className="text-center">Total Days</TableHead>
-                    <TableHead className="text-center">Attendance %</TableHead>
-                    <TableHead>Absent Dates</TableHead>
+                    <TableCell colSpan={7} className="p-0">
+                      <TableSkeleton columns={7} rows={pageSize} />
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {summaryData.map((student) => (
-                    <TableRow key={student.id} className="group transition-all duration-300">
-                      <TableCell className="font-black text-slate-700 group-hover:text-primary transition-colors">{student.name}</TableCell>
+                ) : students.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-40 text-center text-muted-foreground italic">No students found.</TableCell>
+                  </TableRow>
+                ) : (
+                  summaryData.map((student) => (
+                    <TableRow key={student.id} className="group border-muted/5 hover:bg-primary/5 transition-colors">
+                      <TableCell className="font-black text-slate-700 group-hover:text-primary transition-colors pl-6 py-4">{student.name}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-lg font-bold">
                           {student.grade}
@@ -245,31 +284,37 @@ export default function Summary() {
                           variant={student.percentage >= 75 ? "default" : "destructive"}
                           className={cn(
                             "rounded-xl px-3 py-1 font-black",
-                            student.percentage >= 75 ? "bg-green-500/20 text-green-700 hover:bg-green-500/30 border-none" : "shadow-sm"
+                            student.percentage >= 75 ? "bg-green-500/20 text-green-700 hover:bg-green-500/30 border-none shadow-none" : "shadow-sm"
                           )}
                         >
                           {student.percentage}%
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-[10px] max-w-xs overflow-x-auto text-muted-foreground font-medium">
+                      <TableCell className="text-[10px] max-w-xs text-muted-foreground font-medium pr-6">
                         <div className="flex flex-wrap gap-1">
                           {student.absentDates.length > 0
                             ? student.absentDates.map((d) => (
-                              <span key={d} className="px-1.5 py-0.5 rounded bg-red-500/5 text-red-600 border border-red-500/10">
+                              <span key={d} className="px-1.5 py-0.5 rounded bg-red-500/5 text-red-600 border border-red-500/10 whitespace-nowrap">
                                 {safeFormatDate(d, "MMM d")}
                               </span>
                             ))
-                            : <span className="text-green-600 font-bold">PERFECT ATTENDANCE</span>}
+                            : <span className="text-green-600 font-bold tracking-widest uppercase text-[8px]">Perfect Record</span>}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground">No attendance data available</p>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
     </div>

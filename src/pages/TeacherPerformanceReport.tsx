@@ -8,6 +8,9 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subDays } from "date-fns"
@@ -18,6 +21,7 @@ export default function TeacherPerformanceReport() {
   const { user } = useAuth();
   const [selectedTeacher, setSelectedTeacher] = useState("all");
   const [dateRange, setDateRange] = useState<"daily" | "weekly" | "monthly" | "overall">("monthly");
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const today = new Date();
   const getDateRange = () => {
@@ -32,21 +36,53 @@ export default function TeacherPerformanceReport() {
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
-  const { data: teachers = [] } = useQuery({
-    queryKey: ["teachers-for-report", user?.center_id, user?.role, user?.teacher_id, isRestricted],
+  const { data: teachersData, isLoading: teachersLoading } = useQuery({
+    queryKey: ["teachers-for-report", user?.center_id, user?.role, user?.teacher_id, isRestricted, page, pageSize, selectedTeacher],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("teachers").select("id, name").eq("center_id", user.center_id).eq("is_active", true);
+      if (!user?.center_id) return { data: [], count: 0 };
+      let query = supabase
+        .from("teachers")
+        .select("id, name", { count: "exact" })
+        .eq("center_id", user.center_id)
+        .eq("is_active", true);
 
       if (user?.role === 'teacher' && user?.teacher_id && isRestricted) {
         query = query.eq('id', user.teacher_id);
+      } else if (selectedTeacher !== "all") {
+        query = query.eq("id", selectedTeacher);
       }
 
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("name")
+        .range(from, to);
+
+      if (error) throw error;
+      return { data: data || [], count: count || 0 };
+    },
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const teachers = teachersData?.data || [];
+  const totalRows = teachersData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
+
+  // Still need all teachers for dropdown filter
+  const { data: allTeachers = [] } = useQuery({
+    queryKey: ["all-teachers-dropdown", user?.center_id, isRestricted],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+      let query = supabase.from("teachers").select("id, name").eq("center_id", user.center_id).eq("is_active", true);
+      if (isRestricted) query = query.eq('id', user?.teacher_id);
       const { data, error } = await query.order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id
+  });
 
   // Teacher attendance
   const { data: teacherAttendance = [] } = useQuery({
@@ -171,19 +207,19 @@ export default function TeacherPerformanceReport() {
           <div className="flex flex-wrap gap-6 items-end">
             <div className="flex-1 min-w-[200px] space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Faculty Member</Label>
-              <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+              <Select value={selectedTeacher} onValueChange={(v) => { setSelectedTeacher(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="All Faculty" />
                 </SelectTrigger>
                 <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
                   <SelectItem value="all">All Faculty Members</SelectItem>
-                  {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  {allTeachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="w-[180px] space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Analysis Period</Label>
-              <Select value={dateRange} onValueChange={(v: any) => setDateRange(v)}>
+              <Select value={dateRange} onValueChange={(v: any) => { setDateRange(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
@@ -237,57 +273,69 @@ export default function TeacherPerformanceReport() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/5">
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Faculty Member</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Presence Dynamics</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Lesson Velocity</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Homework Index</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Eval Index</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {teacherStats.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground font-medium italic">
-                      No efficiency metrics discovered for the current parameters.
-                    </TableCell>
+          {teachersLoading && !teachers.length ? (
+            <TableSkeleton columns={5} rows={pageSize} />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/5">
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Faculty Member</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Presence Dynamics</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Lesson Velocity</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Homework Index</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Eval Index</TableHead>
                   </TableRow>
-                ) : teacherStats.map(t => (
-                  <TableRow key={t.id} className="group transition-all duration-300 hover:bg-card/60">
-                    <TableCell className="px-6 py-4">
-                      <div className="space-y-0.5">
-                        <p className="font-black text-slate-700 group-hover:text-primary transition-colors leading-none">{t.name}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Certified Instructor</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mb-1">
-                          <span>{t.attendancePct}% Reliability</span>
-                          <span>{t.attendancePresent}/{t.attendanceTotal}D</span>
+                </TableHeader>
+                <TableBody>
+                  {teacherStats.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground font-medium italic">
+                        No efficiency metrics discovered for the current parameters.
+                      </TableCell>
+                    </TableRow>
+                  ) : teacherStats.map(t => (
+                    <TableRow key={t.id} className="group transition-all duration-300 hover:bg-card/60">
+                      <TableCell className="px-6 py-4">
+                        <div className="space-y-0.5">
+                          <p className="font-black text-slate-700 group-hover:text-primary transition-colors leading-none">{t.name}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Certified Instructor</p>
                         </div>
-                        <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden shadow-inner">
-                          <div
-                            className={cn(
-                              "h-full transition-all duration-1000 ease-out",
-                              t.attendancePct >= 90 ? "bg-green-500" : t.attendancePct >= 75 ? "bg-primary" : "bg-orange-500"
-                            )}
-                            style={{ width: `${t.attendancePct}%` }}
-                          />
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mb-1">
+                            <span>{t.attendancePct}% Reliability</span>
+                            <span>{t.attendancePresent}/{t.attendanceTotal}D</span>
+                          </div>
+                          <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden shadow-inner">
+                            <div
+                              className={cn(
+                                "h-full transition-all duration-1000 ease-out",
+                                t.attendancePct >= 90 ? "bg-green-500" : t.attendancePct >= 75 ? "bg-primary" : "bg-orange-500"
+                              )}
+                              style={{ width: `${t.attendancePct}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 font-black text-slate-600">{t.lessonPlans}</TableCell>
-                    <TableCell className="px-6 py-4 font-black text-slate-600">{t.homework}</TableCell>
-                    <TableCell className="px-6 py-4 font-black text-slate-600">{t.evaluations}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 font-black text-slate-600">{t.lessonPlans}</TableCell>
+                      <TableCell className="px-6 py-4 font-black text-slate-600">{t.homework}</TableCell>
+                      <TableCell className="px-6 py-4 font-black text-slate-600">{t.evaluations}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
     </div>

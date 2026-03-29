@@ -11,11 +11,15 @@ import { toast } from "sonner";
 import { DollarSign, Plus, FileText, Send } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export default function SuperAdminBilling() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ centerId: "", amount: "", dueDate: "", number: `INV-${Date.now()}` });
+  const { page, pageSize, setPage, setPageSize } = usePagination(20);
 
   const { data: centers = [] } = useQuery({
     queryKey: ["admin-centers-billing"],
@@ -26,17 +30,23 @@ export default function SuperAdminBilling() {
     },
   });
 
-  const { data: invoices = [] } = useQuery({
-    queryKey: ["admin-center-invoices"],
+  const { data: invoicesData, isLoading } = useQuery({
+    queryKey: ["admin-center-invoices", page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("center_invoices")
-        .select("*, centers(name)")
-        .order("created_at", { ascending: false });
+        .select("*, centers(name)", { count: 'exact' })
+        .order("created_at", { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
   });
+
+  const invoices = invoicesData?.data || [];
+  const totalRows = invoicesData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const createInvoiceMutation = useMutation({
     mutationFn: async () => {
@@ -106,50 +116,65 @@ export default function SuperAdminBilling() {
       <Card className="rounded-[2.5rem] border-none shadow-strong bg-card/40 backdrop-blur-md overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-  <Table>
-            <TableHeader className="bg-slate-50 border-b">
-              <TableRow>
-                <TableHead className="font-black text-[10px] uppercase tracking-widest px-8 py-4">Invoice Details</TableHead>
-                <TableHead className="font-black text-[10px] uppercase tracking-widest">Institution</TableHead>
-                <TableHead className="font-black text-[10px] uppercase tracking-widest">Amount</TableHead>
-                <TableHead className="font-black text-[10px] uppercase tracking-widest">Due Date</TableHead>
-                <TableHead className="font-black text-[10px] uppercase tracking-widest">Status</TableHead>
-                <TableHead className="font-black text-[10px] uppercase tracking-widest text-right px-8">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((inv: any) => (
-                <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                  <TableCell className="px-8 py-5">
-                    <p className="font-black text-slate-700 font-mono">{inv.invoice_number}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(inv.created_at).toLocaleDateString()}</p>
-                  </TableCell>
-                  <TableCell className="font-bold text-slate-600">{inv.centers?.name}</TableCell>
-                  <TableCell className="font-black text-indigo-600">₹{inv.amount.toLocaleString()}</TableCell>
-                  <TableCell className="text-xs font-bold text-slate-500">{new Date(inv.due_date).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Badge className={cn(
-                      "text-[9px] font-black uppercase rounded-lg",
-                      inv.status === 'Paid' ? "bg-emerald-500" : inv.status === 'Overdue' ? "bg-rose-500" : "bg-amber-500"
-                    )}>
-                      {inv.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right px-8">
-                    <Button variant="ghost" size="sm" className="h-8 rounded-lg text-slate-400 hover:text-primary">
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+            <Table>
+              <TableHeader className="bg-slate-50 border-b">
+                <TableRow>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest px-8 py-4">Invoice Details</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest">Institution</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest">Amount</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest">Due Date</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest">Status</TableHead>
+                  <TableHead className="font-black text-[10px] uppercase tracking-widest text-right px-8">Action</TableHead>
                 </TableRow>
-              ))}
-              {invoices.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center py-20 italic text-slate-400">No institutional invoices discovered.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-</div>
+              </TableHeader>
+              <TableBody>
+                {isLoading && !invoices.length ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <TableSkeleton columns={6} rows={pageSize} />
+                    </TableCell>
+                  </TableRow>
+                ) : invoices.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-20 italic text-slate-400">No institutional invoices discovered.</TableCell></TableRow>
+                ) : (
+                  invoices.map((inv: any) => (
+                    <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                      <TableCell className="px-8 py-5">
+                        <p className="font-black text-slate-700 font-mono">{inv.invoice_number}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(inv.created_at).toLocaleDateString()}</p>
+                      </TableCell>
+                      <TableCell className="font-bold text-slate-600">{inv.centers?.name}</TableCell>
+                      <TableCell className="font-black text-indigo-600">Rs. {inv.amount.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-bold text-slate-500">{new Date(inv.due_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge className={cn(
+                          "text-[9px] font-black uppercase rounded-lg",
+                          inv.status === 'Paid' ? "bg-emerald-500" : inv.status === 'Overdue' ? "bg-rose-500" : "bg-amber-500"
+                        )}>
+                          {inv.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right px-8">
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg text-slate-400 hover:text-primary">
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+      <ServerPagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalRows={totalRows}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

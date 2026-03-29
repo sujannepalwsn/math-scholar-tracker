@@ -9,11 +9,15 @@ import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
 import { cn } from "@/lib/utils"
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 type DisciplineIssue = Tables<'discipline_issues'>;
 
 export default function ParentDiscipline() {
   const { user } = useAuth();
+  const { page, pageSize, setPage, setPageSize } = usePagination(20);
 
   if (!user?.student_id) {
     return (
@@ -27,18 +31,24 @@ export default function ParentDiscipline() {
   }
 
   // Fetch student's discipline issues
-  const { data: issues = [], isLoading } = useQuery({
-    queryKey: ['parent-discipline-issues', user.student_id],
+  const { data: issuesData, isLoading } = useQuery({
+    queryKey: ['parent-discipline-issues', user.student_id, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('discipline_issues')
-        .select('*, discipline_categories(name)')
+        .select('*, discipline_categories(name)', { count: 'exact' })
         .eq('student_id', user.student_id!)
-        .order('issue_date', { ascending: false });
+        .order('issue_date', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!user.student_id });
+
+  const issues = issuesData?.data || [];
+  const totalRows = issuesData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const getSeverityStyles = (severity: DisciplineIssue['severity']) => {
     switch (severity) {
@@ -89,10 +99,8 @@ export default function ParentDiscipline() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="h-8 w-8 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
-              </div>
+            {isLoading && !issues.length ? (
+              <TableSkeleton columns={5} rows={pageSize} />
             ) : issues.length === 0 ? (
               <div className="text-center py-12 px-6">
                 <div className="mx-auto w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-4">
@@ -101,52 +109,62 @@ export default function ParentDiscipline() {
                 <p className="text-muted-foreground font-bold italic">Exemplary record. No behavioral incidents identified.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/5">
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Protocol Date</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Classification</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Incident Log</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Priority</TableHead>
-                      <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {issues.map((issue: any) => (
-                      <TableRow key={issue.id} className="group transition-all duration-300 hover:bg-card/60">
-                        <TableCell className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-bold text-slate-600 text-xs">{format(new Date(issue.issue_date), "MMM dd, yyyy")}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <span className="font-black text-primary text-[10px] uppercase tracking-tighter">
-                            {issue.discipline_categories?.name || 'Standard'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <p className="text-xs font-medium text-slate-600 line-clamp-2 max-w-[250px]">{issue.description}</p>
-                        </TableCell>
-                        <TableCell className="px-6 py-4">
-                          <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter px-2", getSeverityStyles(issue.severity))}>
-                            {issue.severity}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 text-right">
-                          <span className={cn(
-                            "font-black text-[10px] uppercase tracking-widest",
-                            issue.status === 'resolved' ? 'text-green-600' : 'text-amber-600'
-                          )}>
-                            {issue.status || 'Pending'}
-                          </span>
-                        </TableCell>
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/5">
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Protocol Date</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Classification</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Incident Log</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Priority</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4 text-right">Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {issues.map((issue: any) => (
+                        <TableRow key={issue.id} className="group transition-all duration-300 hover:bg-card/60">
+                          <TableCell className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="font-bold text-slate-600 text-xs">{format(new Date(issue.issue_date), "MMM dd, yyyy")}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <span className="font-black text-primary text-[10px] uppercase tracking-tighter">
+                              {issue.discipline_categories?.name || 'Standard'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <p className="text-xs font-medium text-slate-600 line-clamp-2 max-w-[250px]">{issue.description}</p>
+                          </TableCell>
+                          <TableCell className="px-6 py-4">
+                            <Badge variant="outline" className={cn("rounded-lg border-none text-[9px] font-black uppercase tracking-tighter px-2", getSeverityStyles(issue.severity))}>
+                              {issue.severity}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-4 text-right">
+                            <span className={cn(
+                              "font-black text-[10px] uppercase tracking-widest",
+                              issue.status === 'resolved' ? 'text-green-600' : 'text-amber-600'
+                            )}>
+                              {issue.status || 'Pending'}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <ServerPagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalRows={totalRows}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </>
             )}
           </CardContent>
         </Card>
@@ -171,7 +189,7 @@ export default function ParentDiscipline() {
                 </div>
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-widest text-indigo-200">Total Logged</p>
-                  <p className="text-2xl font-black">{issues.length}</p>
+                  <p className="text-2xl font-black">{totalRows}</p>
                 </div>
               </div>
             </CardContent>
@@ -196,7 +214,7 @@ export default function ParentDiscipline() {
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400">Resolution Rate</span>
                   <span className="font-black text-slate-700 text-sm">
-                    {issues.length > 0 ? Math.round(((issues.length - unresolvedCount) / issues.length) * 100) : 100}%
+                    {totalRows > 0 ? Math.round(((totalRows - unresolvedCount) / totalRows) * 100) : 100}%
                   </span>
                 </div>
               </div>

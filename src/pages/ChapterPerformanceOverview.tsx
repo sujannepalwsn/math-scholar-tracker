@@ -8,6 +8,9 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { Tables } from "@/integrations/supabase/types"
 import { safeFormatDate } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
@@ -41,6 +44,7 @@ export default function ChapterPerformanceOverview() {
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [studentFilter, setStudentFilter] = useState<string>("all"); // NEW: Student filter state
+  const { page, setPage, pageSize, setPageSize } = usePagination();
 
   const isRestricted = user?.role === 'teacher' && user?.teacher_scope_mode !== 'full';
 
@@ -89,16 +93,19 @@ export default function ChapterPerformanceOverview() {
     enabled: !!user?.center_id });
 
   // Fetch all student_chapters for the center, filtered by student/grade/subject
-  const { data: studentChaptersRaw = [], isLoading: studentChaptersLoading } = useQuery({
-    queryKey: ["all-student-chapters-overview", user?.center_id, subjectFilter, gradeFilter, studentFilter, user?.role, user?.teacher_id, isRestricted],
+  const { data: studentChaptersData, isLoading: studentChaptersLoading } = useQuery({
+    queryKey: ["all-student-chapters-overview", user?.center_id, subjectFilter, gradeFilter, studentFilter, user?.role, user?.teacher_id, isRestricted, page, pageSize],
     queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("student_chapters").select(`
-        *,
-        students(id, name, grade, center_id),
-        lesson_plans(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
-        recorded_by_teacher:recorded_by_teacher_id(name)
-      `).eq("students.center_id", user.center_id);
+      if (!user?.center_id) return { data: [], count: 0 };
+      let query = supabase
+        .from("student_chapters")
+        .select(`
+          *,
+          students!inner(id, name, grade, center_id),
+          lesson_plans!inner(id, chapter, subject, topic, grade, lesson_date, lesson_file_url),
+          recorded_by_teacher:recorded_by_teacher_id(name)
+        `, { count: "exact" })
+        .eq("students.center_id", user.center_id);
 
       if (user?.role === 'teacher' && user?.teacher_id && isRestricted) {
         query = query.eq('recorded_by_teacher_id', user.teacher_id);
@@ -110,17 +117,31 @@ export default function ChapterPerformanceOverview() {
       if (gradeFilter !== "all") {
         query = query.eq("students.grade", gradeFilter);
       }
-      if (studentFilter !== "all") { // NEW: Apply student filter
+      if (studentFilter !== "all") {
         query = query.eq("student_id", studentFilter);
       }
 
-      const { data, error } = await query.order("completed_at", { ascending: false });
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await query
+        .order("completed_at", { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
 
-      // Filter out records where student or lesson_plan data might be missing
-      return data?.filter((d: any) => d.students && d.lesson_plans) || [];
+      return {
+        data: data?.filter((d: any) => d.students && d.lesson_plans) || [],
+        count: count || 0
+      };
     },
-    enabled: !!user?.center_id });
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
+  });
+
+  const studentChaptersRaw = studentChaptersData?.data || [];
+  const totalRows = studentChaptersData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   // NEW: Fetch all test results for the center, including test details and linked lesson_plan_id
   const { data: allTestResults = [], isLoading: testResultsLoading } = useQuery({
@@ -272,7 +293,7 @@ export default function ChapterPerformanceOverview() {
           <div className="flex flex-wrap gap-6 items-end">
             <div className="w-[160px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</label>
-              <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <Select value={subjectFilter} onValueChange={(v) => { setSubjectFilter(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Subject" />
                 </SelectTrigger>
@@ -284,7 +305,7 @@ export default function ChapterPerformanceOverview() {
             </div>
             <div className="w-[140px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <Select value={gradeFilter} onValueChange={(v) => { setGradeFilter(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
@@ -296,7 +317,7 @@ export default function ChapterPerformanceOverview() {
             </div>
             <div className="flex-1 min-w-[200px] space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student Focus</label>
-              <Select value={studentFilter} onValueChange={setStudentFilter}>
+              <Select value={studentFilter} onValueChange={(v) => { setStudentFilter(v); setPage(1); }}>
                 <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Search Student" />
                 </SelectTrigger>
@@ -319,11 +340,13 @@ export default function ChapterPerformanceOverview() {
             Evaluation Archive
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {combinedChapterRecords.length === 0 ? (
+        <CardContent className="p-0">
+          {studentChaptersLoading && !studentChaptersRaw.length ? (
+            <TableSkeleton columns={10} rows={pageSize} />
+          ) : combinedChapterRecords.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No chapter evaluations or associated tests found for the selected filters.</p>
           ) : (
-            <div className="overflow-x-auto max-h-[600px] border rounded">
+            <div className="overflow-x-auto">
               <div className="overflow-x-auto">
   <Table>
                 <TableHeader>
@@ -373,9 +396,17 @@ export default function ChapterPerformanceOverview() {
                   ))}
                 </TableBody>
               </Table>
-</div>
+            </div>
             </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
     </div>

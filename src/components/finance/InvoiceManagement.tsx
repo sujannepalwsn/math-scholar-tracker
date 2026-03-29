@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { usePagination } from "@/hooks/use-pagination";
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import { format } from "date-fns"
@@ -28,6 +31,8 @@ const InvoiceManagement = ({ canEdit }: { canEdit?: boolean }) => {
     dueInDays: '30',
     gradeFilter: 'all' });
 
+  const { page, setPage, pageSize, setPageSize } = usePagination();
+
   const { data: students = [] } = useQuery({
     queryKey: ['students', user?.center_id],
     queryFn: async () => {
@@ -45,19 +50,30 @@ const InvoiceManagement = ({ canEdit }: { canEdit?: boolean }) => {
 
   const uniqueGrades = Array.from(new Set(students.map(s => s.grade))).sort();
 
-  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ['invoices', user?.center_id],
+  const { data: invoicesData, isLoading: invoicesLoading } = useQuery({
+    queryKey: ['invoices', user?.center_id, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      if (!user?.center_id) return { data: [], count: 0 };
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from('invoices')
-        .select('*, students(name)')
-        .eq('center_id', user?.center_id!)
-        .order('created_at', { ascending: false });
+        .select('*, students(name)', { count: "exact" })
+        .eq('center_id', user.center_id)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
       if (error) throw error;
-      return data;
+      return { data: data || [], count: count || 0 };
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    placeholderData: (previousData) => previousData
   });
+
+  const invoices = invoicesData?.data || [];
+  const totalRows = invoicesData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const createInvoiceMutation = useMutation({
     mutationFn: async () => {
@@ -272,7 +288,7 @@ const InvoiceManagement = ({ canEdit }: { canEdit?: boolean }) => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Total Amount (₹) *</Label>
+                      <Label>Total Amount (Rs.) *</Label>
                       <Input type="number" value={createForm.total_amount} onChange={(e) => setCreateForm({ ...createForm, total_amount: e.target.value })} />
                     </div>
                     <div className="space-y-2">
@@ -289,49 +305,57 @@ const InvoiceManagement = ({ canEdit }: { canEdit?: boolean }) => {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {invoicesLoading ? (
-            <p>Loading invoices...</p>
+        <CardContent className="p-0">
+          {invoicesLoading && !invoices.length ? (
+            <TableSkeleton columns={6} rows={pageSize} />
           ) : invoices.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No invoices created yet</p>
           ) : (
             <div className="overflow-x-auto">
-  <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
-                    <TableCell>{(invoice as any).students?.name || 'N/A'}</TableCell>
-                    <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
-                    <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(invoice.status)}`}>
-                        {invoice.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {canEdit && invoice.status !== 'paid' && (
-                        <Button variant="outline" size="sm" onClick={() => markAsPaidMutation.mutate(invoice.id)} disabled={markAsPaidMutation.isPending}>
-                          <DollarSign className="h-4 w-4 mr-1" /> Mark Paid
-                        </Button>
-                      )}
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="px-6 py-4">Invoice #</TableHead>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right px-6">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-</div>
+                </TableHeader>
+                <TableBody>
+                  {invoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium px-6 py-4">{invoice.invoice_number}</TableCell>
+                      <TableCell>{(invoice as any).students?.name || 'N/A'}</TableCell>
+                      <TableCell>{formatCurrency(invoice.total_amount)}</TableCell>
+                      <TableCell>{invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}</TableCell>
+                      <TableCell>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(invoice.status)}`}>
+                          {invoice.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right px-6">
+                        {canEdit && invoice.status !== 'paid' && (
+                          <Button variant="outline" size="sm" onClick={() => markAsPaidMutation.mutate(invoice.id)} disabled={markAsPaidMutation.isPending}>
+                            <DollarSign className="h-4 w-4 mr-1" /> Mark Paid
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
+          <ServerPagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
     </div>

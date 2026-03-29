@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { usePagination } from "@/hooks/use-pagination";
+import { ServerPagination } from "@/components/ui/server-pagination";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export default function AlumniManagement({ centerId, canEdit }: { centerId: string, canEdit?: boolean }) {
   const queryClient = useQueryClient();
@@ -21,21 +24,34 @@ export default function AlumniManagement({ centerId, canEdit }: { centerId: stri
     reason: "",
     leavingDate: new Date().toISOString().split('T')[0]
   });
+  const { page, pageSize, setPage, setPageSize } = usePagination(20);
 
-  const { data: students, isLoading } = useQuery({
-    queryKey: ["alumni-students", centerId, statusFilter],
+  const { data: studentsData, isLoading } = useQuery({
+    queryKey: ["alumni-students", centerId, statusFilter, search, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("students")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("center_id", centerId)
-        .eq("status", statusFilter)
-        .order("name");
+        .eq("status", statusFilter);
+
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,student_id_number.ilike.%${search}%`);
+      }
+
+      const { data, error, count } = await query
+        .order("name")
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
       if (error) throw error;
-      return data;
+      return { data, count: count || 0 };
     },
     enabled: !!centerId,
   });
+
+  const students = studentsData?.data || [];
+  const totalRows = studentsData?.count || 0;
+  const totalPages = Math.ceil(totalRows / pageSize);
 
   const generateTCMutation = useMutation({
     mutationFn: async () => {
@@ -60,11 +76,6 @@ export default function AlumniManagement({ centerId, canEdit }: { centerId: stri
     }
   });
 
-  const filteredStudents = students?.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    (s.student_id_number || "").includes(search)
-  );
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -74,10 +85,10 @@ export default function AlumniManagement({ centerId, canEdit }: { centerId: stri
             placeholder="Search alumni by name or ID..."
             className="pl-10 rounded-xl"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="w-[200px] rounded-xl">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -102,12 +113,16 @@ export default function AlumniManagement({ centerId, canEdit }: { centerId: stri
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10">Loading...</TableCell></TableRow>
-            ) : filteredStudents?.length === 0 ? (
+            {isLoading && !students.length ? (
+              <TableRow>
+                <TableCell colSpan={5} className="p-0">
+                  <TableSkeleton columns={5} rows={pageSize} />
+                </TableCell>
+              </TableRow>
+            ) : students.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-10 italic text-slate-400">No records found for {statusFilter}</TableCell></TableRow>
             ) : (
-              filteredStudents?.map((s: any) => (
+              students.map((s: any) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-bold">{s.name}</TableCell>
                   <TableCell>Grade {s.grade}</TableCell>
@@ -130,6 +145,15 @@ export default function AlumniManagement({ centerId, canEdit }: { centerId: stri
         </Table>
 </div>
       </div>
+
+      <ServerPagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalRows={totalRows}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
 
       <Dialog open={!!selectedStudentForTC} onOpenChange={() => setSelectedStudentForTC(null)}>
         <DialogContent className="rounded-[2.5rem]">
