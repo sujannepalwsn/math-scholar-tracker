@@ -23,19 +23,30 @@ export const rawSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISH
 });
 
 /**
+ * Simple property check to identify PostgREST builders without triggering complex Proxy loops.
+ */
+const IS_PROXY = Symbol('IS_PROXY');
+
+/**
  * Recursive Proxy helper to wrap all methods of a query builder to ensure
  * the .then() handler is preserved through chaining.
  */
 function wrapQueryBuilder(builder: any, tableName: string): any {
+  // Prevent double-wrapping
+  if (builder?.[IS_PROXY]) return builder;
+
   return new Proxy(builder, {
     get(target, prop, receiver) {
+      if (prop === IS_PROXY) return true;
       const value = Reflect.get(target, prop, receiver);
 
-      if (prop === 'then') {
+      if (prop === 'then' && typeof value === 'function') {
         return function(onfulfilled: any, onrejected: any) {
-          return value.call(this,
+          // Bind the original 'then' to the target builder (the PostgREST query)
+          return value.call(target,
             async (response: any) => {
               if (response && response.error) {
+                // Use rawSupabase for internal errors to avoid recursion
                 logger.error(`Database error on table: ${tableName}`, response.error, {
                   errorType: 'database',
                   schemaContext: tableName,
@@ -57,12 +68,12 @@ function wrapQueryBuilder(builder: any, tableName: string): any {
       }
 
       if (typeof value === 'function') {
+        const boundFn = value.bind(target);
         return (...args: any[]) => {
-          const result = value.apply(target, args);
-          // If the result looks like a query builder (has a then method but isn't a promise), wrap it.
-          // Note: Check for 'then' to handle chaining, but we only want to wrap if it's the builder.
-          if (result && typeof result === 'object' && typeof result.then === 'function') {
-            return wrapQueryBuilder(result, tableName);
+          const result = boundFn(...args);
+          // Only wrap results that look like another PostgREST builder
+          if (result && typeof result === 'object' && typeof result.then === 'function' && !result.then.name.includes('bound')) {
+             return wrapQueryBuilder(result, tableName);
           }
           return result;
         };

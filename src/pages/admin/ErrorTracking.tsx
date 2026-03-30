@@ -91,7 +91,7 @@ export default function ErrorTracking() {
 
         if (filters.module !== "all") query = query.eq("module", filters.module);
         if (filters.severity !== "all") query = query.eq("severity", filters.severity);
-        if (filters.role !== "all") query = query.eq("user_context->role", filters.role);
+        if (filters.role !== "all") query = query.eq("user_context->>role", filters.role);
         if (filters.startDate) {
           query = query.gte("timestamp", new Date(filters.startDate).toISOString());
         }

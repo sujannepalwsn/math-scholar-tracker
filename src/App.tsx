@@ -130,7 +130,40 @@ const ActivityTracker = () => {
   return null;
 };
 
-const App = () => (
+const App = () => {
+  // Add global uncaught error listeners for tracking
+  useEffect(() => {
+    const handleUncaughtError = (event: ErrorEvent) => {
+      const message = event.error?.message || event.message || "Uncaught Global Error";
+      logger.error(message, event.error, {
+        errorType: 'runtime',
+        severity: 'high',
+        component: 'Window',
+        action: 'uncaught_exception',
+        payload: { filename: event.filename, lineno: event.lineno }
+      });
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const message = event.reason?.message || (typeof event.reason === 'string' ? event.reason : "Unhandled Promise Rejection");
+      logger.error(message, event.reason, {
+        errorType: 'runtime',
+        severity: 'high',
+        component: 'Window',
+        action: 'unhandled_rejection'
+      });
+    };
+
+    window.addEventListener('error', handleUncaughtError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleUncaughtError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ActivityTracker />
@@ -275,6 +308,7 @@ const App = () => (
       </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
