@@ -119,7 +119,7 @@ class Logger {
     console.warn(this.formatMessage('warn', message), context || '');
   }
 
-  public error(message: string, error?: unknown, context?: LogContext) {
+  public async error(message: string, error?: unknown, context?: LogContext) {
     const formattedMessage = this.formatMessage('error', message);
 
     console.error(formattedMessage, {
@@ -132,7 +132,7 @@ class Logger {
     });
 
     // Only persist errors to the database
-    this.persistError(message, error, context);
+    return await this.persistError(message, error, context);
   }
 
   public debug(message: string, context?: LogContext) {

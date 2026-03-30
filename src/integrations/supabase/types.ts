@@ -2929,6 +2929,66 @@ export type Database = {
           },
         ]
       }
+      error_logs: {
+        Row: {
+          action: string | null
+          component: string | null
+          created_at: string | null
+          device_info: Json | null
+          endpoint: string | null
+          error_type: string
+          id: string
+          message: string
+          module: string | null
+          payload: Json | null
+          request_context: Json | null
+          schema_context: string | null
+          severity: string
+          stack: string | null
+          status_code: number | null
+          timestamp: string | null
+          user_context: Json
+        }
+        Insert: {
+          action?: string | null
+          component?: string | null
+          created_at?: string | null
+          device_info?: Json | null
+          endpoint?: string | null
+          error_type?: string
+          id?: string
+          message: string
+          module?: string | null
+          payload?: Json | null
+          request_context?: Json | null
+          schema_context?: string | null
+          severity?: string
+          stack?: string | null
+          status_code?: number | null
+          timestamp?: string | null
+          user_context?: Json
+        }
+        Update: {
+          action?: string | null
+          component?: string | null
+          created_at?: string | null
+          device_info?: Json | null
+          endpoint?: string | null
+          error_type?: string
+          id?: string
+          message?: string
+          module?: string | null
+          payload?: Json | null
+          request_context?: Json | null
+          schema_context?: string | null
+          severity?: string
+          stack?: string | null
+          status_code?: number | null
+          timestamp?: string | null
+          user_context?: Json
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           center_id: string | null

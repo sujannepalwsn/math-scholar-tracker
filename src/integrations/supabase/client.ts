@@ -23,27 +23,17 @@ export const rawSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISH
 });
 
 /**
- * Proxy/Wrapper for the Supabase client to automatically capture schema context on errors.
- * This implementation specifically wraps the .then() method of query builders to avoid
- * breaking method chaining (e.g., .from().select().eq()).
+ * Recursive Proxy helper to wrap all methods of a query builder to ensure
+ * the .then() handler is preserved through chaining.
  */
-export const supabase = new Proxy(rawSupabase, {
-  get(target, prop, receiver) {
-    const value = Reflect.get(target, prop, receiver);
+function wrapQueryBuilder(builder: any, tableName: string): any {
+  return new Proxy(builder, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
 
-    if (prop === 'from') {
-      return (tableName: string) => {
-        const queryBuilder = value.call(target, tableName);
-
-        // Skip interception for the logs table to prevent infinite loops
-        if (tableName === 'error_logs') {
-          return queryBuilder;
-        }
-
-        // Intercept ONLY the .then() method to capture the final query result/error
-        const originalThen = queryBuilder.then;
-        queryBuilder.then = function(onfulfilled: any, onrejected: any) {
-          return originalThen.call(this,
+      if (prop === 'then') {
+        return function(onfulfilled: any, onrejected: any) {
+          return value.call(this,
             async (response: any) => {
               if (response && response.error) {
                 logger.error(`Database error on table: ${tableName}`, response.error, {
@@ -64,8 +54,43 @@ export const supabase = new Proxy(rawSupabase, {
             }
           );
         };
+      }
 
-        return queryBuilder;
+      if (typeof value === 'function') {
+        return (...args: any[]) => {
+          const result = value.apply(target, args);
+          // If the result looks like a query builder (has a then method but isn't a promise), wrap it.
+          // Note: Check for 'then' to handle chaining, but we only want to wrap if it's the builder.
+          if (result && typeof result === 'object' && typeof result.then === 'function') {
+            return wrapQueryBuilder(result, tableName);
+          }
+          return result;
+        };
+      }
+
+      return value;
+    }
+  });
+}
+
+/**
+ * Proxy/Wrapper for the Supabase client to automatically capture schema context on errors.
+ * This implementation uses a recursive proxy to ensure context is kept through method chaining.
+ */
+export const supabase = new Proxy(rawSupabase, {
+  get(target, prop, receiver) {
+    const value = Reflect.get(target, prop, receiver);
+
+    if (prop === 'from') {
+      return (tableName: string) => {
+        const queryBuilder = value.call(target, tableName);
+
+        // Skip interception for the logs table to prevent infinite loops
+        if (tableName === 'error_logs') {
+          return queryBuilder;
+        }
+
+        return wrapQueryBuilder(queryBuilder, tableName);
       };
     }
     return value;

@@ -44,11 +44,13 @@ import {
   Terminal,
   Activity,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RefreshCcw
 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect } from "react";
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: "bg-blue-100 text-blue-800 border-blue-200",
@@ -71,33 +73,74 @@ export default function ErrorTracking() {
     severity: "all",
     role: "all",
     search: "",
+    startDate: "",
+    endDate: "",
   });
   const [page, setPage] = useState(0);
   const pageSize = 20;
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, refetch, error: queryError } = useQuery({
     queryKey: ["error_logs", filters, page],
     queryFn: async () => {
-      let query = supabase
-        .from("error_logs")
-        .select("*", { count: "exact" })
-        .order("timestamp", { ascending: false })
-        .range(page * pageSize, (page + 1) * pageSize - 1);
+      try {
+        let query = supabase
+          .from("error_logs")
+          .select("*", { count: "exact" })
+          .order("timestamp", { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
-      if (filters.module !== "all") query = query.eq("module", filters.module);
-      if (filters.severity !== "all") query = query.eq("severity", filters.severity);
-      if (filters.role !== "all") query = query.eq("user_context->>role", filters.role);
-      if (filters.search) {
-        query = query.or(`message.ilike.%${filters.search}%,module.ilike.%${filters.search}%,component.ilike.%${filters.search}%`);
+        if (filters.module !== "all") query = query.eq("module", filters.module);
+        if (filters.severity !== "all") query = query.eq("severity", filters.severity);
+        if (filters.role !== "all") query = query.eq("user_context->role", filters.role);
+        if (filters.startDate) {
+          query = query.gte("timestamp", new Date(filters.startDate).toISOString());
+        }
+        if (filters.endDate) {
+          // Set to end of day
+          const end = new Date(filters.endDate);
+          end.setHours(23, 59, 59, 999);
+          query = query.lte("timestamp", end.toISOString());
+        }
+        if (filters.search) {
+          query = query.or(`message.ilike.%${filters.search}%,module.ilike.%${filters.search}%,component.ilike.%${filters.search}%`);
+        }
+
+        const { data, count, error } = await query;
+        if (error) {
+          console.error("Supabase query error:", error);
+          throw error;
+        }
+        return { data, count };
+      } catch (err) {
+        console.error("Error fetching error logs:", err);
+        throw err;
       }
-
-      const { data, count, error } = await query;
-      if (error) throw error;
-      return { data, count };
     },
   });
 
-  const uniqueModules = ["Lessons", "Attendance", "Finance", "Auth", "Inventory", "Reports", "Global"];
+  // Enable real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('error-logs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'error_logs'
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  const uniqueModules = ["Lessons", "Attendance", "Finance", "Auth", "Inventory", "Reports", "Testing", "Global"];
 
   return (
     <div className="space-y-6">
@@ -112,28 +155,71 @@ export default function ErrorTracking() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {queryError && (
+            <Badge variant="destructive" className="mr-4">
+              Connection Error: {String(queryError)}
+            </Badge>
+          )}
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => {
-              logger.error("Manual Test Error Triggered", new Error("This is a simulated system failure for AI Debugging validation."), {
-                module: "Testing",
-                component: "ErrorDashboard",
-                action: "manual_test_click",
-                severity: "high",
-                payload: { test: true, timestamp: Date.now() }
-              });
-              toast.success("Manual test error logged successfully!");
-              setTimeout(() => refetch(), 1000);
+            onClick={async () => {
+              const loadingToast = toast.loading("Logging test error...");
+              try {
+                // Reset filters to see the new error
+                setFilters({
+                  module: "Testing",
+                  severity: "all",
+                  role: "all",
+                  search: "",
+                  startDate: "",
+                  endDate: "",
+                });
+
+                await logger.error("Manual Test Error Triggered", new Error("This is a simulated system failure for AI Debugging validation."), {
+                  module: "Testing",
+                  component: "ErrorDashboard",
+                  action: "manual_test_click",
+                  severity: "high",
+                  payload: { test: true, timestamp: Date.now() }
+                });
+
+                toast.dismiss(loadingToast);
+                toast.success("Manual test error logged!");
+
+                // Force an immediate refetch
+                setTimeout(async () => {
+                  await refetch();
+                }, 500);
+              } catch (err) {
+                toast.dismiss(loadingToast);
+                toast.error("Failed to log error");
+                console.error("Manual trigger failed:", err);
+              }
             }}
             className="h-9"
           >
             <ShieldAlert className="mr-2 h-4 w-4" />
             Trigger Test Error
           </Button>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="h-9">
-            <Activity className="mr-2 h-4 w-4" />
-            Refresh Logs
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFilters({
+                module: "all",
+                severity: "all",
+                role: "all",
+                search: "",
+                startDate: "",
+                endDate: "",
+              });
+              refetch();
+            }}
+            className="h-9"
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Reset & Refresh
           </Button>
         </div>
       </div>
@@ -189,6 +275,26 @@ export default function ErrorTracking() {
                 <SelectItem value="center">Center</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex gap-2 items-center md:col-span-4 lg:col-span-2">
+              <div className="flex-1 flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold whitespace-nowrap">From:</span>
+                <Input
+                  type="date"
+                  className="h-9 text-xs"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                />
+              </div>
+              <div className="flex-1 flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold whitespace-nowrap">To:</span>
+                <Input
+                  type="date"
+                  className="h-9 text-xs"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
