@@ -26,6 +26,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { logger } from "@/utils/logger";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   Bug,
@@ -109,6 +111,25 @@ export default function ErrorTracking() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              logger.error("Manual Test Error Triggered", new Error("This is a simulated system failure for AI Debugging validation."), {
+                module: "Testing",
+                component: "ErrorDashboard",
+                action: "manual_test_click",
+                severity: "high",
+                payload: { test: true, timestamp: Date.now() }
+              });
+              toast.success("Manual test error logged successfully!");
+              setTimeout(() => refetch(), 1000);
+            }}
+            className="h-9"
+          >
+            <ShieldAlert className="mr-2 h-4 w-4" />
+            Trigger Test Error
+          </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} className="h-9">
             <Activity className="mr-2 h-4 w-4" />
             Refresh Logs
