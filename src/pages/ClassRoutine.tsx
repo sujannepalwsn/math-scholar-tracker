@@ -106,7 +106,7 @@ export default function ClassRoutine() {
     queryKey: ["period-schedules", user?.center_id, selectedGrade, user?.role, user?.teacher_id, isRestricted],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("period_schedules").select(`*, class_periods:class_period_id(*), teachers:teacher_id(id, name, expected_check_in, expected_check_out)`).eq("center_id", user.center_id);
+      let query = supabase.from("period_schedules").select(`*, class_periods:class_period_id(*), teachers:teacher_id!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out)`).eq("center_id", user.center_id);
 
       if (user?.role === UserRole.TEACHER && user?.teacher_id) {
         query = query.eq('teacher_id', user.teacher_id);
@@ -124,7 +124,7 @@ export default function ClassRoutine() {
     queryKey: ["all-period-schedules", user?.center_id, isRestricted],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("period_schedules").select(`*, class_periods:class_period_id(*), teachers:teacher_id(id, name, expected_check_in, expected_check_out)`).eq("center_id", user.center_id);
+      let query = supabase.from("period_schedules").select(`*, class_periods:class_period_id(*), teachers:teacher_id!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out)`).eq("center_id", user.center_id);
 
       if (isRestricted) {
         query = query.eq('teacher_id', user?.teacher_id);
