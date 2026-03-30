@@ -30,6 +30,7 @@ import { logger } from "@/utils/logger";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  Bot,
   Bug,
   Calendar,
   Database,
@@ -320,6 +321,12 @@ export default function ErrorTracking() {
               <Badge className={`uppercase text-[10px] ${SEVERITY_COLORS[selectedError?.severity]}`}>
                 {selectedError?.severity}
               </Badge>
+            </div>
+            <div className="mt-4 flex items-center gap-2 p-2 bg-primary/5 border border-primary/10 rounded-md">
+              <Bot className="w-4 h-4 text-primary" />
+              <span className="text-[11px] font-medium text-primary">
+                AI Debugger Status: <span className="font-bold underline cursor-help" title="This error was automatically broadcasted to your AI Studio webhook via Supabase pg_net trigger.">Sent to Webhook</span>
+              </span>
             </div>
           </DialogHeader>
 

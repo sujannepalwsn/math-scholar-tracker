@@ -36,7 +36,7 @@ FOR SELECT
 USING (
     EXISTS (
         SELECT 1 FROM public.users
-        WHERE users.id = auth.uid() AND users.role = 'admin'
+        WHERE users.id = auth.uid() AND (users.role = 'admin' OR users.role = 'center')
     )
 );
 
