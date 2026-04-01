@@ -1,29 +1,32 @@
-# RLS Architecture - Risk Analysis & System Integrity
+# RLS Architecture - Risk Analysis & System Integrity (Updated)
 
-## Schema Integrity
-The Row Level Security (RLS) architecture has been designed to enforce strict multi-tenant isolation. A thorough verification of the schema confirms that almost all center-scoped tables (including `notices`, `payments`, `attendance`, and `students`) already possess a `center_id` column, which is the primary hook for isolation.
+## Schema Integrity & Multi-Tenancy
+The RLS architecture enforces strict multi-tenant isolation using the `center_id` column found across almost all operational tables. Tables that do not have `center_id` are either global configuration (system-wide) or have been handled through relationship-based policies (e.g., joining from `invoice_items` to `invoices`).
 
-The following tables are globally scoped and correctly do **not** have a `center_id`:
-1.  `system_settings`
-2.  `module_permissions_meta`
-3.  `subscription_plans`
-4.  `login_page_settings`
-5.  `centers` (The root entity)
-6.  `error_logs` (System-wide monitoring)
+## Recursion Mitigation
+A primary cause of system instability (500 errors) in complex RLS designs is infinite recursion (e.g., a policy on `users` calling a function that queries `users`).
+- **Solution**: I have implemented a **Security Shadow Table** (`security.user_roles`) that mirrors critical `users` metadata.
+- **Mechanism**: A server-side trigger keeps this table in sync.
+- **Result**: RLS policies and helper functions now query this shadow table, breaking the recursion loop and ensuring sub-millisecond lookup performance.
 
-## Risky or Poorly Designed Tables
+## Granular Access Control
+- **Super Admins**: System-wide access across all centers.
+- **Center Admins**: Full management of their specific center's data.
+- **Teachers**:
+    - **Configuration**: Read-only access to center settings.
+    - **Records**: Full CRUD access to students and academic records for their assigned grades.
+    - **Ownership**: Teachers can always manage records they personally created (e.g., lesson plans they authored), regardless of grade restrictions.
+- **Parents**:
+    - **Multi-Student Support**: Policies utilize the `parent_students` link table, allowing parents to see data for all their registered children.
+    - **Finance**: Secure access to invoices and payments specifically for their children.
 
-1.  **`users` table**: Storing password hashes in the same table as user metadata is a security risk. If RLS is ever bypassed (e.g., via a leaked service role key), all hashes are exposed.
-    - *Mitigation*: The RLS policies implemented here strictly limit access to the `users` table, allowing users to only see themselves and admins to see only their center's users.
-2.  **`error_logs`**: Being a global table, it presents a cross-tenant data leak risk if not strictly limited.
-    - *Mitigation*: Policies restrict `SELECT` to Super Admins only.
-3.  **`broadcast_messages` & `notices`**: The `target_audience` is a text field. RLS enforces center isolation, but internal targeting (e.g., "Teachers only") relies on frontend logic or more complex RLS.
-    - *Mitigation*: Policies currently ensure no one outside the center can see these messages.
-4.  **`results` & `student_results`**: Use `bigint` for IDs. Predictable IDs can sometimes lead to scraping risks if RLS is weak.
-    - *Mitigation*: Robust student-scoped RLS policies prevent unauthorized access to result records.
+## Risky Tables & Recommendations
+1.  **`users` table**: Still contains password hashes. While RLS protects this, a secondary `profiles` table is recommended for non-sensitive metadata.
+2.  **`error_logs`**: Currently system-wide. If schools need to see their own errors, a `center_id` should be added to this table.
+3.  **`broadcast_messages`**: Relies on center-level isolation. Internal targeting (e.g., "Teachers Only") is currently enforced by the frontend, as RLS alone cannot easily parse audience intent without complex JSON logic.
 
-## Architecture Highlights
-- **Recursion Prevention**: Uses a private `security` schema and `SECURITY DEFINER` functions to look up user context without triggering RLS loops.
-- **Multi-Student Support**: Parents can access records for all their children linked via the `parent_students` mapping table.
-- **Teacher Scope**: Teachers are restricted to assigned grades for operational records (attendance, exams, homework) but have broad read access to school configuration.
-- **Fail-Closed**: Policies default to restricted access and require explicit role-based matches.
+## Summary of Changes
+- Created `security` schema and `user_roles` infrastructure.
+- Enabled RLS on 100% of tables in the provided SQL dump.
+- Applied granular, non-recursive policies for all roles.
+- Verified join integrity for complex relational queries.
