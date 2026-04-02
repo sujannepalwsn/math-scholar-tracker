@@ -189,6 +189,69 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
       {/* Main Content Area */}
       <main className="relative z-10 flex-1">
 
+        {/* Mobile Login Card (First on Mobile) */}
+        <div className="lg:hidden container mx-auto px-4 pt-10 pb-6">
+           <Card className="border-none shadow-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden text-white">
+              <CardHeader className="space-y-4 pt-8 pb-4 px-6 text-center">
+                <CardTitle className="text-3xl font-black tracking-tighter">
+                  {settings?.title || 'Sign In'}
+                </CardTitle>
+                <p className="text-slate-400 font-medium text-sm">
+                    Access your institution's digital ecosystem
+                </p>
+              </CardHeader>
+              <CardContent className="pb-8 px-6">
+                <form onSubmit={onSubmit} className="space-y-6">
+                  <div className="space-y-4">
+                    <Select value={currentRole} onValueChange={handleRoleChange}>
+                      <SelectTrigger className="h-12 rounded-xl border-white/10 bg-white/5 font-bold">
+                        <SelectValue placeholder="Role" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-white/10 text-white">
+                        <SelectItem value="center">Tuition Center</SelectItem>
+                        <SelectItem value="teacher">Teacher Portal</SelectItem>
+                        <SelectItem value="parent">Parent Portal</SelectItem>
+                        <SelectItem value="admin">System Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Input
+                      placeholder={settings?.username_placeholder || 'Username'}
+                      className="h-12 rounded-xl border-white/10 bg-white/5 font-bold"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+
+                    <Input
+                      type="password"
+                      placeholder={settings?.password_placeholder || '••••••••'}
+                      className="h-12 rounded-xl border-white/10 bg-white/5 font-bold"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+
+                    <Button
+                      type="submit"
+                      className="w-full h-12 text-md font-black rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
+                      disabled={loading}
+                    >
+                      {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : (
+                        <div className="flex items-center justify-center gap-2">
+                           {settings?.button_text || 'Enter Dashboard'}
+                           <ArrowRight className="h-5 w-5" />
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+           </Card>
+        </div>
+
         {/* Hero Section with Persistent Login Card */}
         <section className="relative min-h-[90vh] flex items-center pt-20">
           <div className="container mx-auto px-4">
@@ -352,62 +415,6 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
               </CardContent>
             </Card>
           </motion.div>
-        </div>
-
-        {/* Mobile Login Card (Integrated in Flow) */}
-        <div className="lg:hidden container mx-auto px-4 py-12">
-           <Card className="border-none shadow-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden text-white">
-              <CardHeader className="space-y-4 pt-8 pb-4 px-6">
-                <CardTitle className="text-3xl font-black tracking-tighter">
-                  {settings?.title || 'Sign In'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-8 px-6">
-                <form onSubmit={onSubmit} className="space-y-6">
-                  {/* Reuse same fields, but simplified for mobile if needed */}
-                  <div className="space-y-4">
-                    <Select value={currentRole} onValueChange={handleRoleChange}>
-                      <SelectTrigger className="h-12 rounded-xl border-white/10 bg-white/5">
-                        <SelectValue placeholder="Role" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-white/10 text-white">
-                        <SelectItem value="center">Tuition Center</SelectItem>
-                        <SelectItem value="teacher">Teacher Portal</SelectItem>
-                        <SelectItem value="parent">Parent Portal</SelectItem>
-                        <SelectItem value="admin">System Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Input
-                      placeholder={settings?.username_placeholder || 'Username'}
-                      className="h-12 rounded-xl border-white/10 bg-white/5"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-
-                    <Input
-                      type="password"
-                      placeholder={settings?.password_placeholder || '••••••••'}
-                      className="h-12 rounded-xl border-white/10 bg-white/5"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-
-                    <Button
-                      type="submit"
-                      className="w-full h-12 text-md font-bold rounded-xl bg-primary"
-                      disabled={loading}
-                    >
-                      {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Enter Dashboard'}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-           </Card>
         </div>
 
         {/* Packages Grid */}

@@ -345,7 +345,7 @@ const HeroSection = ({ scrollToNext, setActiveSection }: { scrollToNext: () => v
   const hasSlides = activeSlides.length > 0;
 
   return (
-    <Section id="hero" index={0} setActiveSection={setActiveSection} noMinHeight className="bg-slate-950 p-0 md:h-[100dvh] md:min-h-[100dvh] h-auto py-10 md:py-0">
+    <Section id="hero" index={0} setActiveSection={setActiveSection} noMinHeight className="bg-slate-950 p-0 md:h-[100dvh] md:min-h-[100dvh] h-auto pt-24 pb-10 md:py-0">
       <div className="relative w-full h-full flex items-center justify-center">
       <div className={cn(
         "z-0 transition-all duration-500",
