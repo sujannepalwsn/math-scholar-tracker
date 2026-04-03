@@ -206,7 +206,7 @@ const LandingPage = () => {
                variant="outline"
                className="h-16 px-10 rounded-2xl text-lg font-black border-white/10 bg-white/5 hover:bg-white/10 text-white"
                onClick={async () => {
-                  toast.loading("Entering Sandbox Mode...");
+                  const loadingToast = toast.loading("Entering Sandbox Mode...");
                   localStorage.setItem('is_sandbox', 'true');
 
                   // Use a public demo account
@@ -214,10 +214,14 @@ const LandingPage = () => {
                   const result = await login("demo@eduflow.com", "demo1234");
 
                   if (result.success) {
-                    toast.success("Welcome to the Sandbox! (Demo Mode Active)");
+                    toast.dismiss(loadingToast);
                     navigate("/center-dashboard");
+                    setTimeout(() => {
+                      toast.success("Welcome to the Sandbox! (Demo Mode Active)");
+                    }, 200);
                   } else {
                     localStorage.removeItem('is_sandbox');
+                    toast.dismiss(loadingToast);
                     toast.error("Demo mode is temporarily unavailable. Please try again later.");
                   }
                }}

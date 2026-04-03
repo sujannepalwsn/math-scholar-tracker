@@ -26,7 +26,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
   const handleLogout = () => {
     logout();
-    navigate('/login-parent');
+    navigate('/login');
   };
 
   const { dynamicCategories, dynamicItems, getIcon, syncDefaults, syncMissingItems } = useDynamicNavigation();
@@ -82,13 +82,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
   const parentDynamicItems = dynamicItems.filter(it => it.role === UserRole.PARENT);
 
-  // Auto-sync defaults if no parent items exist for this center
-  React.useEffect(() => {
-    if (user?.center_id && dynamicItems.length > 0 && dynamicItems.filter(it => it.role === UserRole.PARENT).length === 0) {
-      syncDefaults.mutate();
-    }
-  }, [user?.center_id, dynamicItems.length]);
-
   // Combine dynamic items and missing static items
   const combinedItems = React.useMemo(() => {
     const items = [...parentDynamicItems];
@@ -110,35 +103,27 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     });
 
     return items;
-  }, [parentDynamicItems, staticNavItems]);
+  }, [parentDynamicItems]);
 
-  const updatedNavItems = combinedItems.map(it => {
-    const cat = dynamicCategories.find(c => c.id === it.category_id) ||
-                dynamicCategories.find(c => c.name === (it as any).category_name);
+  const updatedNavItems = React.useMemo(() => {
+    return combinedItems.map(it => {
+      const cat = dynamicCategories.find(c => c.id === it.category_id) ||
+                  dynamicCategories.find(c => c.name === (it as any).category_name);
 
-    return {
-      to: it.route,
-      label: it.name,
-      icon: getIcon(it.icon),
-      role: it.role as any,
-      featureName: it.feature_name,
-      category: cat?.name,
-      unreadCount: it.route === "/parent-messages" ? unreadMessageCount : undefined,
-      is_active: it.is_active
-    };
-  });
+      return {
+        to: it.route,
+        label: it.name,
+        icon: getIcon(it.icon),
+        role: it.role as any,
+        featureName: it.feature_name,
+        feature_name: it.feature_name,
+        category: cat?.name,
+        unreadCount: it.route === "/parent-messages" ? unreadMessageCount : undefined,
+        is_active: it.is_active
+      };
+    });
+  }, [combinedItems, dynamicCategories, getIcon, unreadMessageCount]);
 
-  // Ensure mandatory items from defaults are always present
-  React.useEffect(() => {
-    if (parentDynamicItems.length > 0) {
-      const hasMissing = staticNavItems.some(
-        staticItem => !parentDynamicItems.some(it => it.route === staticItem.route)
-      );
-      if (hasMissing) {
-        syncMissingItems.mutate();
-      }
-    }
-  }, [parentDynamicItems.length, staticNavItems.length]);
 
   const headerContent = (
     <CenterLogo size="md" showName={true} />
@@ -168,7 +153,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       />
 
       {/* Mobile Header - Optimized for narrow screens */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[46px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm overflow-hidden">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
         <div className="flex items-center shrink-0">
           <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/5 text-primary">
             <Menu className="h-5 w-5" />

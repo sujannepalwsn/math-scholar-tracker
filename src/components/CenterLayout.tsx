@@ -185,7 +185,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
       />
 
       {/* Mobile Header - Optimized for narrow screens */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[46px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm overflow-hidden">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
         <div className="flex items-center shrink-0">
           <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/5 text-primary">
             <Menu className="h-5 w-5" />
