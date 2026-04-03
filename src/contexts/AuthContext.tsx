@@ -40,6 +40,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginSandbox: () => Promise<void>;
   logout: () => void;
   setUser: (user: User | null) => void;
 }
@@ -261,13 +262,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginSandbox = async () => {
+    localStorage.setItem('is_sandbox', 'true');
+    const sandboxUser: User = {
+      id: "sandbox-user-id",
+      username: "sandbox-admin",
+      role: UserRole.CENTER,
+      center_id: "sandbox-center-id",
+      center_name: "EduFlow Sandbox Academy",
+      active_academic_year: "2024-2025",
+      centerPermissions: {
+        dashboard_access: true,
+        register_student: true,
+        take_attendance: true,
+        attendance_summary: true,
+        lesson_plans: true,
+        lesson_tracking: true,
+        homework_management: true,
+        finance: true,
+        messaging: true,
+        exams_results: true,
+        hr_management: true,
+        inventory_assets: true,
+        transport_tracking: true,
+        calendar_events: true,
+        settings_access: true
+      },
+      untrusted_metadata: {
+        permissions_fetched_at: new Date().toISOString(),
+        is_ui_restricted: false
+      }
+    };
+    setUser(sandboxUser);
+    localStorage.setItem('auth_user', JSON.stringify(sandboxUser));
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('is_sandbox');
   };
 
   return (
+    <AuthContext.Provider value={{ user, loading, login, loginSandbox, logout }}>
     <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>
       {children}
     </AuthContext.Provider>
