@@ -67,21 +67,34 @@ export default function Dashboard() {
       const savedVisible = localStorage.getItem(`dashboard-visible-widgets-${user.id}`);
       const savedMain = localStorage.getItem(`dashboard-main-order-${user.id}`);
 
+      const defaultVisible = {
+        "students": true, "teachers": true, "student-attendance": true, "teacher-attendance": true,
+        "lesson-plans": true, "approvals": true, "leave-requests": true, "messages": true,
+        "attendance-overview": true, "ai-insights": true, "performers": true, "teacher-status": true, "financial-health": true,
+        "leave-applications": true, "activities-discipline": true, "chapter-mastery": true, "academic-efficiency": true, "effort-outcome-distribution": true, "academic-trends": true, "notice-board": true, "alerts": true, "class-schedule": true
+      };
+
+      const defaultMain = [
+        "attendance-overview", "ai-insights", "performers", "teacher-status", "leave-applications", "activities-discipline", "chapter-mastery", "academic-efficiency", "effort-outcome-distribution", "academic-trends"
+      ];
+
       setKpiOrder(savedKpi ? JSON.parse(savedKpi) : [
         "students", "teachers", "student-attendance", "teacher-attendance",
         "lesson-plans", "approvals", "leave-requests", "messages"
       ]);
 
-      setVisibleWidgets(savedVisible ? JSON.parse(savedVisible) : {
-        "students": true, "teachers": true, "student-attendance": true, "teacher-attendance": true,
-        "lesson-plans": true, "approvals": true, "leave-requests": true, "messages": true,
-        "attendance-overview": true, "ai-insights": true, "performers": true, "teacher-status": true, "financial-health": true,
-        "leave-applications": true, "activities-discipline": true, "chapter-mastery": true, "academic-efficiency": true, "effort-outcome-distribution": true, "academic-trends": true, "notice-board": true, "alerts": true, "class-schedule": true
+      // Merge saved visibility with defaults to ensure new widgets appear for existing users
+      const parsedVisible = savedVisible ? JSON.parse(savedVisible) : {};
+      setVisibleWidgets({ ...defaultVisible, ...parsedVisible });
+
+      // Ensure new default widgets are added to the main order if they aren't there
+      const parsedMain = savedMain ? JSON.parse(savedMain) : [];
+      const mergedMain = [...parsedMain];
+      defaultMain.forEach(id => {
+        if (!mergedMain.includes(id)) mergedMain.push(id);
       });
 
-      setMainWidgetsOrder(savedMain ? JSON.parse(savedMain) : [
-        "attendance-overview", "ai-insights", "performers", "teacher-status", "leave-applications", "activities-discipline", "chapter-mastery", "academic-efficiency", "effort-outcome-distribution", "academic-trends"
-      ]);
+      setMainWidgetsOrder(mergedMain.length > 0 ? mergedMain : defaultMain);
 
       setIsInitialized(true);
     }
