@@ -138,14 +138,9 @@ const LandingPage = () => {
           <Link to="/about" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">About</Link>
         </nav>
 
-        <div className="flex items-center gap-2 md:gap-4">
-           <Link to="/login">
-             <Button variant="ghost" className="text-white font-bold hover:bg-white/5 rounded-full px-3 md:px-6 text-sm md:text-base">
-               Login
-             </Button>
-           </Link>
+        <div className="flex items-center gap-4">
            <Link to="/onboarding">
-             <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-4 md:px-8 shadow-lg shadow-primary/20 text-sm md:text-base">
+             <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-8 shadow-lg shadow-primary/20">
                Get Started
              </Button>
            </Link>

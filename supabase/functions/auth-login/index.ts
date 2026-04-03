@@ -109,7 +109,8 @@ serve(async (req) => {
     }
 
     // Verify password using bcrypt (matching how the application stores hashes)
-    const passwordMatch = await bcrypt.compare(password, userData.password_hash);
+    // Synchronous comparison ensures reliability in Edge environment
+    const passwordMatch = bcrypt.compareSync(password, userData.password_hash);
     if (!passwordMatch) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid username or password' }),
