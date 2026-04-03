@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from './types';
 import { logger } from "@/utils/logger";
+import { mockSupabase } from "@/lib/supabase-sandbox-mock";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -109,7 +110,9 @@ function wrapQueryBuilder(builder: any, tableName: string, queryLog: any[] = [])
  */
 export const supabase = new Proxy(rawSupabase, {
   get(target, prop, receiver) {
-    const value = Reflect.get(target, prop, receiver);
+    const isSandbox = typeof window !== 'undefined' && localStorage.getItem('is_sandbox') === 'true';
+    const effectiveTarget = isSandbox ? mockSupabase : target;
+    const value = Reflect.get(effectiveTarget, prop, receiver);
 
     if (prop === 'from' && typeof value === 'function') {
       return (tableName: string) => {

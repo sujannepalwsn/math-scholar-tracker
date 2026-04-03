@@ -46,7 +46,7 @@ import {
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginSandbox } = useAuth();
   const { data: stats } = useSystemStats();
   const [partners, setPartners] = useState<{ id: string; name: string; logo_url: string; address: string }[]>([]);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
@@ -179,16 +179,11 @@ const LandingPage = () => {
                onClick={async () => {
                   toast.loading("Entering Sandbox Mode...");
 
-                  // Use a public demo account
-                  // In a real production app, these would be managed credentials
-                  const result = await login("demo@eduflow.com", "demo1234");
+                  // New non-DB sandbox mode
+                  await loginSandbox();
 
-                  if (result.success) {
-                    toast.success("Welcome to the Sandbox! (Demo Mode Active)");
-                    navigate("/center-dashboard");
-                  } else {
-                    toast.error("Demo mode is temporarily unavailable. Please try again later.");
-                  }
+                  toast.success("Welcome to the Sandbox! (Offline Mode Active)");
+                  navigate("/center-dashboard");
                }}
             >
                <Zap className="mr-2 h-6 w-6 text-yellow-400" /> Instant Sandbox
