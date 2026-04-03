@@ -215,7 +215,8 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       'calendar_events',
       'finance',
       'chapter_performance',
-      'about_institution'
+      'about_institution',
+      'daily_snapshot'
     ];
     if (allowedParent.includes(dbColumnName)) {
       return true;

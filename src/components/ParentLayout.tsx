@@ -29,7 +29,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     navigate('/login-parent');
   };
 
-  const { dynamicCategories, dynamicItems, getIcon } = useDynamicNavigation();
+  const { dynamicCategories, dynamicItems, getIcon, syncDefaults, syncMissingItems } = useDynamicNavigation();
 
   const queryClient = useQueryClient();
   const { data: unreadMessageCount = 0 } = useQuery({
@@ -81,29 +81,64 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   }, [user?.id, user?.center_id, queryClient]);
 
   const parentDynamicItems = dynamicItems.filter(it => it.role === UserRole.PARENT);
-  const updatedNavItems = parentDynamicItems.length > 1
-    ? parentDynamicItems.map(it => {
-        const cat = dynamicCategories.find(c => c.id === it.category_id);
-        return {
-          to: it.route,
-          label: it.name,
-          icon: getIcon(it.icon),
-          role: it.role as any,
-          featureName: it.feature_name,
-          category: cat?.name,
-          unreadCount: it.route === "/parent-messages" ? unreadMessageCount : undefined,
-          is_active: it.is_active
-        };
-      })
-    : staticNavItems.map(item => ({
-        to: item.route,
-        label: item.name,
-        icon: getIcon(item.icon),
-        role: item.role as any,
-        featureName: item.feature_name,
-        category: item.category as any,
-        unreadCount: item.route === "/parent-messages" ? unreadMessageCount : undefined
-      }));
+
+  // Auto-sync defaults if no parent items exist for this center
+  React.useEffect(() => {
+    if (user?.center_id && dynamicItems.length > 0 && dynamicItems.filter(it => it.role === UserRole.PARENT).length === 0) {
+      syncDefaults.mutate();
+    }
+  }, [user?.center_id, dynamicItems.length]);
+
+  // Combine dynamic items and missing static items
+  const combinedItems = React.useMemo(() => {
+    const items = [...parentDynamicItems];
+
+    staticNavItems.forEach(staticItem => {
+      if (!items.some(it => it.route === staticItem.route)) {
+        items.push({
+          id: `static-${staticItem.route}`,
+          route: staticItem.route,
+          name: staticItem.name,
+          icon: staticItem.icon,
+          role: staticItem.role,
+          feature_name: staticItem.feature_name,
+          is_active: true,
+          category_id: null,
+          category_name: staticItem.category // Temporary for mapping
+        } as any);
+      }
+    });
+
+    return items;
+  }, [parentDynamicItems, staticNavItems]);
+
+  const updatedNavItems = combinedItems.map(it => {
+    const cat = dynamicCategories.find(c => c.id === it.category_id) ||
+                dynamicCategories.find(c => c.name === (it as any).category_name);
+
+    return {
+      to: it.route,
+      label: it.name,
+      icon: getIcon(it.icon),
+      role: it.role as any,
+      featureName: it.feature_name,
+      category: cat?.name,
+      unreadCount: it.route === "/parent-messages" ? unreadMessageCount : undefined,
+      is_active: it.is_active
+    };
+  });
+
+  // Ensure mandatory items from defaults are always present
+  React.useEffect(() => {
+    if (parentDynamicItems.length > 0) {
+      const hasMissing = staticNavItems.some(
+        staticItem => !parentDynamicItems.some(it => it.route === staticItem.route)
+      );
+      if (hasMissing) {
+        syncMissingItems.mutate();
+      }
+    }
+  }, [parentDynamicItems.length, staticNavItems.length]);
 
   const headerContent = (
     <CenterLogo size="md" showName={true} />
