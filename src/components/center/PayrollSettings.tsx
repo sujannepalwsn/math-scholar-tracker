@@ -136,7 +136,7 @@ export default function PayrollSettings({ centerId, canEdit }: { centerId: strin
                   {taxSlabs.map((slab: any) => (
                     <TableRow key={slab.id}>
                       <TableCell className="text-xs font-bold">
-                        ₹{slab.min_income.toLocaleString()} - {slab.max_income ? `₹${slab.max_income.toLocaleString()}` : '∞'}
+                        NPR {slab.min_income.toLocaleString()} - {slab.max_income ? `NPR ${slab.max_income.toLocaleString()}` : '∞'}
                       </TableCell>
                       <TableCell className="text-xs font-black text-primary">{slab.tax_percent}%</TableCell>
                       <TableCell className="text-right">

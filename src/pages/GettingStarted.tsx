@@ -152,7 +152,7 @@ const DashboardMockup = ({ role }: { role: 'admin' | 'teacher' | 'parent' }) => 
             {[
               { label: 'Students', value: '1,248', color: 'bg-indigo-500/10' },
               { label: 'Teachers', value: '86', color: 'bg-emerald-500/10' },
-              { label: 'Revenue', value: '$42.5k', color: 'bg-amber-500/10' },
+              { label: 'Revenue', value: 'NPR 42.5k', color: 'bg-amber-500/10' },
               { label: 'Attendance', value: '94%', color: 'bg-rose-500/10' }
             ].map((stat, i) => (
               <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
@@ -264,7 +264,7 @@ const DashboardMockup = ({ role }: { role: 'admin' | 'teacher' | 'parent' }) => 
             <div className="flex-1 space-y-6">
               <div className="p-6 rounded-[2rem] bg-gradient-to-br from-indigo-500/30 to-blue-500/30 border border-white/10 text-white">
                 <div className="text-sm font-bold opacity-80 mb-1">Quarterly Tuition Fee</div>
-                <div className="text-3xl font-black mb-4">$850.00</div>
+                <div className="text-3xl font-black mb-4">NPR 850.00</div>
                 <div className="flex justify-between items-center">
                   <div className="text-xs font-medium px-3 py-1 rounded-full bg-white/20">Due: June 15</div>
                   <div className="h-8 w-24 bg-white rounded-xl flex items-center justify-center text-xs font-black text-indigo-600">PAY NOW</div>
@@ -665,7 +665,7 @@ const FeatureSlide = ({ title, valueProp, icon: Icon, highlights, index, setActi
                    <div className="relative z-10 w-full space-y-6">
                       <div className="p-6 rounded-[2.5rem] bg-emerald-500/10 border border-emerald-500/20 text-center">
                          <div className="text-sm font-bold text-emerald-400 mb-1 uppercase tracking-widest">Total Collected</div>
-                         <div className="text-4xl font-black text-white">$124,500.00</div>
+                         <div className="text-4xl font-black text-white">NPR 124,500.00</div>
                       </div>
                       <div className="space-y-3">
                          {[1, 2, 3].map(i => (

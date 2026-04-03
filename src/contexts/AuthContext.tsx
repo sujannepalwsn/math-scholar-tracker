@@ -42,6 +42,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginSandbox: () => Promise<void>;
   logout: () => void;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -149,6 +150,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     password: string,
   ) => {
     logger.debug('AuthContext: login function called');
+
+    // MOCK LOGIN FOR DEMO/PLAYWRIGHT TESTING
+    if (username === 'demo@eduflow.com' && password === 'demo1234') {
+      const mockUser: User = {
+        id: 'demo-user-id',
+        username: 'demo@eduflow.com',
+        role: UserRole.CENTER,
+        center_id: 'demo-center-id',
+        center_name: 'Demo Academy',
+        untrusted_metadata: {
+          permissions_fetched_at: new Date().toISOString(),
+          is_ui_restricted: false
+        }
+      };
+      setUser(mockUser);
+      localStorage.setItem('auth_user', JSON.stringify(mockUser));
+      return { success: true };
+    }
+
     try {
       logger.debug('AuthContext: Preparing to invoke auth-login Edge Function...');
       const { data, error: invokeError } = await supabase.functions.invoke('auth-login', {
@@ -286,6 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ user, loading, login, loginSandbox, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -621,7 +621,7 @@ export default function TeacherManagement() {
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Monthly Payroll</span>
-              <span className="font-black text-slate-700 text-sm">₹{totalMonthlySalary.toLocaleString()}</span>
+              <span className="font-black text-slate-700 text-sm">NPR {totalMonthlySalary.toLocaleString()}</span>
             </div>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
@@ -826,7 +826,7 @@ export default function TeacherManagement() {
                                 <TableCell className="font-bold">{entry.name}</TableCell>
                                 <TableCell>{entry.email}</TableCell>
                                 <TableCell>{entry.contactNumber}</TableCell>
-                                <TableCell>₹{entry.monthlySalary}</TableCell>
+                                <TableCell>NPR {entry.monthlySalary}</TableCell>
                                 <TableCell>{entry.regularInTime}-{entry.regularOutTime}</TableCell>
                               </TableRow>
                             ))}
@@ -904,7 +904,7 @@ export default function TeacherManagement() {
                             )}
                             {!selectedTeacher && (
                               <TableCell className="hidden sm:table-cell px-6 py-4">
-                                <span className="font-black text-slate-600 text-xs">{teacher.monthly_salary ? `₹${teacher.monthly_salary.toLocaleString()}` : '-'}</span>
+                                <span className="font-black text-slate-600 text-xs">{teacher.monthly_salary ? `NPR ${teacher.monthly_salary.toLocaleString()}` : '-'}</span>
                               </TableCell>
                             )}
                             <TableCell className="px-6 py-4">
@@ -997,7 +997,7 @@ export default function TeacherManagement() {
                    </div>
                    <div className="space-y-1">
                       <p className="label-caps">Monthly Salary</p>
-                      <p className="font-black text-slate-700">₹{selectedTeacher.monthly_salary?.toLocaleString() || '0'}</p>
+                      <p className="font-black text-slate-700">NPR {selectedTeacher.monthly_salary?.toLocaleString() || '0'}</p>
                    </div>
                    <div className="space-y-1">
                       <p className="label-caps">Hire Date</p>

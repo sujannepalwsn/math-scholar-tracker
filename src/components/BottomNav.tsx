@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { FileText, GraduationCap, Home, ShieldCheck, X } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { FileText, GraduationCap, Home, ShieldCheck, X, LayoutList, MoreHorizontal } from "lucide-react";
 
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,7 @@ interface NavItem {
   featureName?: string;
   is_active?: boolean;
   unreadCount?: number;
-  category?: 'Academics' | 'Administration' | 'Reports and Communication';
+  category?: 'Academics' | 'Administration' | 'Reports and Communication' | string;
 }
 
 interface BottomNavProps {
@@ -26,7 +26,7 @@ export default function BottomNav({ navItems }: BottomNavProps) {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeMenu, setActiveMenu] = useState<'Academics' | 'Administration' | 'Reports and Communication' | null>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const filteredItems = navItems.filter(item => {
     if (item.is_active === false) return false;
@@ -36,12 +36,24 @@ export default function BottomNav({ navItems }: BottomNavProps) {
     return true;
   });
 
-  const dashboardItem = filteredItems.find(item => item.label === "Dashboard");
-  const academicsItems = filteredItems.filter(item => item.category === 'Academics');
-  const administrationItems = filteredItems.filter(item => item.category === 'Administration');
-  const reportsItems = filteredItems.filter(item => item.category === 'Reports and Communication');
+  const dashboardItem = filteredItems.find(item => item.label === "Dashboard" || item.to?.includes('dashboard'));
 
-  const handleMenuToggle = (menu: 'Academics' | 'Administration' | 'Reports and Communication') => {
+  const categorizedItemsMap = useMemo(() => {
+    const map = new Map<string, NavItem[]>();
+    filteredItems.forEach(item => {
+      if (item.category && item.label !== "Dashboard") {
+        if (!map.has(item.category)) map.set(item.category, []);
+        map.get(item.category)!.push(item);
+      }
+    });
+    return map;
+  }, [filteredItems]);
+
+  const uncategorizedItems = filteredItems.filter(item => !item.category && item.label !== "Dashboard");
+
+  const categories = Array.from(categorizedItemsMap.keys());
+
+  const handleMenuToggle = (menu: string) => {
     if (activeMenu === menu) {
       closeMenu();
     } else {
@@ -80,12 +92,13 @@ export default function BottomNav({ navItems }: BottomNavProps) {
 
   const renderSubMenu = (category: string, items: NavItem[]) => (
     <div
+      key={`submenu-${category}`}
       className={cn(
         "fixed inset-x-0 bottom-16 bg-card border-t shadow-elevated p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 transition-all duration-200 z-30 max-h-[60vh] overflow-y-auto",
         activeMenu === category ? "translate-y-0 opacity-100" : "translate-y-full pointer-events-none opacity-0"
       )}
     >
-      <div className="col-span-4 flex justify-between items-center mb-2">
+      <div className="col-span-full flex justify-between items-center mb-2">
         <span className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">{category}</span>
         <button onClick={closeMenu} className="p-1 hover:bg-muted rounded-md transition-colors">
           <X className="h-4 w-4" />
@@ -111,13 +124,26 @@ export default function BottomNav({ navItems }: BottomNavProps) {
     </div>
   );
 
+  const getCategoryIcon = (category: string) => {
+    if (category === 'Academics') return <GraduationCap className="h-5 w-5" />;
+    if (category === 'Administration') return <ShieldCheck className="h-5 w-5" />;
+    if (category === 'Reports and Communication') return <FileText className="h-5 w-5" />;
+    return <LayoutList className="h-5 w-5" />;
+  };
+
+  const getCategoryShortLabel = (category: string) => {
+    if (category === 'Academics') return 'Academics';
+    if (category === 'Administration') return 'Admin';
+    if (category === 'Reports and Communication') return 'Reports';
+    return category;
+  };
+
   return (
     <>
-      {renderSubMenu('Academics', academicsItems)}
-      {renderSubMenu('Administration', administrationItems)}
-      {renderSubMenu('Reports and Communication', reportsItems)}
+      {categories.map(cat => renderSubMenu(cat, categorizedItemsMap.get(cat)!))}
+      {uncategorizedItems.length > 0 && renderSubMenu('More', uncategorizedItems)}
 
-      <div className="fixed bottom-0 inset-x-0 h-16 bg-card border-t flex items-center justify-between px-2 z-40 md:hidden">
+      <div className="fixed bottom-0 inset-x-0 h-16 bg-card border-t flex items-center justify-between px-2 z-40 md:hidden overflow-x-auto no-scrollbar">
         {dashboardItem && (
           <button
             onClick={(e) => handleNavigation(dashboardItem.to, e)}
@@ -131,48 +157,33 @@ export default function BottomNav({ navItems }: BottomNavProps) {
           </button>
         )}
 
-        {academicsItems.length > 0 && (
+        {categories.map(cat => (
           <button
-            onClick={() => handleMenuToggle('Academics')}
+            key={`btn-${cat}`}
+            onClick={() => handleMenuToggle(cat)}
             className={cn(
               "flex flex-col items-center gap-1 min-w-[64px] transition-all relative active:scale-95",
-              activeMenu === 'Academics' ? "text-primary" : "text-muted-foreground"
+              activeMenu === cat ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <GraduationCap className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Academics</span>
-            {academicsItems.some(i => i.unreadCount && i.unreadCount > 0) && (
+            {getCategoryIcon(cat)}
+            <span className="text-[10px] font-medium">{getCategoryShortLabel(cat)}</span>
+            {categorizedItemsMap.get(cat)!.some(i => i.unreadCount && i.unreadCount > 0) && (
               <span className="absolute top-0 right-4 h-2 w-2 bg-destructive rounded-full" />
             )}
           </button>
-        )}
+        ))}
 
-        {administrationItems.length > 0 && (
+        {uncategorizedItems.length > 0 && (
           <button
-            onClick={() => handleMenuToggle('Administration')}
+            onClick={() => handleMenuToggle('More')}
             className={cn(
               "flex flex-col items-center gap-1 min-w-[64px] transition-all relative active:scale-95",
-              activeMenu === 'Administration' ? "text-primary" : "text-muted-foreground"
+              activeMenu === 'More' ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <ShieldCheck className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Admin</span>
-          </button>
-        )}
-
-        {reportsItems.length > 0 && (
-          <button
-            onClick={() => handleMenuToggle('Reports and Communication')}
-            className={cn(
-              "flex flex-col items-center gap-1 min-w-[64px] transition-all relative active:scale-95",
-              activeMenu === 'Reports and Communication' ? "text-primary" : "text-muted-foreground"
-            )}
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Reports</span>
-            {reportsItems.some(i => i.unreadCount && i.unreadCount > 0) && (
-              <span className="absolute top-0 right-4 h-2 w-2 bg-destructive rounded-full" />
-            )}
+            <MoreHorizontal className="h-5 w-5" />
+            <span className="text-[10px] font-medium">More</span>
           </button>
         )}
       </div>

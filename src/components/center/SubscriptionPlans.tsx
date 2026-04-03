@@ -128,7 +128,7 @@ export default function SubscriptionPlans() {
                   </Badge>
                   <div className="flex flex-col mt-2">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black tracking-tighter">₹{p.price}</span>
+                      <span className="text-4xl font-black tracking-tighter">NPR {p.price}</span>
                       <span className="text-sm font-bold text-slate-400">/mo</span>
                     </div>
                     {isProRated && (

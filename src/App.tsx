@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter as BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import GlobalErrorBoundary from "@/components/error-tracking/GlobalErrorBoundary";
@@ -105,6 +105,9 @@ import AboutInstitution from "./pages/AboutInstitution";
 import SystemPage from "./pages/SystemPage";
 import SaaSBookingPage from "./pages/SaaSBookingPage";
 import LandingPage from "./pages/LandingPage";
+import FeaturesPage from "./pages/FeaturesPage";
+import PricingPage from "./pages/PricingPage";
+import AboutPage from "./pages/AboutPage";
 import OnboardingWizard from "./pages/OnboardingWizard";
 import SuiteExplorer from "./pages/SuiteExplorer";
 
@@ -195,6 +198,9 @@ const App = () => {
 
               {/* Authentication & Public */}
               <Route path="/" element={<LandingPage />} />
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/about" element={<AboutPage />} />
               <Route path="/init-admin" element={<InitAdmin />} />
               <Route path="/getting-started" element={<GettingStarted />} />
               <Route path="/contact-sales" element={<ContactSales />} />

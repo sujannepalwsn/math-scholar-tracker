@@ -221,7 +221,7 @@ const FeeManagement = ({ canEdit }: { canEdit?: boolean }) => {
                     <Input value={structureForm.class} onChange={(e) => setStructureForm({ ...structureForm, class: e.target.value })} placeholder="e.g., Grade 1" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Amount (₹) *</Label>
+                    <Label>Amount (NPR ) *</Label>
                     <Input type="number" value={structureForm.amount} onChange={(e) => setStructureForm({ ...structureForm, amount: e.target.value })} />
                   </div>
                   <div className="space-y-2">

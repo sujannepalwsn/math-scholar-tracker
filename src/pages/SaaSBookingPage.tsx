@@ -362,17 +362,17 @@ export default function SaaSBookingPage() {
                        <div className="space-y-4">
                           <div className="flex justify-between items-center text-sm">
                              <span className="text-slate-500 font-medium">Standard License</span>
-                             <span className="font-black text-slate-700">₹{plan?.original_price || plan?.price}</span>
+                             <span className="font-black text-slate-700">NPR {plan?.original_price || plan?.price}</span>
                           </div>
                           {plan?.discount_amount && (
                             <div className="flex justify-between items-center text-sm">
                                <span className="text-emerald-600 font-bold">Introductory Discount</span>
-                               <span className="font-black text-emerald-600">- ₹{plan.discount_amount}</span>
+                               <span className="font-black text-emerald-600">- NPR {plan.discount_amount}</span>
                             </div>
                           )}
                           <div className="pt-4 border-t flex justify-between items-baseline">
                              <span className="font-black text-slate-900">TOTAL DUE</span>
-                             <span className="text-3xl font-black text-indigo-600">₹{plan?.price}</span>
+                             <span className="text-3xl font-black text-indigo-600">NPR {plan?.price}</span>
                           </div>
                        </div>
 

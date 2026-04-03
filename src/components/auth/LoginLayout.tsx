@@ -174,7 +174,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
            </Link>
            <Link to="/getting-started">
              <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-4 md:px-8 shadow-lg shadow-primary/20 text-[10px] md:text-sm h-9 md:h-10">
-               Get Started
+               Tour
              </Button>
            </Link>
         </div>

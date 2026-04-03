@@ -89,7 +89,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
         </Card>
         <Card className="rounded-3xl border-none shadow-soft bg-emerald-50 p-6">
            <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-1">Registry Valuation</p>
-           <p className="text-3xl font-black text-emerald-700">₹{totalValuation.toLocaleString()}</p>
+           <p className="text-3xl font-black text-emerald-700">NPR {totalValuation.toLocaleString()}</p>
         </Card>
         <Card className="rounded-3xl border-none shadow-soft bg-amber-50 p-6">
            <p className="text-[10px] font-black uppercase text-amber-600 tracking-widest mb-1">Avg. Condition</p>
@@ -142,7 +142,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
                 <Input type="date" value={assetForm.purchase_date} onChange={e => setAssetForm({...assetForm, purchase_date: e.target.value})} className="h-10 rounded-lg bg-white" />
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Cost (₹)</Label>
+                <Label className="text-[10px] font-black uppercase text-slate-400">Cost (NPR )</Label>
                 <Input type="number" value={assetForm.purchase_price} onChange={e => setAssetForm({...assetForm, purchase_price: e.target.value})} className="h-10 rounded-lg bg-white" placeholder="0.00" />
               </div>
               <div className="space-y-1">
@@ -212,7 +212,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                          <span className="text-xs font-black text-slate-600">₹{a.purchase_price || "0.00"}</span>
+                          <span className="text-xs font-black text-slate-600">NPR {a.purchase_price || "0.00"}</span>
                           <span className="text-[9px] font-medium text-slate-400 uppercase">{a.purchase_date ? new Date(a.purchase_date).toLocaleDateString() : "DATE UNSET"}</span>
                       </div>
                     </TableCell>
@@ -250,7 +250,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
               </CardHeader>
               <CardContent className="p-8 space-y-8">
                  <div className="grid grid-cols-2 gap-8">
-                    <DetailBlock label="Procurement Cost" value={`₹${selectedAsset.purchase_price?.toLocaleString() || '0.00'}`} icon={DollarSign} />
+                    <DetailBlock label="Procurement Cost" value={`NPR ${selectedAsset.purchase_price?.toLocaleString() || '0.00'}`} icon={DollarSign} />
                     <DetailBlock label="Registry Tag" value={selectedAsset.asset_tag || 'N/A'} icon={Package} />
                     <DetailBlock label="Current Location" value={selectedAsset.location || 'Unassigned'} icon={MapPin} />
                     <DetailBlock label="Condition" value={selectedAsset.condition} icon={Settings} />

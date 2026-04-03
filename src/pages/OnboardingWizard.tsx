@@ -16,7 +16,9 @@ import {
   Search,
   Plus,
   MapPin,
-  Globe
+  Globe,
+  DollarSign as DollarSignLucide,
+  Package as PackageLucide
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -352,9 +354,9 @@ const OnboardingWizard = () => {
                             {[
                                { id: "academic", label: "Academic", icon: <GraduationCap className="h-5 w-5" /> },
                                { id: "attendance", label: "Attendance", icon: <CheckCircle2 className="h-5 w-5" /> },
-                               { id: "finance", label: "Finance", icon: <DollarSign className="h-5 w-5" /> },
+                               { id: "finance", label: "Finance", icon: <DollarSignLucide className="h-5 w-5" /> },
                                { id: "comm", label: "Communication", icon: <MessageSquare className="h-5 w-5" /> },
-                               { id: "inventory", label: "Inventory", icon: <Package className="h-5 w-5" /> },
+                               { id: "inventory", label: "Inventory", icon: <PackageLucide className="h-5 w-5" /> },
                                { id: "hr", label: "HR & Payroll", icon: <Users className="h-5 w-5" /> }
                             ].map((mod) => (
                                <button
@@ -457,19 +459,5 @@ const OnboardingWizard = () => {
   );
 };
 
-const DollarSign = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 2V22M17 5H9.5C8.50544 5 7.55161 5.39509 6.84835 6.09835C6.14509 6.80161 5.75 7.75544 5.75 8.75C5.75 9.74456 6.14509 10.6984 6.84835 11.4017C7.55161 12.1049 8.50544 12.5 9.5 12.5H14.5C15.4946 12.5 16.4484 12.8951 17.1517 13.5983C17.8549 14.3016 18.25 15.2554 18.25 16.25C18.25 17.2446 17.8549 18.1984 17.1517 18.9017C16.4484 19.6049 15.4946 20 14.5 20H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const Package = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M12 3L2 8V16L12 21L22 16V8L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M12 21V12M12 12L2 8M12 12L22 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M22 16L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M2 16L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
 
 export default OnboardingWizard;

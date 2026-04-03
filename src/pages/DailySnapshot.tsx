@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { useNavigate } from "react-router-dom";
 
@@ -23,7 +24,14 @@ export default function DailySnapshot() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const today = new Date().toISOString().split('T')[0];
-  const activeStudentId = user?.student_id || (user?.linked_students?.[0]?.id);
+  const activeStudentId = useMemo(() => {
+    if (user?.student_id) return user.student_id;
+    const linked = user?.linked_students;
+    if (Array.isArray(linked) && linked.length > 0) {
+      return typeof linked[0] === 'string' ? linked[0] : linked[0].id;
+    }
+    return null;
+  }, [user?.student_id, user?.linked_students]);
 
   const { data: student } = useQuery({
     queryKey: ['student-snapshot', activeStudentId],

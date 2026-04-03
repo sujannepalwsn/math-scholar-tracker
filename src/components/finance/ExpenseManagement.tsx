@@ -128,7 +128,7 @@ const ExpenseManagement = ({ canEdit }: { canEdit?: boolean }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Amount (₹) *</Label>
+                    <Label htmlFor="amount">Amount (NPR ) *</Label>
                     <Input
                       id="amount"
                       type="number"

@@ -329,7 +329,7 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
                       </div>
                       <div className="space-y-1">
                         <p className="label-caps">Unit Price</p>
-                        <p className="text-2xl font-black text-slate-700">₹{selectedItem.unit_price}</p>
+                        <p className="text-2xl font-black text-slate-700">NPR {selectedItem.unit_price}</p>
                       </div>
                     </div>
 

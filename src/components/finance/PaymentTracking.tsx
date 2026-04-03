@@ -135,7 +135,7 @@ const PaymentTracking = ({ canEdit }: { canEdit?: boolean }) => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Amount (₹) *</Label>
+                    <Label>Amount (NPR ) *</Label>
                     <Input type="number" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} />
                   </div>
                   <div className="space-y-2">

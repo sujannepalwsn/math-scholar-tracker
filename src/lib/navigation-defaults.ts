@@ -5,7 +5,7 @@ export const DEFAULT_NAV_CATEGORIES = [
 ];
 
 export const DEFAULT_NAV_ITEMS = [
-  { name: "Dashboard", route: "/", icon: "Home", role: "center", feature_name: "dashboard_access", category: null, order: 0 },
+  { name: "Dashboard", route: "/center-dashboard", icon: "Home", role: "center", feature_name: "dashboard_access", category: null, order: 0 },
 
   // Academics Group
   { name: "Take Attendance", route: "/attendance", icon: "CheckSquare", role: "center", feature_name: "take_attendance", category: 'Academics', order: 1 },

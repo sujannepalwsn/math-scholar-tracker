@@ -409,7 +409,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
                 </CardHeader>
                 <CardContent className="p-8 flex flex-col items-center justify-center space-y-4">
                    <div className="text-center">
-                      <p className="text-3xl font-black text-slate-700">₹{payrollLogs?.reduce((acc: number, curr: any) => acc + (curr.net_payable || 0), 0).toLocaleString()}</p>
+                      <p className="text-3xl font-black text-slate-700">NPR {payrollLogs?.reduce((acc: number, curr: any) => acc + (curr.net_payable || 0), 0).toLocaleString()}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Disbursed (All Time)</p>
                    </div>
                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -502,10 +502,10 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
                             <span className="font-bold text-slate-700">{p.month} {p.year}</span>
                          </div>
                       </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-500">₹{p.basic_pay.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs font-medium text-emerald-600">+ ₹{p.allowances.toLocaleString()}</TableCell>
-                      <TableCell className="text-xs font-medium text-rose-500">- ₹{p.deductions.toLocaleString()}</TableCell>
-                      <TableCell className="font-black text-slate-700">₹{p.net_payable.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-500">NPR {p.basic_pay.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-medium text-emerald-600">+ NPR {p.allowances.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-medium text-rose-500">- NPR {p.deductions.toLocaleString()}</TableCell>
+                      <TableCell className="font-black text-slate-700">NPR {p.net_payable.toLocaleString()}</TableCell>
                       <TableCell className="text-right px-6">
                          <Button variant="ghost" size="sm" className="h-8 rounded-lg text-blue-600 hover:bg-blue-50 font-black text-[10px] uppercase">
                             <FileText className="h-3.5 w-3.5 mr-1" /> PDF
@@ -575,7 +575,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
                     <TableCell className="font-bold">{c.contract_type}</TableCell>
                     <TableCell className="text-xs">{c.start_date}</TableCell>
                     <TableCell className="text-xs">{c.end_date || 'N/A'}</TableCell>
-                    <TableCell className="font-bold text-slate-700">₹{c.salary?.toLocaleString()}</TableCell>
+                    <TableCell className="font-bold text-slate-700">NPR {c.salary?.toLocaleString()}</TableCell>
                     <TableCell><Badge variant="outline" className="text-[9px] font-black">{c.status}</Badge></TableCell>
                   </TableRow>
                 ))}

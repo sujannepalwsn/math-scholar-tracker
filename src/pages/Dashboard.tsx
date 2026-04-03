@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { hasPermission } from "@/utils/permissions";
 import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
 import { AIInsightsWidget } from "@/components/dashboard/AIInsightsWidget";
+import { UpgradeModal } from "@/components/dashboard/UpgradeModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +47,8 @@ export default function Dashboard() {
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>("weekly");
   const [selectedVacantClass, setSelectedVacantClass] = useState<any>(null);
   const [isCustomizeMode, setIsCustomizeMode] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [lockedFeatureName, setLockedFeatureName] = useState("");
 
   const canEditRoutine = hasActionPermission(user, 'class_routine', 'edit');
   const canEditDashboard = hasActionPermission(user, 'dashboard', 'edit');
@@ -699,8 +702,9 @@ export default function Dashboard() {
   const ratedEvaluations = evaluationStats.filter((e) => e.evaluation_rating !== null).length;
   const evaluationRate = evaluationStats.length > 0 ? Math.round((ratedEvaluations / evaluationStats.length) * 100) : 0;
   const avgTestScore = performanceTrend.length > 0 ? performanceTrend[performanceTrend.length - 1].value : 0;
-  const feeCollection = invoicesInRange.reduce((acc, curr) => acc + (curr.paid_amount || 0), 0);
-  const totalInvoiced = invoicesInRange.reduce((acc, curr) => acc + (curr.total_amount || 0), 0);
+  const isDemo = user?.username === 'demo@eduflow.com' || user?.username === 'demo';
+  const feeCollection = isDemo ? 85000 : invoicesInRange.reduce((acc, curr) => acc + (curr.paid_amount || 0), 0);
+  const totalInvoiced = isDemo ? 100000 : invoicesInRange.reduce((acc, curr) => acc + (curr.total_amount || 0), 0);
   const collectionRate = totalInvoiced > 0 ? Math.round((feeCollection / totalInvoiced) * 100) : 0;
 
   const highestPerformers = useMemo(() => {
@@ -1009,7 +1013,10 @@ export default function Dashboard() {
           trendData={teacherAttendanceTrend}
           delta={getDelta(teacherAttendanceTrend)}
           target={teacherAttendanceRate}
-          onClick={() => navigate("/teacher-attendance")}
+          onClick={() => {
+            setLockedFeatureName("Teacher Attendance (PRO)");
+            setUpgradeModalOpen(true);
+          }}
         />
       ) : null,
       "lesson-plans": hasPermission(user, 'lesson_plans') ? (
@@ -1020,7 +1027,10 @@ export default function Dashboard() {
           icon={FileText}
           color="purple"
           delta={upcomingLessons.length > 0 ? 5 : 0}
-          onClick={() => navigate("/lesson-plans")}
+          onClick={() => {
+            setLockedFeatureName("Advanced Lesson Planning (PRO)");
+            setUpgradeModalOpen(true);
+          }}
         />
       ) : null,
       "approvals": hasPermission(user, 'lesson_plans') ? (
@@ -1031,7 +1041,10 @@ export default function Dashboard() {
           icon={CheckCircle2}
           color="yellow"
           delta={pendingLessonPlansCount > 0 ? -10 : 0}
-          onClick={() => navigate("/lesson-plans")}
+          onClick={() => {
+            setLockedFeatureName("Automated Workflow Approvals (PRO)");
+            setUpgradeModalOpen(true);
+          }}
         />
       ) : null,
       "leave-requests": hasPermission(user, 'leave_management') ? (
@@ -1042,7 +1055,10 @@ export default function Dashboard() {
           icon={Calendar}
           color="rose"
           delta={pendingLeavesCount > 0 ? 15 : 0}
-          onClick={() => navigate("/leave-management")}
+          onClick={() => {
+            setLockedFeatureName("Faculty Leave Management (PRO)");
+            setUpgradeModalOpen(true);
+          }}
         />
       ) : null,
       "messages": hasPermission(user, 'messaging') ? (
@@ -1166,6 +1182,12 @@ export default function Dashboard() {
       {/* Top Header - School Details */}
       <DashboardHeader />
       <CommandCenter />
+
+      <UpgradeModal
+        isOpen={upgradeModalOpen}
+        onOpenChange={setUpgradeModalOpen}
+        featureName={lockedFeatureName}
+      />
 
       <div className="flex justify-end items-center gap-4">
         {/* Command Center Search Trigger - Relocated and Enhanced */}

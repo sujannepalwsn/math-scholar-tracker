@@ -1,5 +1,6 @@
-import { type LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
+import { type LucideIcon, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils"
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { motion } from "framer-motion";
@@ -54,6 +55,8 @@ export const KPICard = ({
     yellow: "#eab308",
     pink: "#ec4899" };
 
+  const isProFeature = ["teacher attendance", "lesson plans", "approvals", "leave requests"].includes(title.toLowerCase());
+
   return (
     <motion.div
       whileHover={{ scale: 1.02, y: -4 }}
@@ -63,11 +66,19 @@ export const KPICard = ({
     <Card
       onClick={onClick}
       className={cn(
-        "group overflow-hidden border-none shadow-glass transition-all duration-500 bg-white/70 dark:bg-slate-900/70 backdrop-blur-lg rounded-3xl border border-white/40 dark:border-slate-800/40 h-full flex flex-col justify-between",
+        "group overflow-hidden border-none shadow-glass transition-all duration-500 bg-white/70 dark:bg-slate-900/70 backdrop-blur-lg rounded-3xl border border-white/40 dark:border-slate-800/40 h-full flex flex-col justify-between relative",
         onClick && "cursor-pointer",
+        isProFeature && "border-indigo-500/20 shadow-indigo-500/5",
         className
       )}
     >
+      {isProFeature && (
+         <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5">
+            <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg">
+               <Sparkles className="h-2 w-2 mr-1" /> Pro
+            </Badge>
+         </div>
+      )}
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-2">
           <div className={cn("p-2 rounded-lg", colorVariants[color])}>

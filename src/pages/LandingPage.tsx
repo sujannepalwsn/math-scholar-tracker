@@ -1,4 +1,5 @@
 import React from "react";
+import { Helmet } from "react-helmet";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Shield,
@@ -22,9 +23,12 @@ import {
   ExternalLink,
   ShieldCheck,
   Building,
-  X
+  X,
+  Globe,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { SYSTEM_MODULES } from "@/lib/system-modules";
@@ -32,6 +36,7 @@ import { FeatureCard, PackageCard } from "@/components/auth/LandingPageComponent
 import { useSystemStats } from "@/hooks/use-system-stats";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { FileDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -51,6 +56,18 @@ const LandingPage = () => {
   const [partners, setPartners] = useState<{ id: string; name: string; logo_url: string; address: string }[]>([]);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [showExitIntent, setShowExitIntent] = useState(false);
+
+  useEffect(() => {
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0 && !localStorage.getItem('exit_intent_dismissed')) {
+        setShowExitIntent(true);
+      }
+    };
+
+    document.addEventListener('mouseleave', handleMouseLeave);
+    return () => document.removeEventListener('mouseleave', handleMouseLeave);
+  }, []);
 
   useEffect(() => {
     const fetchPartners = async () => {
@@ -98,30 +115,37 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white selection:bg-primary/20 selection:text-primary scroll-smooth">
+      <Helmet>
+        <title>EduFlow | Modern School Management System & Automated School ERP</title>
+        <meta name="description" content="Transform your institution with EduFlow, the last school management system you'll ever need. Cloud-based education software for automated attendance, fee collection, and parent communication." />
+        <meta property="og:title" content="EduFlow | The Operating System for Modern Schools" />
+        <meta property="og:description" content="Automate 80% of administrative tasks with our high-performance school ERP. Trusted by 2,000+ institutions worldwide." />
+        <meta property="og:type" content="website" />
+      </Helmet>
       {/* Navigation */}
-      <header className="fixed top-0 w-full z-[100] px-4 md:px-6 py-4 flex items-center justify-between border-b border-white/5 bg-slate-950/20 backdrop-blur-md">
-        <div className="flex items-center gap-3">
+      <header className="fixed top-0 w-full z-[100] px-4 md:px-6 py-4 flex items-center justify-between border-b border-white/5 bg-slate-950/80 backdrop-blur-md transition-all">
+        <Link to="/" className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/20 border border-primary/20">
             <ShieldCheck className="h-6 w-6 text-primary" />
           </div>
           <span className="text-2xl font-black text-white tracking-tighter uppercase">Edu<span className="text-primary">Flow</span></span>
-        </div>
+        </Link>
 
         <nav className="hidden lg:flex items-center gap-8">
-          <a href="#features" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">Features</a>
+          <Link to="/features" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">Features</Link>
           <a href="#solutions" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">Solutions</a>
-          <a href="#pricing" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">Pricing</a>
-          <a href="#about" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">About</a>
+          <Link to="/pricing" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">Pricing</Link>
+          <Link to="/about" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">About</Link>
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
            <Link to="/login">
-             <Button variant="ghost" className="text-white font-bold hover:bg-white/5 rounded-full px-6">
+             <Button variant="ghost" className="text-white font-bold hover:bg-white/5 rounded-full px-3 md:px-6 text-sm md:text-base">
                Login
              </Button>
            </Link>
-           <Link to="/getting-started">
-             <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-8 shadow-lg shadow-primary/20">
+           <Link to="/onboarding">
+             <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-4 md:px-8 shadow-lg shadow-primary/20 text-sm md:text-base">
                Get Started
              </Button>
            </Link>
@@ -141,7 +165,7 @@ const LandingPage = () => {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black tracking-widest uppercase mb-8"
           >
             <Sparkles className="h-4 w-4" />
-            <span>Next Generation Education ERP</span>
+            <span>Next Generation School OS</span>
           </motion.div>
 
           <motion.h1
@@ -150,7 +174,7 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-6xl md:text-8xl font-black text-white leading-[0.9] tracking-tighter mb-8 uppercase max-w-5xl mx-auto"
           >
-            The Operating System for <span className="text-primary">Modern Schools.</span>
+            The Last School Management <span className="text-primary">System You'll Ever Need.</span>
           </motion.h1>
 
           <motion.p
@@ -159,7 +183,7 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-xl md:text-2xl text-slate-400 font-medium max-w-3xl mx-auto mb-12"
           >
-            Run your entire institution from one dashboard. Automate attendance, simplify finance, and enhance communication with EduFlow.
+            Automate 80% of administrative tasks, from fee collection to attendance. Built for modern institutions that value time and transparency.
           </motion.p>
 
           <motion.div
@@ -189,21 +213,6 @@ const LandingPage = () => {
                <Zap className="mr-2 h-6 w-6 text-yellow-400" /> Instant Sandbox
             </Button>
 
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="lg" variant="ghost" className="h-16 px-10 rounded-2xl text-lg font-black text-slate-400 hover:text-white">
-                  <Play className="mr-2 h-6 w-6 fill-current" /> Watch Demo
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[800px] bg-slate-900 border-white/10 p-0 overflow-hidden aspect-video">
-                 <div className="w-full h-full bg-slate-800 flex items-center justify-center relative">
-                    <Play className="h-20 w-20 text-white/20" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-                       <p className="text-white font-bold">Demo Video Placeholder</p>
-                    </div>
-                 </div>
-              </DialogContent>
-            </Dialog>
           </motion.div>
 
           <motion.p
@@ -214,32 +223,176 @@ const LandingPage = () => {
           >
             No credit card required • Instant access
           </motion.p>
+
+          {/* Floating Dashboard Preview Mockup */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className="mt-20 max-w-6xl mx-auto relative group"
+          >
+            <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+            <div className="relative glass-surface rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl p-4 bg-slate-900/50 backdrop-blur-3xl">
+              <div className="flex items-center gap-2 mb-4 px-4 py-2 border-b border-white/5">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-rose-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-500/50" />
+                </div>
+                <div className="mx-auto bg-white/5 rounded-full px-4 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest border border-white/5">
+                  admin-dashboard.eduflow.com
+                </div>
+              </div>
+              <div className="grid grid-cols-12 gap-4">
+                {/* Sidebar Mockup */}
+                <div className="col-span-3 space-y-3 p-4 border-r border-white/5 hidden md:block">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className={cn("h-8 rounded-lg flex items-center gap-3 px-3", i === 1 ? "bg-primary/20 border border-primary/20" : "bg-white/5")}>
+                       <div className={cn("w-3 h-3 rounded-sm", i === 1 ? "bg-primary" : "bg-slate-700")} />
+                       <div className={cn("h-2 rounded-full flex-1", i === 1 ? "bg-primary/40" : "bg-slate-800")} />
+                    </div>
+                  ))}
+                </div>
+                {/* Content Mockup */}
+                <div className="col-span-12 md:col-span-9 p-6 space-y-8">
+                  <div className="grid grid-cols-3 gap-6">
+                    {[
+                      { label: "Revenue", value: "NPR 42.5K", color: "text-emerald-400" },
+                      { label: "Students", value: "1,280", color: "text-blue-400" },
+                      { label: "Attendance", value: "94.2%", color: "text-purple-400" }
+                    ].map(kpi => (
+                      <div key={kpi.label} className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{kpi.label}</div>
+                        <div className={cn("text-2xl font-black tracking-tighter", kpi.color)}>{kpi.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-48 bg-white/5 rounded-3xl border border-white/5 p-6 flex flex-col justify-end gap-2">
+                     <div className="flex items-end gap-2 h-full">
+                        {[40, 70, 45, 90, 65, 80, 55, 95].map((h, i) => (
+                          <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-primary/20 rounded-t-lg border-t border-x border-primary/30 relative group/bar">
+                             <div className="absolute inset-0 bg-primary opacity-0 group-hover/bar:opacity-100 transition-opacity rounded-t-lg" />
+                          </div>
+                        ))}
+                     </div>
+                     <div className="flex justify-between px-2">
+                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'].map(m => (
+                          <span key={m} className="text-[8px] font-bold text-slate-600 uppercase">{m}</span>
+                        ))}
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Social Proof / Partners */}
       <section className="py-20 border-y border-white/5 bg-slate-900/20 overflow-hidden">
         <div className="container mx-auto px-4">
-           <p className="text-center text-slate-500 font-black text-xs uppercase tracking-[0.3em] mb-12">Trusted by 2,000+ forward-thinking institutions</p>
-           <div className="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all">
-              {partners.length > 0 ? partners.map(p => (
-                <div key={p.id} className="flex items-center gap-3">
-                   {p.logo_url ? <img src={p.logo_url} className="h-8 md:h-12 w-auto object-contain" /> : <Building className="h-8 w-8" />}
-                   <span className="font-bold text-xl tracking-tighter">{p.name}</span>
+           <p className="text-center text-slate-500 font-black text-xs uppercase tracking-[0.3em] mb-12">Trusted by 2,000+ institutions across 15 countries</p>
+           <div className="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-30 grayscale hover:grayscale-0 transition-all">
+              {[
+                { name: "St. Jude's Academy", icon: Shield },
+                { name: "Global International", icon: Globe },
+                { name: "Springfield High", icon: Building },
+                { name: "Beacon Heights", icon: GraduationCap },
+                { name: "Riverdale Prep", icon: Zap },
+                { name: "Oakwood Institute", icon: Briefcase }
+              ].map((p, i) => (
+                <div key={i} className="flex items-center gap-3">
+                   <p.icon className="h-8 w-8" />
+                   <span className="font-bold text-xl tracking-tighter whitespace-nowrap">{p.name}</span>
                 </div>
-              )) : (
-                <>
-                  <div className="text-2xl font-black tracking-tighter">Springfield Academy</div>
-                  <div className="text-2xl font-black tracking-tighter">Global International</div>
-                  <div className="text-2xl font-black tracking-tighter">Beacon Heights</div>
-                  <div className="text-2xl font-black tracking-tighter">St. Jude's School</div>
-                </>
-              )}
+              ))}
            </div>
         </div>
       </section>
 
-      {/* Chaos to Clarity Section */}
+      {/* Lead Magnet: School Efficiency Calculator */}
+      <section className="py-32 bg-slate-900/40 relative overflow-hidden">
+         <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary/20 rounded-full blur-[120px] -translate-x-1/2" />
+         <div className="container mx-auto px-4 relative z-10">
+            <div className="grid lg:grid-cols-2 gap-20 items-center">
+               <div className="space-y-8">
+                  <Badge className="bg-primary/10 text-primary px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">ROI Calculator</Badge>
+                  <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase leading-[0.9]">How much time is your school <span className="text-primary">losing?</span></h2>
+                  <p className="text-xl text-slate-400 font-medium">The cost of manual administration is higher than you think. Use our interactive tool to calculate your potential savings with EduFlow.</p>
+
+                  <div className="space-y-6 pt-8">
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary">
+                           <Clock className="h-6 w-6" />
+                        </div>
+                        <div>
+                           <p className="text-white font-black uppercase text-sm tracking-tight">Save 10+ Hours/Week</p>
+                           <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">On automated attendance and reporting</p>
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
+                           <DollarSign className="h-6 w-6" />
+                        </div>
+                        <div>
+                           <p className="text-white font-black uppercase text-sm tracking-tight">Eliminate 15% Leakage</p>
+                           <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Via automated fee follow-ups</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="glass-surface rounded-[3rem] p-10 border border-white/10 bg-slate-900/60 backdrop-blur-3xl shadow-2xl">
+                  <div className="space-y-8">
+                     <div className="space-y-4">
+                        <label className="text-xs font-black uppercase tracking-widest text-slate-400">Number of Students</label>
+                        <div className="flex gap-4">
+                           <input
+                              type="range"
+                              min="50" max="2000" step="50"
+                              defaultValue="300"
+                              className="flex-1 accent-primary h-2 bg-white/10 rounded-full appearance-none cursor-pointer mt-4"
+                              onChange={(e) => {
+                                 const val = parseInt(e.target.value);
+                                 const studentEl = document.getElementById('calc-students');
+                                 const saveEl = document.getElementById('calc-savings');
+                                 const hourEl = document.getElementById('calc-hours');
+                                 if (studentEl) studentEl.innerText = val.toString();
+                                 if (saveEl) saveEl.innerText = (val * 12).toLocaleString();
+                                 if (hourEl) hourEl.innerText = (val / 10 * 2).toFixed(0);
+                              }}
+                           />
+                           <span id="calc-students" className="text-3xl font-black tracking-tighter text-white w-20 text-right">300</span>
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-6 pt-10 border-t border-white/5">
+                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
+                           <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-2">Monthly Savings</p>
+                           <p className="text-3xl font-black text-emerald-400 tracking-tighter">NPR <span id="calc-savings">3,600</span></p>
+                        </div>
+                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
+                           <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-2">Hours Saved/mo</p>
+                           <p className="text-3xl font-black text-primary tracking-tighter"><span id="calc-hours">60</span> hrs</p>
+                        </div>
+                     </div>
+
+                     <div className="space-y-4">
+                        <Input
+                           placeholder="Enter school email to get full report"
+                           className="h-16 rounded-2xl bg-white/5 border-white/10 text-white font-bold"
+                        />
+                        <Button className="w-full h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-lg uppercase tracking-widest shadow-xl shadow-primary/20">
+                           Email Me This Report
+                        </Button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </section>
+
+      {/* Chaos to Clarity (Old Way vs New Way) */}
       <section id="solutions" className="py-32 relative overflow-hidden">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center mb-24">
@@ -255,10 +408,10 @@ const LandingPage = () => {
                <h3 className="text-3xl font-black mb-6 uppercase tracking-tight text-rose-500">The Old Way</h3>
                <ul className="space-y-4">
                   {[
+                    "Fragmented Spreadsheets",
+                    "Manual Invoicing",
+                    "Communication Gaps",
                     "Manual paper attendance tracking",
-                    "Fragmented data across spreadsheets",
-                    "Communication gaps with parents",
-                    "Slow, error-prone manual invoicing",
                     "Lack of real-time insights"
                   ].map((item, i) => (
                     <li key={i} className="flex items-center gap-3 text-slate-400 font-medium">
@@ -278,10 +431,10 @@ const LandingPage = () => {
                <h3 className="text-3xl font-black mb-6 uppercase tracking-tight text-emerald-500">The EduFlow Way</h3>
                <ul className="space-y-4">
                   {[
+                    "Unified Cloud Database",
+                    "Automated Fee Collection",
+                    "Real-time Parent App",
                     "One-tap digital attendance registers",
-                    "Unified, secure cloud-based database",
-                    "Direct real-time parent communication",
-                    "Automated, seamless fee collection",
                     "Instant, data-driven analytics"
                   ].map((item, i) => (
                     <li key={i} className="flex items-center gap-3 text-slate-200 font-bold">
@@ -381,20 +534,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-32 bg-slate-900/20 border-y border-white/5">
-        <div className="container mx-auto px-4">
-           <div className="text-center mb-24">
-              <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">Flexible plans for every scale.</h2>
-              <p className="text-xl text-slate-400 font-medium">Choose the perfect package for your school's unique requirements.</p>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              <PackageCard type="Basic" index={0} allModules={SYSTEM_MODULES} />
-              <PackageCard type="Standard" index={1} allModules={SYSTEM_MODULES} />
-              <PackageCard type="Premium" index={2} allModules={SYSTEM_MODULES} />
-           </div>
-        </div>
-      </section>
 
       {/* Trust & Testimonial */}
       <section id="about" className="py-32 overflow-hidden">
@@ -511,6 +650,38 @@ const LandingPage = () => {
             </div>
          </div>
       </section>
+
+      {/* Exit-Intent Popup */}
+      <Dialog open={showExitIntent} onOpenChange={(open) => {
+        setShowExitIntent(open);
+        if (!open) localStorage.setItem('exit_intent_dismissed', 'true');
+      }}>
+        <DialogContent className="sm:max-w-2xl bg-slate-900 border-white/10 p-0 overflow-hidden rounded-[3rem]">
+           <div className="grid md:grid-cols-2">
+              <div className="bg-primary p-12 flex flex-col justify-center items-center text-center text-white space-y-6">
+                 <div className="w-20 h-20 rounded-3xl bg-white/20 flex items-center justify-center">
+                    <FileDown className="h-10 w-10" />
+                 </div>
+                 <h3 className="text-3xl font-black uppercase leading-tight">Wait! Don't go empty-handed.</h3>
+              </div>
+              <div className="p-12 space-y-6 flex flex-col justify-center">
+                 <p className="text-slate-400 font-medium">Download our <span className="text-white font-bold">'2026 School Digital Transformation Guide'</span> for free before you leave.</p>
+                 <div className="space-y-4">
+                    <Input placeholder="Enter your email" className="h-14 rounded-2xl bg-white/5 border-white/10 text-white font-bold" />
+                    <Button className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                       Download Guide
+                    </Button>
+                    <button
+                      onClick={() => { setShowExitIntent(false); localStorage.setItem('exit_intent_dismissed', 'true'); }}
+                      className="w-full text-center text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors"
+                    >
+                      No thanks, I'll explore later
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Final CTA */}
       <section className="py-40 bg-slate-950 text-center relative overflow-hidden">

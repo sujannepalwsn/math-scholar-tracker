@@ -275,7 +275,7 @@ const InvoiceManagement = ({ canEdit }: { canEdit?: boolean }) => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Total Amount (₹) *</Label>
+                      <Label>Total Amount (NPR ) *</Label>
                       <Input type="number" value={createForm.total_amount} onChange={(e) => setCreateForm({ ...createForm, total_amount: e.target.value })} />
                     </div>
                     <div className="space-y-2">

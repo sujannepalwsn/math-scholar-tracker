@@ -133,7 +133,7 @@ export default function SuperAdminBilling() {
                     <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(inv.created_at).toLocaleDateString()}</p>
                   </TableCell>
                   <TableCell className="font-bold text-slate-600">{inv.centers?.name}</TableCell>
-                  <TableCell className="font-black text-indigo-600">₹{inv.amount.toLocaleString()}</TableCell>
+                  <TableCell className="font-black text-indigo-600">NPR {inv.amount.toLocaleString()}</TableCell>
                   <TableCell className="text-xs font-bold text-slate-500">{new Date(inv.due_date).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Badge className={cn(

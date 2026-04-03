@@ -349,7 +349,7 @@ export default function SubscriptionManagement() {
                 <Badge className="bg-amber-100 text-amber-700 border-none font-black text-[10px] uppercase tracking-widest py-1 px-3">
                   Tier: {p.name}
                 </Badge>
-                <p className="text-3xl font-black tracking-tighter">₹{p.price}<span className="text-sm font-bold text-slate-400">/mo</span></p>
+                <p className="text-3xl font-black tracking-tighter">NPR {p.price}<span className="text-sm font-bold text-slate-400">/mo</span></p>
               </div>
               <div className="space-y-4 mb-8">
                 <div className="flex items-center gap-3 text-sm font-bold text-slate-600">

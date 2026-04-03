@@ -77,7 +77,7 @@ const AdminDashboard = () => {
   const kpis = [
     { label: "Total Centers", value: stats?.centers, icon: Building2, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "System Users", value: stats?.totalUsers, icon: Users, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Global Revenue", value: `₹${(stats?.revenue || 0).toLocaleString()}`, icon: TrendingUp, color: "text-violet-600", bg: "bg-violet-50" },
+    { label: "Global Revenue", value: `NPR ${(stats?.revenue || 0).toLocaleString()}`, icon: TrendingUp, color: "text-violet-600", bg: "bg-violet-50" },
     { label: "System Errors", value: stats?.errors, icon: Activity, color: "text-rose-600", bg: "bg-rose-50" },
   ];
 
@@ -138,7 +138,7 @@ const AdminDashboard = () => {
                     <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                     <Legend iconType="circle" />
                     <Bar dataKey="students" name="Total Students" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="revenue" name="Total Revenue (₹)" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="revenue" name="Total Revenue (NPR )" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

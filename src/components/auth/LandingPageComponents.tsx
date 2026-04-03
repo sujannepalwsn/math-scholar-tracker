@@ -137,12 +137,12 @@ export const PackageCard: React.FC<PackageCardProps> = ({ type, index, allModule
         {plan && (
           <div className="space-y-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-white">₹{plan.price}</span>
-              <span className="text-slate-500 line-through text-sm">₹{plan.original_price}</span>
+              <span className="text-4xl font-black text-white">NPR {plan.price}</span>
+              <span className="text-slate-500 line-through text-sm">NPR {plan.original_price}</span>
             </div>
             {plan.discount_amount && (
               <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[10px] font-black uppercase">
-                Save ₹{plan.discount_amount}
+                Save NPR {plan.discount_amount}
               </Badge>
             )}
           </div>

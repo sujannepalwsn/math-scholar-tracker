@@ -200,7 +200,23 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
 
   // Parents follow center global override
   if (user.role === UserRole.PARENT) {
-    const allowedParent = ['leave_management', 'messaging', 'dashboard_access', 'homework_management', 'exams_results', 'discipline_issues', 'preschool_activities'];
+    const allowedParent = [
+      'leave_management',
+      'messaging',
+      'dashboard_access',
+      'homework_management',
+      'exams_results',
+      'discipline_issues',
+      'preschool_activities',
+      'lesson_tracking',
+      'settings_access',
+      'meetings_management',
+      'student_report',
+      'calendar_events',
+      'finance',
+      'chapter_performance',
+      'about_institution'
+    ];
     if (allowedParent.includes(dbColumnName)) {
       return true;
     }

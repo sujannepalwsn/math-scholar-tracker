@@ -1,6 +1,5 @@
-"use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Check, Info, MessageSquare, Send, Shield } from "lucide-react";
+import { Check, Info, MessageSquare, Send, Shield, Brain, Sparkles, X } from "lucide-react";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
@@ -13,12 +12,23 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useLocation } from "react-router-dom";
 
 export default function ParentMessaging() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [newMessage, setNewMessage] = useState("");
+  const [attachedContext, setAttachedContext] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Handle incoming context from dashboard
+  useEffect(() => {
+    if (location.state?.attachedContext) {
+      setAttachedContext(location.state.attachedContext);
+      setNewMessage(`I'd like to discuss the recent observation regarding ${location.state.attachedContext.title}.`);
+    }
+  }, [location.state]);
 
   // Fetch conversation for parent
   const { data: conversation, isLoading: conversationLoading } = useQuery({
@@ -37,7 +47,8 @@ export default function ParentMessaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id });
+    enabled: !!user?.id
+  });
 
   // Fetch messages
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
@@ -55,7 +66,8 @@ export default function ParentMessaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!conversation?.id });
+    enabled: !!conversation?.id
+  });
 
   // Real-time subscription
   useEffect(() => {
@@ -105,7 +117,9 @@ export default function ParentMessaging() {
       const { error } = await supabase.from("chat_messages").insert({
         conversation_id: conversation.id,
         sender_user_id: user.id,
-        message_text: newMessage.trim() });
+        message_text: newMessage.trim(),
+        context_data: attachedContext || {}
+      });
       if (error) throw error;
 
       await supabase
@@ -115,11 +129,13 @@ export default function ParentMessaging() {
     },
     onSuccess: () => {
       setNewMessage("");
+      setAttachedContext(null);
       queryClient.invalidateQueries({ queryKey: ["parent-chat-messages", conversation?.id] });
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to send message");
-    } });
+    }
+  });
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +189,7 @@ export default function ParentMessaging() {
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Security</span>
-            <span className="font-black text-slate-700 text-sm">End-to-End Encrypted</span>
+            <span className="font-black text-slate-700 text-sm">Decision-Intelligence Ready</span>
           </div>
         </div>
       </div>
@@ -212,6 +228,8 @@ export default function ParentMessaging() {
               ) : (
                 messages.map((msg: any) => {
                   const isOwnMessage = msg.sender_user_id === user?.id;
+                  const hasContext = msg.context_data && Object.keys(msg.context_data).length > 0;
+
                   return (
                     <div
                       key={msg.id}
@@ -229,6 +247,17 @@ export default function ParentMessaging() {
                               : "bg-white text-slate-700 rounded-tl-none border border-slate-100"
                           )}
                         >
+                          {hasContext && (
+                            <div className={cn("mb-3 p-3 rounded-xl border flex items-center gap-3", isOwnMessage ? "bg-white/10 border-white/20" : "bg-primary/5 border-primary/10")}>
+                               <div className="p-2 rounded-lg bg-white/20">
+                                  <Brain className="h-4 w-4" />
+                               </div>
+                               <div>
+                                  <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Intelligence Context</p>
+                                  <p className="text-xs font-black">{msg.context_data.title}</p>
+                               </div>
+                            </div>
+                          )}
                           <p className="text-sm font-medium leading-relaxed whitespace-pre-wrap">{msg.message_text}</p>
                         </div>
                         <div className={cn("flex items-center gap-2 px-1", isOwnMessage ? "justify-end" : "justify-start")}>
@@ -249,6 +278,27 @@ export default function ParentMessaging() {
           </ScrollArea>
 
           <div className="p-6 bg-card/60 backdrop-blur-md border-t border-slate-100 shrink-0">
+            {attachedContext && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Attaching Context</p>
+                    <p className="text-xs font-bold text-slate-700">{attachedContext.title}</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setAttachedContext(null)} className="h-8 w-8 rounded-full hover:bg-rose-50 hover:text-rose-500">
+                  <X className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            )}
+
             <form onSubmit={handleSendMessage} className="relative">
               <Textarea
                 value={newMessage}
@@ -272,7 +322,7 @@ export default function ParentMessaging() {
               </Button>
             </form>
             <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest text-center mt-3">
-               Press Shift + Enter for new line • Messages are securely logged
+               Press Shift + Enter for new line • Context-aware messaging active
             </p>
           </div>
         </CardContent>

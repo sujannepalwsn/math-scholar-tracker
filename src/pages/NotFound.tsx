@@ -16,12 +16,12 @@ const NotFound = () => {
   }, [location.pathname]);
 
   const quickLinks = [
-    { label: "Go Home", icon: Home, onClick: () => navigate("/") },
-    { label: "Features", icon: LayoutTemplate, onClick: () => navigate("/login") },
-    { label: "Pricing", icon: DollarSign, onClick: () => navigate("/login") },
-    { label: "Support", icon: HelpCircle, onClick: () => navigate("/login") },
-    { label: "Get Started", icon: Zap, onClick: () => navigate("/login") },
-    { label: "Contact Sales", icon: MessageSquare, onClick: () => navigate("/login") },
+    { label: "Dashboard", icon: LayoutTemplate, onClick: () => navigate("/center-dashboard") },
+    { label: "Pricing", icon: DollarSign, onClick: () => navigate("/pricing") },
+    { label: "Contact Support", icon: HelpCircle, onClick: () => navigate("/contact-sales") },
+    { label: "Features", icon: LayoutTemplate, onClick: () => navigate("/features") },
+    { label: "About Us", icon: Shield, onClick: () => navigate("/about") },
+    { label: "Start Free Trial", icon: Zap, onClick: () => navigate("/onboarding") },
   ];
 
   return (
@@ -58,6 +58,21 @@ const NotFound = () => {
             <Search className="h-24 w-24 text-primary mb-4 opacity-50" />
             <p className="text-2xl md:text-3xl font-black tracking-tight uppercase">Route Not Found</p>
           </div>
+        </motion.div>
+
+        {/* Search UI */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="max-w-md mx-auto relative group"
+        >
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            placeholder="Search Help Center..."
+            className="w-full h-16 pl-14 pr-6 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all font-bold"
+          />
         </motion.div>
 
         {/* Message */}
