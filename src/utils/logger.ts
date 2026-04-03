@@ -1,4 +1,4 @@
-import { rawSupabase as supabase } from "@/integrations/supabase/client";
+import { rawSupabase as supabase } from "@/integrations/supabase/raw-client";
 
 /**
  * Enhanced Logging Utility for AI Debugger Integration
