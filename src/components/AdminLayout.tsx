@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
+import NotificationBell from "./NotificationBell";
 
 const navItems: Array<{
   to: string;
@@ -72,30 +73,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onMobileOpenChange={setMobileMenuOpen}
       />
 
-      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b z-20 flex items-center justify-between px-4">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 shadow-sm">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden -ml-2"
+            className="h-9 w-9 bg-primary/5 text-primary rounded-xl"
           >
             <Menu className="h-5 w-5" />
           </Button>
           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Shield className="h-4 w-4 text-primary" />
           </div>
-          <span className="font-semibold text-foreground">Admin</span>
+          <span className="font-semibold text-foreground text-sm">Admin</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9">
-          <LogOut className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 text-muted-foreground">
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </header>
 
       <main className={cn(
         "flex-1 overflow-y-auto bg-background transition-all duration-200",
         "md:h-screen",
-        "pt-16 md:pt-0",
+        "pt-14 md:pt-0",
         "px-4 pb-20 md:p-6 lg:p-8",
         sidebarCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
