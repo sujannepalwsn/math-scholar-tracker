@@ -123,12 +123,12 @@ const LandingPage = () => {
         <meta property="og:type" content="website" />
       </Helmet>
       {/* Navigation */}
-      <header className="fixed top-0 w-full z-[100] px-4 md:px-6 py-4 flex items-center justify-between border-b border-white/5 bg-slate-950/80 backdrop-blur-md transition-all">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/20 border border-primary/20">
-            <ShieldCheck className="h-6 w-6 text-primary" />
+      <header className="fixed top-0 w-full z-[100] px-2 md:px-6 py-4 flex items-center justify-between border-b border-white/5 bg-slate-950/80 backdrop-blur-md transition-all">
+        <Link to="/" className="flex items-center gap-1.5 md:gap-3">
+          <div className="p-1.5 md:p-2 rounded-xl bg-primary/20 border border-primary/20">
+            <ShieldCheck className="h-5 w-5 md:h-6 md:w-6 text-primary" />
           </div>
-          <span className="text-2xl font-black text-white tracking-tighter uppercase">Edu<span className="text-primary">Flow</span></span>
+          <span className="text-lg md:text-2xl font-black text-white tracking-tighter uppercase shrink-0">Edu<span className="text-primary">Flow</span></span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-8">
@@ -138,9 +138,19 @@ const LandingPage = () => {
           <Link to="/about" className="text-sm font-bold text-slate-300 hover:text-white transition-colors">About</Link>
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
+           <Link to="/login" className="hidden sm:block">
+             <Button variant="ghost" className="text-white font-bold hover:bg-white/5 rounded-full px-4 md:px-6">
+               Login
+             </Button>
+           </Link>
+           <Link to="/login" className="sm:hidden">
+             <Button variant="ghost" size="sm" className="text-white font-bold hover:bg-white/5 rounded-full px-3 text-xs">
+               Login
+             </Button>
+           </Link>
            <Link to="/onboarding">
-             <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-8 shadow-lg shadow-primary/20">
+             <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-full px-4 md:px-8 shadow-lg shadow-primary/20 text-xs md:text-sm">
                Get Started
              </Button>
            </Link>
@@ -197,6 +207,7 @@ const LandingPage = () => {
                className="h-16 px-10 rounded-2xl text-lg font-black border-white/10 bg-white/5 hover:bg-white/10 text-white"
                onClick={async () => {
                   toast.loading("Entering Sandbox Mode...");
+                  localStorage.setItem('is_sandbox', 'true');
 
                   // Use a public demo account
                   // In a real production app, these would be managed credentials
@@ -206,6 +217,7 @@ const LandingPage = () => {
                     toast.success("Welcome to the Sandbox! (Demo Mode Active)");
                     navigate("/center-dashboard");
                   } else {
+                    localStorage.removeItem('is_sandbox');
                     toast.error("Demo mode is temporarily unavailable. Please try again later.");
                   }
                }}

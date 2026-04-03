@@ -265,6 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('is_sandbox');
   };
 
   return (
