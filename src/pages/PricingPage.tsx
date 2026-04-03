@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { PackageCard } from "@/components/auth/LandingPageComponents";
-import { SYSTEM_MODULES } from "@/lib/system-modules";
 
 const PricingPage = () => {
   const [isYearly, setIsYearly] = useState(false);
@@ -124,10 +122,68 @@ const PricingPage = () => {
         </div>
 
         {/* Pricing Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-32">
-          <PackageCard type="Basic" index={0} allModules={SYSTEM_MODULES} />
-          <PackageCard type="Standard" index={1} allModules={SYSTEM_MODULES} />
-          <PackageCard type="Premium" index={2} allModules={SYSTEM_MODULES} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto mb-32">
+          {tiers.map((tier, i) => (
+            <motion.div
+              key={tier.name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className={cn(
+                "p-10 rounded-[3.5rem] flex flex-col relative transition-all duration-500 group",
+                tier.popular
+                  ? "bg-primary/5 border-2 border-primary/50 shadow-2xl shadow-primary/10"
+                  : "bg-white/5 border border-white/10 hover:bg-white/10"
+              )}
+            >
+              {tier.popular && (
+                <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-black px-6 py-2 rounded-full uppercase tracking-[0.2em] shadow-lg shadow-primary/40">
+                  Most Popular Choice
+                </div>
+              )}
+
+              <div className="mb-10">
+                <h3 className="text-3xl font-black mb-3 uppercase tracking-tight">{tier.name}</h3>
+                <p className="text-slate-400 font-medium text-sm leading-relaxed">{tier.description}</p>
+              </div>
+
+              <div className="mb-10">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-6xl font-black tracking-tighter">
+                    {tier.price === "Custom" ? "" : "NPR "}
+                    {tier.price}
+                  </span>
+                  {tier.price !== "Custom" && <span className="text-slate-500 font-bold text-lg uppercase tracking-widest">/month</span>}
+                </div>
+                {tier.price !== "Custom" && tier.price !== "0" && (
+                   <p className="text-slate-500 text-xs font-bold mt-2 uppercase tracking-widest">
+                     Billed {isYearly ? "annually" : "monthly"}
+                   </p>
+                )}
+              </div>
+
+              <div className="space-y-4 mb-12 flex-1">
+                {tier.features.map((f, j) => (
+                  <div key={j} className={cn("flex items-center gap-4 text-sm font-bold", f.included ? "text-slate-200" : "text-slate-600")}>
+                    {f.included ? <Check className="h-5 w-5 text-emerald-500 shrink-0" /> : <X className="h-5 w-5 text-slate-800 shrink-0" />}
+                    {f.label}
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                asChild
+                className={cn(
+                  "w-full h-16 rounded-2xl text-lg font-black uppercase tracking-widest transition-transform group-hover:scale-[1.02] active:scale-[0.98]",
+                  tier.popular ? "bg-primary hover:bg-primary/90 text-white" : "bg-white/10 hover:bg-white/20 text-white"
+                )}
+              >
+                <Link to={tier.name === "Enterprise" ? "/contact-sales" : "/onboarding"}>
+                  {tier.cta}
+                </Link>
+              </Button>
+            </motion.div>
+          ))}
         </div>
 
         {/* Feature Comparison Table */}
