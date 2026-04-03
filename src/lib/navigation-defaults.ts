@@ -81,6 +81,7 @@ export const DEFAULT_NAV_ITEMS = [
 
   // Parent Defaults
   { name: "Dashboard", route: "/parent-dashboard", icon: "Home", role: "parent", feature_name: "dashboard_access", category: null, order: 0 },
+  { name: "Daily Snapshot", route: "/parent-snapshot", icon: "Sparkles", role: "parent", feature_name: "daily_snapshot", category: null, order: 0.5 },
   { name: "Lesson Tracking", route: "/parent-lesson-tracking", icon: "BookOpen", role: "parent", feature_name: "lesson_tracking", category: 'Academics', order: 1 },
   { name: "Exam Results", route: "/parent-results", icon: "GraduationCap", role: "parent", feature_name: "exams_results", category: 'Academics', order: 2 },
   { name: "Homework", route: "/parent-homework", icon: "Book", role: "parent", feature_name: "homework_management", category: 'Academics', order: 3 },

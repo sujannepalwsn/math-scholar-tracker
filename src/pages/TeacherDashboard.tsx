@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { UserRole } from "@/types/roles";
-import { AlertTriangle, BarChart3, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle, CheckCircle2, ClipboardCheck, Clock, DollarSign, Download, Eye, FileText, GraduationCap, Home, Info, MessageSquare, Paintbrush, Plane, Printer, Search, Star, Target, TrendingUp, User, Users, XCircle } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Bell, Book, BookOpen, Calendar, CalendarIcon, CheckCircle, CheckCircle2, ClipboardCheck, Clock, DollarSign, Download, Eye, FileText, GraduationCap, Home, Info, MessageSquare, Paintbrush, Plane, Printer, Search, Star, Target, TrendingUp, User, Users, XCircle } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
