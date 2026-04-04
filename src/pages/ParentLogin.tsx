@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 import { useLoginSettings } from "@/hooks/use-login-settings";
 import LoginLayout from "@/components/auth/LoginLayout";
+import { hexToHSL } from "@/lib/utils";
 
 const ParentLogin = () => {
   const [username, setUsername] = useState('');
@@ -15,8 +16,8 @@ const ParentLogin = () => {
   const { data: settings } = useLoginSettings('parent');
 
   const containerStyles = {
-    '--primary': settings?.primary_color || '#4f46e5',
-    '--background': settings?.background_color || '#020617',
+    '--primary': hexToHSL(settings?.primary_color || '#4f46e5'),
+    '--background': hexToHSL(settings?.background_color || '#F8FAFC'),
   } as React.CSSProperties;
 
   const handleSubmit = async (e: React.FormEvent) => {

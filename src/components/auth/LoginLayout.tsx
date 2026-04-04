@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Shield, CheckCircle2, HelpCircle, ArrowRight, ExternalLink, Loader2, Sparkles, User, Lock, Globe, MessageSquare, Phone, MapPin, Mail, ChevronRight, Github, Twitter, Linkedin, Facebook, Users, GraduationCap, Briefcase } from "lucide-react";
+import React, { useEffect } from "react";
+import { Shield, ArrowRight, Loader2, User, Lock, ExternalLink, ChevronRight, Github, Twitter, Linkedin, Facebook, Users, Briefcase, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,14 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
-import { SYSTEM_MODULES } from "@/lib/system-modules";
-import { PackageType } from "@/lib/package-presets";
-import { FeatureCard, PackageCard, HeroSection, DynamicIcon } from "./LandingPageComponents";
-import { useSystemStats } from "@/hooks/use-system-stats";
+import { motion } from "framer-motion";
 
 interface LoginLayoutProps {
  settings: Tables<'login_page_settings'> | null;
@@ -40,21 +35,18 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
  const navigate = useNavigate();
  const location = useLocation();
  const primaryColor = settings?.primary_color || '#4f46e5';
- const bgColor = settings?.background_color || '#020617';
-
- const hexToRGB = (hex: string) => {
-  if (!hex || !hex.startsWith('#')) return '2, 6, 23';
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `${r}, ${g}, ${b}`;
- };
 
  const hexToHSL = (hex: string) => {
-  if (!hex || !hex.startsWith('#')) return '226 100% 50%';
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16) / 255;
+    g = parseInt(hex[2] + hex[2], 16) / 255;
+    b = parseInt(hex[3] + hex[3], 16) / 255;
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16) / 255;
+    g = parseInt(hex.slice(3, 5), 16) / 255;
+    b = parseInt(hex.slice(5, 7), 16) / 255;
+  }
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   let h = 0, s = 0, l = (max + min) / 2;
   if (max !== min) {
@@ -70,7 +62,6 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
  };
 
- // Determine current role based on path
  const getCurrentRole = () => {
   const path = location.pathname;
   if (path === '/login-admin') return 'admin';
@@ -80,21 +71,6 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
  };
 
  const currentRole = getCurrentRole();
- const { data: stats } = useSystemStats();
- const [partners, setPartners] = useState<{ id: string; name: string; logo_url: string; address: string }[]>([]);
-
- useEffect(() => {
-  const fetchPartners = async () => {
-   const { data } = await supabase
-    .from('centers')
-    .select('id, name, logo_url, address')
-    .eq('is_active', true)
-    .limit(12)
-    .order('name');
-   if (data) setPartners(data as any);
-  };
-  fetchPartners();
- }, []);
 
  const handleRoleChange = (role: string) => {
   if (role === 'admin') navigate('/login-admin');
@@ -103,39 +79,25 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
   else navigate('/login');
  };
 
- // Sort modules: implemented first
- const sortedModules = [...SYSTEM_MODULES].sort((a, b) => {
-  if (a.completeness === 'Fully implemented' && b.completeness !== 'Fully implemented') return -1;
-  if (a.completeness !== 'Fully implemented' && b.completeness === 'Fully implemented') return 1;
-  return 0;
- });
-
- const packages: PackageType[] = ['Basic', 'Standard', 'Premium'];
-
  const devInfo = (settings?.developer_info as any) || { name: "EduFlow Tech", website: "#", copyright: `© ${new Date().getFullYear()}` };
- const helpInfo = (settings?.help_info as any) || { text: "Documentation", link: "#" };
  const footerLinks = Array.isArray(settings?.footer_links) ? (settings.footer_links as any) : [
-  { title: "Product", links: [{ label: "Features", href: "#features" }, { label: "Pricing", href: "#packages" }, { label: "Testimonials", href: "#" }] },
-  { title: "Support", links: [{ label: "Help Center", href: "/pages/support" }, { label: "API Docs", href: "#" }, { label: "Security", href: "#" }] },
-  { title: "Company", links: [{ label: "About Us", href: "#about" }, { label: "Contact", href: "/contact-sales" }, { label: "Privacy", href: "/pages/privacy" }] }
+  { title: "Product", links: [{ label: "Features", href: "/#features" }, { label: "Pricing", href: "/pricing" }, { label: "Solutions", href: "/getting-started" }] },
+  { title: "Support", links: [{ label: "Contact Sales", href: "/contact-sales" }, { label: "Help Center", href: "#" }, { label: "Security", href: "#" }] },
+  { title: "Company", links: [{ label: "About Us", href: "/#about" }, { label: "Privacy", href: "#" }, { label: "Terms", href: "#" }] }
  ];
- const toggles = (settings?.section_toggles as any) || { show_features: true, show_packages: true, show_stats: true, show_footer: true };
+ const toggles = (settings?.section_toggles as any) || { show_footer: true };
 
- // Apply Super Admin theme colors globally to the login experience
  useEffect(() => {
   if (primaryColor) {
-   // Convert hex to HSL for CSS variable consistency if possible,
-   // but for login page simple RGB/Hex override is often enough for utility classes
    document.documentElement.style.setProperty('--primary', hexToHSL(primaryColor));
   }
  }, [primaryColor]);
 
  return (
-  <div className="min-h-screen flex flex-col font-sans selection:bg-primary-light selection:text-primary scroll-smooth overflow-x-hidden bg-slate-50">
-   {/* Navigation Bar */}
+  <div className="min-h-screen flex flex-col font-sans selection:bg-primary/20 selection:text-primary scroll-smooth overflow-x-hidden bg-slate-50">
    <header className="relative z-50 w-full px-4 md:px-8 py-4 flex items-center justify-between border-b border-border bg-white ">
     <Link to="/" className="flex items-center gap-3">
-     <div className="p-1.5 md:p-2 rounded-xl bg-primary-light border border-primary/10">
+     <div className="p-1.5 md:p-2 rounded-xl bg-primary/10 border border-primary/10">
       {settings?.logo_url ? (
        <img src={settings.logo_url} alt="Logo" className="h-6 w-6 md:h-8 md:w-8 object-contain" />
       ) : (
@@ -159,7 +121,6 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
     </div>
    </header>
 
-   {/* Main Content Area */}
    <main className="relative z-10 flex-1 flex items-center justify-center py-12 px-4">
     <div className="w-full max-w-[460px]">
      <motion.div
@@ -170,7 +131,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
       <Card className="border border-border shadow-xl bg-white rounded-2xl overflow-hidden text-slate-900">
        <CardHeader className="space-y-6 pt-10 pb-6 px-8 text-center">
         <div className="flex flex-col items-center gap-4">
-          <Badge variant="outline" className="bg-primary-light text-primary border-primary/10 py-1 px-4 rounded-full font-black tracking-widest text-[10px] uppercase">
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/10 py-1 px-4 rounded-full font-black tracking-widest text-[10px] uppercase">
            SECURE GATEWAY
           </Badge>
           <CardTitle className="text-4xl font-black tracking-tight text-slate-950">
@@ -193,25 +154,25 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
             <SelectValue placeholder="Select Role" />
            </SelectTrigger>
            <SelectContent className="bg-white border-border text-slate-900 rounded-2xl shadow-xl">
-            <SelectItem value="center" className="focus:bg-primary-light focus:text-primary cursor-pointer py-3 rounded-xl">
+            <SelectItem value="center" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
               <div className="flex items-center gap-3">
                <div className="p-2 rounded-lg bg-blue-50 text-blue-600"><Shield className="h-4 w-4" /></div>
                <span className="font-bold">Tuition Center</span>
               </div>
             </SelectItem>
-            <SelectItem value="teacher" className="focus:bg-primary-light focus:text-primary cursor-pointer py-3 rounded-xl">
+            <SelectItem value="teacher" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
               <div className="flex items-center gap-3">
                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600"><Briefcase className="h-4 w-4" /></div>
                <span className="font-bold">Teacher Portal</span>
               </div>
             </SelectItem>
-            <SelectItem value="parent" className="focus:bg-primary-light focus:text-primary cursor-pointer py-3 rounded-xl">
+            <SelectItem value="parent" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
               <div className="flex items-center gap-3">
                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600"><Users className="h-4 w-4" /></div>
                <span className="font-bold">Parent Portal</span>
               </div>
             </SelectItem>
-            <SelectItem value="admin" className="focus:bg-primary-light focus:text-primary cursor-pointer py-3 rounded-xl">
+            <SelectItem value="admin" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
               <div className="flex items-center gap-3">
                <div className="p-2 rounded-lg bg-amber-50 text-amber-600"><Shield className="h-4 w-4" /></div>
                <span className="font-bold">System Admin</span>
@@ -307,8 +268,6 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
             Create Account
            </Button>
          </div>
-
-         {extraFooter}
         </form>
        </CardContent>
       </Card>
@@ -317,14 +276,13 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
 
    </main>
 
-   {/* Modern Footer */}
    {toggles.show_footer && (
     <footer className="relative z-10 bg-white border-t border-border pt-20 pb-12">
      <div className="container mx-auto px-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
        <div className="space-y-6 col-span-1 md:col-span-1">
         <div className="flex items-center gap-3">
-         <div className="p-2 rounded-xl bg-primary-light border border-primary/10">
+         <div className="p-2 rounded-xl bg-primary/10 border border-primary/10">
           <Shield className="h-6 w-6 text-primary" />
          </div>
          <span className="text-2xl font-black text-slate-950 tracking-tighter">EduFlow</span>
@@ -333,16 +291,16 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
          Revolutionizing education through innovative digital solutions and seamless institution management in Nepal.
         </p>
         <div className="flex items-center gap-4">
-         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary-light transition-colors text-slate-400 hover:text-primary">
+         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary/10 transition-colors text-slate-400 hover:text-primary">
           <Twitter className="h-5 w-5" />
          </a>
-         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary-light transition-colors text-slate-400 hover:text-primary">
+         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary/10 transition-colors text-slate-400 hover:text-primary">
           <Linkedin className="h-5 w-5" />
          </a>
-         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary-light transition-colors text-slate-400 hover:text-primary">
+         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary/10 transition-colors text-slate-400 hover:text-primary">
           <Github className="h-5 w-5" />
          </a>
-         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary-light transition-colors text-slate-400 hover:text-primary">
+         <a href="#" className="p-2 rounded-full bg-slate-50 hover:bg-primary/10 transition-colors text-slate-400 hover:text-primary">
           <Facebook className="h-5 w-5" />
          </a>
         </div>
@@ -354,19 +312,13 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
          <ul className="space-y-4">
           {column.links.map((link: any, j: number) => (
            <li key={j}>
-            <a
-             href={link.href}
-             onClick={(e) => {
-              if (link.href.startsWith('#')) {
-               e.preventDefault();
-               document.getElementById(link.href.substring(1))?.scrollIntoView({ behavior: 'smooth' });
-              }
-             }}
+            <Link
+             to={link.href}
              className="text-slate-600 font-medium hover:text-primary transition-colors flex items-center gap-2 group"
             >
              <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0" />
              {link.label}
-            </a>
+            </Link>
            </li>
           ))}
          </ul>
