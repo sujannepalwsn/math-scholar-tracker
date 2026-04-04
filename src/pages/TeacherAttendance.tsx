@@ -29,6 +29,7 @@ import { Database, Tables } from "@/integrations/supabase/types"
 import { Badge } from "@/components/ui/badge"
 import { KPICard } from "@/components/dashboard/KPICard"
 import { hasPermission, hasActionPermission } from "@/utils/permissions"
+import { useNavigate } from "react-router-dom";
 
 type Teacher = Tables<'teachers'>;
 type TeacherAttendance = Tables<'teacher_attendance'>;
@@ -54,6 +55,7 @@ interface TeacherDetailAttendance {
 
 export default function TeacherAttendancePage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const isTeacher = user?.role === UserRole.TEACHER;
@@ -693,6 +695,7 @@ export default function TeacherAttendancePage() {
           description="Staff present today"
           icon={User}
           color="indigo"
+          onClick={() => navigate("/teacher-attendance/details?feature=Presence%20Log")}
         />
         <KPICard
           title="On Leave"
@@ -700,6 +703,7 @@ export default function TeacherAttendancePage() {
           description="Staff on leave today"
           icon={MinusCircle}
           color="orange"
+          onClick={() => navigate("/teacher-attendance/details?feature=Leave%20Analysis")}
         />
         <KPICard
           title="Efficiency"
@@ -707,6 +711,7 @@ export default function TeacherAttendancePage() {
           description="Avg monthly attendance"
           icon={TrendingUp}
           color="green"
+          onClick={() => navigate("/teacher-attendance/details?feature=Efficiency%20Matrix")}
         />
         <KPICard
           title="Punctuality"
@@ -714,6 +719,7 @@ export default function TeacherAttendancePage() {
           description="Staff arriving on time"
           icon={Clock}
           color="purple"
+          onClick={() => navigate("/teacher-attendance/details?feature=Punctuality%20Analysis")}
         />
       </div>
 

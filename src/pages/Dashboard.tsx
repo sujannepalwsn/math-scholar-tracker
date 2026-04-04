@@ -27,7 +27,6 @@ import { AIInsightsWidget } from "@/components/dashboard/AIInsightsWidget";
 import { EffortOutcomeMatrix } from '@/components/parent/EffortOutcomeMatrix';
 import { PerformanceTrendsChart } from '@/components/parent/PerformanceTrendsChart';
 import { Target, Zap, Shield, CheckCircle, Activity } from 'lucide-react';
-import { UpgradeModal } from "@/components/dashboard/UpgradeModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,8 +49,6 @@ export default function Dashboard() {
   const [attendanceRange, setAttendanceRange] = useState<AttendanceRange>("weekly");
   const [selectedVacantClass, setSelectedVacantClass] = useState<any>(null);
   const [isCustomizeMode, setIsCustomizeMode] = useState(false);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [lockedFeatureName, setLockedFeatureName] = useState("");
 
   const canEditRoutine = hasActionPermission(user, 'class_routine', 'edit');
   const canEditDashboard = hasActionPermission(user, 'dashboard', 'edit');
@@ -1111,10 +1108,7 @@ export default function Dashboard() {
           trendData={teacherAttendanceTrend}
           delta={getDelta(teacherAttendanceTrend)}
           target={teacherAttendanceRate}
-          onClick={() => {
-            setLockedFeatureName("Teacher Attendance (PRO)");
-            setUpgradeModalOpen(true);
-          }}
+          onClick={() => navigate("/teacher-attendance")}
         />
       ) : null,
       "lesson-plans": hasPermission(user, 'lesson_plans') ? (
@@ -1125,10 +1119,7 @@ export default function Dashboard() {
           icon={FileText}
           color="purple"
           delta={upcomingLessons.length > 0 ? 5 : 0}
-          onClick={() => {
-            setLockedFeatureName("Advanced Lesson Planning (PRO)");
-            setUpgradeModalOpen(true);
-          }}
+          onClick={() => navigate("/lesson-plans")}
         />
       ) : null,
       "approvals": hasPermission(user, 'lesson_plans') ? (
@@ -1139,10 +1130,7 @@ export default function Dashboard() {
           icon={CheckCircle2}
           color="yellow"
           delta={pendingLessonPlansCount > 0 ? -10 : 0}
-          onClick={() => {
-            setLockedFeatureName("Automated Workflow Approvals (PRO)");
-            setUpgradeModalOpen(true);
-          }}
+          onClick={() => navigate("/lesson-plan-management")}
         />
       ) : null,
       "leave-requests": hasPermission(user, 'leave_management') ? (
@@ -1153,10 +1141,7 @@ export default function Dashboard() {
           icon={Calendar}
           color="rose"
           delta={pendingLeavesCount > 0 ? 15 : 0}
-          onClick={() => {
-            setLockedFeatureName("Faculty Leave Management (PRO)");
-            setUpgradeModalOpen(true);
-          }}
+          onClick={() => navigate("/leave-management")}
         />
       ) : null,
       "messages": hasPermission(user, 'messaging') ? (
@@ -1280,12 +1265,6 @@ export default function Dashboard() {
       {/* Top Header - School Details */}
       <DashboardHeader />
       <CommandCenter />
-
-      <UpgradeModal
-        isOpen={upgradeModalOpen}
-        onOpenChange={setUpgradeModalOpen}
-        featureName={lockedFeatureName}
-      />
 
       <div className="flex justify-end items-center gap-4">
         {/* Command Center Search Trigger - Relocated and Enhanced */}

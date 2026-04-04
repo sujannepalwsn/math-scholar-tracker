@@ -399,10 +399,10 @@ export default function ParentDashboard() {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <KPICard title="Attendance Rate" value={`${attendanceRate}%`} description="Presence Index" icon={Clock} color="green" />
-        <KPICard title="Avg Performance" value={`${performanceTrends[performanceTrends.length-1]?.percentage || 0}%`} description="Evaluation Synthesis" icon={TrendingUp} color="purple" />
-        <KPICard title="Effort Score" value={`${Math.round(effortIndex)}/100`} description="Behavioral Engagement" icon={Activity} color="orange" />
-        <KPICard title="Fees Payable" value={formatCurrency(outstandingDues)} description="Outstanding Liability" icon={Wallet} color="rose" />
+        <KPICard title="Attendance Rate" value={`${attendanceRate}%`} description="Presence Index" icon={Clock} color="green" onClick={() => navigate("/parent/attendance?feature=Attendance%20Analytics")} />
+        <KPICard title="Avg Performance" value={`${performanceTrends[performanceTrends.length-1]?.percentage || 0}%`} description="Evaluation Synthesis" icon={TrendingUp} color="purple" onClick={() => navigate("/parent/performance?feature=Performance%20Analytics")} />
+        <KPICard title="Effort Score" value={`${Math.round(effortIndex)}/100`} description="Behavioral Engagement" icon={Activity} color="orange" onClick={() => navigate("/parent/performance?feature=Effort%20Analysis")} />
+        <KPICard title="Fees Payable" value={formatCurrency(outstandingDues)} description="Outstanding Liability" icon={Wallet} color="rose" onClick={() => navigate("/parent/fees?feature=Fee%20Management")} />
       </div>
 
       {/* Intelligence Row 1: Trends and Matrix */}

@@ -110,6 +110,7 @@ import PricingPage from "./pages/PricingPage";
 import AboutPage from "./pages/AboutPage";
 import OnboardingWizard from "./pages/OnboardingWizard";
 import SuiteExplorer from "./pages/SuiteExplorer";
+import ComingSoonPage from "./pages/ComingSoonPage";
 
 const queryClient = new QueryClient();
 
@@ -243,6 +244,9 @@ const App = () => {
               <Route path="/parent-leave" element={<ProtectedRoute role="parent"><ParentLayout><LeaveApplications /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-snapshot" element={<ProtectedRoute role="parent"><ParentLayout><DailySnapshot /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-settings" element={<ProtectedRoute role="parent"><ParentLayout><GeneralSettings /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/attendance" element={<ProtectedRoute role="parent"><ParentLayout><ComingSoonPage /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/performance" element={<ProtectedRoute role="parent"><ParentLayout><ComingSoonPage /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/fees" element={<ProtectedRoute role="parent"><ParentLayout><ComingSoonPage /></ParentLayout></ProtectedRoute>} />
 
               {/* Teacher */}
               <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherDashboard /></TeacherLayout></ProtectedRoute>} />
@@ -305,6 +309,7 @@ const App = () => {
               <Route path="/inventory" element={<ProtectedRoute role="center"><CenterLayout><InventoryManagement /></CenterLayout></ProtectedRoute>} />
               <Route path="/hr-management" element={<ProtectedRoute role="center"><CenterLayout><HRManagement /></CenterLayout></ProtectedRoute>} />
               <Route path="/transport" element={<ProtectedRoute role="center"><CenterLayout><TransportManagementPage /></CenterLayout></ProtectedRoute>} />
+              <Route path="/teacher-attendance/details" element={<ProtectedRoute role="center"><CenterLayout><ComingSoonPage /></CenterLayout></ProtectedRoute>} />
 
               {/* Teacher Result Routes */}
               <Route path="/teacher/exams" element={<ProtectedRoute role="teacher"><TeacherLayout><ExamManagement /></TeacherLayout></ProtectedRoute>} />
@@ -330,6 +335,8 @@ const App = () => {
               <Route path="/admin/landing-page" element={<ProtectedRoute role="admin"><AdminLayout><LandingPageEditor /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/demo-requests" element={<ProtectedRoute role="admin"><AdminLayout><DemoRequests /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/system-pages" element={<ProtectedRoute role="admin"><AdminLayout><SystemPagesEditor /></AdminLayout></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminLayout><ComingSoonPage /></AdminLayout></ProtectedRoute>} />
+              <Route path="/admin/revenue" element={<ProtectedRoute role="admin"><AdminLayout><ComingSoonPage /></AdminLayout></ProtectedRoute>} />
 
               <Route path="*" element={<NotFound />} />
 
