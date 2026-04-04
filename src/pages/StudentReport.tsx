@@ -34,2613 +34,2613 @@ type Homework = Tables<'homework'>;
 type TestResult = Tables<'test_results'>;
 
 interface ChapterPerformance {
-  lessonPlan: LessonPlan;
-  studentChapters: (StudentChapter & { recorded_by_teacher?: { name: string } })[];
-  testResults: (Tables<'test_results'> & { tests: Pick<Test, 'id' | 'name' | 'subject' | 'total_marks' | 'lesson_plan_id' | 'questions'> })[];
-  homeworkRecords: (Tables<'student_homework_records'> & { homework: Pick<Homework, 'id' | 'title' | 'subject' | 'due_date'> })[];
+ lessonPlan: LessonPlan;
+ studentChapters: (StudentChapter & { recorded_by_teacher?: { name: string } })[];
+ testResults: (Tables<'test_results'> & { tests: Pick<Test, 'id' | 'name' | 'subject' | 'total_marks' | 'lesson_plan_id' | 'questions'> })[];
+ homeworkRecords: (Tables<'student_homework_records'> & { homework: Pick<Homework, 'id' | 'title' | 'subject' | 'due_date'> })[];
 }
 
 export default function StudentReport() {
-  const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const urlStudentId = searchParams.get("student_id");
-
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(urlStudentId || "none"); // Changed initial state to "none"
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: subYears(new Date(), 1), // Default to last year
-    to: endOfMonth(new Date()) });
-  const [subjectFilter, setSubjectFilter] = useState<string>("all");
-  const [gradeFilter, setGradeFilter] = useState<string>("all");
-  const [aiSummary, setAiSummary] = useState<string>("");
-  const [selectedDisciplineIssue, setSelectedDisciplineIssue] = useState<any>(null);
-  const [selectedChapterDetail, setSelectedChapterDetail] = useState<ChapterPerformance | null>(null);
-  const [selectedExamResult, setSelectedExamResult] = useState<any>(null);
-  const [selectedExamSchedule, setSelectedExamSchedule] = useState<any>(null);
-  const [selectedPublishedExamId, setSelectedPublishedExamId] = useState<string>("none");
-  const [selectedAttendanceDetail, setSelectedAttendanceDetail] = useState<any>(null);
-
-  const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
-
-  // Fetch students
-  const { data: students = [] } = useQuery({
-    queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id],
-    queryFn: async () => {
-      let query = supabase.from("students").select("*").order("name");
-      if (user?.role !== UserRole.ADMIN && user?.center_id) query = query.eq("center_id", user.center_id);
-
-      if (isRestricted) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
-        const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
-        const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
-
-        if (myGrades.length > 0) {
-          query = query.in('grade', myGrades);
-        } else {
-          return []; // Restricted teacher with no assignments sees no students
-        }
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    } });
-
-  const filteredStudents = students.filter(s => gradeFilter === "all" || s.grade === gradeFilter);
-
-  // Get student IDs for current filters
-  const studentIds = useMemo(() => {
-    if (selectedStudentId && selectedStudentId !== "none") return [selectedStudentId];
-    return filteredStudents.map(s => s.id);
-  }, [selectedStudentId, filteredStudents]);
-
-  // Fetch attendance
-  const { data: attendanceData = [], isLoading: isAttendanceLoading } = useQuery({
-    queryKey: ["student-attendance", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id, isRestricted],
-    queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase
-        .from("attendance")
-        .select("*, students!inner(grade)")
-        .eq("center_id", user.center_id)
-        .gte("date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      if (user?.role === UserRole.TEACHER && isRestricted) {
-        query = query.eq('marked_by', user.id);
-      }
-
-      if (selectedStudentId && selectedStudentId !== "none") {
-        query = query.eq("student_id", selectedStudentId);
-      } else if (gradeFilter !== "all") {
-        query = query.in("student_id", studentIds);
-      }
-
-      const { data, error } = await query.order("date");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id });
-
-  // Fetch lesson plans (needed for grouping)
-  const { data: allLessonPlans = [] } = useQuery({
-    queryKey: ["all-lesson-plans-for-report", user?.center_id],
-    queryFn: async () => {
-      if (!user?.center_id) return [];
-      const { data, error } = await supabase
-        .from("lesson_plans")
-        .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
-        .eq("center_id", user.center_id)
-        .order("lesson_date", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id });
-
-  // Fetch student_chapters (lesson evaluations)
-  const { data: studentChapters = [], isLoading: isChaptersLoading } = useQuery({
-    queryKey: ["student-lesson-records-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.teacher_id],
-    queryFn: async () => {
-      let query = supabase.from("student_chapters").select(`
-        *,
-        lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url),
-        recorded_by_teacher:teachers!recorded_by_teacher_id(name)
-      `)
-        .gte("completed_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("completed_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      if (user?.role === UserRole.TEACHER && user?.teacher_id) {
-        query = query.eq('recorded_by_teacher_id', user.teacher_id);
-      }
-
-      if (selectedStudentId && selectedStudentId !== "none") {
-        query = query.eq("student_id", selectedStudentId);
-      } else if (gradeFilter !== "all") {
-        query = query.in("student_id", studentIds);
-      } else {
-        // School level: still need to ensure students belong to the center
-        query = query.in("student_id", studentIds);
-      }
-
-      if (subjectFilter !== "all") {
-        query = query.eq("lesson_plans.subject", subjectFilter);
-      }
-
-      const { data, error } = await query.order("completed_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: studentIds.length > 0 });
-
-  // Fetch test results
-  const { data: testResults = [], isLoading: isTestsLoading } = useQuery({
-    queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.id],
-    queryFn: async () => {
-      let query = supabase.from("test_results").select("*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions, created_by)")
-        .gte("date_taken", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("date_taken", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      if (user?.role === UserRole.TEACHER) {
-        query = query.eq('tests.created_by', user.id);
-      }
-
-      if (selectedStudentId && selectedStudentId !== "none") {
-        query = query.eq("student_id", selectedStudentId);
-      } else if (gradeFilter !== "all") {
-        query = query.in("student_id", studentIds);
-      } else {
-        query = query.in("student_id", studentIds);
-      }
-
-      if (subjectFilter !== "all") {
-        query = query.eq("tests.subject", subjectFilter);
-      }
-
-      const { data, error } = await query.order("date_taken", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: studentIds.length > 0 });
-
-  // Fetch homework status
-  const { data: homeworkStatus = [], isLoading: isHomeworkLoading } = useQuery({
-    queryKey: ["student-homework-status-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.teacher_id],
-    queryFn: async () => {
-      let query = supabase.from("student_homework_records").select("*, homework!inner(id, title, subject, due_date, lesson_plan_id, teacher_id)")
-        .gte("homework.due_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("homework.due_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      if (user?.role === UserRole.TEACHER && user?.teacher_id) {
-        query = query.eq('homework.teacher_id', user.teacher_id);
-      }
-
-      if (selectedStudentId && selectedStudentId !== "none") {
-        query = query.eq("student_id", selectedStudentId);
-      } else if (gradeFilter !== "all") {
-        query = query.in("student_id", studentIds);
-      } else {
-        query = query.in("student_id", studentIds);
-      }
-
-      if (subjectFilter !== "all") {
-        query = query.eq("homework.subject", subjectFilter);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: studentIds.length > 0 });
-
-  // Fetch activities (distinct from student participations)
-  const { data: activities = [], isLoading: isAllActivitiesLoading } = useQuery({
-    queryKey: ["center-activities", user?.center_id, gradeFilter, dateRange, isRestricted],
-    queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("activities")
-        .select("*")
-        .eq("center_id", user.center_id)
-        .gte("activity_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("activity_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      if (gradeFilter !== "all") {
-        query = query.eq("grade", gradeFilter);
-      }
-
-      if (isRestricted) {
-        query = query.eq('created_by', user?.id);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id });
-
-  // Fetch preschool activities (student participations)
-  const { data: preschoolActivities = [], isLoading: isActivitiesLoading } = useQuery({
-    queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds, user?.role, user?.id],
-    queryFn: async () => {
-      let query = supabase.from("student_activities").select("*, activities!inner(title, description, activity_date, photo_url, video_url, activity_type_id, created_by, activity_types(name))")
-        .gte("created_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("created_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      if (user?.role === UserRole.TEACHER) {
-        query = query.eq('activities.created_by', user.id);
-      }
-
-      if (selectedStudentId && selectedStudentId !== "none") {
-        query = query.eq("student_id", selectedStudentId);
-      } else if (gradeFilter !== "all") {
-        query = query.in("student_id", studentIds);
-      } else {
-        query = query.in("student_id", studentIds);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: studentIds.length > 0 });
-
-  // Fetch discipline issues
-  const { data: disciplineIssues = [], isLoading: isDisciplineLoading } = useQuery({
-    queryKey: ["student-discipline-issues-report", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id, isRestricted],
-    queryFn: async () => {
-      if (!user?.center_id) return [];
-      let query = supabase.from("discipline_issues").select("*, students!inner(grade), discipline_categories(name)")
-        .eq("center_id", user.center_id)
-        .gte("issue_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("issue_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      if (user?.role === UserRole.TEACHER) {
-        if (isRestricted) {
-          const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
-          const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
-          const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
-
-          // To avoid complex cross-table OR filters in PostgREST, we first get student IDs for the assigned grades
-          const { data: assignedStudents } = await supabase
-            .from('students')
-            .select('id')
-            .in('grade', myGrades);
-
-          const assignedStudentIds = assignedStudents?.map(s => s.id) || [];
-
-          // Teacher sees their own reports OR reports for their assigned students
-          const conditions = [`reported_by.eq.${user.id}`];
-          if (assignedStudentIds.length > 0) {
-            conditions.push(`student_id.in.(${assignedStudentIds.join(',')})`);
-          }
-          query = query.or(conditions.join(','));
-        }
-      }
-
-      if (selectedStudentId && selectedStudentId !== "none") {
-        query = query.eq("student_id", selectedStudentId);
-      } else if (gradeFilter !== "all") {
-        query = query.in("student_id", studentIds);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id });
-
-  // Fetch Exam Schedules & Results
-  const { data: studentExams = [] } = useQuery({
-    queryKey: ["student-exams-report", selectedStudentId, user?.center_id, user?.role, students, dateRange],
-    queryFn: async () => {
-      if (!user?.center_id || !selectedStudentId || selectedStudentId === "none") return [];
-
-      const student = students.find(s => s.id === selectedStudentId);
-      if (!student) return [];
-
-      let query = supabase
-        .from("exams")
-        .select("*")
-        .eq("center_id", user.center_id)
-        .eq("grade", student.grade)
-        .gte("exam_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("exam_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-
-      // Parents only see published routines or results
-      if (user?.role === UserRole.PARENT) {
-        query = query.in("status", ["published", "results_published"]);
-      }
-
-      const { data: exams, error: examsError } = await query;
-
-      if (examsError) throw examsError;
-      if (!exams || exams.length === 0) return [];
-
-      const examIds = exams.map(e => e.id);
-
-      const { data: subjects, error: subjError } = await supabase
-        .from("exam_subjects")
-        .select("*")
-        .in("exam_id", examIds);
-
-      if (subjError) throw subjError;
-
-      const { data: marks, error: marksError } = await supabase
-        .from("exam_marks")
-        .select("*")
-        .eq("student_id", selectedStudentId)
-        .in("exam_id", examIds);
-
-      if (marksError) throw marksError;
-
-      return exams.map(exam => {
-        const examSubjects = subjects.filter(s => s.exam_id === exam.id);
-        const examMarks = marks.filter(m => m.exam_id === exam.id);
-
-        let totalObtained = 0;
-        let totalFull = 0;
-        let allPassed = true;
-        const hasMarks = examMarks.length > 0;
-
-        const results = examSubjects.map(subj => {
-          const mark = examMarks.find(m => m.exam_subject_id === subj.id);
-          const hasMark = mark !== undefined && mark !== null && mark.marks_obtained !== null;
-          const obtained = hasMark ? mark!.marks_obtained : null;
-
-          if (hasMark) {
-            totalObtained += (obtained || 0);
-            totalFull += subj.full_marks;
-            if ((obtained || 0) < subj.pass_marks) allPassed = false;
-          } else {
-            allPassed = false;
-          }
-
-          return {
-            ...subj,
-            obtained,
-            passed: hasMark ? (obtained || 0) >= subj.pass_marks : false,
-            hasMark
-          };
-        });
-
-        const marksCount = results.filter(r => r.hasMark).length;
-        const isPartial = marksCount > 0 && marksCount < examSubjects.length;
-        const percentage = totalFull > 0 ? (totalObtained / totalFull) * 100 : 0;
-
-        return {
-          ...exam,
-          totalObtained,
-          totalFull,
-          percentage,
-          allPassed,
-          hasMarks,
-          isPartial,
-          results,
-          student
-        };
-      });
-    },
-    enabled: !!user?.center_id && selectedStudentId !== "none"
-  });
-
-  // Fetch finance data (keep student-specific for now, or generalize if needed)
-  const { data: invoices = [] } = useQuery({
-    queryKey: ["student-invoices-report", selectedStudentId, dateRange],
-    queryFn: async () => {
-      if (!selectedStudentId || selectedStudentId === "none") return [];
-      const { data, error } = await supabase.from("invoices").select("*").eq("student_id", selectedStudentId)
-        .gte("invoice_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("invoice_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-      if (error) throw error;
-      return data as Invoice[];
-    },
-    enabled: !!selectedStudentId && selectedStudentId !== "none" });
-
-  const { data: payments = [] } = useQuery({
-    queryKey: ["student-payments-report", selectedStudentId, dateRange],
-    queryFn: async () => {
-      if (!selectedStudentId || selectedStudentId === "none") return [];
-      const { data: invoices, error: invError } = await supabase
-        .from('invoices')
-        .select('id')
-        .eq('student_id', selectedStudentId);
-      
-      if (invError) throw invError;
-      if (!invoices || invoices.length === 0) return [];
-      
-      const invoiceIds = invoices.map(inv => inv.id);
-      const { data, error } = await supabase.from("payments").select("*")
-        .in("invoice_id", invoiceIds)
-        .gte("payment_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
-        .lte("payment_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
-      if (error) throw error;
-      return data as Payment[];
-    },
-    enabled: !!selectedStudentId && selectedStudentId !== "none" });
-
-  // Calculate finance summary
-  const totalInvoiced = useMemo(() => {
-    const sum = invoices.reduce((acc, inv) => acc + inv.total_amount, 0);
-    return sum;
-  }, [invoices]);
-  
-  const totalPaid = useMemo(() => {
-    const sum = invoices.reduce((acc, inv) => acc + (inv.paid_amount || 0), 0);
-    return sum;
-  }, [invoices]);
-
-  const outstandingDues = useMemo(() => {
-    const dues = totalInvoiced - totalPaid;
-    return dues;
-  }, [totalInvoiced, totalPaid]);
-
-  // Statistics
-  const reportLevel = useMemo(() => {
-    if (selectedStudentId && selectedStudentId !== "none") return "student";
-    if (gradeFilter !== "all" && subjectFilter !== "all") return "grade-subject";
-    if (gradeFilter !== "all") return "grade";
-    if (subjectFilter !== "all") return "subject";
-    return "school";
-  }, [selectedStudentId, gradeFilter, subjectFilter]);
-
-  const dashboardStats = useMemo(() => {
-    // 1. Total Students
-    const totalStudents = reportLevel === "student" ? 1 : filteredStudents.length;
-
-    // 2. Average Attendance %
-    const totalAttendanceDays = attendanceData.length;
-    const presentAttendanceDays = attendanceData.filter(a => a.status === "present").length;
-    const attendancePercentage = totalAttendanceDays > 0
-      ? Math.round((presentAttendanceDays / totalAttendanceDays) * 100)
-      : 0;
-
-    // 3. Overall Homework Completion Rate
-    const totalHomework = homeworkStatus.length;
-    const completedHomework = homeworkStatus.filter(h => ["completed", "checked"].includes(h.status || "")).length;
-    const homeworkCompletionRate = totalHomework > 0
-      ? Math.round((completedHomework / totalHomework) * 100)
-      : 0;
-
-    // 4. Overall Evaluation Completion Rate (from student_chapters)
-    const totalEvaluations = studentChapters.length;
-    const ratedEvaluations = studentChapters.filter(sc => sc.evaluation_rating !== null).length;
-    const evaluationCompletionRate = totalEvaluations > 0
-      ? Math.round((ratedEvaluations / totalEvaluations) * 100)
-      : 0;
-
-    // 5. Average Test & Exam Performance
-    const totalTestResults = testResults.length;
-    const totalMarksObtained = testResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
-    const totalMaxMarks = testResults.reduce((sum, r) => sum + (r.tests?.total_marks || 0), 0);
-
-    // Add Exam Marks
-    let examObtained = 0;
-    let examFull = 0;
-    studentExams.forEach(e => {
-      if (e.hasMarks) {
-        examObtained += e.totalObtained;
-        examFull += e.totalFull;
-      }
+ const { user } = useAuth();
+ const [searchParams, setSearchParams] = useSearchParams();
+ const urlStudentId = searchParams.get("student_id");
+
+ const [selectedStudentId, setSelectedStudentId] = useState<string>(urlStudentId || "none"); // Changed initial state to "none"
+ const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+  from: subYears(new Date(), 1), // Default to last year
+  to: endOfMonth(new Date()) });
+ const [subjectFilter, setSubjectFilter] = useState<string>("all");
+ const [gradeFilter, setGradeFilter] = useState<string>("all");
+ const [aiSummary, setAiSummary] = useState<string>("");
+ const [selectedDisciplineIssue, setSelectedDisciplineIssue] = useState<any>(null);
+ const [selectedChapterDetail, setSelectedChapterDetail] = useState<ChapterPerformance | null>(null);
+ const [selectedExamResult, setSelectedExamResult] = useState<any>(null);
+ const [selectedExamSchedule, setSelectedExamSchedule] = useState<any>(null);
+ const [selectedPublishedExamId, setSelectedPublishedExamId] = useState<string>("none");
+ const [selectedAttendanceDetail, setSelectedAttendanceDetail] = useState<any>(null);
+
+ const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
+
+ // Fetch students
+ const { data: students = [] } = useQuery({
+  queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id],
+  queryFn: async () => {
+   let query = supabase.from("students").select("*").order("name");
+   if (user?.role !== UserRole.ADMIN && user?.center_id) query = query.eq("center_id", user.center_id);
+
+   if (isRestricted) {
+    const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
+    const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
+    const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
+
+    if (myGrades.length > 0) {
+     query = query.in('grade', myGrades);
+    } else {
+     return []; // Restricted teacher with no assignments sees no students
+    }
+   }
+
+   const { data, error } = await query;
+   if (error) throw error;
+   return data;
+  } });
+
+ const filteredStudents = students.filter(s => gradeFilter === "all" || s.grade === gradeFilter);
+
+ // Get student IDs for current filters
+ const studentIds = useMemo(() => {
+  if (selectedStudentId && selectedStudentId !== "none") return [selectedStudentId];
+  return filteredStudents.map(s => s.id);
+ }, [selectedStudentId, filteredStudents]);
+
+ // Fetch attendance
+ const { data: attendanceData = [], isLoading: isAttendanceLoading } = useQuery({
+  queryKey: ["student-attendance", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id, isRestricted],
+  queryFn: async () => {
+   if (!user?.center_id) return [];
+   let query = supabase
+    .from("attendance")
+    .select("*, students!inner(grade)")
+    .eq("center_id", user.center_id)
+    .gte("date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   if (user?.role === UserRole.TEACHER && isRestricted) {
+    query = query.eq('marked_by', user.id);
+   }
+
+   if (selectedStudentId && selectedStudentId !== "none") {
+    query = query.eq("student_id", selectedStudentId);
+   } else if (gradeFilter !== "all") {
+    query = query.in("student_id", studentIds);
+   }
+
+   const { data, error } = await query.order("date");
+   if (error) throw error;
+   return data;
+  },
+  enabled: !!user?.center_id });
+
+ // Fetch lesson plans (needed for grouping)
+ const { data: allLessonPlans = [] } = useQuery({
+  queryKey: ["all-lesson-plans-for-report", user?.center_id],
+  queryFn: async () => {
+   if (!user?.center_id) return [];
+   const { data, error } = await supabase
+    .from("lesson_plans")
+    .select("id, subject, chapter, topic, grade, lesson_date, notes, lesson_file_url")
+    .eq("center_id", user.center_id)
+    .order("lesson_date", { ascending: false });
+   if (error) throw error;
+   return data;
+  },
+  enabled: !!user?.center_id });
+
+ // Fetch student_chapters (lesson evaluations)
+ const { data: studentChapters = [], isLoading: isChaptersLoading } = useQuery({
+  queryKey: ["student-lesson-records-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.teacher_id],
+  queryFn: async () => {
+   let query = supabase.from("student_chapters").select(`
+    *,
+    lesson_plans!inner(id, subject, chapter, topic, lesson_date, lesson_file_url),
+    recorded_by_teacher:teachers!recorded_by_teacher_id(name)
+   `)
+    .gte("completed_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("completed_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   if (user?.role === UserRole.TEACHER && user?.teacher_id) {
+    query = query.eq('recorded_by_teacher_id', user.teacher_id);
+   }
+
+   if (selectedStudentId && selectedStudentId !== "none") {
+    query = query.eq("student_id", selectedStudentId);
+   } else if (gradeFilter !== "all") {
+    query = query.in("student_id", studentIds);
+   } else {
+    // School level: still need to ensure students belong to the center
+    query = query.in("student_id", studentIds);
+   }
+
+   if (subjectFilter !== "all") {
+    query = query.eq("lesson_plans.subject", subjectFilter);
+   }
+
+   const { data, error } = await query.order("completed_at", { ascending: false });
+   if (error) throw error;
+   return data;
+  },
+  enabled: studentIds.length > 0 });
+
+ // Fetch test results
+ const { data: testResults = [], isLoading: isTestsLoading } = useQuery({
+  queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.id],
+  queryFn: async () => {
+   let query = supabase.from("test_results").select("*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions, created_by)")
+    .gte("date_taken", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("date_taken", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   if (user?.role === UserRole.TEACHER) {
+    query = query.eq('tests.created_by', user.id);
+   }
+
+   if (selectedStudentId && selectedStudentId !== "none") {
+    query = query.eq("student_id", selectedStudentId);
+   } else if (gradeFilter !== "all") {
+    query = query.in("student_id", studentIds);
+   } else {
+    query = query.in("student_id", studentIds);
+   }
+
+   if (subjectFilter !== "all") {
+    query = query.eq("tests.subject", subjectFilter);
+   }
+
+   const { data, error } = await query.order("date_taken", { ascending: false });
+   if (error) throw error;
+   return data;
+  },
+  enabled: studentIds.length > 0 });
+
+ // Fetch homework status
+ const { data: homeworkStatus = [], isLoading: isHomeworkLoading } = useQuery({
+  queryKey: ["student-homework-status-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.teacher_id],
+  queryFn: async () => {
+   let query = supabase.from("student_homework_records").select("*, homework!inner(id, title, subject, due_date, lesson_plan_id, teacher_id)")
+    .gte("homework.due_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("homework.due_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   if (user?.role === UserRole.TEACHER && user?.teacher_id) {
+    query = query.eq('homework.teacher_id', user.teacher_id);
+   }
+
+   if (selectedStudentId && selectedStudentId !== "none") {
+    query = query.eq("student_id", selectedStudentId);
+   } else if (gradeFilter !== "all") {
+    query = query.in("student_id", studentIds);
+   } else {
+    query = query.in("student_id", studentIds);
+   }
+
+   if (subjectFilter !== "all") {
+    query = query.eq("homework.subject", subjectFilter);
+   }
+
+   const { data, error } = await query.order("created_at", { ascending: false });
+   if (error) throw error;
+   return data;
+  },
+  enabled: studentIds.length > 0 });
+
+ // Fetch activities (distinct from student participations)
+ const { data: activities = [], isLoading: isAllActivitiesLoading } = useQuery({
+  queryKey: ["center-activities", user?.center_id, gradeFilter, dateRange, isRestricted],
+  queryFn: async () => {
+   if (!user?.center_id) return [];
+   let query = supabase.from("activities")
+    .select("*")
+    .eq("center_id", user.center_id)
+    .gte("activity_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("activity_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   if (gradeFilter !== "all") {
+    query = query.eq("grade", gradeFilter);
+   }
+
+   if (isRestricted) {
+    query = query.eq('created_by', user?.id);
+   }
+
+   const { data, error } = await query;
+   if (error) throw error;
+   return data;
+  },
+  enabled: !!user?.center_id });
+
+ // Fetch preschool activities (student participations)
+ const { data: preschoolActivities = [], isLoading: isActivitiesLoading } = useQuery({
+  queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds, user?.role, user?.id],
+  queryFn: async () => {
+   let query = supabase.from("student_activities").select("*, activities!inner(title, description, activity_date, photo_url, video_url, activity_type_id, created_by, activity_types(name))")
+    .gte("created_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("created_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   if (user?.role === UserRole.TEACHER) {
+    query = query.eq('activities.created_by', user.id);
+   }
+
+   if (selectedStudentId && selectedStudentId !== "none") {
+    query = query.eq("student_id", selectedStudentId);
+   } else if (gradeFilter !== "all") {
+    query = query.in("student_id", studentIds);
+   } else {
+    query = query.in("student_id", studentIds);
+   }
+
+   const { data, error } = await query;
+   if (error) throw error;
+   return data;
+  },
+  enabled: studentIds.length > 0 });
+
+ // Fetch discipline issues
+ const { data: disciplineIssues = [], isLoading: isDisciplineLoading } = useQuery({
+  queryKey: ["student-discipline-issues-report", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id, isRestricted],
+  queryFn: async () => {
+   if (!user?.center_id) return [];
+   let query = supabase.from("discipline_issues").select("*, students!inner(grade), discipline_categories(name)")
+    .eq("center_id", user.center_id)
+    .gte("issue_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("issue_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   if (user?.role === UserRole.TEACHER) {
+    if (isRestricted) {
+     const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
+     const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
+     const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
+
+     // To avoid complex cross-table OR filters in PostgREST, we first get student IDs for the assigned grades
+     const { data: assignedStudents } = await supabase
+      .from('students')
+      .select('id')
+      .in('grade', myGrades);
+
+     const assignedStudentIds = assignedStudents?.map(s => s.id) || [];
+
+     // Teacher sees their own reports OR reports for their assigned students
+     const conditions = [`reported_by.eq.${user.id}`];
+     if (assignedStudentIds.length > 0) {
+      conditions.push(`student_id.in.(${assignedStudentIds.join(',')})`);
+     }
+     query = query.or(conditions.join(','));
+    }
+   }
+
+   if (selectedStudentId && selectedStudentId !== "none") {
+    query = query.eq("student_id", selectedStudentId);
+   } else if (gradeFilter !== "all") {
+    query = query.in("student_id", studentIds);
+   }
+
+   const { data, error } = await query;
+   if (error) throw error;
+   return data;
+  },
+  enabled: !!user?.center_id });
+
+ // Fetch Exam Schedules & Results
+ const { data: studentExams = [] } = useQuery({
+  queryKey: ["student-exams-report", selectedStudentId, user?.center_id, user?.role, students, dateRange],
+  queryFn: async () => {
+   if (!user?.center_id || !selectedStudentId || selectedStudentId === "none") return [];
+
+   const student = students.find(s => s.id === selectedStudentId);
+   if (!student) return [];
+
+   let query = supabase
+    .from("exams")
+    .select("*")
+    .eq("center_id", user.center_id)
+    .eq("grade", student.grade)
+    .gte("exam_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("exam_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+
+   // Parents only see published routines or results
+   if (user?.role === UserRole.PARENT) {
+    query = query.in("status", ["published", "results_published"]);
+   }
+
+   const { data: exams, error: examsError } = await query;
+
+   if (examsError) throw examsError;
+   if (!exams || exams.length === 0) return [];
+
+   const examIds = exams.map(e => e.id);
+
+   const { data: subjects, error: subjError } = await supabase
+    .from("exam_subjects")
+    .select("*")
+    .in("exam_id", examIds);
+
+   if (subjError) throw subjError;
+
+   const { data: marks, error: marksError } = await supabase
+    .from("exam_marks")
+    .select("*")
+    .eq("student_id", selectedStudentId)
+    .in("exam_id", examIds);
+
+   if (marksError) throw marksError;
+
+   return exams.map(exam => {
+    const examSubjects = subjects.filter(s => s.exam_id === exam.id);
+    const examMarks = marks.filter(m => m.exam_id === exam.id);
+
+    let totalObtained = 0;
+    let totalFull = 0;
+    let allPassed = true;
+    const hasMarks = examMarks.length > 0;
+
+    const results = examSubjects.map(subj => {
+     const mark = examMarks.find(m => m.exam_subject_id === subj.id);
+     const hasMark = mark !== undefined && mark !== null && mark.marks_obtained !== null;
+     const obtained = hasMark ? mark!.marks_obtained : null;
+
+     if (hasMark) {
+      totalObtained += (obtained || 0);
+      totalFull += subj.full_marks;
+      if ((obtained || 0) < subj.pass_marks) allPassed = false;
+     } else {
+      allPassed = false;
+     }
+
+     return {
+      ...subj,
+      obtained,
+      passed: hasMark ? (obtained || 0) >= subj.pass_marks : false,
+      hasMark
+     };
     });
 
-    const combinedObtained = totalMarksObtained + examObtained;
-    const combinedFull = totalMaxMarks + examFull;
-
-    const testPerformance = combinedFull > 0
-      ? Math.round((combinedObtained / combinedFull) * 100)
-      : 0;
-
-    // 6. Total Discipline Records
-    const totalDiscipline = disciplineIssues.length;
-
-    // 7. Total Activities Conducted
-    // If student selected, show participations. Else show unique activities.
-    const totalActivities = reportLevel === "student" ? preschoolActivities.length : activities.length;
+    const marksCount = results.filter(r => r.hasMark).length;
+    const isPartial = marksCount > 0 && marksCount < examSubjects.length;
+    const percentage = totalFull > 0 ? (totalObtained / totalFull) * 100 : 0;
 
     return {
-      totalStudents,
-      attendancePercentage,
-      homeworkCompletionRate,
-      evaluationCompletionRate,
-      testPerformance,
-      totalDiscipline,
-      totalActivities,
-      totalTests: totalTestResults,
-      totalMarksObtained,
-      totalMaxMarks
+     ...exam,
+     totalObtained,
+     totalFull,
+     percentage,
+     allPassed,
+     hasMarks,
+     isPartial,
+     results,
+     student
     };
-  }, [reportLevel, filteredStudents, attendanceData, homeworkStatus, studentChapters, testResults, disciplineIssues, activities, preschoolActivities]);
+   });
+  },
+  enabled: !!user?.center_id && selectedStudentId !== "none"
+ });
 
-  const totalDays = attendanceData.length;
-  const presentDays = attendanceData.filter((a) => a.status === "present").length;
-  const attendancePercentage = dashboardStats.attendancePercentage;
+ // Fetch finance data (keep student-specific for now, or generalize if needed)
+ const { data: invoices = [] } = useQuery({
+  queryKey: ["student-invoices-report", selectedStudentId, dateRange],
+  queryFn: async () => {
+   if (!selectedStudentId || selectedStudentId === "none") return [];
+   const { data, error } = await supabase.from("invoices").select("*").eq("student_id", selectedStudentId)
+    .gte("invoice_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("invoice_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+   if (error) throw error;
+   return data as Invoice[];
+  },
+  enabled: !!selectedStudentId && selectedStudentId !== "none" });
 
-  const totalTests = dashboardStats.totalTests;
-  const totalMarksObtained = dashboardStats.totalMarksObtained;
-  const totalMaxMarks = dashboardStats.totalMaxMarks;
-  const averagePercentage = dashboardStats.testPerformance;
+ const { data: payments = [] } = useQuery({
+  queryKey: ["student-payments-report", selectedStudentId, dateRange],
+  queryFn: async () => {
+   if (!selectedStudentId || selectedStudentId === "none") return [];
+   const { data: invoices, error: invError } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('student_id', selectedStudentId);
 
-  const subjectPerformance = useMemo(() => {
-    const subjectsMap = new Map<string, { total: number; count: number }>();
+   if (invError) throw invError;
+   if (!invoices || invoices.length === 0) return [];
 
-    // Process Tests
-    testResults.forEach((tr: any) => {
-      const subject = tr.tests?.subject;
-      if (subject) {
-        if (!subjectsMap.has(subject)) subjectsMap.set(subject, { total: 0, count: 0 });
-        const pct = (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100;
-        const entry = subjectsMap.get(subject)!;
-        entry.total += pct;
-        entry.count += 1;
-      }
-    });
+   const invoiceIds = invoices.map(inv => inv.id);
+   const { data, error } = await supabase.from("payments").select("*")
+    .in("invoice_id", invoiceIds)
+    .gte("payment_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
+    .lte("payment_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
+   if (error) throw error;
+   return data as Payment[];
+  },
+  enabled: !!selectedStudentId && selectedStudentId !== "none" });
 
-    // Process Exams
-    studentExams.forEach((exam: any) => {
-      if (exam.hasMarks) {
-        exam.results.forEach((res: any) => {
-          const subject = res.subject_name;
-          if (!subjectsMap.has(subject)) subjectsMap.set(subject, { total: 0, count: 0 });
-          const pct = (res.obtained / (res.full_marks || 1)) * 100;
-          const entry = subjectsMap.get(subject)!;
-          entry.total += pct;
-          entry.count += 1;
-        });
-      }
-    });
+ // Calculate finance summary
+ const totalInvoiced = useMemo(() => {
+  const sum = invoices.reduce((acc, inv) => acc + inv.total_amount, 0);
+  return sum;
+ }, [invoices]);
 
-    return Array.from(subjectsMap.entries()).map(([name, { total, count }]) => ({
-      name,
-      percentage: Math.round(total / count)
-    })).sort((a, b) => b.percentage - a.percentage);
-  }, [testResults, studentExams]);
+ const totalPaid = useMemo(() => {
+  const sum = invoices.reduce((acc, inv) => acc + (inv.paid_amount || 0), 0);
+  return sum;
+ }, [invoices]);
 
-  const subjects = Array.from(new Set([
-    ...allLessonPlans.map(lp => lp.subject).filter(Boolean),
-    ...testResults.map(t => t.tests?.subject).filter(Boolean),
-    ...homeworkStatus.map((hs: any) => hs.homework?.subject).filter(Boolean)
-  ]));
+ const outstandingDues = useMemo(() => {
+  const dues = totalInvoiced - totalPaid;
+  return dues;
+ }, [totalInvoiced, totalPaid]);
 
-  const selectedStudent = students.find((s) => s.id === selectedStudentId);
+ // Statistics
+ const reportLevel = useMemo(() => {
+  if (selectedStudentId && selectedStudentId !== "none") return "student";
+  if (gradeFilter !== "all" && subjectFilter !== "all") return "grade-subject";
+  if (gradeFilter !== "all") return "grade";
+  if (subjectFilter !== "all") return "subject";
+  return "school";
+ }, [selectedStudentId, gradeFilter, subjectFilter]);
 
-  // AI Summary mutation
-  const generateSummaryMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedStudentId || selectedStudentId === "none") {
-        toast.error("Please select a student to generate AI summary.");
-        return;
-      }
-      const { data, error } = await supabase.functions.invoke("ai-student-summary", {
-        body: { studentId: selectedStudentId } });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      setAiSummary(data.summary);
-      toast.success("AI summary generated successfully");
-    },
-    onError: (error: any) => {
-      logger.error("Error generating summary:", error);
-      toast.error("Failed to generate AI summary");
-    } });
+ const dashboardStats = useMemo(() => {
+  // 1. Total Students
+  const totalStudents = reportLevel === "student" ? 1 : filteredStudents.length;
 
-  // Chapter-wise Performance Data Grouping
-  const chapterPerformanceData: ChapterPerformance[] = useMemo(() => {
-    const dataMap = new Map<string, ChapterPerformance>();
+  // 2. Average Attendance %
+  const totalAttendanceDays = attendanceData.length;
+  const presentAttendanceDays = attendanceData.filter(a => a.status === "present").length;
+  const attendancePercentage = totalAttendanceDays > 0
+   ? Math.round((presentAttendanceDays / totalAttendanceDays) * 100)
+   : 0;
 
-    // Process student_chapters (lesson evaluations)
-    studentChapters.forEach((sc: any) => {
-      if (sc.lesson_plan_id && sc.lesson_plans) {
-        if (!dataMap.has(sc.lesson_plan_id)) {
-          dataMap.set(sc.lesson_plan_id, {
-            lessonPlan: sc.lesson_plans,
-            studentChapters: [],
-            testResults: [],
-            homeworkRecords: [] });
-        }
-        dataMap.get(sc.lesson_plan_id)?.studentChapters.push(sc);
-      }
-    });
+  // 3. Overall Homework Completion Rate
+  const totalHomework = homeworkStatus.length;
+  const completedHomework = homeworkStatus.filter(h => ["completed", "checked"].includes(h.status || "")).length;
+  const homeworkCompletionRate = totalHomework > 0
+   ? Math.round((completedHomework / totalHomework) * 100)
+   : 0;
 
-    // Process test results
-    testResults.forEach((tr: any) => {
-      if (tr.tests?.lesson_plan_id) {
-        if (!dataMap.has(tr.tests.lesson_plan_id)) {
-          const correspondingLessonPlan = allLessonPlans.find(lp => lp.id === tr.tests.lesson_plan_id);
-          if (correspondingLessonPlan) {
-            dataMap.set(tr.tests.lesson_plan_id, {
-              lessonPlan: correspondingLessonPlan as any,
-              studentChapters: [],
-              testResults: [],
-              homeworkRecords: [] });
-          } else {
-            return; // Skip if no corresponding lesson plan found
-          }
-        }
-        dataMap.get(tr.tests.lesson_plan_id)?.testResults.push(tr);
-      }
-    });
+  // 4. Overall Evaluation Completion Rate (from student_chapters)
+  const totalEvaluations = studentChapters.length;
+  const ratedEvaluations = studentChapters.filter(sc => sc.evaluation_rating !== null).length;
+  const evaluationCompletionRate = totalEvaluations > 0
+   ? Math.round((ratedEvaluations / totalEvaluations) * 100)
+   : 0;
 
-    // Process homework records - skip if no lesson_plan link since homework table doesn't have lesson_plan_id
-    // Homework is matched by subject instead
-    homeworkStatus.forEach((hs: any) => {
-      const hwSubject = hs.homework?.subject;
-      if (hwSubject) {
-        // Find a lesson plan with the same subject
-        const matchingLessonPlan = allLessonPlans.find(lp => lp.subject === hwSubject);
-        if (matchingLessonPlan && dataMap.has(matchingLessonPlan.id)) {
-          dataMap.get(matchingLessonPlan.id)?.homeworkRecords.push(hs);
-        }
-      }
-    });
+  // 5. Average Test & Exam Performance
+  const totalTestResults = testResults.length;
+  const totalMarksObtained = testResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
+  const totalMaxMarks = testResults.reduce((sum, r) => sum + (r.tests?.total_marks || 0), 0);
 
-    // Sort by lesson plan date
-    return Array.from(dataMap.values()).sort((a, b) => 
-      new Date(b.lessonPlan.lesson_date).getTime() - new Date(a.lessonPlan.lesson_date).getTime()
-    );
-  }, [studentChapters, testResults, homeworkStatus, allLessonPlans]);
+  // Add Exam Marks
+  let examObtained = 0;
+  let examFull = 0;
+  studentExams.forEach(e => {
+   if (e.hasMarks) {
+    examObtained += e.totalObtained;
+    examFull += e.totalFull;
+   }
+  });
 
-  // NEW: Calculate Missed Chapters
-  const missedChapters = useMemo(() => {
-    if (!selectedStudent || !selectedStudent.grade) return [];
-    const studentGrade = selectedStudent.grade;
+  const combinedObtained = totalMarksObtained + examObtained;
+  const combinedFull = totalMaxMarks + examFull;
 
-    const completedLessonPlanIds = new Set(studentChapters.map(sc => sc.lesson_plan_id));
+  const testPerformance = combinedFull > 0
+   ? Math.round((combinedObtained / combinedFull) * 100)
+   : 0;
 
-    return allLessonPlans.filter(lp => 
-      lp.grade === studentGrade && // Filter by student's grade
-      !completedLessonPlanIds.has(lp.id) &&
-      new Date(lp.lesson_date) >= dateRange.from &&
-      new Date(lp.lesson_date) <= dateRange.to
-    ).sort((a, b) => new Date(b.lesson_date).getTime() - new Date(a.lesson_date).getTime());
-  }, [selectedStudent, studentChapters, allLessonPlans, dateRange]);
+  // 6. Total Discipline Records
+  const totalDiscipline = disciplineIssues.length;
 
-  // Overdue Homework - based on student_homework_records
-  const overdueHomeworks = useMemo(() => {
-    return homeworkStatus.filter((hs: any) => {
-      const dueDate = hs.homework?.due_date ? new Date(hs.homework.due_date) : null;
-      return dueDate && isPast(dueDate) && !['completed', 'checked'].includes(hs.status);
-    });
-  }, [homeworkStatus]);
+  // 7. Total Activities Conducted
+  // If student selected, show participations. Else show unique activities.
+  const totalActivities = reportLevel === "student" ? preschoolActivities.length : activities.length;
 
-
-  const getRatingStars = (rating: number | null) => {
-    if (rating === null) return "N/A";
-    return Array(rating).fill("⭐").join("");
+  return {
+   totalStudents,
+   attendancePercentage,
+   homeworkCompletionRate,
+   evaluationCompletionRate,
+   testPerformance,
+   totalDiscipline,
+   totalActivities,
+   totalTests: totalTestResults,
+   totalMarksObtained,
+   totalMaxMarks
   };
+ }, [reportLevel, filteredStudents, attendanceData, homeworkStatus, studentChapters, testResults, disciplineIssues, activities, preschoolActivities]);
 
-  // Export CSV
-  const exportToCSV = () => {
-    if (!selectedStudent) return;
+ const totalDays = attendanceData.length;
+ const presentDays = attendanceData.filter((a) => a.status === "present").length;
+ const attendancePercentage = dashboardStats.attendancePercentage;
 
-    const csvRows: string[][] = [];
+ const totalTests = dashboardStats.totalTests;
+ const totalMarksObtained = dashboardStats.totalMarksObtained;
+ const totalMaxMarks = dashboardStats.totalMaxMarks;
+ const averagePercentage = dashboardStats.testPerformance;
 
-    csvRows.push(["Student Report"]);
-    csvRows.push(["Name", selectedStudent.name]);
-    csvRows.push(["Grade", selectedStudent.grade]);
-    csvRows.push([]);
+ const subjectPerformance = useMemo(() => {
+  const subjectsMap = new Map<string, { total: number; count: number }>();
 
-    csvRows.push(["Attendance Summary"]);
-    csvRows.push(["Total Days", totalDays.toString()]);
-    csvRows.push(["Present", presentDays.toString()]);
-    csvRows.push(["Absent", (totalDays - presentDays).toString()]);
-    csvRows.push(["Percentage", attendancePercentage + "%"]);
-    csvRows.push([]);
+  // Process Tests
+  testResults.forEach((tr: any) => {
+   const subject = tr.tests?.subject;
+   if (subject) {
+    if (!subjectsMap.has(subject)) subjectsMap.set(subject, { total: 0, count: 0 });
+    const pct = (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100;
+    const entry = subjectsMap.get(subject)!;
+    entry.total += pct;
+    entry.count += 1;
+   }
+  });
 
-    csvRows.push(["Finance Summary"]);
-    csvRows.push(["Total Invoiced", totalInvoiced.toString()]);
-    csvRows.push(["Total Paid", totalPaid.toString()]);
-    csvRows.push(["Outstanding Dues", outstandingDues.toString()]);
-    csvRows.push([]);
-
-    csvRows.push(["Chapter-wise Performance"]);
-    csvRows.push(["Subject", "Chapter", "Topic", "Lesson Date", "Evaluation Rating", "Teacher Notes", "Test Name", "Test Marks", "Homework Title", "Homework Status"]);
-    chapterPerformanceData.forEach(chapterGroup => {
-      const lp = chapterGroup.lessonPlan;
-      const sc = chapterGroup.studentChapters[0]; // Assuming one student_chapter per lesson plan for simplicity in CSV
-      
-      const baseRow = [
-        lp.subject || '',
-        lp.chapter || '',
-        lp.topic || '',
-        safeFormatDate(lp.lesson_date, "PPP"),
-        sc?.evaluation_rating ? `${sc.evaluation_rating}/5` : 'N/A',
-        sc?.teacher_notes || '',
-      ];
-
-      if (chapterGroup.testResults.length > 0 || chapterGroup.homeworkRecords.length > 0) {
-        const maxEntries = Math.max(chapterGroup.testResults.length, chapterGroup.homeworkRecords.length);
-        for (let i = 0; i < maxEntries; i++) {
-          const test = chapterGroup.testResults[i];
-          const homework = chapterGroup.homeworkRecords[i];
-          csvRows.push([
-            ...baseRow,
-            test ? test.tests?.name || '' : '',
-            test ? `${test.marks_obtained}/${test.tests?.total_marks}` : '',
-            homework ? homework.homework?.title || '' : '',
-            homework ? homework.status || '' : '',
-          ]);
-        }
-      } else {
-        csvRows.push([...baseRow, '', '', '', '']); // Add empty columns if no tests/homework
-      }
+  // Process Exams
+  studentExams.forEach((exam: any) => {
+   if (exam.hasMarks) {
+    exam.results.forEach((res: any) => {
+     const subject = res.subject_name;
+     if (!subjectsMap.has(subject)) subjectsMap.set(subject, { total: 0, count: 0 });
+     const pct = (res.obtained / (res.full_marks || 1)) * 100;
+     const entry = subjectsMap.get(subject)!;
+     entry.total += pct;
+     entry.count += 1;
     });
-    csvRows.push([]);
+   }
+  });
 
-    // NEW: Missed Chapters to CSV
-    csvRows.push(["Missed Chapters"]);
-    csvRows.push(["Subject", "Chapter", "Topic", "Lesson Date"]);
-    missedChapters.forEach(lp => {
-      csvRows.push([
-        lp.subject || '',
-        lp.chapter || '',
-        lp.topic || '',
-        safeFormatDate(lp.lesson_date, "PPP"),
-      ]);
-    });
-    csvRows.push([]);
+  return Array.from(subjectsMap.entries()).map(([name, { total, count }]) => ({
+   name,
+   percentage: Math.round(total / count)
+  })).sort((a, b) => b.percentage - a.percentage);
+ }, [testResults, studentExams]);
 
-    // Overdue Homework to CSV
-    csvRows.push(["Overdue Homework"]);
-    csvRows.push(["Title", "Subject", "Status", "Due Date"]);
-    overdueHomeworks.forEach((hw: any) => {
-      csvRows.push([
-        hw.homework?.title || '',
-        hw.homework?.subject || '',
-        hw.status || '',
-        safeFormatDate(hw.homework?.due_date, "PPP"),
-      ]);
-    });
-    csvRows.push([]);
+ const subjects = Array.from(new Set([
+  ...allLessonPlans.map(lp => lp.subject).filter(Boolean),
+  ...testResults.map(t => t.tests?.subject).filter(Boolean),
+  ...homeworkStatus.map((hs: any) => hs.homework?.subject).filter(Boolean)
+ ]));
 
-    csvRows.push(["Preschool Activities"]);
-    csvRows.push(["Type", "Title", "Description", "Date", "Involvement", "Photo Link", "Video Link"]);
-    preschoolActivities.forEach((pa: any) => {
-      csvRows.push([
-        pa.activities?.activity_types?.name || 'N/A',
-        pa.activities?.title || 'N/A',
-        pa.activities?.description || 'N/A',
-        pa.activities?.activity_date ? safeFormatDate(pa.activities.activity_date, "PPP") : 'N/A',
-        pa.involvement_score || 'N/A',
-        pa.activities?.photo_url ? supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl : '',
-        pa.activities?.video_url ? supabase.storage.from("activity-videos").getPublicUrl(pa.activities.video_url).data.publicUrl : '',
-      ]);
-    });
-    csvRows.push([]);
+ const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
-    csvRows.push(["Discipline Issues"]);
-    csvRows.push(["Category", "Description", "Severity", "Date"]);
-    disciplineIssues.forEach((di: any) => {
-      csvRows.push([
-        di.discipline_categories?.name || 'N/A',
-        di.description,
-        di.severity,
-        safeFormatDate(di.issue_date, "PPP"),
-      ]);
-    });
-    csvRows.push([]);
+ // AI Summary mutation
+ const generateSummaryMutation = useMutation({
+  mutationFn: async () => {
+   if (!selectedStudentId || selectedStudentId === "none") {
+    toast.error("Please select a student to generate AI summary.");
+    return;
+   }
+   const { data, error } = await supabase.functions.invoke("ai-student-summary", {
+    body: { studentId: selectedStudentId } });
+   if (error) throw error;
+   return data;
+  },
+  onSuccess: (data) => {
+   setAiSummary(data.summary);
+   toast.success("AI summary generated successfully");
+  },
+  onError: (error: any) => {
+   logger.error("Error generating summary:", error);
+   toast.error("Failed to generate AI summary");
+  } });
 
-    const csvContent = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+ // Chapter-wise Performance Data Grouping
+ const chapterPerformanceData: ChapterPerformance[] = useMemo(() => {
+  const dataMap = new Map<string, ChapterPerformance>();
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${selectedStudent.name}_report.csv`;
-    a.click();
-  };
-
-  // Print
-  const handlePrint = () => {
-    const content = document.getElementById("printable-report");
-    if (content) {
-      const newWindow = window.open("", "_blank");
-      newWindow?.document.write(`
-        <html>
-          <head>
-            <title>Academic Performance Report — ${selectedStudent?.name}</title>
-            <style>
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-              body {
-                font-family: 'Inter', -apple-system, sans-serif;
-                padding: 40px;
-                color: #1e293b;
-                background: white;
-              }
-              .print-header {
-                border-bottom: 4px solid #4f46e5;
-                padding-bottom: 20px;
-                margin-bottom: 30px;
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end;
-              }
-              .print-header h1 {
-                margin: 0;
-                font-size: 28px;
-                font-weight: 800;
-                letter-spacing: -0.025em;
-                color: #4f46e5;
-                text-transform: uppercase;
-              }
-              .print-header p {
-                margin: 4px 0 0 0;
-                font-size: 14px;
-                color: #64748b;
-                font-weight: 500;
-              }
-              h2 {
-                font-size: 18px;
-                font-weight: 700;
-                margin: 30px 0 15px 0;
-                color: #0f172a;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-              }
-              h3 { font-size: 15px; font-weight: 700; margin: 20px 0 10px 0; color: #334155; }
-              table { border-collapse: collapse; width: 100%; margin-bottom: 25px; font-size: 12px; }
-              th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; }
-              th { background-color: #f8fafc; font-weight: 700; text-transform: uppercase; color: #64748b; font-size: 10px; letter-spacing: 0.05em; }
-              .text-green-600 { color: #16a34a; font-weight: 700; }
-              .text-red-600 { color: #dc2626; font-weight: 700; }
-              .text-orange-600 { color: #ea580c; font-weight: 700; }
-              .text-blue-600 { color: #2563eb; font-weight: 700; }
-              .font-bold { font-weight: 700; }
-              .text-muted-foreground { color: #64748b; }
-              .badge {
-                display: inline-block;
-                padding: 2px 8px;
-                border-radius: 4px;
-                font-size: 10px;
-                font-weight: 700;
-                text-transform: uppercase;
-                background: #f1f5f9;
-                color: #475569;
-              }
-              .stats-grid {
-                display: grid;
-                grid-template-cols: repeat(3, 1fr);
-                gap: 20px;
-                margin-bottom: 30px;
-              }
-              .stat-box {
-                padding: 15px;
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-              }
-              .stat-box p:first-child {
-                margin: 0;
-                font-size: 10px;
-                font-weight: 700;
-                text-transform: uppercase;
-                color: #64748b;
-                letter-spacing: 0.05em;
-              }
-              .stat-box p:last-child {
-                margin: 5px 0 0 0;
-                font-size: 20px;
-                font-weight: 800;
-                color: #1e293b;
-              }
-              .chapter-group {
-                margin-bottom: 20px;
-                padding: 15px;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-              }
-              @media print {
-                body { padding: 0; }
-                .no-print { display: none; }
-                .chapter-group { page-break-inside: avoid; }
-                table { page-break-inside: auto; }
-                tr { page-break-inside: avoid; page-break-after: auto; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="print-header">
-              <div>
-                <h1>Official Progress Report</h1>
-                <p>Academic Cycle: ${format(dateRange.from, "MMM yyyy")} - ${format(dateRange.to, "MMM yyyy")}</p>
-              </div>
-              <div style="text-right">
-                <p style="font-weight: 800; color: #0f172a; font-size: 18px;">${selectedStudent?.name}</p>
-                <p>Grade: ${selectedStudent?.grade} | Center: ${user?.center_name || 'Institution'}</p>
-              </div>
-            </div>
-            ${content.innerHTML}
-            <div style="margin-top: 50px; border-top: 1px solid #e2e8f0; pt-20px; display: flex; justify-content: space-between;">
-              <p style="font-size: 10px; color: #94a3b8;">Generated on ${format(new Date(), "PPP p")}</p>
-              <p style="font-size: 10px; color: #94a3b8;">Computer Generated Record</p>
-            </div>
-          </body>
-        </html>
-      `);
-      newWindow?.document.close();
-      newWindow?.focus();
-      setTimeout(() => {
-        newWindow?.print();
-        newWindow?.close();
-      }, 500);
+  // Process student_chapters (lesson evaluations)
+  studentChapters.forEach((sc: any) => {
+   if (sc.lesson_plan_id && sc.lesson_plans) {
+    if (!dataMap.has(sc.lesson_plan_id)) {
+     dataMap.set(sc.lesson_plan_id, {
+      lessonPlan: sc.lesson_plans,
+      studentChapters: [],
+      testResults: [],
+      homeworkRecords: [] });
     }
-  };
+    dataMap.get(sc.lesson_plan_id)?.studentChapters.push(sc);
+   }
+  });
 
-  const getHomeworkStatusIcon = (status: StudentHomeworkRecord['status']) => {
-    switch (status) {
-      case 'completed':
-      case 'checked':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'in_progress':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'assigned':
-      default:
-        return <XCircle className="h-4 w-4 text-red-600" />;
+  // Process test results
+  testResults.forEach((tr: any) => {
+   if (tr.tests?.lesson_plan_id) {
+    if (!dataMap.has(tr.tests.lesson_plan_id)) {
+     const correspondingLessonPlan = allLessonPlans.find(lp => lp.id === tr.tests.lesson_plan_id);
+     if (correspondingLessonPlan) {
+      dataMap.set(tr.tests.lesson_plan_id, {
+       lessonPlan: correspondingLessonPlan as any,
+       studentChapters: [],
+       testResults: [],
+       homeworkRecords: [] });
+     } else {
+      return; // Skip if no corresponding lesson plan found
+     }
     }
-  };
+    dataMap.get(tr.tests.lesson_plan_id)?.testResults.push(tr);
+   }
+  });
 
-  const getSeverityColor = (severity: Tables<'discipline_issues'>['severity']) => {
-    switch (severity) {
-      case "low": return "text-green-600";
-      case "medium": return "text-orange-600";
-      case "high": return "text-red-600";
-      default: return "text-gray-600";
+  // Process homework records - skip if no lesson_plan link since homework table doesn't have lesson_plan_id
+  // Homework is matched by subject instead
+  homeworkStatus.forEach((hs: any) => {
+   const hwSubject = hs.homework?.subject;
+   if (hwSubject) {
+    // Find a lesson plan with the same subject
+    const matchingLessonPlan = allLessonPlans.find(lp => lp.subject === hwSubject);
+    if (matchingLessonPlan && dataMap.has(matchingLessonPlan.id)) {
+     dataMap.get(matchingLessonPlan.id)?.homeworkRecords.push(hs);
     }
-  };
+   }
+  });
 
-  const StatCard = ({ title, value, icon: Icon, description, colorClass, targetId }: any) => {
-    const isClickable = !!targetId && reportLevel === "student";
-
-    const handleClick = () => {
-      if (isClickable) {
-        const element = document.getElementById(targetId);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }
-    };
-
-    return (
-      <Card
-        onClick={handleClick}
-        className={cn(
-          "group relative border-none shadow-soft overflow-hidden transition-all duration-500",
-          isClickable ? "cursor-pointer hover:shadow-strong hover:-translate-y-1" : "hover:shadow-medium"
-        )}
-      >
-        <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary/5 via-transparent to-transparent")} />
-        <CardContent className="p-6 relative z-10">
-          <div className="flex justify-between items-start">
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">{title}</p>
-              <h3 className="text-3xl font-black tracking-tight group-hover:text-primary transition-colors duration-300">{value}</h3>
-              {description && <p className="text-[10px] font-medium text-muted-foreground italic">{description}</p>}
-            </div>
-            <div className={cn("p-3 rounded-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3", colorClass)}>
-              <Icon className="h-6 w-6 text-primary" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const SummaryDashboard = () => (
-    <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-          <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/80 font-mono">Real-time Analytics</h2>
-        </div>
-        <div className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-muted-foreground/10 uppercase tracking-widest">
-          Updated just now
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title={reportLevel === "student" ? "Financial Status" : "Total Students"}
-          value={reportLevel === "student" ? formatCurrency(outstandingDues) : dashboardStats.totalStudents}
-          icon={reportLevel === "student" ? DollarSign : Users}
-          colorClass="bg-primary/10"
-          targetId="finance-section"
-          description={reportLevel === "student" ? "Outstanding Balance" : ""}
-        />
-        <StatCard
-          title="Attendance"
-          value={`${dashboardStats.attendancePercentage}%`}
-          icon={Clock}
-          colorClass="bg-success/10"
-          description="Average student attendance"
-          targetId="attendance-section"
-        />
-        <StatCard
-          title="Homework Completion"
-          value={`${dashboardStats.homeworkCompletionRate}%`}
-          icon={Book}
-          colorClass="bg-warning/10"
-          description="Assigned vs Completed"
-          targetId="overdue-homework-section"
-        />
-        <StatCard
-          title="Evaluation Completion"
-          value={`${dashboardStats.evaluationCompletionRate}%`}
-          icon={Star}
-          colorClass="bg-primary/10"
-          description="Lesson evaluations"
-          targetId="milestones-section"
-        />
-        <StatCard
-          title="Test Performance"
-          value={`${dashboardStats.testPerformance}%`}
-          icon={ClipboardCheck}
-          colorClass="bg-primary/10"
-          description="Average score across tests"
-          targetId="tests-section"
-        />
-        <StatCard
-          title="Activities"
-          value={dashboardStats.totalActivities}
-          icon={Paintbrush}
-          colorClass="bg-primary/10"
-          description="Total activities conducted"
-          targetId="activities-section"
-        />
-        <StatCard
-          title="Discipline Records"
-          value={dashboardStats.totalDiscipline}
-          icon={AlertTriangle}
-          colorClass="bg-destructive/10"
-          description="Total incidents reported"
-          targetId="discipline-section"
-        />
-        {(reportLevel === "subject" || reportLevel === "grade-subject") && (
-          <StatCard
-            title="Lessons Covered"
-            value={studentChapters.length}
-            icon={BookOpen}
-            colorClass="bg-primary/10"
-          />
-        )}
-      </div>
-
-      {/* Subject Wise Performance Cards */}
-      {subjectPerformance.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">Subject Performance</h3>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {subjectPerformance.map((sp) => (
-              <Card key={sp.name} className="border-none shadow-soft bg-card/40 backdrop-blur-sm overflow-hidden group hover:shadow-medium transition-all duration-300">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-[100px] md:max-w-none">{sp.name}</p>
-                      <p className="text-xl font-black group-hover:text-primary transition-colors">{sp.percentage}%</p>
-                    </div>
-                    <div className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
-                    )} />
-                  </div>
-                  <div className="mt-2 w-full h-1 bg-muted/30 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full transition-all duration-1000",
-                        sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
-                      )}
-                      style={{ width: `${sp.percentage}%` }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Aggregate Tables for Grade/Subject */}
-      {(reportLevel === "grade" || reportLevel === "subject" || reportLevel === "grade-subject" || reportLevel === "school") && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-card/40 backdrop-blur-md border border-border/20">
-            <CardHeader className="border-b border-muted/20 bg-muted/5">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-purple-500/10">
-                  <ClipboardCheck className="h-5 w-5 text-purple-600" />
-                </div>
-                Academic Performance Spotlight
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {testResults.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-                  <div className="p-3 rounded-full bg-muted/10">
-                    <FileText className="h-8 w-8 text-muted-foreground/40" />
-                  </div>
-                  <p className="text-sm text-muted-foreground font-medium italic">No test results found for this selection.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {testResults.slice(0, 5).map((tr: any) => {
-                    const pct = Math.round((tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100);
-                    return (
-                      <div key={tr.id} className="group p-4 rounded-xl bg-card/50 border border-transparent hover:border-primary/10 hover:shadow-soft transition-all duration-300">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="space-y-1">
-                            <p className="font-bold text-sm group-hover:text-primary transition-colors">{tr.tests?.name}</p>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-[10px] uppercase font-bold py-0 h-4 border-muted-foreground/20 text-muted-foreground">
-                                {tr.tests?.subject}
-                              </Badge>
-                              <p className="text-[10px] font-medium text-muted-foreground">{safeFormatDate(tr.date_taken, "PPP")}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-black text-lg">{tr.marks_obtained}<span className="text-xs text-muted-foreground font-medium">/{tr.tests?.total_marks}</span></p>
-                            <p className={cn("text-xs font-bold", pct >= 75 ? "text-green-600" : pct >= 50 ? "text-orange-600" : "text-red-600")}>{pct}%</p>
-                          </div>
-                        </div>
-                        <div className="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden">
-                          <div
-                            className={cn("h-full transition-all duration-1000", pct >= 75 ? "bg-green-500" : pct >= 50 ? "bg-orange-500" : "bg-red-500")}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-strong overflow-hidden rounded-2xl bg-card/40 backdrop-blur-md border border-border/20">
-            <CardHeader className="border-b border-muted/20 bg-muted/5">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-red-500/10">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                </div>
-                Behavioral Insights
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {disciplineIssues.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
-                  <div className="p-3 rounded-full bg-muted/10">
-                    <CheckCircle className="h-8 w-8 text-green-500/40" />
-                  </div>
-                  <p className="text-sm text-muted-foreground font-medium italic">No discipline records found for this selection.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {disciplineIssues.slice(0, 5).map((di: any) => (
-                    <div key={di.id} className="p-4 rounded-xl bg-card/50 border border-transparent hover:border-red-500/10 hover:shadow-soft transition-all duration-300">
-                      <div className="flex justify-between items-start mb-1">
-                        <div className="space-y-1">
-                          <p className="font-bold text-sm">{di.discipline_categories?.name}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{di.description}</p>
-                        </div>
-                        <Badge className={cn("text-[10px] font-black uppercase tracking-tighter px-1.5 py-0 h-5",
-                          di.severity === "high" ? "bg-red-500 text-white" :
-                          di.severity === "medium" ? "bg-orange-500 text-white" : "bg-green-500 text-white")}>
-                          {di.severity}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-muted/20">
-                        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">{safeFormatDate(di.issue_date, "PPP")}</p>
-                        <p
-                          className="text-[10px] font-medium text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
-                          onClick={() => setSelectedDisciplineIssue(di)}
-                        >
-                          View details
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+  // Sort by lesson plan date
+  return Array.from(dataMap.values()).sort((a, b) =>
+   new Date(b.lessonPlan.lesson_date).getTime() - new Date(a.lessonPlan.lesson_date).getTime()
   );
+ }, [studentChapters, testResults, homeworkStatus, allLessonPlans]);
 
-  const isLoading = isAttendanceLoading || isChaptersLoading || isTestsLoading || isHomeworkLoading || isActivitiesLoading || isDisciplineLoading || isAllActivitiesLoading;
+ // NEW: Calculate Missed Chapters
+ const missedChapters = useMemo(() => {
+  if (!selectedStudent || !selectedStudent.grade) return [];
+  const studentGrade = selectedStudent.grade;
+
+  const completedLessonPlanIds = new Set(studentChapters.map(sc => sc.lesson_plan_id));
+
+  return allLessonPlans.filter(lp =>
+   lp.grade === studentGrade && // Filter by student's grade
+   !completedLessonPlanIds.has(lp.id) &&
+   new Date(lp.lesson_date) >= dateRange.from &&
+   new Date(lp.lesson_date) <= dateRange.to
+  ).sort((a, b) => new Date(b.lesson_date).getTime() - new Date(a.lesson_date).getTime());
+ }, [selectedStudent, studentChapters, allLessonPlans, dateRange]);
+
+ // Overdue Homework - based on student_homework_records
+ const overdueHomeworks = useMemo(() => {
+  return homeworkStatus.filter((hs: any) => {
+   const dueDate = hs.homework?.due_date ? new Date(hs.homework.due_date) : null;
+   return dueDate && isPast(dueDate) && !['completed', 'checked'].includes(hs.status);
+  });
+ }, [homeworkStatus]);
+
+
+ const getRatingStars = (rating: number | null) => {
+  if (rating === null) return "N/A";
+  return Array(rating).fill("⭐").join("");
+ };
+
+ // Export CSV
+ const exportToCSV = () => {
+  if (!selectedStudent) return;
+
+  const csvRows: string[][] = [];
+
+  csvRows.push(["Student Report"]);
+  csvRows.push(["Name", selectedStudent.name]);
+  csvRows.push(["Grade", selectedStudent.grade]);
+  csvRows.push([]);
+
+  csvRows.push(["Attendance Summary"]);
+  csvRows.push(["Total Days", totalDays.toString()]);
+  csvRows.push(["Present", presentDays.toString()]);
+  csvRows.push(["Absent", (totalDays - presentDays).toString()]);
+  csvRows.push(["Percentage", attendancePercentage + "%"]);
+  csvRows.push([]);
+
+  csvRows.push(["Finance Summary"]);
+  csvRows.push(["Total Invoiced", totalInvoiced.toString()]);
+  csvRows.push(["Total Paid", totalPaid.toString()]);
+  csvRows.push(["Outstanding Dues", outstandingDues.toString()]);
+  csvRows.push([]);
+
+  csvRows.push(["Chapter-wise Performance"]);
+  csvRows.push(["Subject", "Chapter", "Topic", "Lesson Date", "Evaluation Rating", "Teacher Notes", "Test Name", "Test Marks", "Homework Title", "Homework Status"]);
+  chapterPerformanceData.forEach(chapterGroup => {
+   const lp = chapterGroup.lessonPlan;
+   const sc = chapterGroup.studentChapters[0]; // Assuming one student_chapter per lesson plan for simplicity in CSV
+
+   const baseRow = [
+    lp.subject || '',
+    lp.chapter || '',
+    lp.topic || '',
+    safeFormatDate(lp.lesson_date, "PPP"),
+    sc?.evaluation_rating ? `${sc.evaluation_rating}/5` : 'N/A',
+    sc?.teacher_notes || '',
+   ];
+
+   if (chapterGroup.testResults.length > 0 || chapterGroup.homeworkRecords.length > 0) {
+    const maxEntries = Math.max(chapterGroup.testResults.length, chapterGroup.homeworkRecords.length);
+    for (let i = 0; i < maxEntries; i++) {
+     const test = chapterGroup.testResults[i];
+     const homework = chapterGroup.homeworkRecords[i];
+     csvRows.push([
+      ...baseRow,
+      test ? test.tests?.name || '' : '',
+      test ? `${test.marks_obtained}/${test.tests?.total_marks}` : '',
+      homework ? homework.homework?.title || '' : '',
+      homework ? homework.status || '' : '',
+     ]);
+    }
+   } else {
+    csvRows.push([...baseRow, '', '', '', '']); // Add empty columns if no tests/homework
+   }
+  });
+  csvRows.push([]);
+
+  // NEW: Missed Chapters to CSV
+  csvRows.push(["Missed Chapters"]);
+  csvRows.push(["Subject", "Chapter", "Topic", "Lesson Date"]);
+  missedChapters.forEach(lp => {
+   csvRows.push([
+    lp.subject || '',
+    lp.chapter || '',
+    lp.topic || '',
+    safeFormatDate(lp.lesson_date, "PPP"),
+   ]);
+  });
+  csvRows.push([]);
+
+  // Overdue Homework to CSV
+  csvRows.push(["Overdue Homework"]);
+  csvRows.push(["Title", "Subject", "Status", "Due Date"]);
+  overdueHomeworks.forEach((hw: any) => {
+   csvRows.push([
+    hw.homework?.title || '',
+    hw.homework?.subject || '',
+    hw.status || '',
+    safeFormatDate(hw.homework?.due_date, "PPP"),
+   ]);
+  });
+  csvRows.push([]);
+
+  csvRows.push(["Preschool Activities"]);
+  csvRows.push(["Type", "Title", "Description", "Date", "Involvement", "Photo Link", "Video Link"]);
+  preschoolActivities.forEach((pa: any) => {
+   csvRows.push([
+    pa.activities?.activity_types?.name || 'N/A',
+    pa.activities?.title || 'N/A',
+    pa.activities?.description || 'N/A',
+    pa.activities?.activity_date ? safeFormatDate(pa.activities.activity_date, "PPP") : 'N/A',
+    pa.involvement_score || 'N/A',
+    pa.activities?.photo_url ? supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl : '',
+    pa.activities?.video_url ? supabase.storage.from("activity-videos").getPublicUrl(pa.activities.video_url).data.publicUrl : '',
+   ]);
+  });
+  csvRows.push([]);
+
+  csvRows.push(["Discipline Issues"]);
+  csvRows.push(["Category", "Description", "Severity", "Date"]);
+  disciplineIssues.forEach((di: any) => {
+   csvRows.push([
+    di.discipline_categories?.name || 'N/A',
+    di.description,
+    di.severity,
+    safeFormatDate(di.issue_date, "PPP"),
+   ]);
+  });
+  csvRows.push([]);
+
+  const csvContent = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${selectedStudent.name}_report.csv`;
+  a.click();
+ };
+
+ // Print
+ const handlePrint = () => {
+  const content = document.getElementById("printable-report");
+  if (content) {
+   const newWindow = window.open("", "_blank");
+   newWindow?.document.write(`
+    <html>
+     <head>
+      <title>Academic Performance Report — ${selectedStudent?.name}</title>
+      <style>
+       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+       body {
+        font-family: 'Inter', -apple-system, sans-serif;
+        padding: 40px;
+        color: #1e293b;
+        background: white;
+       }
+       .print-header {
+        border-bottom: 4px solid #4f46e5;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+       }
+       .print-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        color: #4f46e5;
+        text-transform: uppercase;
+       }
+       .print-header p {
+        margin: 4px 0 0 0;
+        font-size: 14px;
+        color: #64748b;
+        font-weight: 500;
+       }
+       h2 {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 30px 0 15px 0;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+       }
+       h3 { font-size: 15px; font-weight: 700; margin: 20px 0 10px 0; color: #334155; }
+       table { border-collapse: collapse; width: 100%; margin-bottom: 25px; font-size: 12px; }
+       th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; }
+       th { background-color: #f8fafc; font-weight: 700; text-transform: uppercase; color: #64748b; font-size: 10px; letter-spacing: 0.05em; }
+       .text-green-600 { color: #16a34a; font-weight: 700; }
+       .text-red-600 { color: #dc2626; font-weight: 700; }
+       .text-orange-600 { color: #ea580c; font-weight: 700; }
+       .text-blue-600 { color: #2563eb; font-weight: 700; }
+       .font-bold { font-weight: 700; }
+       .text-muted-foreground { color: #64748b; }
+       .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: #f1f5f9;
+        color: #475569;
+       }
+       .stats-grid {
+        display: grid;
+        grid-template-cols: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 30px;
+       }
+       .stat-box {
+        padding: 15px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+       }
+       .stat-box p:first-child {
+        margin: 0;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: 0.05em;
+       }
+       .stat-box p:last-child {
+        margin: 5px 0 0 0;
+        font-size: 20px;
+        font-weight: 800;
+        color: #1e293b;
+       }
+       .chapter-group {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+       }
+       @media print {
+        body { padding: 0; }
+        .no-print { display: none; }
+        .chapter-group { page-break-inside: avoid; }
+        table { page-break-inside: auto; }
+        tr { page-break-inside: avoid; page-break-after: auto; }
+       }
+      </style>
+     </head>
+     <body>
+      <div class="print-header">
+       <div>
+        <h1>Official Progress Report</h1>
+        <p>Academic Cycle: ${format(dateRange.from, "MMM yyyy")} - ${format(dateRange.to, "MMM yyyy")}</p>
+       </div>
+       <div style="text-right">
+        <p style="font-weight: 800; color: #0f172a; font-size: 18px;">${selectedStudent?.name}</p>
+        <p>Grade: ${selectedStudent?.grade} | Center: ${user?.center_name || 'Institution'}</p>
+       </div>
+      </div>
+      ${content.innerHTML}
+      <div style="margin-top: 50px; border-top: 1px solid #e2e8f0; pt-20px; display: flex; justify-content: space-between;">
+       <p style="font-size: 10px; color: #94a3b8;">Generated on ${format(new Date(), "PPP p")}</p>
+       <p style="font-size: 10px; color: #94a3b8;">Computer Generated Record</p>
+      </div>
+     </body>
+    </html>
+   `);
+   newWindow?.document.close();
+   newWindow?.focus();
+   setTimeout(() => {
+    newWindow?.print();
+    newWindow?.close();
+   }, 500);
+  }
+ };
+
+ const getHomeworkStatusIcon = (status: StudentHomeworkRecord['status']) => {
+  switch (status) {
+   case 'completed':
+   case 'checked':
+    return <CheckCircle className="h-4 w-4 text-green-600" />;
+   case 'in_progress':
+    return <Clock className="h-4 w-4 text-yellow-600" />;
+   case 'assigned':
+   default:
+    return <XCircle className="h-4 w-4 text-red-600" />;
+  }
+ };
+
+ const getSeverityColor = (severity: Tables<'discipline_issues'>['severity']) => {
+  switch (severity) {
+   case "low": return "text-green-600";
+   case "medium": return "text-orange-600";
+   case "high": return "text-red-600";
+   default: return "text-gray-600";
+  }
+ };
+
+ const StatCard = ({ title, value, icon: Icon, description, colorClass, targetId }: any) => {
+  const isClickable = !!targetId && reportLevel === "student";
+
+  const handleClick = () => {
+   if (isClickable) {
+    const element = document.getElementById(targetId);
+    if (element) {
+     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+   }
+  };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
-      {/* Header and Print/Export */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <BarChart3 className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-                Performance Hub
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="rounded-md px-2 py-0 text-[10px] uppercase font-bold tracking-widest bg-primary/5 text-primary border-primary/10">
-                  {reportLevel.replace('-', ' ')} level
-                </Badge>
-                {reportLevel === "student" && selectedStudent && (
-                  <span className="text-sm font-medium text-muted-foreground">— {selectedStudent.name}</span>
-                )}
-              </div>
-            </div>
+   <Card
+    onClick={handleClick}
+    className={cn(
+     "group relative border border-border shadow-sm overflow-hidden transition-all duration-500",
+     isClickable ? "cursor-pointer hover:shadow-sm hover:-translate-y-1" : "hover:shadow-sm"
+    )}
+   >
+    <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-primary/5 via-transparent to-transparent")} />
+    <CardContent className="p-6 relative z-10">
+     <div className="flex justify-between items-start">
+      <div className="space-y-2">
+       <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">{title}</p>
+       <h3 className="text-3xl font-black tracking-tight group-hover:text-primary transition-colors duration-300">{value}</h3>
+       {description && <p className="text-[10px] font-medium text-muted-foreground italic">{description}</p>}
+      </div>
+      <div className={cn("p-3 rounded-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3", colorClass)}>
+       <Icon className="h-6 w-6 text-primary" />
+      </div>
+     </div>
+    </CardContent>
+   </Card>
+  );
+ };
+
+ const SummaryDashboard = () => (
+  <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-700">
+   <div className="flex items-center justify-between">
+    <div className="flex items-center gap-2">
+     <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+     <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/80 font-mono">Real-time Analytics</h2>
+    </div>
+    <div className="text-[10px] font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-muted-foreground/10 uppercase tracking-widest">
+     Updated just now
+    </div>
+   </div>
+   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <StatCard
+     title={reportLevel === "student" ? "Financial Status" : "Total Students"}
+     value={reportLevel === "student" ? formatCurrency(outstandingDues) : dashboardStats.totalStudents}
+     icon={reportLevel === "student" ? DollarSign : Users}
+     colorClass="bg-primary/10"
+     targetId="finance-section"
+     description={reportLevel === "student" ? "Outstanding Balance" : ""}
+    />
+    <StatCard
+     title="Attendance"
+     value={`${dashboardStats.attendancePercentage}%`}
+     icon={Clock}
+     colorClass="bg-success/10"
+     description="Average student attendance"
+     targetId="attendance-section"
+    />
+    <StatCard
+     title="Homework Completion"
+     value={`${dashboardStats.homeworkCompletionRate}%`}
+     icon={Book}
+     colorClass="bg-warning/10"
+     description="Assigned vs Completed"
+     targetId="overdue-homework-section"
+    />
+    <StatCard
+     title="Evaluation Completion"
+     value={`${dashboardStats.evaluationCompletionRate}%`}
+     icon={Star}
+     colorClass="bg-primary/10"
+     description="Lesson evaluations"
+     targetId="milestones-section"
+    />
+    <StatCard
+     title="Test Performance"
+     value={`${dashboardStats.testPerformance}%`}
+     icon={ClipboardCheck}
+     colorClass="bg-primary/10"
+     description="Average score across tests"
+     targetId="tests-section"
+    />
+    <StatCard
+     title="Activities"
+     value={dashboardStats.totalActivities}
+     icon={Paintbrush}
+     colorClass="bg-primary/10"
+     description="Total activities conducted"
+     targetId="activities-section"
+    />
+    <StatCard
+     title="Discipline Records"
+     value={dashboardStats.totalDiscipline}
+     icon={AlertTriangle}
+     colorClass="bg-destructive/10"
+     description="Total incidents reported"
+     targetId="discipline-section"
+    />
+    {(reportLevel === "subject" || reportLevel === "grade-subject") && (
+     <StatCard
+      title="Lessons Covered"
+      value={studentChapters.length}
+      icon={BookOpen}
+      colorClass="bg-primary/10"
+     />
+    )}
+   </div>
+
+   {/* Subject Wise Performance Cards */}
+   {subjectPerformance.length > 0 && (
+    <div className="space-y-4">
+     <div className="flex items-center gap-2">
+      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">Subject Performance</h3>
+     </div>
+     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {subjectPerformance.map((sp) => (
+       <Card key={sp.name} className="border border-border shadow-sm bg-white overflow-hidden group hover:shadow-sm transition-all duration-300">
+        <CardContent className="p-4">
+         <div className="flex justify-between items-center">
+          <div className="space-y-1">
+           <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-[100px] md:max-w-none">{sp.name}</p>
+           <p className="text-xl font-black group-hover:text-primary transition-colors">{sp.percentage}%</p>
           </div>
-          <p className="text-muted-foreground text-lg max-w-2xl leading-relaxed">
-            Real-time academic intelligence and performance analytics across your institution.
-          </p>
+          <div className={cn(
+           "h-1.5 w-1.5 rounded-full",
+           sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
+          )} />
+         </div>
+         <div className="mt-2 w-full h-1 bg-muted/30 rounded-full overflow-hidden">
+          <div
+           className={cn(
+            "h-full transition-all duration-1000",
+            sp.percentage >= 75 ? "bg-green-500" : sp.percentage >= 50 ? "bg-orange-500" : "bg-red-500"
+           )}
+           style={{ width: `${sp.percentage}%` }}
+          />
+         </div>
+        </CardContent>
+       </Card>
+      ))}
+     </div>
+    </div>
+   )}
+
+   {/* Aggregate Tables for Grade/Subject */}
+   {(reportLevel === "grade" || reportLevel === "subject" || reportLevel === "grade-subject" || reportLevel === "school") && (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-border/20">
+      <CardHeader className="border-b border-muted/20 bg-muted/5">
+       <CardTitle className="text-lg font-bold flex items-center gap-2">
+        <div className="p-1.5 rounded-lg bg-purple-500/10">
+         <ClipboardCheck className="h-5 w-5 text-purple-600" />
         </div>
-        {selectedStudentId !== "none" && (
-          <div className="flex gap-3">
-            <Button onClick={exportToCSV} variant="outline" className="rounded-xl border-2">
-              <Download className="mr-2 h-4 w-4" /> Export CSV
-            </Button>
-            <Button onClick={handlePrint} variant="outline" className="rounded-xl border-2">
-              <Printer className="mr-2 h-4 w-4" /> Print
-            </Button>
+        Academic Performance Spotlight
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+       {testResults.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+         <div className="p-3 rounded-full bg-muted/10">
+          <FileText className="h-8 w-8 text-muted-foreground/40" />
+         </div>
+         <p className="text-sm text-muted-foreground font-medium italic">No test results found for this selection.</p>
+        </div>
+       ) : (
+        <div className="space-y-4">
+         {testResults.slice(0, 5).map((tr: any) => {
+          const pct = Math.round((tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100);
+          return (
+           <div key={tr.id} className="group p-4 rounded-xl bg-white border border-transparent hover:border-primary/10 hover:shadow-sm transition-all duration-300">
+            <div className="flex justify-between items-start mb-2">
+             <div className="space-y-1">
+              <p className="font-bold text-sm group-hover:text-primary transition-colors">{tr.tests?.name}</p>
+              <div className="flex items-center gap-2">
+               <Badge variant="outline" className="text-[10px] uppercase font-bold py-0 h-4 border-muted-foreground/20 text-muted-foreground">
+                {tr.tests?.subject}
+               </Badge>
+               <p className="text-[10px] font-medium text-muted-foreground">{safeFormatDate(tr.date_taken, "PPP")}</p>
+              </div>
+             </div>
+             <div className="text-right">
+              <p className="font-black text-lg">{tr.marks_obtained}<span className="text-xs text-muted-foreground font-medium">/{tr.tests?.total_marks}</span></p>
+              <p className={cn("text-xs font-bold", pct >= 75 ? "text-green-600" : pct >= 50 ? "text-orange-600" : "text-red-600")}>{pct}%</p>
+             </div>
+            </div>
+            <div className="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden">
+             <div
+              className={cn("h-full transition-all duration-1000", pct >= 75 ? "bg-green-500" : pct >= 50 ? "bg-orange-500" : "bg-red-500")}
+              style={{ width: `${pct}%` }}
+             />
+            </div>
+           </div>
+          );
+         })}
+        </div>
+       )}
+      </CardContent>
+     </Card>
+
+     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-border/20">
+      <CardHeader className="border-b border-muted/20 bg-muted/5">
+       <CardTitle className="text-lg font-bold flex items-center gap-2">
+        <div className="p-1.5 rounded-lg bg-red-500/10">
+         <AlertTriangle className="h-5 w-5 text-red-600" />
+        </div>
+        Behavioral Insights
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-6">
+       {disciplineIssues.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+         <div className="p-3 rounded-full bg-muted/10">
+          <CheckCircle className="h-8 w-8 text-green-500/40" />
+         </div>
+         <p className="text-sm text-muted-foreground font-medium italic">No discipline records found for this selection.</p>
+        </div>
+       ) : (
+        <div className="space-y-4">
+         {disciplineIssues.slice(0, 5).map((di: any) => (
+          <div key={di.id} className="p-4 rounded-xl bg-white border border-transparent hover:border-red-500/10 hover:shadow-sm transition-all duration-300">
+           <div className="flex justify-between items-start mb-1">
+            <div className="space-y-1">
+             <p className="font-bold text-sm">{di.discipline_categories?.name}</p>
+             <p className="text-xs text-muted-foreground line-clamp-1">{di.description}</p>
+            </div>
+            <Badge className={cn("text-[10px] font-black uppercase tracking-tighter px-1.5 py-0 h-5",
+             di.severity === "high" ? "bg-red-500 text-white" :
+             di.severity === "medium" ? "bg-orange-500 text-white" : "bg-green-500 text-white")}>
+             {di.severity}
+            </Badge>
+           </div>
+           <div className="flex items-center justify-between mt-2 pt-2 border-t border-muted/20">
+            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">{safeFormatDate(di.issue_date, "PPP")}</p>
+            <p
+             className="text-[10px] font-medium text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
+             onClick={() => setSelectedDisciplineIssue(di)}
+            >
+             View details
+            </p>
+           </div>
           </div>
+         ))}
+        </div>
+       )}
+      </CardContent>
+     </Card>
+    </div>
+   )}
+  </div>
+ );
+
+ const isLoading = isAttendanceLoading || isChaptersLoading || isTestsLoading || isHomeworkLoading || isActivitiesLoading || isDisciplineLoading || isAllActivitiesLoading;
+
+ return (
+  <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
+   {/* Header and Print/Export */}
+   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-2">
+     <div className="flex items-center gap-3">
+      <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
+       <BarChart3 className="h-8 w-8 text-primary animate-pulse" />
+      </div>
+      <div>
+       <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+        Performance Hub
+       </h1>
+       <div className="flex items-center gap-2 mt-1">
+        <Badge variant="secondary" className="rounded-md px-2 py-0 text-[10px] uppercase font-bold tracking-widest bg-primary/5 text-primary border-primary/10">
+         {reportLevel.replace('-', ' ')} level
+        </Badge>
+        {reportLevel === "student" && selectedStudent && (
+         <span className="text-sm font-medium text-muted-foreground">— {selectedStudent.name}</span>
         )}
+       </div>
       </div>
+     </div>
+     <p className="text-muted-foreground text-lg max-w-2xl leading-relaxed">
+      Real-time academic intelligence and performance analytics across your institution.
+     </p>
+    </div>
+    {selectedStudentId !== "none" && (
+     <div className="flex gap-3">
+      <Button onClick={exportToCSV} variant="outline" className="rounded-xl border-2">
+       <Download className="mr-2 h-4 w-4" /> Export CSV
+      </Button>
+      <Button onClick={handlePrint} variant="outline" className="rounded-xl border-2">
+       <Printer className="mr-2 h-4 w-4" /> Print
+      </Button>
+     </div>
+    )}
+   </div>
 
-      {/* Filters */}
-      {/* Filters */}
-      <div className={cn("relative group transition-all duration-700", isLoading ? "opacity-50 grayscale pointer-events-none" : "opacity-100")}>
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-        <Card className="relative border-none shadow-medium p-8 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-[2.5rem]">
-          <div className="flex flex-wrap gap-8 items-end">
+   {/* Filters */}
+   {/* Filters */}
+   <div className={cn("relative group transition-all duration-700", isLoading ? "opacity-50 grayscale pointer-events-none" : "opacity-100")}>
+    <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+    <Card className="relative border border-border shadow-sm p-8 overflow-hidden bg-white border border-white/30 rounded-2xl">
+     <div className="flex flex-wrap gap-8 items-end">
+    <div className="space-y-2">
+     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
+     <Select value={gradeFilter} onValueChange={(val) => { setGradeFilter(val); setSelectedStudentId("none"); }}>
+      <SelectTrigger className="w-[160px] h-11 bg-white border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+       <SelectValue placeholder="Grade" />
+      </SelectTrigger>
+      <SelectContent className=" bg-white border-muted-foreground/10 rounded-xl">
+       <SelectItem value="all">All Grades</SelectItem>
+       {Array.from(new Set(students.map(s => s.grade))).map((g) => (
+        <SelectItem key={g} value={g}>{g}</SelectItem>
+       ))}
+      </SelectContent>
+     </Select>
+    </div>
+
+    <div className="space-y-2">
+     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">From Date</label>
+     <Input
+      type="date"
+      className="w-[160px] h-11 bg-white border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
+      value={safeFormatDate(dateRange.from, "yyyy-MM-dd")}
+      onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
+     />
+    </div>
+
+    <div className="space-y-2">
+     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">To Date</label>
+     <Input
+      type="date"
+      className="w-[160px] h-11 bg-white border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
+      value={safeFormatDate(dateRange.to, "yyyy-MM-dd")}
+      onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
+     />
+    </div>
+
+    <div className="space-y-2">
+     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</label>
+     <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+      <SelectTrigger className="w-[160px] h-11 bg-white border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+       <SelectValue placeholder="Subject" />
+      </SelectTrigger>
+      <SelectContent className=" bg-white border-muted-foreground/10 rounded-xl">
+       <SelectItem value="all">All Subjects</SelectItem>
+       {subjects.map((s) => (
+        <SelectItem key={s} value={s}>{s}</SelectItem>
+       ))}
+      </SelectContent>
+     </Select>
+    </div>
+
+    <div className="space-y-2">
+     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</label>
+     <Select value={selectedStudentId} onValueChange={(val) => { setSelectedStudentId(val); setSelectedPublishedExamId("none"); }}>
+      <SelectTrigger className="w-[220px] h-11 bg-white border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+       <SelectValue placeholder="Select Student" />
+      </SelectTrigger>
+      <SelectContent className=" bg-white border-muted-foreground/10 rounded-xl">
+       <SelectItem value="none">All Students</SelectItem>
+       {filteredStudents.map((student) => (
+        <SelectItem key={student.id} value={student.id}>
+         {student.name}
+        </SelectItem>
+       ))}
+      </SelectContent>
+     </Select>
+    </div>
+
+   </div>
+   </Card>
+   </div>
+
+   {isLoading ? (
+    <div className="space-y-12 animate-in fade-in duration-500">
+     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="space-y-4">
+       <div className="flex items-center gap-4">
+        <Skeleton className="h-14 w-14 rounded-2xl" />
         <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
-          <Select value={gradeFilter} onValueChange={(val) => { setGradeFilter(val); setSelectedStudentId("none"); }}>
-            <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
-              <SelectValue placeholder="Grade" />
-            </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
-              <SelectItem value="all">All Grades</SelectItem>
-              {Array.from(new Set(students.map(s => s.grade))).map((g) => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+         <Skeleton className="h-10 w-64 rounded-lg" />
+         <Skeleton className="h-4 w-32 rounded-md" />
         </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">From Date</label>
-          <Input
-            type="date"
-            className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
-            value={safeFormatDate(dateRange.from, "yyyy-MM-dd")}
-            onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">To Date</label>
-          <Input
-            type="date"
-            className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
-            value={safeFormatDate(dateRange.to, "yyyy-MM-dd")}
-            onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</label>
-          <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
-              <SelectValue placeholder="Subject" />
-            </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
-              <SelectItem value="all">All Subjects</SelectItem>
-              {subjects.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</label>
-          <Select value={selectedStudentId} onValueChange={(val) => { setSelectedStudentId(val); setSelectedPublishedExamId("none"); }}>
-            <SelectTrigger className="w-[220px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
-              <SelectValue placeholder="Select Student" />
-            </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
-              <SelectItem value="none">All Students</SelectItem>
-              {filteredStudents.map((student) => (
-                <SelectItem key={student.id} value={student.id}>
-                  {student.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
+       </div>
+       <Skeleton className="h-4 w-full max-w-xl rounded-md" />
       </div>
-      </Card>
+      <div className="flex gap-3">
+       <Skeleton className="h-10 w-32 rounded-xl" />
+       <Skeleton className="h-10 w-32 rounded-xl" />
       </div>
+     </div>
 
-      {isLoading ? (
-        <div className="space-y-12 animate-in fade-in duration-500">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-14 w-14 rounded-2xl" />
-                <div className="space-y-2">
-                  <Skeleton className="h-10 w-64 rounded-lg" />
-                  <Skeleton className="h-4 w-32 rounded-md" />
-                </div>
+     <Skeleton className="h-32 w-full rounded-2xl" />
+
+     <div className="space-y-6">
+      <div className="flex justify-between items-end">
+       <Skeleton className="h-4 w-48 rounded-md" />
+       <Skeleton className="h-4 w-24 rounded-md" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+       {[...Array(8)].map((_, i) => (
+        <Card key={i} className="border border-border shadow-sm p-6 rounded-2xl">
+         <div className="flex justify-between items-start">
+          <div className="space-y-3">
+           <Skeleton className="h-3 w-20 rounded-full" />
+           <Skeleton className="h-10 w-16 rounded-lg" />
+           <Skeleton className="h-2 w-28 rounded-full" />
+          </div>
+          <Skeleton className="h-12 w-12 rounded-2xl" />
+         </div>
+        </Card>
+       ))}
+      </div>
+     </div>
+
+     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <Skeleton className="h-[400px] w-full rounded-2xl shadow-sm" />
+      <Skeleton className="h-[400px] w-full rounded-2xl shadow-sm" />
+     </div>
+    </div>
+   ) : (
+    <div className="space-y-8">
+     <SummaryDashboard />
+
+     {reportLevel === "student" && selectedStudent && (
+      <div id="printable-report" className="space-y-12 animate-in slide-in-from-bottom-8 duration-700">
+
+     {/* Consolidated Student Profile Header */}
+     <Card className="border border-border shadow-sm rounded-2xl bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 text-white overflow-hidden relative group">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+      <CardContent className="p-10 relative z-10">
+       <div className="flex flex-col md:flex-row items-center gap-10">
+        <div className="relative">
+         <div className="w-40 h-40 rounded-2xl border-4 border-white/20 overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-105">
+          {selectedStudent.photo_url ? (
+           <img
+            src={selectedStudent.photo_url.startsWith('http') ? selectedStudent.photo_url : supabase.storage.from('activity-photos').getPublicUrl(selectedStudent.photo_url).data.publicUrl}
+            alt={selectedStudent.name}
+            className="w-full h-full object-cover"
+           />
+          ) : (
+           <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+            <User className="h-20 w-20 text-slate-600" />
+           </div>
+          )}
+         </div>
+         <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-primary text-white font-black px-4 py-1 rounded-full border-2 border-slate-900">
+          GRADE {selectedStudent.grade}
+         </Badge>
+        </div>
+
+        <div className="flex-1 text-center md:text-left space-y-4">
+         <div className="space-y-1">
+          <h2 className="text-4xl font-black tracking-tight">{selectedStudent.name}</h2>
+          <p className="text-indigo-300 font-bold uppercase tracking-[0.2em] text-xs">Student ID: {selectedStudent.student_id_number || 'N/A'}</p>
+         </div>
+
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4">
+          <div className="bg-white rounded-2xl p-4 border border-white/10">
+           <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Attendance</p>
+           <p className="text-2xl font-black">{attendancePercentage}%</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-white/10">
+           <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Avg. Grade</p>
+           <p className="text-2xl font-black">{getGradeFormal(averagePercentage)}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-white/10">
+           <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Fee Status</p>
+           <p className={cn("text-xl font-black", outstandingDues > 0 ? "text-rose-400" : "text-emerald-400")}>
+            {outstandingDues > 0 ? 'Dues Pending' : 'Clear'}
+           </p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-white/10">
+           <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Assessment</p>
+           <p className="text-2xl font-black">{averagePercentage}%</p>
+          </div>
+         </div>
+        </div>
+       </div>
+      </CardContent>
+     </Card>
+
+     <div className="relative">
+      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+       <div className="w-full border-t border-muted" />
+      </div>
+      <div className="relative flex justify-center">
+       <span className="bg-background px-4 text-sm font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
+        Detailed Academic Profile
+       </span>
+      </div>
+     </div>
+
+     {/* Finance Summary */}
+     <Card id="finance-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-white/20">
+      <CardHeader className="bg-primary/5 pb-6 border-b border-primary/10 p-8">
+       <CardTitle className="text-2xl font-black flex items-center gap-3">
+        <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+         <DollarSign className="h-7 w-7" />
+        </div>
+        Financial Overview
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-8 space-y-8">
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Invoiced</p>
+         <p className="text-2xl font-black">{formatCurrency(totalInvoiced)}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Total Paid</p>
+         <p className="text-2xl font-black text-green-600">{formatCurrency(totalPaid)}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Outstanding Dues</p>
+         <p className="text-2xl font-black text-rose-600">{formatCurrency(outstandingDues)}</p>
+        </div>
+       </div>
+       <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Payment History Matrix</h3>
+       {payments.length === 0 ? (
+        <p className="text-muted-foreground italic text-sm">No recent payments discovered.</p>
+       ) : (
+        <div className="overflow-hidden border border-border/40 rounded-2xl shadow-sm bg-white">
+         <table className="w-full text-sm">
+          <thead className="bg-gray-100">
+           <tr>
+            <th className="border px-2 py-1">Date</th>
+            <th className="border px-2 py-1">Amount</th>
+            <th className="border px-2 py-1">Method</th>
+            <th className="border px-2 py-1">Reference</th>
+           </tr>
+          </thead>
+          <tbody>
+           {payments.map((p) => (
+            <tr key={p.id}>
+             <td className="border px-2 py-1">{safeFormatDate(p.payment_date, "PPP")}</td>
+             <td className="border px-2 py-1">{formatCurrency(p.amount)}</td>
+             <td className="border px-2 py-1">{p.payment_method}</td>
+             <td className="border px-2 py-1">{p.reference_number || "-"}</td>
+            </tr>
+           ))}
+          </tbody>
+         </table>
+        </div>
+       )}
+      </CardContent>
+     </Card>
+
+     {/* Attendance Overview */}
+     <Card id="attendance-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-white/20">
+      <CardHeader className="bg-green-500/5 pb-6 border-b border-green-500/10 p-8">
+       <CardTitle className="text-2xl font-black flex items-center gap-3">
+        <div className="p-2.5 rounded-2xl bg-green-500/10 text-green-600">
+         <Clock className="h-7 w-7" />
+        </div>
+        Attendance Trajectory
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-8 space-y-8">
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Sessions</p>
+         <p className="text-3xl font-black">{totalDays}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Present</p>
+         <p className="text-3xl font-black text-green-600">{presentDays}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Absent</p>
+         <p className="text-3xl font-black text-rose-600">{totalDays - presentDays}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-primary uppercase tracking-widest">Ratio %</p>
+         <p className="text-3xl font-black text-primary">{attendancePercentage}%</p>
+        </div>
+       </div>
+
+       <div className="h-64 w-full bg-white rounded-2xl p-6 border border-border/40 shadow-inner">
+        <ResponsiveContainer width="100%" height="100%">
+         <AreaChart data={attendanceData.map(d => ({ date: format(new Date(d.date), 'MMM d'), status: d.status === 'present' ? 1 : 0 }))}>
+          <defs>
+           <linearGradient id="colorAtt" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+           </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+          <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+          <YAxis hide domain={[0, 1.2]} />
+          <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+          <Area type="step" dataKey="status" name="Presence" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorAtt)" animationDuration={1500} />
+         </AreaChart>
+        </ResponsiveContainer>
+       </div>
+
+       <div className="overflow-hidden border border-border/40 rounded-2xl shadow-sm bg-white">
+        <table className="w-full border text-sm">
+         <thead className="bg-gray-100">
+          <tr>
+           <th className="border px-2 py-1">Date</th>
+           <th className="border px-2 py-1">Status</th>
+           <th className="border px-2 py-1">Time In</th>
+           <th className="border px-2 py-1">Time Out</th>
+          </tr>
+         </thead>
+         <tbody>
+          {attendanceData.map((record) => (
+           <tr
+            key={record.id}
+            className={cn(record.remarks?.includes('Approved Leave') && "bg-orange-50 cursor-pointer hover:bg-orange-100")}
+            onClick={() => record.remarks && setSelectedAttendanceDetail(record)}
+           >
+            <td className="border px-2 py-1">
+             <div className="flex items-center justify-between">
+              {safeFormatDate(record.date, "PPP")}
+              {record.remarks?.includes('Approved Leave') && <Badge variant="outline" className="text-[8px] h-4 bg-white text-orange-600 border-orange-200">LEAVE</Badge>}
+             </div>
+            </td>
+            <td className="border px-2 py-1 capitalize">{record.status}</td>
+            <td className="border px-2 py-1">{record.time_in || "-"}</td>
+            <td className="border px-2 py-1">{record.time_out || "-"}</td>
+           </tr>
+          ))}
+         </tbody>
+        </table>
+       </div>
+      </CardContent>
+     </Card>
+
+     {/* Chapter-wise Performance */}
+     <Card id="milestones-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-white/20">
+      <CardHeader className="bg-blue-500/5 pb-6 border-b border-blue-500/10 p-8">
+       <CardTitle className="text-2xl font-black flex items-center gap-3">
+        <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-600">
+         <BookOpen className="h-7 w-7" />
+        </div>
+        Curricular Milestones
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+       {chapterPerformanceData.length === 0 ? (
+        <div className="p-8 text-center text-muted-foreground italic">No chapter performance data available for the selected filters.</div>
+       ) : (
+        <div className="overflow-x-auto">
+         <table className="w-full text-sm text-left">
+          <thead className="bg-muted/50 border-b">
+           <tr>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
+           </tr>
+          </thead>
+          <tbody className="divide-y">
+           {chapterPerformanceData.map((chapterGroup) => {
+            const evaluation = chapterGroup.studentChapters[0];
+            const testResult = chapterGroup.testResults[0];
+            const homework = chapterGroup.homeworkRecords[0];
+
+            const avgPct = chapterGroup.testResults.length > 0
+             ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
+             : null;
+
+            return (
+             <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
+              <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
+              <td className="px-6 py-4">
+               <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
+               <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
+              </td>
+              <td className="px-6 py-4">
+               {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
+              </td>
+              <td className="px-6 py-4">
+               {homework ? (
+                <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
+                 {homework.status}
+                </Badge>
+               ) : (
+                <span className="text-muted-foreground italic text-xs">N/A</span>
+               )}
+              </td>
+              <td className="px-6 py-4 font-bold">
+               {avgPct !== null ? (
+                <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
+                 {avgPct}%
+                </span>
+               ) : (
+                <span className="text-muted-foreground italic text-xs">N/A</span>
+               )}
+              </td>
+              <td className="px-6 py-4 text-center">
+               <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
+                onClick={() => setSelectedChapterDetail(chapterGroup)}
+               >
+                <Eye className="h-4 w-4" />
+               </Button>
+              </td>
+             </tr>
+            );
+           })}
+          </tbody>
+         </table>
+        </div>
+       )}
+      </CardContent>
+     </Card>
+
+     {/* Exam Schedules & Results Section */}
+     <Card id="published-results-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-white/20">
+      <CardHeader className="bg-primary/5 pb-6 border-b border-primary/10 p-8">
+       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <CardTitle className="text-2xl font-black flex items-center gap-3">
+         <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+          <GraduationCap className="h-7 w-7" />
+         </div>
+         Formal Assessment Records
+        </CardTitle>
+        <div className="flex items-center gap-3 bg-white p-1.5 rounded-xl border border-border/40 shadow-sm">
+         <span className="text-[10px] font-black text-muted-foreground uppercase ml-2">Filter Result:</span>
+         <Select value={selectedPublishedExamId} onValueChange={setSelectedPublishedExamId}>
+          <SelectTrigger className="w-[180px] h-8 bg-transparent border border-border focus:ring-0 text-[11px] font-bold">
+           <SelectValue placeholder="All Published Exams" />
+          </SelectTrigger>
+          <SelectContent className=" bg-white border-muted-foreground/10 rounded-xl">
+           <SelectItem value="none">Show All History</SelectItem>
+           {studentExams
+            .filter(e => e.status === 'results_published')
+            .map((e) => (
+             <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+            ))
+           }
+          </SelectContent>
+         </Select>
+        </div>
+       </div>
+      </CardHeader>
+      <CardContent className="p-0">
+       {selectedPublishedExamId !== "none" ? (
+        <div className="p-8 space-y-8 animate-in fade-in slide-in-from-top-2 duration-300">
+         {(() => {
+          const exam = studentExams.find(e => e.id === selectedPublishedExamId);
+          if (!exam) return <div className="p-8 text-center text-muted-foreground">Result not found.</div>;
+          return (
+           <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-primary/5 p-6 rounded-2xl border border-primary/10">
+             <div className="space-y-1 text-center border-r border-primary/10">
+              <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Synthesis Score</p>
+              <p className="text-2xl font-black">{exam.totalObtained}/{exam.totalFull}</p>
+             </div>
+             <div className="space-y-1 text-center border-r border-primary/10">
+              <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Proficiency %</p>
+              <p className="text-2xl font-black text-primary">{exam.percentage.toFixed(1)}%</p>
+             </div>
+             <div className="space-y-1 text-center border-r border-primary/10">
+              <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Grade Rank</p>
+              <p className="text-2xl font-black">{getGradeFormal(exam.percentage)}</p>
+             </div>
+             <div className="space-y-1 text-center">
+              <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Outcome</p>
+              <div className="flex justify-center mt-1">
+               <Badge variant={exam.allPassed ? "success" : "destructive"} className="font-black uppercase text-[10px] rounded-lg">
+                {exam.allPassed ? "PASSED" : "FAILED"}
+               </Badge>
               </div>
-              <Skeleton className="h-4 w-full max-w-xl rounded-md" />
+             </div>
             </div>
-            <div className="flex gap-3">
-              <Skeleton className="h-10 w-32 rounded-xl" />
-              <Skeleton className="h-10 w-32 rounded-xl" />
-            </div>
-          </div>
 
-          <Skeleton className="h-32 w-full rounded-[2rem]" />
-
-          <div className="space-y-6">
-            <div className="flex justify-between items-end">
-              <Skeleton className="h-4 w-48 rounded-md" />
-              <Skeleton className="h-4 w-24 rounded-md" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
-                <Card key={i} className="border-none shadow-soft p-6 rounded-2xl">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-3">
-                      <Skeleton className="h-3 w-20 rounded-full" />
-                      <Skeleton className="h-10 w-16 rounded-lg" />
-                      <Skeleton className="h-2 w-28 rounded-full" />
-                    </div>
-                    <Skeleton className="h-12 w-12 rounded-2xl" />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Skeleton className="h-[400px] w-full rounded-[2rem] shadow-soft" />
-            <Skeleton className="h-[400px] w-full rounded-[2rem] shadow-soft" />
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          <SummaryDashboard />
-
-          {reportLevel === "student" && selectedStudent && (
-            <div id="printable-report" className="space-y-12 animate-in slide-in-from-bottom-8 duration-700">
-
-          {/* Consolidated Student Profile Header */}
-          <Card className="border-none shadow-strong rounded-[2.5rem] bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 text-white overflow-hidden relative group">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-            <CardContent className="p-10 relative z-10">
-              <div className="flex flex-col md:flex-row items-center gap-10">
-                <div className="relative">
-                  <div className="w-40 h-40 rounded-[2.5rem] border-4 border-white/20 overflow-hidden shadow-2xl transition-transform duration-500 group-hover:scale-105">
-                    {selectedStudent.photo_url ? (
-                      <img
-                        src={selectedStudent.photo_url.startsWith('http') ? selectedStudent.photo_url : supabase.storage.from('activity-photos').getPublicUrl(selectedStudent.photo_url).data.publicUrl}
-                        alt={selectedStudent.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                        <User className="h-20 w-20 text-slate-600" />
-                      </div>
-                    )}
-                  </div>
-                  <Badge className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-primary text-white font-black px-4 py-1 rounded-full border-2 border-slate-900">
-                    GRADE {selectedStudent.grade}
+            <div className="rounded-2xl border border-border/40 overflow-hidden bg-white ">
+             <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50/50 border-b">
+               <tr>
+                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject Domain</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Full Scale</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Obtained</th>
+                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Status</th>
+               </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+               {exam.results.map((res: any) => (
+                <tr key={res.id} className="hover:bg-primary/5 transition-colors">
+                 <td className="px-6 py-4 font-bold text-slate-700">{res.subject_name}</td>
+                 <td className="px-6 py-4 text-center font-medium text-slate-400">{res.full_marks}</td>
+                 <td className="px-6 py-4 text-center font-black text-primary">{res.obtained}</td>
+                 <td className="px-6 py-4 text-center">
+                  <Badge variant={res.passed ? "success" : "destructive"} className="text-[9px] uppercase font-bold rounded-md">
+                   {res.passed ? "Pass" : "Fail"}
                   </Badge>
-                </div>
-
-                <div className="flex-1 text-center md:text-left space-y-4">
-                  <div className="space-y-1">
-                    <h2 className="text-4xl font-black tracking-tight">{selectedStudent.name}</h2>
-                    <p className="text-indigo-300 font-bold uppercase tracking-[0.2em] text-xs">Student ID: {selectedStudent.student_id_number || 'N/A'}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4">
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                      <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Attendance</p>
-                      <p className="text-2xl font-black">{attendancePercentage}%</p>
-                    </div>
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                      <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Avg. Grade</p>
-                      <p className="text-2xl font-black">{getGradeFormal(averagePercentage)}</p>
-                    </div>
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                      <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Fee Status</p>
-                      <p className={cn("text-xl font-black", outstandingDues > 0 ? "text-rose-400" : "text-emerald-400")}>
-                        {outstandingDues > 0 ? 'Dues Pending' : 'Clear'}
-                      </p>
-                    </div>
-                    <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                      <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-1">Assessment</p>
-                      <p className="text-2xl font-black">{averagePercentage}%</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-muted" />
+                 </td>
+                </tr>
+               ))}
+              </tbody>
+             </table>
             </div>
-            <div className="relative flex justify-center">
-              <span className="bg-background px-4 text-sm font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
-                Detailed Academic Profile
-              </span>
-            </div>
-          </div>
 
-          {/* Finance Summary */}
-          <Card id="finance-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-primary/5 pb-6 border-b border-primary/10 p-8">
-              <CardTitle className="text-2xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-                  <DollarSign className="h-7 w-7" />
-                </div>
-                Financial Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Invoiced</p>
-                  <p className="text-2xl font-black">{formatCurrency(totalInvoiced)}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Total Paid</p>
-                  <p className="text-2xl font-black text-green-600">{formatCurrency(totalPaid)}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Outstanding Dues</p>
-                  <p className="text-2xl font-black text-rose-600">{formatCurrency(outstandingDues)}</p>
-                </div>
-              </div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Payment History Matrix</h3>
-              {payments.length === 0 ? (
-                <p className="text-muted-foreground italic text-sm">No recent payments discovered.</p>
-              ) : (
-                <div className="overflow-hidden border border-border/40 rounded-3xl shadow-soft bg-white/20">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="border px-2 py-1">Date</th>
-                        <th className="border px-2 py-1">Amount</th>
-                        <th className="border px-2 py-1">Method</th>
-                        <th className="border px-2 py-1">Reference</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payments.map((p) => (
-                        <tr key={p.id}>
-                          <td className="border px-2 py-1">{safeFormatDate(p.payment_date, "PPP")}</td>
-                          <td className="border px-2 py-1">{formatCurrency(p.amount)}</td>
-                          <td className="border px-2 py-1">{p.payment_method}</td>
-                          <td className="border px-2 py-1">{p.reference_number || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Attendance Overview */}
-          <Card id="attendance-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-green-500/5 pb-6 border-b border-green-500/10 p-8">
-              <CardTitle className="text-2xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-green-500/10 text-green-600">
-                  <Clock className="h-7 w-7" />
-                </div>
-                Attendance Trajectory
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-8">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Sessions</p>
-                  <p className="text-3xl font-black">{totalDays}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Present</p>
-                  <p className="text-3xl font-black text-green-600">{presentDays}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Absent</p>
-                  <p className="text-3xl font-black text-rose-600">{totalDays - presentDays}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-primary uppercase tracking-widest">Ratio %</p>
-                  <p className="text-3xl font-black text-primary">{attendancePercentage}%</p>
-                </div>
-              </div>
-
-              <div className="h-64 w-full bg-white/30 rounded-3xl p-6 border border-border/40 shadow-inner">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={attendanceData.map(d => ({ date: format(new Date(d.date), 'MMM d'), status: d.status === 'present' ? 1 : 0 }))}>
-                    <defs>
-                      <linearGradient id="colorAtt" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
-                    <YAxis hide domain={[0, 1.2]} />
-                    <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                    <Area type="step" dataKey="status" name="Presence" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorAtt)" animationDuration={1500} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="overflow-hidden border border-border/40 rounded-3xl shadow-soft bg-white/20">
-                <table className="w-full border text-sm">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="border px-2 py-1">Date</th>
-                      <th className="border px-2 py-1">Status</th>
-                      <th className="border px-2 py-1">Time In</th>
-                      <th className="border px-2 py-1">Time Out</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendanceData.map((record) => (
-                      <tr
-                        key={record.id}
-                        className={cn(record.remarks?.includes('Approved Leave') && "bg-orange-50 cursor-pointer hover:bg-orange-100")}
-                        onClick={() => record.remarks && setSelectedAttendanceDetail(record)}
-                      >
-                        <td className="border px-2 py-1">
-                          <div className="flex items-center justify-between">
-                            {safeFormatDate(record.date, "PPP")}
-                            {record.remarks?.includes('Approved Leave') && <Badge variant="outline" className="text-[8px] h-4 bg-white text-orange-600 border-orange-200">LEAVE</Badge>}
-                          </div>
-                        </td>
-                        <td className="border px-2 py-1 capitalize">{record.status}</td>
-                        <td className="border px-2 py-1">{record.time_in || "-"}</td>
-                        <td className="border px-2 py-1">{record.time_out || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Chapter-wise Performance */}
-          <Card id="milestones-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-blue-500/5 pb-6 border-b border-blue-500/10 p-8">
-              <CardTitle className="text-2xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-blue-500/10 text-blue-600">
-                  <BookOpen className="h-7 w-7" />
-                </div>
-                Curricular Milestones
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {chapterPerformanceData.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground italic">No chapter performance data available for the selected filters.</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-muted/50 border-b">
-                      <tr>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Topic</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Evaluation</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Homework</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Result</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {chapterPerformanceData.map((chapterGroup) => {
-                        const evaluation = chapterGroup.studentChapters[0];
-                        const testResult = chapterGroup.testResults[0];
-                        const homework = chapterGroup.homeworkRecords[0];
-
-                        const avgPct = chapterGroup.testResults.length > 0
-                          ? Math.round(chapterGroup.testResults.reduce((acc, tr) => acc + (tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100, 0) / chapterGroup.testResults.length)
-                          : null;
-
-                        return (
-                          <tr key={chapterGroup.lessonPlan.id} className="hover:bg-muted/30 transition-colors">
-                            <td className="px-6 py-4 font-semibold">{chapterGroup.lessonPlan.subject}</td>
-                            <td className="px-6 py-4">
-                              <p className="font-medium">{chapterGroup.lessonPlan.topic}</p>
-                              <p className="text-[10px] text-muted-foreground">Chapter: {chapterGroup.lessonPlan.chapter}</p>
-                            </td>
-                            <td className="px-6 py-4">
-                              {evaluation ? getRatingStars(evaluation.evaluation_rating) : <span className="text-muted-foreground italic text-xs">N/A</span>}
-                            </td>
-                            <td className="px-6 py-4">
-                              {homework ? (
-                                <Badge variant={homework.status === 'completed' || homework.status === 'checked' ? 'success' : homework.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
-                                  {homework.status}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">N/A</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 font-bold">
-                              {avgPct !== null ? (
-                                <span className={cn(avgPct >= 75 ? "text-green-600" : avgPct >= 50 ? "text-orange-600" : "text-red-600")}>
-                                  {avgPct}%
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground italic text-xs">N/A</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full"
-                                onClick={() => setSelectedChapterDetail(chapterGroup)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Exam Schedules & Results Section */}
-          <Card id="published-results-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-primary/5 pb-6 border-b border-primary/10 p-8">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <CardTitle className="text-2xl font-black flex items-center gap-3">
-                  <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
-                    <GraduationCap className="h-7 w-7" />
-                  </div>
-                  Formal Assessment Records
-                </CardTitle>
-                <div className="flex items-center gap-3 bg-card/60 p-1.5 rounded-xl border border-border/40 shadow-soft">
-                  <span className="text-[10px] font-black text-muted-foreground uppercase ml-2">Filter Result:</span>
-                  <Select value={selectedPublishedExamId} onValueChange={setSelectedPublishedExamId}>
-                    <SelectTrigger className="w-[180px] h-8 bg-transparent border-none focus:ring-0 text-[11px] font-bold">
-                      <SelectValue placeholder="All Published Exams" />
-                    </SelectTrigger>
-                    <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
-                      <SelectItem value="none">Show All History</SelectItem>
-                      {studentExams
-                        .filter(e => e.status === 'results_published')
-                        .map((e) => (
-                          <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                        ))
-                      }
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {selectedPublishedExamId !== "none" ? (
-                <div className="p-8 space-y-8 animate-in fade-in slide-in-from-top-2 duration-300">
-                  {(() => {
-                    const exam = studentExams.find(e => e.id === selectedPublishedExamId);
-                    if (!exam) return <div className="p-8 text-center text-muted-foreground">Result not found.</div>;
-                    return (
-                      <>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-primary/5 p-6 rounded-3xl border border-primary/10">
-                          <div className="space-y-1 text-center border-r border-primary/10">
-                            <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Synthesis Score</p>
-                            <p className="text-2xl font-black">{exam.totalObtained}/{exam.totalFull}</p>
-                          </div>
-                          <div className="space-y-1 text-center border-r border-primary/10">
-                            <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Proficiency %</p>
-                            <p className="text-2xl font-black text-primary">{exam.percentage.toFixed(1)}%</p>
-                          </div>
-                          <div className="space-y-1 text-center border-r border-primary/10">
-                            <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Grade Rank</p>
-                            <p className="text-2xl font-black">{getGradeFormal(exam.percentage)}</p>
-                          </div>
-                          <div className="space-y-1 text-center">
-                            <p className="text-[9px] font-black text-primary/60 uppercase tracking-widest">Outcome</p>
-                            <div className="flex justify-center mt-1">
-                              <Badge variant={exam.allPassed ? "success" : "destructive"} className="font-black uppercase text-[10px] rounded-lg">
-                                {exam.allPassed ? "PASSED" : "FAILED"}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-3xl border border-border/40 overflow-hidden bg-white/20 backdrop-blur-sm">
-                          <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50/50 border-b">
-                              <tr>
-                                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Subject Domain</th>
-                                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Full Scale</th>
-                                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Obtained</th>
-                                <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/20">
-                              {exam.results.map((res: any) => (
-                                <tr key={res.id} className="hover:bg-primary/5 transition-colors">
-                                  <td className="px-6 py-4 font-bold text-slate-700">{res.subject_name}</td>
-                                  <td className="px-6 py-4 text-center font-medium text-slate-400">{res.full_marks}</td>
-                                  <td className="px-6 py-4 text-center font-black text-primary">{res.obtained}</td>
-                                  <td className="px-6 py-4 text-center">
-                                    <Badge variant={res.passed ? "success" : "destructive"} className="text-[9px] uppercase font-bold rounded-md">
-                                      {res.passed ? "Pass" : "Fail"}
-                                    </Badge>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        <div className="flex justify-between items-center">
-                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest italic">
-                              * Official academic record for {exam.name}
-                           </p>
-                           <Button
-                             onClick={() => setSelectedExamResult(exam)}
-                             className="rounded-2xl shadow-strong bg-slate-900 hover:bg-slate-800 text-white font-black uppercase text-[10px] tracking-widest px-6"
-                           >
-                             <Printer className="h-4 w-4 mr-2" /> View Full Marksheet
-                           </Button>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-muted/50 border-b">
-                      <tr>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Assessment Name</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Date</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Status</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Total Scale</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Proficiency</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Rank</th>
-                        <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Management</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {studentExams.length === 0 ? (
-                        <tr><td colSpan={7} className="p-8 text-center text-muted-foreground italic">No assessment history found.</td></tr>
-                      ) : (
-                        studentExams.map((exam: any) => (
-                          <tr key={exam.id} className="hover:bg-muted/30 transition-colors group">
-                            <td className="px-6 py-4">
-                              <p className="font-bold text-slate-700">{exam.name}</p>
-                              <p className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Academic Year {exam.academic_year}</p>
-                            </td>
-                            <td className="px-6 py-4 text-[11px] font-medium text-slate-500">{safeFormatDate(exam.exam_date, "PPP")}</td>
-                            <td className="px-6 py-4">
-                              {exam.hasMarks ? (
-                                <Badge variant={exam.isPartial ? "warning" : "success"} className="text-[9px] uppercase font-black rounded-md">
-                                  {exam.isPartial ? "Partial Result" : "Result Ready"}
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-[9px] uppercase font-bold rounded-md">Scheduled</Badge>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 font-bold text-slate-700">
-                              {exam.hasMarks ? `${exam.totalObtained}/${exam.totalFull}` : "-"}
-                            </td>
-                            <td className="px-6 py-4">
-                              {exam.hasMarks ? (
-                                <span className={cn("font-black", exam.percentage >= 75 ? "text-green-600" : exam.percentage >= 50 ? "text-orange-600" : "text-red-600")}>
-                                  {exam.percentage.toFixed(1)}%
-                                </span>
-                              ) : "-"}
-                            </td>
-                            <td className="px-6 py-4 font-black text-slate-700">
-                              {exam.hasMarks ? getGradeFormal(exam.percentage) : "-"}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                               <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {exam.hasMarks ? (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-primary bg-white shadow-soft hover:bg-primary/10 rounded-xl"
-                                      onClick={() => setSelectedExamResult(exam)}
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 text-slate-400 bg-white shadow-soft hover:bg-slate-50 rounded-xl"
-                                      onClick={() => setSelectedExamSchedule(exam)}
-                                    >
-                                      <Calendar className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                               </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Test Report */}
-          <Card id="tests-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-purple-500/5 pb-6 border-b border-purple-500/10 p-8">
-              <CardTitle className="text-2xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-purple-500/10 text-purple-600">
-                  <ClipboardCheck className="h-7 w-7" />
-                </div>
-                Academic Evolution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-8">
-              {testResults.length === 0 ? (
-                <p className="text-muted-foreground italic text-center py-12">No test results found for the selected filters.</p>
-              ) : (
-                <>
-                  <div className="h-72 w-full bg-white/30 rounded-3xl p-6 border border-border/40 shadow-inner">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={testResults.slice().reverse().map(r => ({ name: r.tests?.name?.substring(0, 10), score: Math.round((r.marks_obtained / (r.tests?.total_marks || 1)) * 100) }))}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} domain={[0, 100]} />
-                        <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                        <Bar dataKey="score" name="Performance %" fill="#8b5cf6" radius={[6, 6, 0, 0]} animationDuration={1500} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="overflow-hidden border border-border/40 rounded-3xl shadow-soft bg-white/20">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="border px-2 py-1">Test Name</th>
-                          <th className="border px-2 py-1">Subject</th>
-                          <th className="border px-2 py-1">Date Taken</th>
-                          <th className="border px-2 py-1">Marks Obtained</th>
-                          <th className="border px-2 py-1">Total Marks</th>
-                          <th className="border px-2 py-1">Percentage</th>
-                          <th className="border px-2 py-1">Grade</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {testResults.map((tr: any) => {
-                          const percentage = tr.tests?.total_marks 
-                            ? Math.round((tr.marks_obtained / tr.tests.total_marks) * 100)
-                            : 0;
-                          const getGradeColor = (pct: number) => {
-                            if (pct >= 90) return 'text-green-600 font-semibold';
-                            if (pct >= 75) return 'text-blue-600 font-semibold';
-                            if (pct >= 60) return 'text-yellow-600 font-semibold';
-                            if (pct >= 50) return 'text-orange-600 font-semibold';
-                            return 'text-red-600 font-semibold';
-                          };
-                          const getGrade = (pct: number) => {
-                            if (pct >= 90) return 'A+';
-                            if (pct >= 80) return 'A';
-                            if (pct >= 75) return 'B+';
-                            if (pct >= 70) return 'B';
-                            if (pct >= 60) return 'C+';
-                            if (pct >= 50) return 'C';
-                            return 'F';
-                          };
-                          return (
-                            <tr key={tr.id}>
-                              <td className="border px-2 py-1 font-medium">{tr.tests?.name || 'N/A'}</td>
-                              <td className="border px-2 py-1">{tr.tests?.subject || 'N/A'}</td>
-                              <td className="border px-2 py-1">{safeFormatDate(tr.date_taken, "PPP")}</td>
-                              <td className="border px-2 py-1 font-semibold">{tr.marks_obtained}</td>
-                              <td className="border px-2 py-1">{tr.tests?.total_marks || 'N/A'}</td>
-                              <td className={`border px-2 py-1 ${getGradeColor(percentage)}`}>{percentage}%</td>
-                              <td className={`border px-2 py-1 ${getGradeColor(percentage)}`}>{getGrade(percentage)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4 border-t">
-                    <div>
-                      <p className="text-muted-foreground">Total Tests</p>
-                      <p className="font-semibold">{totalTests}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Average Score</p>
-                      <p className="font-semibold">{averagePercentage}%</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Total Marks</p>
-                      <p className="font-semibold">{totalMarksObtained}/{totalMaxMarks}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Overall Performance</p>
-                      <p className={`font-semibold ${averagePercentage >= 75 ? 'text-green-600' : averagePercentage >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {averagePercentage >= 75 ? 'Good' : averagePercentage >= 60 ? 'Average' : 'Needs Improvement'}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* NEW: Missed Chapters */}
-            <Card id="missed-chapters-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
-              <CardHeader className="bg-rose-500/5 pb-6 border-b border-rose-500/10 p-8">
-                <CardTitle className="text-xl font-black flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600">
-                    <XCircle className="h-6 w-6" />
-                  </div>
-                  Pending Curriculum
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {missedChapters.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground font-medium italic">No pending chapters identified for this period.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-muted/30 border-b">
-                        <tr>
-                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Subject</th>
-                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Chapter</th>
-                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Date</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/10">
-                        {missedChapters.map((lp) => (
-                          <tr key={lp.id} className="hover:bg-rose-500/5 transition-colors">
-                            <td className="px-6 py-4 font-bold text-slate-700">{lp.subject}</td>
-                            <td className="px-6 py-4 text-slate-600">{lp.chapter}</td>
-                            <td className="px-6 py-4 text-[11px] font-medium text-slate-400">{safeFormatDate(lp.lesson_date, "PPP")}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* NEW: Overdue Homework */}
-            <Card id="overdue-homework-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
-              <CardHeader className="bg-amber-500/5 pb-6 border-b border-amber-500/10 p-8">
-                <CardTitle className="text-xl font-black flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
-                    <AlertTriangle className="h-6 w-6" />
-                  </div>
-                  Overdue Assignments
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {overdueHomeworks.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground font-medium italic">All assignments are currently up to date.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-muted/30 border-b">
-                        <tr>
-                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Title</th>
-                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Subject</th>
-                          <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Due</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/10">
-                        {overdueHomeworks.map((hw: any) => (
-                          <tr key={hw.id} className="hover:bg-amber-500/5 transition-colors">
-                            <td className="px-6 py-4 font-bold text-slate-700">{hw.homework?.title || '-'}</td>
-                            <td className="px-6 py-4 font-medium text-slate-600">{hw.homework?.subject || '-'}</td>
-                            <td className="px-6 py-4 text-[11px] font-black text-rose-500">{safeFormatDate(hw.homework?.due_date, "PPP")}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Preschool Activities */}
-          <Card id="activities-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
-            <CardHeader className="bg-sky-500/5 pb-6 border-b border-sky-500/10 p-8">
-              <CardTitle className="text-2xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-sky-500/10 text-sky-600">
-                  <Paintbrush className="h-7 w-7" />
-                </div>
-                Co-Curricular Engagement
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8">
-              {preschoolActivities.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground font-medium italic">No participation records discovered for activities.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {preschoolActivities.map((pa: any) => (
-                    <Card key={pa.id} className="border-none shadow-soft overflow-hidden rounded-2xl bg-white/50 group hover:shadow-medium transition-all">
-                      <div className="aspect-video relative overflow-hidden bg-slate-100">
-                        {pa.activities?.photo_url ? (
-                          <img
-                            src={supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl}
-                            alt={pa.activities.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-300">
-                            <Paintbrush className="h-12 w-12" />
-                          </div>
-                        )}
-                        <Badge className="absolute top-3 left-3 bg-white/90 text-slate-900 font-black text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-lg backdrop-blur-sm">
-                          {pa.activities?.activity_types?.name || 'Activity'}
-                        </Badge>
-                      </div>
-                      <CardContent className="p-5 space-y-3">
-                        <div>
-                          <h4 className="font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">{pa.activities?.title}</h4>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{safeFormatDate(pa.activities?.activity_date, "PPP")}</p>
-                        </div>
-                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{pa.activities?.description}</p>
-                        <div className="pt-2 flex justify-between items-center">
-                          <div className="flex items-center gap-1.5">
-                            <div className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase">Involvement: {pa.involvement_score || 5}/10</span>
-                          </div>
-                          <div className="flex gap-2">
-                             {pa.activities?.photo_url && (
-                               <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100" asChild>
-                                 <a href={supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl} target="_blank" rel="noopener noreferrer"><Eye className="h-3.5 w-3.5" /></a>
-                               </Button>
-                             )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Discipline Issues */}
-          <Card id="discipline-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
-            <CardHeader className="bg-rose-500/5 pb-6 border-b border-rose-500/10 p-8">
-              <CardTitle className="text-2xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-600">
-                  <AlertTriangle className="h-7 w-7" />
-                </div>
-                Behavioral Log
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {disciplineIssues.length === 0 ? (
-                <div className="p-12 text-center text-muted-foreground font-medium italic">No behavioral incidents reported. Clear record maintained.</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-muted/30 border-b">
-                      <tr>
-                        <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Category</th>
-                        <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Incident Context</th>
-                        <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Severity</th>
-                        <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/10">
-                      {disciplineIssues.map((di: any) => (
-                        <tr key={di.id} className="hover:bg-rose-500/5 transition-colors">
-                          <td className="px-8 py-5 font-black text-slate-700">{di.discipline_categories?.name || 'N/A'}</td>
-                          <td className="px-8 py-5">
-                            <p className="text-slate-600 line-clamp-1">{di.description}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{safeFormatDate(di.issue_date, "PPP")}</p>
-                          </td>
-                          <td className="px-8 py-5">
-                            <Badge className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded-lg",
-                              di.severity === "high" ? "bg-rose-500 text-white" :
-                              di.severity === "medium" ? "bg-amber-500 text-white" : "bg-emerald-500 text-white")}>
-                              {di.severity}
-                            </Badge>
-                          </td>
-                          <td className="px-8 py-5 text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
-                              onClick={() => setSelectedDisciplineIssue(di)}
-                            >
-                              <Eye className="h-4.5 w-4.5" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* AI Summary */}
-          <Card id="ai-summary-section" className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-indigo-950 text-white border border-white/10 relative">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <Star className="h-32 w-32 rotate-12" />
-            </div>
-            <CardHeader className="pb-6 border-b border-white/10 p-10 relative z-10">
-              <CardTitle className="text-3xl font-black flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  <Star className="h-8 w-8 animate-pulse" />
-                </div>
-                AI Synthesis Report
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-10 relative z-10">
-              {aiSummary ? (
-                <div className="space-y-6">
-                  <div className="prose prose-invert max-w-none">
-                    <Textarea
-                      value={aiSummary}
-                      onChange={e => setAiSummary(e.target.value)}
-                      rows={12}
-                      className="resize-none bg-white/5 border-white/10 text-indigo-100 font-medium leading-relaxed rounded-3xl p-8 focus:ring-indigo-500/50 shadow-inner"
-                    />
-                  </div>
-                  <div className="flex justify-between items-center pt-4">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Neural Insight Generated</p>
-                    <Button
-                      variant="ghost"
-                      className="text-indigo-300 hover:text-white hover:bg-white/10 font-bold uppercase text-[10px] tracking-widest"
-                      onClick={() => generateSummaryMutation.mutate()}
-                    >
-                      Regenerate Insight
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-12 flex flex-col items-center justify-center space-y-8 text-center">
-                   <div className="space-y-2">
-                     <p className="text-indigo-200 font-bold text-xl">Analyze Performance Trends with AI</p>
-                     <p className="text-indigo-400/80 max-w-md mx-auto">Generate a comprehensive summary of student performance, behavioral patterns, and academic trajectory using our advanced synthesis engine.</p>
-                   </div>
-                   <Button
-                    onClick={() => generateSummaryMutation.mutate()}
-                    disabled={generateSummaryMutation.isPending}
-                    className="h-16 px-12 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl shadow-indigo-500/40 border-b-4 border-indigo-700 active:border-b-0 active:translate-y-1 transition-all"
-                   >
-                    {generateSummaryMutation.isPending ? (
-                      <div className="flex items-center gap-3">
-                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Synthesizing...
-                      </div>
-                    ) : (
-                      "Initialize Synthesis"
-                    )}
-                   </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Exam Schedule Dialog */}
-      <Dialog open={!!selectedExamSchedule} onOpenChange={() => setSelectedExamSchedule(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-md rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Exam Schedule
-            </DialogTitle>
-            <DialogDescription>Examination details and subject-wise schedule.</DialogDescription>
-          </DialogHeader>
-
-          {selectedExamSchedule && (
-            <div className="space-y-6 py-4">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Examination</p>
-                <p className="text-lg font-bold text-primary">{selectedExamSchedule.name}</p>
-                <p className="text-sm font-medium text-muted-foreground">Grade {selectedExamSchedule.grade} • {selectedExamSchedule.academic_year}</p>
-              </div>
-
-              <div className="bg-muted/30 p-4 rounded-2xl border space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold">Base Exam Date</span>
-                  <span className="text-sm font-semibold">{safeFormatDate(selectedExamSchedule.exam_date, "PPP")}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-bold">Total Subjects</span>
-                  <span className="text-sm font-semibold">{selectedExamSchedule.results.length}</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Included Subjects</p>
-                <div className="grid grid-cols-1 gap-2">
-                  {selectedExamSchedule.results.map((subj: any) => (
-                    <div key={subj.id} className="flex justify-between items-center p-3 bg-white border rounded-xl shadow-sm">
-                      <span className="font-bold text-sm text-foreground/80">{subj.subject_name}</span>
-                      <div className="flex gap-4 text-[10px] font-bold uppercase tracking-tighter">
-                        <span className="text-muted-foreground">Full: {subj.full_marks}</span>
-                        <span className="text-muted-foreground">Pass: {subj.pass_marks}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end pt-4 border-t">
-            <Button variant="outline" className="rounded-xl" onClick={() => setSelectedExamSchedule(null)}>Close Schedule</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Published Result Marksheet Dialog */}
-      <Dialog open={!!selectedExamResult} onOpenChange={() => setSelectedExamResult(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[95vh] overflow-y-auto rounded-3xl">
-          <DialogHeader className="no-print">
-            <DialogTitle>Official Marksheet</DialogTitle>
-            <DialogDescription>Formal academic record for {selectedExamResult?.name}</DialogDescription>
-          </DialogHeader>
-
-          {selectedExamResult && (
-            <div id="marksheet-content-report" className="space-y-6">
-              <div className="text-center space-y-2 border-b pb-6">
-                <h1 className="text-2xl font-black text-primary tracking-tight">OFFICIAL MARKSHEET</h1>
-                <h2 className="text-lg font-bold text-foreground/80 uppercase">{selectedExamResult.name}</h2>
-                <p className="text-sm font-medium text-muted-foreground">Academic Year: {selectedExamResult.academic_year}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 bg-muted/30 p-6 rounded-2xl border">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Student Name</p>
-                  <p className="text-lg font-bold">{selectedExamResult.student.name}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Roll Number</p>
-                  <p className="text-lg font-bold">{selectedExamResult.student.roll_number || "-"}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Grade / Class</p>
-                  <p className="text-lg font-bold">Grade {selectedExamResult.student.grade}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Exam Date</p>
-                  <p className="text-lg font-bold">{selectedExamResult.exam_date ? safeFormatDate(selectedExamResult.exam_date, "PPP") : "-"}</p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border overflow-hidden">
-                <div className="overflow-x-auto">
-  <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead className="font-bold py-4">Subject Name</TableHead>
-                      <TableHead className="text-center font-bold">Full Marks</TableHead>
-                      <TableHead className="text-center font-bold">Pass Marks</TableHead>
-                      <TableHead className="text-center font-bold">Obtained</TableHead>
-                      <TableHead className="text-center font-bold">Result</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedExamResult.results.map((subj: any) => (
-                      <TableRow key={subj.id} className="h-12">
-                        <TableCell className="font-semibold">{subj.subject_name}</TableCell>
-                        <TableCell className="text-center font-medium">{subj.full_marks}</TableCell>
-                        <TableCell className="text-center font-medium">{subj.pass_marks}</TableCell>
-                        <TableCell className="text-center font-black text-primary">
-                          {subj.obtained !== undefined && subj.obtained !== null ? subj.obtained : "-"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {subj.obtained !== undefined && subj.obtained !== null ? (
-                            <Badge variant={subj.passed ? "success" : "destructive"} className="font-black uppercase text-[9px]">
-                              {subj.passed ? "Pass" : "Fail"}
-                            </Badge>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground italic">Pending</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-</div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
-                <div className="p-4 rounded-2xl bg-muted/20 border text-center space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Grand Total</p>
-                  <p className="text-xl font-black">{selectedExamResult.totalObtained}/{selectedExamResult.totalFull}</p>
-                </div>
-                <div className="p-4 rounded-2xl bg-muted/20 border text-center space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Percentage</p>
-                  <p className="text-xl font-black">{selectedExamResult.percentage.toFixed(1)}%</p>
-                </div>
-                <div className="p-4 rounded-2xl bg-muted/20 border text-center space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Grade</p>
-                  <p className="text-xl font-black">{getGradeFormal(selectedExamResult.percentage)}</p>
-                </div>
-                <div className={cn(
-                  "p-4 rounded-2xl border text-center space-y-1",
-                  selectedExamResult.allPassed ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"
-                )}>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Final Status</p>
-                  <p className={cn("text-xl font-black", selectedExamResult.allPassed ? "text-green-600" : "text-red-600")}>
-                    {selectedExamResult.allPassed ? "PASSED" : "FAILED"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-between mt-16 px-4 pb-8">
-                <div className="text-center space-y-1">
-                  <div className="w-32 border-t-2 border-foreground/30 pt-1" />
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Class Teacher</p>
-                </div>
-                <div className="text-center space-y-1">
-                  <div className="w-32 border-t-2 border-foreground/30 pt-1" />
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Principal</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-6 border-t no-print">
-            <Button variant="outline" size="sm" className="rounded-xl h-10 px-6" onClick={() => {
-               const content = document.getElementById('marksheet-content-report');
-               if (content) {
-                 const printWindow = window.open('', '_blank');
-                 printWindow?.document.write(`<html><head><title>Marksheet</title><style>
-                   body { font-family: sans-serif; padding: 40px; }
-                   table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                   th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-                   th { background-color: #f5f5f5; }
-                   .text-center { text-align: center; }
-                   .font-bold { font-weight: bold; }
-                   .border-b { border-bottom: 1px solid #eee; }
-                   .pb-6 { padding-bottom: 24px; }
-                   .mb-6 { margin-bottom: 24px; }
-                   .p-6 { padding: 24px; }
-                   .rounded-2xl { border-radius: 1rem; }
-                   .border { border: 1px solid #eee; }
-                   .bg-muted\\/30 { background-color: #f9fafb; }
-                   .grid { display: grid; }
-                   .grid-cols-2 { grid-template-cols: 1fr 1fr; }
-                   .gap-6 { gap: 24px; }
-                 </style></head><body>${content.innerHTML}</body></html>`);
-                 printWindow?.document.close();
-                 printWindow?.focus();
-                 setTimeout(() => { printWindow?.print(); printWindow?.close(); }, 500);
-               }
-            }}>
-              <Printer className="h-4 w-4 mr-2" /> Print
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Chapter Detail Dialog */}
-      <Dialog open={!!selectedChapterDetail} onOpenChange={() => setSelectedChapterDetail(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <BookOpen className="h-6 w-6 text-blue-600" />
-              Chapter Details
-            </DialogTitle>
-            <DialogDescription>
-              Detailed performance metrics and records for this curricular unit.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedChapterDetail && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-xl border">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Subject</p>
-                  <p className="font-bold">{selectedChapterDetail.lessonPlan.subject}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Lesson Date</p>
-                  <p className="font-semibold">{safeFormatDate(selectedChapterDetail.lessonPlan.lesson_date, "PPP")}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Topic</p>
-                  <p className="font-medium">{selectedChapterDetail.lessonPlan.chapter}: {selectedChapterDetail.lessonPlan.topic}</p>
-                </div>
-              </div>
-
-              {/* Lesson Evaluation */}
-              <div className="space-y-3">
-                <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-primary">
-                  <Star className="h-4 w-4" /> Teacher Evaluation
-                </h4>
-                {selectedChapterDetail.studentChapters.length > 0 ? (
-                  selectedChapterDetail.studentChapters.map((sc) => (
-                    <div key={sc.id} className="bg-white p-4 rounded-xl border shadow-sm space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold">Rating</span>
-                        <span>{getRatingStars(sc.evaluation_rating)}</span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground">Teacher Notes</span>
-                        <p className="text-sm italic leading-relaxed">{sc.teacher_notes || "No notes recorded."}</p>
-                      </div>
-                      <p className="text-[10px] text-right text-muted-foreground">Recorded by {sc.recorded_by_teacher?.name || "N/A"}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm italic text-muted-foreground">No evaluation recorded for this lesson.</p>
-                )}
-              </div>
-
-              {/* Tests */}
-              <div className="space-y-3">
-                <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-purple-600">
-                  <ClipboardCheck className="h-4 w-4" /> Academic Results
-                </h4>
-                {selectedChapterDetail.testResults.length > 0 ? (
-                  <div className="divide-y border rounded-xl overflow-hidden">
-                    {selectedChapterDetail.testResults.map((tr) => {
-                      const pct = Math.round((tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100);
-                      return (
-                        <div key={tr.id} className="p-4 flex justify-between items-center bg-white">
-                          <div>
-                            <p className="text-sm font-bold">{tr.tests?.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{safeFormatDate(tr.date_taken, "PPP")}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-black">{tr.marks_obtained}/{tr.tests?.total_marks}</p>
-                            <p className={cn("text-[10px] font-bold", pct >= 75 ? "text-green-600" : pct >= 50 ? "text-orange-600" : "text-red-600")}>{pct}%</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm italic text-muted-foreground">No tests associated with this chapter.</p>
-                )}
-              </div>
-
-              {/* Homework */}
-              <div className="space-y-3">
-                <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-orange-600">
-                  <Book className="h-4 w-4" /> Homework Assignments
-                </h4>
-                {selectedChapterDetail.homeworkRecords.length > 0 ? (
-                  <div className="divide-y border rounded-xl overflow-hidden">
-                    {selectedChapterDetail.homeworkRecords.map((hr) => (
-                      <div key={hr.id} className="p-4 flex justify-between items-center bg-white">
-                        <div>
-                          <p className="text-sm font-bold">{hr.homework?.title}</p>
-                          <p className="text-[10px] text-muted-foreground">Due: {safeFormatDate(hr.homework?.due_date, "PPP")}</p>
-                        </div>
-                        <Badge variant={hr.status === 'completed' || hr.status === 'checked' ? 'success' : hr.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
-                          {hr.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm italic text-muted-foreground">No homework assigned for this chapter.</p>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Attendance Remark Dialog */}
-      <Dialog open={!!selectedAttendanceDetail} onOpenChange={(open) => !open && setSelectedAttendanceDetail(null)}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black">Attendance Detail</DialogTitle>
-            <DialogDescription className="font-medium">
-              Information for {selectedAttendanceDetail ? safeFormatDate(selectedAttendanceDetail.date, 'MMMM d, yyyy') : ''}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-6">
-            <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 space-y-2">
-              <div className="flex items-center gap-2 text-orange-600">
-                <FileText className="h-4 w-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Recorded Remarks</span>
-              </div>
-              <p className="text-sm font-bold text-orange-900 leading-relaxed italic">
-                "{selectedAttendanceDetail?.remarks}"
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest italic">
+               * Official academic record for {exam.name}
               </p>
+              <Button
+               onClick={() => setSelectedExamResult(exam)}
+               className="rounded-2xl shadow-sm bg-slate-900 hover:bg-slate-800 text-white font-black uppercase text-[10px] tracking-widest px-6"
+              >
+               <Printer className="h-4 w-4 mr-2" /> View Full Marksheet
+              </Button>
             </div>
+           </>
+          );
+         })()}
+        </div>
+       ) : (
+        <div className="overflow-x-auto">
+         <table className="w-full text-sm text-left">
+          <thead className="bg-muted/50 border-b">
+           <tr>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Assessment Name</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Date</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Status</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Total Scale</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Proficiency</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Rank</th>
+            <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Management</th>
+           </tr>
+          </thead>
+          <tbody className="divide-y">
+           {studentExams.length === 0 ? (
+            <tr><td colSpan={7} className="p-8 text-center text-muted-foreground italic">No assessment history found.</td></tr>
+           ) : (
+            studentExams.map((exam: any) => (
+             <tr key={exam.id} className="hover:bg-muted/30 transition-colors group">
+              <td className="px-6 py-4">
+               <p className="font-bold text-slate-700">{exam.name}</p>
+               <p className="text-[9px] font-black uppercase text-primary/60 tracking-widest">Academic Year {exam.academic_year}</p>
+              </td>
+              <td className="px-6 py-4 text-[11px] font-medium text-slate-500">{safeFormatDate(exam.exam_date, "PPP")}</td>
+              <td className="px-6 py-4">
+               {exam.hasMarks ? (
+                <Badge variant={exam.isPartial ? "warning" : "success"} className="text-[9px] uppercase font-black rounded-md">
+                 {exam.isPartial ? "Partial Result" : "Result Ready"}
+                </Badge>
+               ) : (
+                <Badge variant="secondary" className="text-[9px] uppercase font-bold rounded-md">Scheduled</Badge>
+               )}
+              </td>
+              <td className="px-6 py-4 font-bold text-slate-700">
+               {exam.hasMarks ? `${exam.totalObtained}/${exam.totalFull}` : "-"}
+              </td>
+              <td className="px-6 py-4">
+               {exam.hasMarks ? (
+                <span className={cn("font-black", exam.percentage >= 75 ? "text-green-600" : exam.percentage >= 50 ? "text-orange-600" : "text-red-600")}>
+                 {exam.percentage.toFixed(1)}%
+                </span>
+               ) : "-"}
+              </td>
+              <td className="px-6 py-4 font-black text-slate-700">
+               {exam.hasMarks ? getGradeFormal(exam.percentage) : "-"}
+              </td>
+              <td className="px-6 py-4 text-center">
+                <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                 {exam.hasMarks ? (
+                  <Button
+                   variant="ghost"
+                   size="icon"
+                   className="h-8 w-8 text-primary bg-white shadow-sm hover:bg-primary/10 rounded-xl"
+                   onClick={() => setSelectedExamResult(exam)}
+                  >
+                   <Eye className="h-4 w-4" />
+                  </Button>
+                 ) : (
+                  <Button
+                   variant="ghost"
+                   size="icon"
+                   className="h-8 w-8 text-slate-400 bg-white shadow-sm hover:bg-slate-50 rounded-xl"
+                   onClick={() => setSelectedExamSchedule(exam)}
+                  >
+                   <Calendar className="h-4 w-4" />
+                  </Button>
+                 )}
+                </div>
+              </td>
+             </tr>
+            ))
+           )}
+          </tbody>
+         </table>
+        </div>
+       )}
+      </CardContent>
+     </Card>
+
+     {/* Test Report */}
+     <Card id="tests-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-white/20">
+      <CardHeader className="bg-purple-500/5 pb-6 border-b border-purple-500/10 p-8">
+       <CardTitle className="text-2xl font-black flex items-center gap-3">
+        <div className="p-2.5 rounded-2xl bg-purple-500/10 text-purple-600">
+         <ClipboardCheck className="h-7 w-7" />
+        </div>
+        Academic Evolution
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-8 space-y-8">
+       {testResults.length === 0 ? (
+        <p className="text-muted-foreground italic text-center py-12">No test results found for the selected filters.</p>
+       ) : (
+        <>
+         <div className="h-72 w-full bg-white rounded-2xl p-6 border border-border/40 shadow-inner">
+          <ResponsiveContainer width="100%" height="100%">
+           <BarChart data={testResults.slice().reverse().map(r => ({ name: r.tests?.name?.substring(0, 10), score: Math.round((r.marks_obtained / (r.tests?.total_marks || 1)) * 100) }))}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} domain={[0, 100]} />
+            <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+            <Bar dataKey="score" name="Performance %" fill="#8b5cf6" radius={[6, 6, 0, 0]} animationDuration={1500} />
+           </BarChart>
+          </ResponsiveContainer>
+         </div>
+
+         <div className="overflow-hidden border border-border/40 rounded-2xl shadow-sm bg-white">
+          <table className="w-full text-sm">
+           <thead className="bg-gray-100">
+            <tr>
+             <th className="border px-2 py-1">Test Name</th>
+             <th className="border px-2 py-1">Subject</th>
+             <th className="border px-2 py-1">Date Taken</th>
+             <th className="border px-2 py-1">Marks Obtained</th>
+             <th className="border px-2 py-1">Total Marks</th>
+             <th className="border px-2 py-1">Percentage</th>
+             <th className="border px-2 py-1">Grade</th>
+            </tr>
+           </thead>
+           <tbody>
+            {testResults.map((tr: any) => {
+             const percentage = tr.tests?.total_marks
+              ? Math.round((tr.marks_obtained / tr.tests.total_marks) * 100)
+              : 0;
+             const getGradeColor = (pct: number) => {
+              if (pct >= 90) return 'text-green-600 font-semibold';
+              if (pct >= 75) return 'text-blue-600 font-semibold';
+              if (pct >= 60) return 'text-yellow-600 font-semibold';
+              if (pct >= 50) return 'text-orange-600 font-semibold';
+              return 'text-red-600 font-semibold';
+             };
+             const getGrade = (pct: number) => {
+              if (pct >= 90) return 'A+';
+              if (pct >= 80) return 'A';
+              if (pct >= 75) return 'B+';
+              if (pct >= 70) return 'B';
+              if (pct >= 60) return 'C+';
+              if (pct >= 50) return 'C';
+              return 'F';
+             };
+             return (
+              <tr key={tr.id}>
+               <td className="border px-2 py-1 font-medium">{tr.tests?.name || 'N/A'}</td>
+               <td className="border px-2 py-1">{tr.tests?.subject || 'N/A'}</td>
+               <td className="border px-2 py-1">{safeFormatDate(tr.date_taken, "PPP")}</td>
+               <td className="border px-2 py-1 font-semibold">{tr.marks_obtained}</td>
+               <td className="border px-2 py-1">{tr.tests?.total_marks || 'N/A'}</td>
+               <td className={`border px-2 py-1 ${getGradeColor(percentage)}`}>{percentage}%</td>
+               <td className={`border px-2 py-1 ${getGradeColor(percentage)}`}>{getGrade(percentage)}</td>
+              </tr>
+             );
+            })}
+           </tbody>
+          </table>
+         </div>
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm pt-4 border-t">
+          <div>
+           <p className="text-muted-foreground">Total Tests</p>
+           <p className="font-semibold">{totalTests}</p>
+          </div>
+          <div>
+           <p className="text-muted-foreground">Average Score</p>
+           <p className="font-semibold">{averagePercentage}%</p>
+          </div>
+          <div>
+           <p className="text-muted-foreground">Total Marks</p>
+           <p className="font-semibold">{totalMarksObtained}/{totalMaxMarks}</p>
+          </div>
+          <div>
+           <p className="text-muted-foreground">Overall Performance</p>
+           <p className={`font-semibold ${averagePercentage >= 75 ? 'text-green-600' : averagePercentage >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+            {averagePercentage >= 75 ? 'Good' : averagePercentage >= 60 ? 'Average' : 'Needs Improvement'}
+           </p>
+          </div>
+         </div>
+        </>
+       )}
+      </CardContent>
+     </Card>
+
+     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* NEW: Missed Chapters */}
+      <Card id="missed-chapters-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-border/20">
+       <CardHeader className="bg-rose-500/5 pb-6 border-b border-rose-500/10 p-8">
+        <CardTitle className="text-xl font-black flex items-center gap-3">
+         <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600">
+          <XCircle className="h-6 w-6" />
+         </div>
+         Pending Curriculum
+        </CardTitle>
+       </CardHeader>
+       <CardContent className="p-0">
+        {missedChapters.length === 0 ? (
+         <div className="p-8 text-center text-muted-foreground font-medium italic">No pending chapters identified for this period.</div>
+        ) : (
+         <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+           <thead className="bg-muted/30 border-b">
+            <tr>
+             <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Subject</th>
+             <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Chapter</th>
+             <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Date</th>
+            </tr>
+           </thead>
+           <tbody className="divide-y divide-border/10">
+            {missedChapters.map((lp) => (
+             <tr key={lp.id} className="hover:bg-rose-500/5 transition-colors">
+              <td className="px-6 py-4 font-bold text-slate-700">{lp.subject}</td>
+              <td className="px-6 py-4 text-slate-600">{lp.chapter}</td>
+              <td className="px-6 py-4 text-[11px] font-medium text-slate-400">{safeFormatDate(lp.lesson_date, "PPP")}</td>
+             </tr>
+            ))}
+           </tbody>
+          </table>
+         </div>
+        )}
+       </CardContent>
+      </Card>
+
+      {/* NEW: Overdue Homework */}
+      <Card id="overdue-homework-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-border/20">
+       <CardHeader className="bg-amber-500/5 pb-6 border-b border-amber-500/10 p-8">
+        <CardTitle className="text-xl font-black flex items-center gap-3">
+         <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
+          <AlertTriangle className="h-6 w-6" />
+         </div>
+         Overdue Assignments
+        </CardTitle>
+       </CardHeader>
+       <CardContent className="p-0">
+        {overdueHomeworks.length === 0 ? (
+         <div className="p-8 text-center text-muted-foreground font-medium italic">All assignments are currently up to date.</div>
+        ) : (
+         <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+           <thead className="bg-muted/30 border-b">
+            <tr>
+             <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Title</th>
+             <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Subject</th>
+             <th className="px-6 py-4 font-bold uppercase tracking-wider text-[9px] text-muted-foreground">Due</th>
+            </tr>
+           </thead>
+           <tbody className="divide-y divide-border/10">
+            {overdueHomeworks.map((hw: any) => (
+             <tr key={hw.id} className="hover:bg-amber-500/5 transition-colors">
+              <td className="px-6 py-4 font-bold text-slate-700">{hw.homework?.title || '-'}</td>
+              <td className="px-6 py-4 font-medium text-slate-600">{hw.homework?.subject || '-'}</td>
+              <td className="px-6 py-4 text-[11px] font-black text-rose-500">{safeFormatDate(hw.homework?.due_date, "PPP")}</td>
+             </tr>
+            ))}
+           </tbody>
+          </table>
+         </div>
+        )}
+       </CardContent>
+      </Card>
+     </div>
+
+     {/* Preschool Activities */}
+     <Card id="activities-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-border/20">
+      <CardHeader className="bg-sky-500/5 pb-6 border-b border-sky-500/10 p-8">
+       <CardTitle className="text-2xl font-black flex items-center gap-3">
+        <div className="p-2.5 rounded-2xl bg-sky-500/10 text-sky-600">
+         <Paintbrush className="h-7 w-7" />
+        </div>
+        Co-Curricular Engagement
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-8">
+       {preschoolActivities.length === 0 ? (
+        <div className="py-12 text-center text-muted-foreground font-medium italic">No participation records discovered for activities.</div>
+       ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+         {preschoolActivities.map((pa: any) => (
+          <Card key={pa.id} className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white group hover:shadow-sm transition-all">
+           <div className="aspect-video relative overflow-hidden bg-slate-100">
+            {pa.activities?.photo_url ? (
+             <img
+              src={supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl}
+              alt={pa.activities.title}
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+             />
+            ) : (
+             <div className="w-full h-full flex items-center justify-center text-slate-300">
+              <Paintbrush className="h-12 w-12" />
+             </div>
+            )}
+            <Badge className="absolute top-3 left-3 bg-white text-slate-900 font-black text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-lg ">
+             {pa.activities?.activity_types?.name || 'Activity'}
+            </Badge>
+           </div>
+           <CardContent className="p-5 space-y-3">
+            <div>
+             <h4 className="font-black text-slate-800 line-clamp-1 group-hover:text-primary transition-colors">{pa.activities?.title}</h4>
+             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{safeFormatDate(pa.activities?.activity_date, "PPP")}</p>
+            </div>
+            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{pa.activities?.description}</p>
+            <div className="pt-2 flex justify-between items-center">
+             <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+              <span className="text-[10px] font-black text-slate-400 uppercase">Involvement: {pa.involvement_score || 5}/10</span>
+             </div>
+             <div className="flex gap-2">
+               {pa.activities?.photo_url && (
+                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100" asChild>
+                 <a href={supabase.storage.from("activity-photos").getPublicUrl(pa.activities.photo_url).data.publicUrl} target="_blank" rel="noopener noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                </Button>
+               )}
+             </div>
+            </div>
+           </CardContent>
+          </Card>
+         ))}
+        </div>
+       )}
+      </CardContent>
+     </Card>
+
+     {/* Discipline Issues */}
+     <Card id="discipline-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-border/20">
+      <CardHeader className="bg-rose-500/5 pb-6 border-b border-rose-500/10 p-8">
+       <CardTitle className="text-2xl font-black flex items-center gap-3">
+        <div className="p-2.5 rounded-2xl bg-rose-500/10 text-rose-600">
+         <AlertTriangle className="h-7 w-7" />
+        </div>
+        Behavioral Log
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+       {disciplineIssues.length === 0 ? (
+        <div className="p-12 text-center text-muted-foreground font-medium italic">No behavioral incidents reported. Clear record maintained.</div>
+       ) : (
+        <div className="overflow-x-auto">
+         <table className="w-full text-sm text-left">
+          <thead className="bg-muted/30 border-b">
+           <tr>
+            <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Category</th>
+            <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Incident Context</th>
+            <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground">Severity</th>
+            <th className="px-8 py-4 font-bold uppercase tracking-wider text-[10px] text-muted-foreground text-center">Action</th>
+           </tr>
+          </thead>
+          <tbody className="divide-y divide-border/10">
+           {disciplineIssues.map((di: any) => (
+            <tr key={di.id} className="hover:bg-rose-500/5 transition-colors">
+             <td className="px-8 py-5 font-black text-slate-700">{di.discipline_categories?.name || 'N/A'}</td>
+             <td className="px-8 py-5">
+              <p className="text-slate-600 line-clamp-1">{di.description}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{safeFormatDate(di.issue_date, "PPP")}</p>
+             </td>
+             <td className="px-8 py-5">
+              <Badge className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded-lg",
+               di.severity === "high" ? "bg-rose-500 text-white" :
+               di.severity === "medium" ? "bg-amber-500 text-white" : "bg-emerald-500 text-white")}>
+               {di.severity}
+              </Badge>
+             </td>
+             <td className="px-8 py-5 text-center">
+              <Button
+               variant="ghost"
+               size="icon"
+               className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+               onClick={() => setSelectedDisciplineIssue(di)}
+              >
+               <Eye className="h-4.5 w-4.5" />
+              </Button>
+             </td>
+            </tr>
+           ))}
+          </tbody>
+         </table>
+        </div>
+       )}
+      </CardContent>
+     </Card>
+
+     {/* AI Summary */}
+     <Card id="ai-summary-section" className="border border-border shadow-sm overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white border border-white/10 relative">
+      <div className="absolute top-0 right-0 p-8 opacity-10">
+       <Star className="h-32 w-32 rotate-12" />
+      </div>
+      <CardHeader className="pb-6 border-b border-white/10 p-10 relative z-10">
+       <CardTitle className="text-3xl font-black flex items-center gap-4">
+        <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+         <Star className="h-8 w-8 animate-pulse" />
+        </div>
+        AI Synthesis Report
+       </CardTitle>
+      </CardHeader>
+      <CardContent className="p-10 relative z-10">
+       {aiSummary ? (
+        <div className="space-y-6">
+         <div className="prose prose-invert max-w-none">
+          <Textarea
+           value={aiSummary}
+           onChange={e => setAiSummary(e.target.value)}
+           rows={12}
+           className="resize-none bg-white border-white/10 text-indigo-100 font-medium leading-relaxed rounded-2xl p-8 focus:ring-indigo-500/50 shadow-inner"
+          />
+         </div>
+         <div className="flex justify-between items-center pt-4">
+          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Neural Insight Generated</p>
+          <Button
+           variant="ghost"
+           className="text-indigo-300 hover:text-white hover:bg-white font-bold uppercase text-[10px] tracking-widest"
+           onClick={() => generateSummaryMutation.mutate()}
+          >
+           Regenerate Insight
+          </Button>
+         </div>
+        </div>
+       ) : (
+        <div className="py-12 flex flex-col items-center justify-center space-y-8 text-center">
+          <div className="space-y-2">
+           <p className="text-indigo-200 font-bold text-xl">Analyze Performance Trends with AI</p>
+           <p className="text-indigo-400/80 max-w-md mx-auto">Generate a comprehensive summary of student performance, behavioral patterns, and academic trajectory using our advanced synthesis engine.</p>
           </div>
           <Button
-            onClick={() => setSelectedAttendanceDetail(null)}
-            className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px]"
+          onClick={() => generateSummaryMutation.mutate()}
+          disabled={generateSummaryMutation.isPending}
+          className="h-16 px-12 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl shadow-indigo-500/40 border-b-4 border-indigo-700 active:border-b-0 active:translate-y-1 transition-all"
           >
-            Close
-          </Button>
-        </DialogContent>
-      </Dialog>
-
-      {/* Discipline Detail Dialog */}
-      <Dialog open={!!selectedDisciplineIssue} onOpenChange={() => setSelectedDisciplineIssue(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-md" aria-describedby="discipline-detail-description">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              Discipline Issue Details
-            </DialogTitle>
-            <DialogDescription id="discipline-detail-description">
-              In-depth view of the behavioral incident and its current resolution status.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedDisciplineIssue && (
-            <div className="space-y-4 py-2">
-              <div className="flex justify-between items-start border-b pb-4">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</p>
-                  <p className="text-lg font-bold">{selectedDisciplineIssue.discipline_categories?.name}</p>
-                </div>
-                <Badge className={cn("text-[10px] font-black uppercase",
-                  selectedDisciplineIssue.severity === "high" ? "bg-red-500" :
-                  selectedDisciplineIssue.severity === "medium" ? "bg-orange-500" : "bg-green-500")}>
-                  {selectedDisciplineIssue.severity} Severity
-                </Badge>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Description</p>
-                <p className="text-sm bg-muted/30 p-3 rounded-lg border italic leading-relaxed">
-                  {selectedDisciplineIssue.description}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Date Reported</p>
-                  <p className="text-sm font-semibold">{safeFormatDate(selectedDisciplineIssue.issue_date, "PPP")}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</p>
-                  <Badge variant="outline" className="mt-1 font-bold uppercase text-[10px]">
-                    {selectedDisciplineIssue.status || "Reported"}
-                  </Badge>
-                </div>
-              </div>
-
-              {selectedDisciplineIssue.action_taken && (
-                <div className="space-y-2 pt-2">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Action Taken</p>
-                  <p className="text-sm font-medium">{selectedDisciplineIssue.action_taken}</p>
-                </div>
-              )}
-            </div>
+          {generateSummaryMutation.isPending ? (
+           <div className="flex items-center gap-3">
+            <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Synthesizing...
+           </div>
+          ) : (
+           "Initialize Synthesis"
           )}
-        </DialogContent>
-      </Dialog>
+          </Button>
+        </div>
+       )}
+      </CardContent>
+     </Card>
+      </div>
+     )}
     </div>
-  );
+   )}
+
+   {/* Exam Schedule Dialog */}
+   <Dialog open={!!selectedExamSchedule} onOpenChange={() => setSelectedExamSchedule(null)}>
+    <DialogContent className="w-[95vw] sm:max-w-md rounded-2xl">
+     <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+       <Calendar className="h-5 w-5 text-primary" />
+       Exam Schedule
+      </DialogTitle>
+      <DialogDescription>Examination details and subject-wise schedule.</DialogDescription>
+     </DialogHeader>
+
+     {selectedExamSchedule && (
+      <div className="space-y-6 py-4">
+       <div className="space-y-1">
+        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Examination</p>
+        <p className="text-lg font-bold text-primary">{selectedExamSchedule.name}</p>
+        <p className="text-sm font-medium text-muted-foreground">Grade {selectedExamSchedule.grade} • {selectedExamSchedule.academic_year}</p>
+       </div>
+
+       <div className="bg-muted/30 p-4 rounded-2xl border space-y-3">
+        <div className="flex justify-between items-center">
+         <span className="text-sm font-bold">Base Exam Date</span>
+         <span className="text-sm font-semibold">{safeFormatDate(selectedExamSchedule.exam_date, "PPP")}</span>
+        </div>
+        <div className="flex justify-between items-center">
+         <span className="text-sm font-bold">Total Subjects</span>
+         <span className="text-sm font-semibold">{selectedExamSchedule.results.length}</span>
+        </div>
+       </div>
+
+       <div className="space-y-3">
+        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Included Subjects</p>
+        <div className="grid grid-cols-1 gap-2">
+         {selectedExamSchedule.results.map((subj: any) => (
+          <div key={subj.id} className="flex justify-between items-center p-3 bg-white border rounded-xl shadow-sm">
+           <span className="font-bold text-sm text-foreground/80">{subj.subject_name}</span>
+           <div className="flex gap-4 text-[10px] font-bold uppercase tracking-tighter">
+            <span className="text-muted-foreground">Full: {subj.full_marks}</span>
+            <span className="text-muted-foreground">Pass: {subj.pass_marks}</span>
+           </div>
+          </div>
+         ))}
+        </div>
+       </div>
+      </div>
+     )}
+
+     <div className="flex justify-end pt-4 border-t">
+      <Button variant="outline" className="rounded-xl" onClick={() => setSelectedExamSchedule(null)}>Close Schedule</Button>
+     </div>
+    </DialogContent>
+   </Dialog>
+
+   {/* Published Result Marksheet Dialog */}
+   <Dialog open={!!selectedExamResult} onOpenChange={() => setSelectedExamResult(null)}>
+    <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[95vh] overflow-y-auto rounded-2xl">
+     <DialogHeader className="no-print">
+      <DialogTitle>Official Marksheet</DialogTitle>
+      <DialogDescription>Formal academic record for {selectedExamResult?.name}</DialogDescription>
+     </DialogHeader>
+
+     {selectedExamResult && (
+      <div id="marksheet-content-report" className="space-y-6">
+       <div className="text-center space-y-2 border-b pb-6">
+        <h1 className="text-2xl font-black text-primary tracking-tight">OFFICIAL MARKSHEET</h1>
+        <h2 className="text-lg font-bold text-foreground/80 uppercase">{selectedExamResult.name}</h2>
+        <p className="text-sm font-medium text-muted-foreground">Academic Year: {selectedExamResult.academic_year}</p>
+       </div>
+
+       <div className="grid grid-cols-2 gap-6 bg-muted/30 p-6 rounded-2xl border">
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Student Name</p>
+         <p className="text-lg font-bold">{selectedExamResult.student.name}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Roll Number</p>
+         <p className="text-lg font-bold">{selectedExamResult.student.roll_number || "-"}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Grade / Class</p>
+         <p className="text-lg font-bold">Grade {selectedExamResult.student.grade}</p>
+        </div>
+        <div className="space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Exam Date</p>
+         <p className="text-lg font-bold">{selectedExamResult.exam_date ? safeFormatDate(selectedExamResult.exam_date, "PPP") : "-"}</p>
+        </div>
+       </div>
+
+       <div className="rounded-2xl border overflow-hidden">
+        <div className="overflow-x-auto">
+ <Table>
+         <TableHeader className="bg-muted/50">
+          <TableRow>
+           <TableHead className="font-bold py-4">Subject Name</TableHead>
+           <TableHead className="text-center font-bold">Full Marks</TableHead>
+           <TableHead className="text-center font-bold">Pass Marks</TableHead>
+           <TableHead className="text-center font-bold">Obtained</TableHead>
+           <TableHead className="text-center font-bold">Result</TableHead>
+          </TableRow>
+         </TableHeader>
+         <TableBody>
+          {selectedExamResult.results.map((subj: any) => (
+           <TableRow key={subj.id} className="h-12">
+            <TableCell className="font-semibold">{subj.subject_name}</TableCell>
+            <TableCell className="text-center font-medium">{subj.full_marks}</TableCell>
+            <TableCell className="text-center font-medium">{subj.pass_marks}</TableCell>
+            <TableCell className="text-center font-black text-primary">
+             {subj.obtained !== undefined && subj.obtained !== null ? subj.obtained : "-"}
+            </TableCell>
+            <TableCell className="text-center">
+             {subj.obtained !== undefined && subj.obtained !== null ? (
+              <Badge variant={subj.passed ? "success" : "destructive"} className="font-black uppercase text-[9px]">
+               {subj.passed ? "Pass" : "Fail"}
+              </Badge>
+             ) : (
+              <span className="text-[10px] text-muted-foreground italic">Pending</span>
+             )}
+            </TableCell>
+           </TableRow>
+          ))}
+         </TableBody>
+        </Table>
+</div>
+       </div>
+
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+        <div className="p-4 rounded-2xl bg-muted/20 border text-center space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Grand Total</p>
+         <p className="text-xl font-black">{selectedExamResult.totalObtained}/{selectedExamResult.totalFull}</p>
+        </div>
+        <div className="p-4 rounded-2xl bg-muted/20 border text-center space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Percentage</p>
+         <p className="text-xl font-black">{selectedExamResult.percentage.toFixed(1)}%</p>
+        </div>
+        <div className="p-4 rounded-2xl bg-muted/20 border text-center space-y-1">
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Grade</p>
+         <p className="text-xl font-black">{getGradeFormal(selectedExamResult.percentage)}</p>
+        </div>
+        <div className={cn(
+         "p-4 rounded-2xl border text-center space-y-1",
+         selectedExamResult.allPassed ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20"
+        )}>
+         <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Final Status</p>
+         <p className={cn("text-xl font-black", selectedExamResult.allPassed ? "text-green-600" : "text-red-600")}>
+          {selectedExamResult.allPassed ? "PASSED" : "FAILED"}
+         </p>
+        </div>
+       </div>
+
+       <div className="flex justify-between mt-16 px-4 pb-8">
+        <div className="text-center space-y-1">
+         <div className="w-32 border-t-2 border-foreground/30 pt-1" />
+         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Class Teacher</p>
+        </div>
+        <div className="text-center space-y-1">
+         <div className="w-32 border-t-2 border-foreground/30 pt-1" />
+         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Principal</p>
+        </div>
+       </div>
+      </div>
+     )}
+
+     <div className="flex justify-end gap-3 pt-6 border-t no-print">
+      <Button variant="outline" size="sm" className="rounded-xl h-10 px-6" onClick={() => {
+        const content = document.getElementById('marksheet-content-report');
+        if (content) {
+         const printWindow = window.open('', '_blank');
+         printWindow?.document.write(`<html><head><title>Marksheet</title><style>
+          body { font-family: sans-serif; padding: 40px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f5f5f5; }
+          .text-center { text-align: center; }
+          .font-bold { font-weight: bold; }
+          .border-b { border-bottom: 1px solid #eee; }
+          .pb-6 { padding-bottom: 24px; }
+          .mb-6 { margin-bottom: 24px; }
+          .p-6 { padding: 24px; }
+          .rounded-2xl { border-radius: 1rem; }
+          .border { border: 1px solid #eee; }
+          .bg-muted\\/30 { background-color: #f9fafb; }
+          .grid { display: grid; }
+          .grid-cols-2 { grid-template-cols: 1fr 1fr; }
+          .gap-6 { gap: 24px; }
+         </style></head><body>${content.innerHTML}</body></html>`);
+         printWindow?.document.close();
+         printWindow?.focus();
+         setTimeout(() => { printWindow?.print(); printWindow?.close(); }, 500);
+        }
+      }}>
+       <Printer className="h-4 w-4 mr-2" /> Print
+      </Button>
+     </div>
+    </DialogContent>
+   </Dialog>
+
+   {/* Chapter Detail Dialog */}
+   <Dialog open={!!selectedChapterDetail} onOpenChange={() => setSelectedChapterDetail(null)}>
+    <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+     <DialogHeader>
+      <DialogTitle className="flex items-center gap-2 text-xl">
+       <BookOpen className="h-6 w-6 text-blue-600" />
+       Chapter Details
+      </DialogTitle>
+      <DialogDescription>
+       Detailed performance metrics and records for this curricular unit.
+      </DialogDescription>
+     </DialogHeader>
+
+     {selectedChapterDetail && (
+      <div className="space-y-6 py-4">
+       <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-xl border">
+        <div>
+         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Subject</p>
+         <p className="font-bold">{selectedChapterDetail.lessonPlan.subject}</p>
+        </div>
+        <div>
+         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Lesson Date</p>
+         <p className="font-semibold">{safeFormatDate(selectedChapterDetail.lessonPlan.lesson_date, "PPP")}</p>
+        </div>
+        <div className="col-span-2">
+         <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Topic</p>
+         <p className="font-medium">{selectedChapterDetail.lessonPlan.chapter}: {selectedChapterDetail.lessonPlan.topic}</p>
+        </div>
+       </div>
+
+       {/* Lesson Evaluation */}
+       <div className="space-y-3">
+        <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-primary">
+         <Star className="h-4 w-4" /> Teacher Evaluation
+        </h4>
+        {selectedChapterDetail.studentChapters.length > 0 ? (
+         selectedChapterDetail.studentChapters.map((sc) => (
+          <div key={sc.id} className="bg-white p-4 rounded-xl border shadow-sm space-y-2">
+           <div className="flex justify-between items-center">
+            <span className="text-sm font-bold">Rating</span>
+            <span>{getRatingStars(sc.evaluation_rating)}</span>
+           </div>
+           <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase text-muted-foreground">Teacher Notes</span>
+            <p className="text-sm italic leading-relaxed">{sc.teacher_notes || "No notes recorded."}</p>
+           </div>
+           <p className="text-[10px] text-right text-muted-foreground">Recorded by {sc.recorded_by_teacher?.name || "N/A"}</p>
+          </div>
+         ))
+        ) : (
+         <p className="text-sm italic text-muted-foreground">No evaluation recorded for this lesson.</p>
+        )}
+       </div>
+
+       {/* Tests */}
+       <div className="space-y-3">
+        <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-purple-600">
+         <ClipboardCheck className="h-4 w-4" /> Academic Results
+        </h4>
+        {selectedChapterDetail.testResults.length > 0 ? (
+         <div className="divide-y border rounded-xl overflow-hidden">
+          {selectedChapterDetail.testResults.map((tr) => {
+           const pct = Math.round((tr.marks_obtained / (tr.tests?.total_marks || 1)) * 100);
+           return (
+            <div key={tr.id} className="p-4 flex justify-between items-center bg-white">
+             <div>
+              <p className="text-sm font-bold">{tr.tests?.name}</p>
+              <p className="text-[10px] text-muted-foreground">{safeFormatDate(tr.date_taken, "PPP")}</p>
+             </div>
+             <div className="text-right">
+              <p className="font-black">{tr.marks_obtained}/{tr.tests?.total_marks}</p>
+              <p className={cn("text-[10px] font-bold", pct >= 75 ? "text-green-600" : pct >= 50 ? "text-orange-600" : "text-red-600")}>{pct}%</p>
+             </div>
+            </div>
+           );
+          })}
+         </div>
+        ) : (
+         <p className="text-sm italic text-muted-foreground">No tests associated with this chapter.</p>
+        )}
+       </div>
+
+       {/* Homework */}
+       <div className="space-y-3">
+        <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-widest text-orange-600">
+         <Book className="h-4 w-4" /> Homework Assignments
+        </h4>
+        {selectedChapterDetail.homeworkRecords.length > 0 ? (
+         <div className="divide-y border rounded-xl overflow-hidden">
+          {selectedChapterDetail.homeworkRecords.map((hr) => (
+           <div key={hr.id} className="p-4 flex justify-between items-center bg-white">
+            <div>
+             <p className="text-sm font-bold">{hr.homework?.title}</p>
+             <p className="text-[10px] text-muted-foreground">Due: {safeFormatDate(hr.homework?.due_date, "PPP")}</p>
+            </div>
+            <Badge variant={hr.status === 'completed' || hr.status === 'checked' ? 'success' : hr.status === 'in_progress' ? 'warning' : 'destructive'} className="text-[9px] uppercase font-bold">
+             {hr.status}
+            </Badge>
+           </div>
+          ))}
+         </div>
+        ) : (
+         <p className="text-sm italic text-muted-foreground">No homework assigned for this chapter.</p>
+        )}
+       </div>
+      </div>
+     )}
+    </DialogContent>
+   </Dialog>
+
+   {/* Attendance Remark Dialog */}
+   <Dialog open={!!selectedAttendanceDetail} onOpenChange={(open) => !open && setSelectedAttendanceDetail(null)}>
+    <DialogContent className="sm:max-w-[425px] rounded-2xl">
+     <DialogHeader>
+      <DialogTitle className="text-2xl font-black">Attendance Detail</DialogTitle>
+      <DialogDescription className="font-medium">
+       Information for {selectedAttendanceDetail ? safeFormatDate(selectedAttendanceDetail.date, 'MMMM d, yyyy') : ''}
+      </DialogDescription>
+     </DialogHeader>
+     <div className="py-6">
+      <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 space-y-2">
+       <div className="flex items-center gap-2 text-orange-600">
+        <FileText className="h-4 w-4" />
+        <span className="text-[10px] font-black uppercase tracking-widest">Recorded Remarks</span>
+       </div>
+       <p className="text-sm font-bold text-orange-900 leading-relaxed italic">
+        "{selectedAttendanceDetail?.remarks}"
+       </p>
+      </div>
+     </div>
+     <Button
+      onClick={() => setSelectedAttendanceDetail(null)}
+      className="w-full h-12 rounded-xl font-black uppercase tracking-widest text-[10px]"
+     >
+      Close
+     </Button>
+    </DialogContent>
+   </Dialog>
+
+   {/* Discipline Detail Dialog */}
+   <Dialog open={!!selectedDisciplineIssue} onOpenChange={() => setSelectedDisciplineIssue(null)}>
+    <DialogContent className="w-[95vw] sm:max-w-md" aria-describedby="discipline-detail-description">
+     <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+       <AlertTriangle className="h-5 w-5 text-red-600" />
+       Discipline Issue Details
+      </DialogTitle>
+      <DialogDescription id="discipline-detail-description">
+       In-depth view of the behavioral incident and its current resolution status.
+      </DialogDescription>
+     </DialogHeader>
+     {selectedDisciplineIssue && (
+      <div className="space-y-4 py-2">
+       <div className="flex justify-between items-start border-b pb-4">
+        <div>
+         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</p>
+         <p className="text-lg font-bold">{selectedDisciplineIssue.discipline_categories?.name}</p>
+        </div>
+        <Badge className={cn("text-[10px] font-black uppercase",
+         selectedDisciplineIssue.severity === "high" ? "bg-red-500" :
+         selectedDisciplineIssue.severity === "medium" ? "bg-orange-500" : "bg-green-500")}>
+         {selectedDisciplineIssue.severity} Severity
+        </Badge>
+       </div>
+
+       <div className="space-y-2">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Description</p>
+        <p className="text-sm bg-muted/30 p-3 rounded-lg border italic leading-relaxed">
+         {selectedDisciplineIssue.description}
+        </p>
+       </div>
+
+       <div className="grid grid-cols-2 gap-4">
+        <div>
+         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Date Reported</p>
+         <p className="text-sm font-semibold">{safeFormatDate(selectedDisciplineIssue.issue_date, "PPP")}</p>
+        </div>
+        <div>
+         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</p>
+         <Badge variant="outline" className="mt-1 font-bold uppercase text-[10px]">
+          {selectedDisciplineIssue.status || "Reported"}
+         </Badge>
+        </div>
+       </div>
+
+       {selectedDisciplineIssue.action_taken && (
+        <div className="space-y-2 pt-2">
+         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Action Taken</p>
+         <p className="text-sm font-medium">{selectedDisciplineIssue.action_taken}</p>
+        </div>
+       )}
+      </div>
+     )}
+    </DialogContent>
+   </Dialog>
+  </div>
+ );
 }

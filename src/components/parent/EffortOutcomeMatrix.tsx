@@ -36,8 +36,8 @@ export const EffortOutcomeMatrix: React.FC<EffortOutcomeMatrixProps> = ({
   const quadrant = activePoint ? getQuadrant(activePoint.effort, activePoint.outcome) : null;
 
   return (
-    <Card className="border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2rem] overflow-hidden h-full">
-      <CardHeader className="bg-primary/5 border-b border-primary/10 p-6">
+    <Card className="border border-border shadow-sm bg-white rounded-2xl overflow-hidden h-full">
+      <CardHeader className="bg-slate-50/30 border-b border-slate-50 p-6">
         <CardTitle className="text-lg font-black flex items-center gap-2">
           <Activity className="h-6 w-6 text-primary" />
           {title}

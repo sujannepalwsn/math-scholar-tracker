@@ -46,8 +46,8 @@ export const AlertList = ({
     error: "bg-rose-500/10 text-rose-600 border-rose-600/20" };
 
   return (
-    <Card className={cn("overflow-hidden border-none shadow-soft bg-card/60 backdrop-blur-md rounded-2xl border border-border/20", className)}>
-      <CardHeader className="py-4 border-b border-muted/20 flex flex-row items-center justify-between">
+    <Card className={cn("overflow-hidden border border-border shadow-sm bg-white rounded-2xl dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass", className)}>
+      <CardHeader className="py-4 border-b border-slate-50 bg-slate-50/30 flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           {title}
         </CardTitle>
@@ -64,12 +64,12 @@ export const AlertList = ({
               </Button>
             )}
           </DialogTrigger>
-          <DialogContent className="w-[95vw] sm:max-w-2xl bg-card/90 backdrop-blur-xl border-none shadow-strong rounded-[2rem] p-0 overflow-hidden">
-            <DialogHeader className="p-8 border-b border-slate-100 bg-slate-50/50">
+          <DialogContent className="w-[95vw] sm:max-w-2xl bg-white border border-border shadow-xl rounded-2xl p-0 overflow-hidden">
+            <DialogHeader className="p-8 border-b border-slate-50 bg-slate-50/30">
               <div className="flex items-center justify-between">
-                <DialogTitle className="text-2xl font-black text-foreground/90 tracking-tight flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10">
-                    <Bell className="h-6 w-6 text-primary" />
+                <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary-light text-primary">
+                    <Bell className="h-6 w-6" />
                   </div>
                   System Notifications
                 </DialogTitle>

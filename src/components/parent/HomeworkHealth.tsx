@@ -37,10 +37,10 @@ export const HomeworkHealth: React.FC<HomeworkHealthProps> = ({
   const discrepancy = accuracyRate !== null ? completionRate - accuracyRate : 0;
 
   return (
-    <Card className="border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden">
-      <CardHeader className="bg-amber-500/5 border-b border-amber-100/30 p-6">
+    <Card className="border border-border shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="bg-amber-50/30 border-b border-amber-100/50 p-6">
         <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-amber-600 flex items-center gap-2">
-          <BookMarked className="h-5 w-5" /> {title}
+          <BookMarked className="h-5 w-5 text-amber-500" /> {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
@@ -75,7 +75,7 @@ export const HomeworkHealth: React.FC<HomeworkHealthProps> = ({
 
         <div className="space-y-3">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Recent Directive Evaluations</p>
-          <div className="divide-y divide-slate-100 border rounded-2xl overflow-hidden bg-white/40">
+          <div className="divide-y divide-slate-100 border rounded-2xl overflow-hidden bg-slate-50/30">
             {records.slice(0, 3).map((record) => (
               <div key={record.id} className="p-4 flex justify-between items-center hover:bg-slate-50/50 transition-colors">
                 <div>

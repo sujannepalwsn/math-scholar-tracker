@@ -10,6 +10,7 @@ import BottomNav from "./BottomNav";
 import CenterLogo from "./CenterLogo";
 import NotificationBell from "./NotificationBell";
 import SchoolBranding from "./dashboard/SchoolBranding";
+import { Breadcrumbs } from "./ui/Breadcrumbs";
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useDynamicNavigation } from "@/hooks/useDynamicNavigation";
@@ -185,9 +186,9 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
       />
 
       {/* Mobile Header - Optimized for narrow screens */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
         <div className="flex items-center shrink-0">
-          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/5 text-primary">
+          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary-light text-primary">
             <Menu className="h-5 w-5" />
           </Button>
         </div>
@@ -203,7 +204,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto mesh-gradient transition-all duration-300",
+        "flex-1 overflow-y-auto bg-slate-50/50 transition-all duration-300",
         "md:h-screen",
         "pt-14 md:pt-0",
         "px-4 pb-20 md:p-6 lg:p-8",
@@ -247,19 +248,20 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
         {/* Navigation spacer for mobile fixed header */}
         <div className="md:hidden h-4" />
 
-        {/* Desktop Header Overlay with Branding - Premium Glass Design */}
-        <div className="hidden md:flex sticky top-4 left-0 right-0 h-[76px] glass-surface z-30 items-center justify-between px-8 mb-8 rounded-[2.5rem] shadow-glass mx-auto max-w-7xl border border-white/40">
+        {/* Desktop Header Overlay with Branding - Modern SaaS Design */}
+        <div className="hidden md:flex sticky top-4 left-0 right-0 h-[76px] bg-white dark:bg-card dark:backdrop-blur-md z-30 items-center justify-between px-8 mb-8 rounded-2xl shadow-sm mx-auto max-w-7xl border border-border dark:border-white/10">
           <SchoolBranding />
           <div className="flex items-center gap-6 pr-4">
-             <div className="h-10 w-[1px] bg-black/5" />
+             <div className="h-10 w-[1px] bg-border" />
              <NotificationBell />
-             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-white shadow-soft">
+             <div className="h-10 w-10 rounded-full bg-primary-light flex items-center justify-center border-2 border-white shadow-sm">
                 <User className="h-5 w-5 text-primary" />
              </div>
           </div>
         </div>
 
         <div className="page-enter max-w-7xl mx-auto">
+          <Breadcrumbs />
           {children}
         </div>
       </main>

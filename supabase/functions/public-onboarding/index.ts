@@ -43,7 +43,8 @@ serve(async (req) => {
       adminEmail,
       adminPassword,
       modules,
-      plan
+      plan,
+      curriculumType
     } = body;
 
     if (!schoolName || !adminEmail || !adminPassword) {
@@ -74,12 +75,24 @@ serve(async (req) => {
         name: schoolName,
         address: location || null,
         is_active: true,
+        curriculum_type: curriculumType || null,
         header_config: { layout: 'classic', elements: [] }
       })
       .select()
       .single();
 
     if (centerError) throw centerError;
+
+    // Provision CDC Nepal data if selected
+    if (curriculumType === 'CDC_NEPAL') {
+      const { error: provisionError } = await supabase.rpc('provision_cdc_nepal_data', {
+        p_center_id: center.id
+      });
+      if (provisionError) {
+        console.error('Error provisioning CDC Nepal data:', provisionError);
+        // We don't throw here to avoid failing the whole onboarding
+      }
+    }
 
     // Hash password using bcryptjs (consistent with auth-login)
     // Using 10 rounds for balance between security and performance in Edge environment

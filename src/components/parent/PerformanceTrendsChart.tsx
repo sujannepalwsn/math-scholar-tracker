@@ -46,8 +46,8 @@ export const PerformanceTrendsChart: React.FC<PerformanceTrendsChartProps> = ({
   };
 
   return (
-    <Card className="border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2rem] overflow-hidden">
-      <CardHeader className="bg-primary/5 border-b border-primary/10 p-6">
+    <Card className="border border-border shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="bg-slate-50/30 border-b border-slate-50 p-6">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg font-black flex items-center gap-2">
             <Brain className="h-6 w-6 text-primary" />

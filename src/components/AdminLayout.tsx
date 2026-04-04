@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import NotificationBell from "./NotificationBell";
+import { Breadcrumbs } from "./ui/Breadcrumbs";
 
 const navItems: Array<{
   to: string;
@@ -73,17 +74,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onMobileOpenChange={setMobileMenuOpen}
       />
 
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 shadow-sm">
+      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white border-b z-40 flex items-center justify-between px-2 shadow-sm">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setMobileMenuOpen(true)}
-            className="h-9 w-9 bg-primary/5 text-primary rounded-xl"
+            className="h-9 w-9 bg-primary-light text-primary rounded-xl"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div className="h-8 w-8 rounded-lg bg-primary-light flex items-center justify-center">
             <Shield className="h-4 w-4 text-primary" />
           </div>
           <span className="font-semibold text-foreground text-sm">Admin</span>
@@ -97,13 +98,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </header>
 
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-200",
+        "flex-1 overflow-y-auto bg-slate-50/50 transition-all duration-200",
         "md:h-screen",
         "pt-14 md:pt-0",
         "px-4 pb-20 md:p-6 lg:p-8",
-        sidebarCollapsed ? "md:ml-20" : "md:ml-64"
+        sidebarCollapsed ? "md:ml-24" : "md:ml-72"
       )}>
         <div className="page-enter max-w-7xl mx-auto">
+          <Breadcrumbs />
           {children}
         </div>
       </main>
