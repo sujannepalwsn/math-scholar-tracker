@@ -46,7 +46,7 @@ export const AlertList = ({
     error: "bg-rose-500/10 text-rose-600 border-rose-600/20" };
 
   return (
-    <Card className={cn("overflow-hidden border border-border shadow-sm bg-white rounded-2xl", className)}>
+    <Card className={cn("overflow-hidden border border-border shadow-sm bg-white rounded-2xl dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass", className)}>
       <CardHeader className="py-4 border-b border-slate-50 bg-slate-50/30 flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           {title}

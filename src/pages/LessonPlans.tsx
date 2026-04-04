@@ -403,7 +403,7 @@ export default function LessonPlans() {
     </div>
    </div>
 
-   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
     <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
      <CardTitle className="text-xl font-black flex items-center gap-3">
       <div className="p-2 rounded-xl bg-primary/10"><FileText className="h-6 w-6 text-primary" /></div>

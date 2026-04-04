@@ -56,7 +56,7 @@
     --background: 222 47% 6%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 9%;
+    --card: 222 47% 9% / 0.4;
     --card-foreground: 210 40% 98%;
 
     --popover: 222 47% 9%;
@@ -104,8 +104,16 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased transition-colors duration-500;
     font-feature-settings: "cv11", "ss01", "ss03";
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%),
+      radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
+    background-attachment: fixed;
   }
 
   /* Smooth scrolling */

@@ -87,6 +87,8 @@ export default {
         medium: "0 4px 6px -1px hsl(var(--foreground) / 0.06), 0 2px 4px -2px hsl(var(--foreground) / 0.06)",
         strong: "0 10px 15px -3px hsl(var(--foreground) / 0.08), 0 4px 6px -4px hsl(var(--foreground) / 0.08)",
         elevated: "0 20px 25px -5px hsl(var(--foreground) / 0.08), 0 8px 10px -6px hsl(var(--foreground) / 0.06)",
+        glass: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+        "glass-strong": "0 12px 48px 0 rgba(0, 0, 0, 0.5)",
       },
       keyframes: {
         "accordion-down": {

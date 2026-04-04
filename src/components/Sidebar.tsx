@@ -456,7 +456,7 @@ export default function Sidebar({
    <div
     className={cn(
      "fixed top-4 left-4 bottom-4 z-20 hidden md:flex flex-col print:hidden",
-     "bg-white border border-border rounded-2xl shadow-sm overflow-hidden",
+     "bg-white dark:bg-slate-950/80 dark:backdrop-blur-xl border border-border dark:border-white/10 rounded-2xl shadow-sm overflow-hidden",
      mounted ? "transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1)" : "",
      isCollapsed ? "w-20" : "w-64"
     )}

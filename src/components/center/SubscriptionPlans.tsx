@@ -377,7 +377,7 @@ export default function SubscriptionPlans() {
     </DialogContent>
    </Dialog>
 
-   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
     <CardContent className="p-0">
      <Table>
       <TableHeader className="bg-slate-50">

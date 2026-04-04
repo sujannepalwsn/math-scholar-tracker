@@ -249,7 +249,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
         <div className="md:hidden h-4" />
 
         {/* Desktop Header Overlay with Branding - Modern SaaS Design */}
-        <div className="hidden md:flex sticky top-4 left-0 right-0 h-[76px] bg-white z-30 items-center justify-between px-8 mb-8 rounded-2xl shadow-sm mx-auto max-w-7xl border border-border">
+        <div className="hidden md:flex sticky top-4 left-0 right-0 h-[76px] bg-white dark:bg-card dark:backdrop-blur-md z-30 items-center justify-between px-8 mb-8 rounded-2xl shadow-sm mx-auto max-w-7xl border border-border dark:border-white/10">
           <SchoolBranding />
           <div className="flex items-center gap-6 pr-4">
              <div className="h-10 w-[1px] bg-border" />

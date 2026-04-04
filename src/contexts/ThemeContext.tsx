@@ -228,7 +228,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Sidebar
     if (userPreferences.darkMode) {
-      root.style.setProperty('--sidebar-background', '222 47% 9%');
+      root.style.setProperty('--sidebar-background', '222 47% 9% / 0.8');
       root.style.setProperty('--sidebar-foreground', '210 40% 98%');
     } else {
       applyVar('--sidebar-background', '#ffffff');

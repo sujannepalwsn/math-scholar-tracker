@@ -485,7 +485,7 @@ export default function TakeAttendance() {
     </div>
    </Card>
 
-   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
     <CardHeader className="border-b border-slate-50 bg-slate-50/30 py-6">
      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
       <div className="space-y-1">

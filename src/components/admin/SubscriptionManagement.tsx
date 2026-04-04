@@ -640,7 +640,7 @@ export default function SubscriptionManagement() {
     <p className="text-sm text-muted-foreground font-medium">Monitor institutional billing and process incoming payments.</p>
    </div>
 
-   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
     <CardContent className="p-0">
      <Table>
       <TableHeader className="bg-slate-50">

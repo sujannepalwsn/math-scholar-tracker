@@ -40,7 +40,7 @@ export const ClassSchedule = ({
     upcoming: "bg-blue-500/10 text-blue-600 border-blue-600/20" };
 
   return (
-    <Card className={cn("overflow-hidden border border-border shadow-sm bg-white rounded-2xl", className)}>
+    <Card className={cn("overflow-hidden border border-border shadow-sm bg-white rounded-2xl dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass", className)}>
       <CardHeader className="py-4 border-b border-slate-50 bg-slate-50/30 flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-bold flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -475,7 +475,7 @@ export default function ParentDashboard() {
      </div>
 
      {/* Finance Summary */}
-     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
       <CardHeader className="bg-slate-50/30 pb-4 border-b border-slate-50">
        <CardTitle className="text-2xl font-bold flex items-center gap-3">
         <div className="p-2 rounded-xl bg-primary-light text-primary">
@@ -521,7 +521,7 @@ export default function ParentDashboard() {
      </Card>
 
      {/* Attendance Overview */}
-     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
       <CardHeader className="bg-slate-50/30 pb-4 border-b border-slate-50">
        <CardTitle className="text-2xl font-bold flex items-center gap-3">
         <div className="p-2 rounded-xl bg-green-50 text-green-600">
@@ -567,7 +567,7 @@ export default function ParentDashboard() {
      </Card>
 
      {/* Test Report */}
-     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
       <CardHeader className="bg-slate-50/30 pb-4 border-b border-slate-50">
        <CardTitle className="text-2xl font-bold flex items-center gap-3">
         <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
@@ -616,7 +616,7 @@ export default function ParentDashboard() {
      </Card>
 
      {/* Discipline Issues */}
-     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+     <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
       <CardHeader className="bg-slate-50/30 pb-4 border-b border-slate-50">
        <CardTitle className="text-2xl font-bold flex items-center gap-3">
         <div className="p-2 rounded-xl bg-rose-50 text-rose-600">

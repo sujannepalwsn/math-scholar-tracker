@@ -224,7 +224,7 @@ export default function Summary() {
    </Card>
 
    {/* Table */}
-   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white">
+   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white dark:bg-card dark:backdrop-blur-md dark:border-white/10 dark:shadow-glass">
     <CardHeader className="border-b border-slate-50 bg-slate-50/30 py-6">
      <CardTitle className="text-xl font-black flex items-center gap-3">
       <div className="p-2 rounded-xl bg-primary-light text-primary">
