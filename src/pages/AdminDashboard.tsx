@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { motion } from "framer-motion";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from "recharts";
 import { AIInsightsWidget } from "@/components/dashboard/AIInsightsWidget";
+import { KPICard } from "@/components/dashboard/KPICard";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -75,10 +76,10 @@ const AdminDashboard = () => {
   });
 
   const kpis = [
-    { label: "Total Centers", value: stats?.centers, icon: Building2, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "System Users", value: stats?.totalUsers, icon: Users, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Global Revenue", value: `NPR ${(stats?.revenue || 0).toLocaleString()}`, icon: TrendingUp, color: "text-violet-600", bg: "bg-violet-50" },
-    { label: "System Errors", value: stats?.errors, icon: Activity, color: "text-rose-600", bg: "bg-rose-50" },
+    { label: "Total Centers", value: stats?.centers, icon: Building2, color: "blue", onClick: () => navigate("/admin/centers") },
+    { label: "System Users", value: stats?.totalUsers, icon: Users, color: "green", onClick: () => navigate("/admin/users?feature=System%20Users") },
+    { label: "Global Revenue", value: `NPR ${(stats?.revenue || 0).toLocaleString()}`, icon: TrendingUp, color: "purple", onClick: () => navigate("/admin/revenue?feature=Revenue%20Analytics") },
+    { label: "System Errors", value: stats?.errors, icon: Activity, color: "rose", onClick: () => navigate("/admin/errors") },
   ];
 
   return (
@@ -103,19 +104,13 @@ const AdminDashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card className="border-none shadow-strong rounded-[2rem] overflow-hidden group hover:scale-[1.02] transition-all duration-500">
-              <CardContent className="p-8">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-4 rounded-2xl ${kpi.bg} ${kpi.color} group-hover:scale-110 transition-transform duration-500`}>
-                    <kpi.icon className="h-6 w-6" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{kpi.label}</p>
-                  <p className="text-3xl font-black tracking-tighter">{kpi.value ?? "..."}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <KPICard
+              title={kpi.label}
+              value={kpi.value ?? "..."}
+              icon={kpi.icon}
+              color={kpi.color}
+              onClick={kpi.onClick}
+            />
           </motion.div>
         ))}
       </div>

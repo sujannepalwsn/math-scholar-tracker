@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { UserRole } from "@/types/roles";
 import { AlertCircle, ArrowLeft, FileText, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Target, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import FeeManagement from '@/components/finance/FeeManagement';
@@ -19,10 +19,14 @@ import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import { Area, AreaChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, CartesianGrid, Bar, BarChart, Legend, Cell, Pie, PieChart } from "recharts";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { KPICard } from "@/components/dashboard/KPICard";
 
 const AdminFinance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "invoices";
+
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
   const canEdit = hasActionPermission(user, 'finance', 'edit');
 
@@ -183,45 +187,22 @@ const AdminFinance = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { title: "Revenue Flow", value: totalInvoiced, icon: FileText, color: "text-blue-600", bgColor: "bg-blue-500/10", desc: "Total Invoiced Assets", trend: "+12%" },
-            { title: "Capital Collected", value: totalCollected, icon: TrendingUp, color: "text-green-600", bgColor: "bg-green-500/10", valueClass: "text-green-600", desc: "Realized Liquidity", trend: "+8%" },
-            { title: "Risk Exposure", value: outstanding, icon: AlertCircle, color: "text-orange-600", bgColor: "bg-orange-500/10", valueClass: "text-orange-600", desc: `${unpaidCount} Pending Receivables`, trend: "-5%" },
-            { title: "Net Liquidity", value: netBalance, icon: Wallet, color: "text-purple-600", bgColor: "bg-purple-500/10", valueClass: netBalance >= 0 ? 'text-green-600' : 'text-red-600', desc: "Post-Expenditure Balance", trend: "+15%" },
+            { title: "Revenue Flow", value: totalInvoiced, icon: FileText, color: "blue", desc: "Total Invoiced Assets", delta: 12, tab: "invoices" },
+            { title: "Capital Collected", value: totalCollected, icon: TrendingUp, color: "green", desc: "Realized Liquidity", delta: 8, tab: "payments" },
+            { title: "Risk Exposure", value: outstanding, icon: AlertCircle, color: "orange", desc: `${unpaidCount} Pending Receivables`, delta: -5, tab: "invoices" },
+            { title: "Net Liquidity", value: netBalance, icon: Wallet, color: "purple", desc: "Post-Expenditure Balance", delta: 15, tab: "reports" },
           ].map((stat) => (
-            <Card key={stat.title} className="border-none shadow-strong hover:shadow-xl transition-all duration-500 group rounded-[2rem] bg-card/40 backdrop-blur-md border border-border/20 overflow-hidden">
-              <CardContent className="p-6 relative">
-                <div className="flex justify-between items-start mb-4">
-                   <div className={cn("p-3 rounded-2xl transition-transform group-hover:rotate-6 shadow-sm", stat.bgColor)}>
-                    <stat.icon className={cn("h-6 w-6", stat.color)} />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{stat.title}</p>
-                    <h3 className={cn("text-2xl font-black tracking-tighter mt-1", stat.valueClass)}>{formatCurrency(stat.value)}</h3>
-                  </div>
-                </div>
-
-                <div className="h-10 w-full mb-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={sparklineData}>
-                      <Area
-                        type="monotone"
-                        dataKey="value"
-                        stroke={stat.color.includes('blue') ? '#2563eb' : stat.color.includes('green') ? '#16a34a' : stat.color.includes('orange') ? '#ea580c' : '#9333ea'}
-                        fill={stat.color.includes('blue') ? '#dbeafe' : stat.color.includes('green') ? '#dcfce7' : stat.color.includes('orange') ? '#ffedd5' : '#f3e8ff'}
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="pt-4 border-t border-muted/10 flex justify-between items-center">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{stat.desc}</p>
-                  <Badge className={cn("text-[9px] font-black", stat.trend.startsWith('+') ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600")}>
-                    {stat.trend}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <KPICard
+              key={stat.title}
+              title={stat.title}
+              value={formatCurrency(stat.value)}
+              icon={stat.icon}
+              color={stat.color}
+              description={stat.desc}
+              delta={stat.delta}
+              trendData={sparklineData}
+              onClick={() => setSearchParams({ tab: stat.tab })}
+            />
           ))}
         </div>
 
@@ -368,7 +349,7 @@ const AdminFinance = () => {
           </div>
         )}
 
-        <Tabs defaultValue="invoices" className="space-y-8">
+        <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-8">
           <TabsList className="flex flex-nowrap w-full overflow-x-auto h-14 bg-card/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-border/40 shadow-soft custom-scrollbar">
             <TabsTrigger value="invoices" className="rounded-[1.5rem] flex-1 min-w-[100px] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Invoices</TabsTrigger>
             <TabsTrigger value="fees" className="rounded-[1.5rem] flex-1 min-w-[100px] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Fees</TabsTrigger>

@@ -172,10 +172,42 @@ export default function LessonPlanManagement() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPICard title="Pending Review" value={stats.pending} description="Awaiting approval" icon={Clock} color="orange" />
-        <KPICard title="Approved Plans" value={stats.approved} description="Certified roadmaps" icon={CheckCircle2} color="green" />
-        <KPICard title="Rejected" value={stats.rejected} description="Needs revision" icon={XCircle} color="rose" />
-        <KPICard title="Total Processed" value={stats.total} description="Combined registry" icon={BookOpen} color="indigo" />
+        <KPICard
+          title="Pending Review"
+          value={stats.pending}
+          description="Awaiting approval"
+          icon={Clock}
+          color="orange"
+          onClick={() => setStatusFilter("pending")}
+          className={cn(statusFilter === "pending" && "ring-2 ring-orange-500")}
+        />
+        <KPICard
+          title="Approved Plans"
+          value={stats.approved}
+          description="Certified roadmaps"
+          icon={CheckCircle2}
+          color="green"
+          onClick={() => setStatusFilter("approved")}
+          className={cn(statusFilter === "approved" && "ring-2 ring-green-500")}
+        />
+        <KPICard
+          title="Rejected"
+          value={stats.rejected}
+          description="Needs revision"
+          icon={XCircle}
+          color="rose"
+          onClick={() => setStatusFilter("rejected")}
+          className={cn(statusFilter === "rejected" && "ring-2 ring-rose-500")}
+        />
+        <KPICard
+          title="Total Processed"
+          value={stats.total}
+          description="Combined registry"
+          icon={BookOpen}
+          color="indigo"
+          onClick={() => setStatusFilter("all")}
+          className={cn(statusFilter === "all" && "ring-2 ring-primary")}
+        />
       </div>
 
       <Card className="border-none shadow-strong rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">

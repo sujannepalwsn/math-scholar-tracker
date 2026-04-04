@@ -428,7 +428,7 @@ export default function TeacherDashboard() {
         {hasPermission(user, 'leave_management') && <KPICard title="Leave Applications" value="Portal" description="Absence Management" icon={Plane} color="rose" onClick={() => navigate("/teacher/leave")} />}
         {hasPermission(user, 'messaging') && <KPICard title="Messages" value={unreadCount > 0 ? unreadCount : "View"} description={unreadCount > 0 ? "New Messages" : "Admin Liaison"} icon={MessageSquare} color="pink" onClick={() => navigate("/teacher-messages")} delta={unreadCount > 0 ? unreadCount : undefined} />}
         {hasPermission(user, 'lesson_plans') && <KPICard title="Lesson Plans" value={allLessonPlans.length} description="Instructional Assets" icon={FileText} color="purple" onClick={() => navigate("/teacher/lesson-plans")} />}
-        {hasPermission(user, 'test_management') && <KPICard title="Class Proficiency" value={`${avgPerformance}%`} description="Score Synthesis" icon={TrendingUp} color="purple" onClick={() => {}} />}
+        {hasPermission(user, 'test_management') && <KPICard title="Class Proficiency" value={`${avgPerformance}%`} description="Score Synthesis" icon={TrendingUp} color="purple" onClick={() => navigate("/teacher/results-dashboard")} />}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
