@@ -76,6 +76,7 @@ DROP POLICY IF EXISTS "Anyone can insert error_logs" ON public.error_logs;
 
 -- 4. HARDEN error_logs TABLE
 -- Only authenticated users can insert logs. Unauthenticated logs must go through Edge Functions.
+DROP POLICY IF EXISTS "Authenticated users can insert error logs" ON public.error_logs;
 CREATE POLICY "Authenticated users can insert error logs"
 ON public.error_logs
 FOR INSERT
@@ -122,6 +123,7 @@ GRANT SELECT ON public.global_system_stats TO anon, authenticated;
 -- system_settings
 DROP POLICY IF EXISTS "Public access system_settings" ON public.system_settings;
 DROP POLICY IF EXISTS "Public read-only system_settings" ON public.system_settings;
+DROP POLICY IF EXISTS "Super Admin manage system_settings" ON public.system_settings;
 CREATE POLICY "Super Admin manage system_settings"
 ON public.system_settings FOR ALL TO authenticated
 USING (public.get_user_role() = 'admin' AND public.get_user_center_id() IS NULL);
@@ -129,6 +131,7 @@ USING (public.get_user_role() = 'admin' AND public.get_user_center_id() IS NULL)
 -- login_page_settings
 DROP POLICY IF EXISTS "Public access login_page_settings" ON public.login_page_settings;
 DROP POLICY IF EXISTS "Public read-only login_page_settings" ON public.login_page_settings;
+DROP POLICY IF EXISTS "Super Admin manage login_page_settings" ON public.login_page_settings;
 CREATE POLICY "Super Admin manage login_page_settings"
 ON public.login_page_settings FOR ALL TO authenticated
 USING (public.get_user_role() = 'admin' AND public.get_user_center_id() IS NULL);
@@ -159,6 +162,7 @@ END $$;
 DROP POLICY IF EXISTS "Public access centers" ON public.centers;
 DROP POLICY IF EXISTS "Allow public users to view centers" ON public.centers;
 DROP POLICY IF EXISTS "Public read-only centers" ON public.centers;
+DROP POLICY IF EXISTS "Center access centers" ON public.centers;
 CREATE POLICY "Center access centers"
 ON public.centers FOR SELECT TO authenticated
 USING (id = public.get_user_center_id() OR public.get_user_role() = 'admin');
@@ -166,6 +170,7 @@ USING (id = public.get_user_center_id() OR public.get_user_role() = 'admin');
 -- 6. HARDEN users TABLE
 -- Ensure users table is strictly isolated
 DROP POLICY IF EXISTS "Center Admin manage users" ON public.users;
+DROP POLICY IF EXISTS "Admin manage users" ON public.users;
 CREATE POLICY "Center Admin manage users"
 ON public.users FOR ALL TO authenticated
 USING (
@@ -180,12 +185,14 @@ USING (
 
 -- 8. RESTRICT PUBLIC ADMISSION (If used)
 DROP POLICY IF EXISTS "Public can submit admission" ON public.admission_applications;
+DROP POLICY IF EXISTS "Unauthenticated admission submission" ON public.admission_applications;
 CREATE POLICY "Unauthenticated admission submission"
 ON public.admission_applications FOR INSERT TO anon, authenticated
 WITH CHECK (true); -- Keep this public but monitor closely
 
 -- 8.5. RESTRICT DEMO REQUESTS (Keep unauthenticated INSERT)
 DROP POLICY IF EXISTS "Anyone can submit demo requests" ON public.demo_requests;
+DROP POLICY IF EXISTS "Unauthenticated demo request submission" ON public.demo_requests;
 CREATE POLICY "Unauthenticated demo request submission"
 ON public.demo_requests FOR INSERT TO anon, authenticated
 WITH CHECK (true);
