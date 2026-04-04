@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { UserRole } from "@/types/roles";
-import { CalendarIcon, Download, Edit, Eye, FileText, Plus, Trash2, PlusCircle, MinusCircle, Printer, Send, CheckCircle2, XCircle, User, Loader2, Scan } from "lucide-react";
+import { CalendarIcon, Download, Edit, Eye, FileText, Plus, Trash2, PlusCircle, MinusCircle, Printer, Send, CheckCircle2, XCircle, User, Loader2, Scan, ExternalLink } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-utils";
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import LessonPlanOCR from "@/components/center/LessonPlanOCR";
+import LessonGeneratorModal from "@/components/center/LessonGeneratorModal";
 import { parseLessonPlanText } from "@/utils/lessonPlanParser";
 import { logger } from "@/utils/logger";
 
@@ -32,6 +33,7 @@ export default function LessonPlans() {
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOCROpen, setIsOCROpen] = useState(false);
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [editingLessonPlan, setEditingLessonPlan] = useState<LessonPlan | null>(null);
   const [viewingLessonPlan, setViewingLessonPlan] = useState<LessonPlan | null>(null);
@@ -171,6 +173,7 @@ export default function LessonPlans() {
     setNotes("");
     setFile(null);
     setEditingLessonPlan(null);
+    setIsGeneratorOpen(false);
   };
 
   const uploadFile = async (fileToUpload: File, bucket: string) => {
@@ -560,6 +563,14 @@ export default function LessonPlans() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setIsGeneratorOpen(true)}
+                  className="rounded-xl border-indigo-600 text-indigo-600 font-black uppercase text-[9px] sm:text-[10px] tracking-widest gap-2 shadow-soft hover:bg-indigo-600 hover:text-white transition-all"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> GENERATOR
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setIsPasteDialogOpen(true)}
                   className="rounded-xl border-violet-600 text-violet-600 font-black uppercase text-[9px] sm:text-[10px] tracking-widest gap-2 shadow-soft hover:bg-violet-600 hover:text-white transition-all"
                 >
@@ -749,6 +760,12 @@ export default function LessonPlans() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* External Generator Modal */}
+      <LessonGeneratorModal
+        isOpen={isGeneratorOpen}
+        onClose={() => setIsGeneratorOpen(false)}
+      />
 
       {/* View/Approval Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
