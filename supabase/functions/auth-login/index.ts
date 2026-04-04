@@ -27,10 +27,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch user by username
+    // Fetch user and their secret by username
     const { data: userData, error: userError } = await supabaseClient
       .from('users')
-      .select('*, teachers(contract_end_date, is_active), centers(is_active)')
+      .select('*, teachers(contract_end_date, is_active), centers(is_active), user_secrets:security_user_secrets(password_hash)')
       .eq('username', username)
       .single();
 
@@ -110,7 +110,16 @@ serve(async (req) => {
 
     // Verify password using bcrypt (matching how the application stores hashes)
     // Synchronous comparison ensures reliability in Edge environment
-    const passwordMatch = bcrypt.compareSync(password, userData.password_hash);
+    const password_hash = userData.user_secrets?.password_hash || userData.password_hash;
+
+    if (!password_hash) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid username or password' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const passwordMatch = bcrypt.compareSync(password, password_hash);
     if (!passwordMatch) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid username or password' }),

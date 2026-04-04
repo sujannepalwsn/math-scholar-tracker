@@ -12,28 +12,21 @@ export const useSystemStats = () => {
   return useQuery({
     queryKey: ['system_stats'],
     queryFn: async () => {
-      // Fetch counts while ensuring we only count active records from active centers
-      const [studentsCount, teachersCount, centersCount] = await Promise.all([
-        supabase
-          .from('students')
-          .select('*, centers!inner(is_active)', { count: 'exact', head: true })
-          .eq('is_active', true)
-          .eq('centers.is_active', true),
-        supabase
-          .from('teachers')
-          .select('*, centers!inner(is_active)', { count: 'exact', head: true })
-          .eq('is_active', true)
-          .eq('centers.is_active', true),
-        supabase
-          .from('centers')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true),
-      ]);
+      // Fetch counts from the secure public view instead of raw tables
+      const { data, error } = await supabase
+        .from('global_system_stats' as any)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error("Error fetching system stats:", error);
+        return { students: 0, teachers: 0, centers: 0 };
+      }
 
       return {
-        students: studentsCount.count || 0,
-        teachers: teachersCount.count || 0,
-        centers: centersCount.count || 0,
+        students: data.students_count || 0,
+        teachers: data.teachers_count || 0,
+        centers: data.centers_count || 0,
       };
     },
     staleTime: 30 * 60 * 1000, // Stats don't need to be perfectly real-time for landing page

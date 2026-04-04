@@ -72,9 +72,8 @@ const LandingPage = () => {
   useEffect(() => {
     const fetchPartners = async () => {
       const { data } = await supabase
-        .from('centers')
+        .from('public_centers')
         .select('id, name, logo_url, address')
-        .eq('is_active', true)
         .limit(6)
         .order('name');
       if (data) setPartners(data as any);

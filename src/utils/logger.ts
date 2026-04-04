@@ -93,13 +93,33 @@ class Logger {
         timestamp: new Date().toISOString(),
       };
 
-      // Asynchronous insert to Supabase - The trigger will send this to the AI studio
+      // Use the Edge Function if the user is not authenticated (for login page errors, etc.)
+      // or if direct table insertion fails due to RLS.
+      if (!user) {
+        const { error: functionError } = await supabase.functions.invoke('secure-log-ingest', {
+          body: errorPayload
+        });
+
+        if (functionError) {
+          console.error("Failed to persist error log via Edge Function:", functionError);
+        }
+        return;
+      }
+
+      // Direct insert for authenticated users (as permitted by RLS)
       const { error: insertError } = await supabase
         .from('error_logs')
         .insert(errorPayload);
 
       if (insertError) {
-        console.error("Failed to persist error log to Supabase:", insertError);
+        // Fallback to Edge Function if direct insert fails
+        const { error: fallbackError } = await supabase.functions.invoke('secure-log-ingest', {
+          body: errorPayload
+        });
+
+        if (fallbackError) {
+          console.error("Failed to persist error log via both direct insert and fallback:", fallbackError);
+        }
       }
     } catch (e) {
       console.error("Error in logger persistence logic:", e);
