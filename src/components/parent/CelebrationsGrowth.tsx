@@ -43,10 +43,10 @@ export const CelebrationsGrowth: React.FC<CelebrationsGrowthProps> = ({
   };
 
   return (
-    <Card className="border-none shadow-strong bg-gradient-to-br from-pink-50/30 to-white backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-pink-100/50">
-      <CardHeader className="bg-pink-500/5 border-b border-pink-100/30 p-6">
+    <Card className="border border-pink-100 shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="bg-pink-50/30 border-b border-pink-100/50 p-6">
         <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-pink-600 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 animate-pulse" /> {title}
+          <Sparkles className="h-5 w-5 animate-pulse text-pink-500" /> {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">

@@ -20,542 +20,542 @@ import { usePagination } from "@/hooks/usePagination"
 import { ServerPagination } from "@/components/ui/ServerPagination"
 
 interface StudentAttendanceRecord {
-  id: string;
-  student_id: string;
-  status: string;
-  date: string;
-  time_in: string | null;
-  time_out: string | null;
-  students: {
-    name: string;
-    grade: string;
-  };
+ id: string;
+ student_id: string;
+ status: string;
+ date: string;
+ time_in: string | null;
+ time_out: string | null;
+ students: {
+  name: string;
+  grade: string;
+ };
 }
 
 interface StudentDetail {
-  id: string;
-  name: string;
-  grade: string;
+ id: string;
+ name: string;
+ grade: string;
 }
 
 interface StudentDetailAttendance {
-  id: string;
-  date: string;
-  status: string;
-  time_in: string | null;
-  time_out: string | null;
+ id: string;
+ date: string;
+ status: string;
+ time_in: string | null;
+ time_out: string | null;
 }
 
 export default function ViewRecords() {
-  const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [gradeFilter, setGradeFilter] = useState<string>("");
-  const { currentPage, pageSize, setPage, getRange } = usePagination(50);
-  const dateStr = format(selectedDate, "yyyy-MM-dd");
-  const [showStudentDetailDialog, setShowStudentDetailDialog] = useState(false);
-  const [selectedStudentDetail, setSelectedStudentDetail] = useState<StudentDetail | null>(null);
-  const [detailMonthFilter, setDetailMonthFilter] = useState<Date>(new Date());
+ const { user } = useAuth();
+ const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+ const [gradeFilter, setGradeFilter] = useState<string>("");
+ const { currentPage, pageSize, setPage, getRange } = usePagination(50);
+ const dateStr = format(selectedDate, "yyyy-MM-dd");
+ const [showStudentDetailDialog, setShowStudentDetailDialog] = useState(false);
+ const [selectedStudentDetail, setSelectedStudentDetail] = useState<StudentDetail | null>(null);
+ const [detailMonthFilter, setDetailMonthFilter] = useState<Date>(new Date());
 
-  const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
+ const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
 
-  // Fetch students for this center
-  const { data: students = [] } = useQuery({
-    queryKey: ['students', user?.center_id, isRestricted, user?.teacher_id],
-    queryFn: async () => {
-      let query = supabase
-        .from('students')
-        .select('id, name, grade')
-        .eq('center_id', user?.center_id as string)
-        .order('name');
+ // Fetch students for this center
+ const { data: students = [] } = useQuery({
+  queryKey: ['students', user?.center_id, isRestricted, user?.teacher_id],
+  queryFn: async () => {
+   let query = supabase
+    .from('students')
+    .select('id, name, grade')
+    .eq('center_id', user?.center_id as string)
+    .order('name');
 
-      if (isRestricted) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
-        const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
-        const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
+   if (isRestricted) {
+    const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
+    const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
+    const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
 
-        if (myGrades.length > 0) {
-          query = query.in('grade', myGrades);
-        }
-      }
+    if (myGrades.length > 0) {
+     query = query.in('grade', myGrades);
+    }
+   }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.center_id });
+   const { data, error } = await query;
+   if (error) throw error;
+   return data;
+  },
+  enabled: !!user?.center_id });
 
-  const filteredStudents = students.filter(s => gradeFilter === "all" || s.grade === gradeFilter);
+ const filteredStudents = students.filter(s => gradeFilter === "all" || s.grade === gradeFilter);
 
-  // Fetch attendance records for selected date & filtered students with pagination
-  const { data: recordsData, isLoading } = useQuery({
-    queryKey: ["attendance-records", dateStr, gradeFilter, user?.center_id, user?.role, user?.id, isRestricted, currentPage, pageSize],
-    queryFn: async () => {
-      const { from, to } = getRange();
-      const studentIds = filteredStudents.map(s => s.id);
-      if (studentIds.length === 0) return { data: [], count: 0 };
+ // Fetch attendance records for selected date & filtered students with pagination
+ const { data: recordsData, isLoading } = useQuery({
+  queryKey: ["attendance-records", dateStr, gradeFilter, user?.center_id, user?.role, user?.id, isRestricted, currentPage, pageSize],
+  queryFn: async () => {
+   const { from, to } = getRange();
+   const studentIds = filteredStudents.map(s => s.id);
+   if (studentIds.length === 0) return { data: [], count: 0 };
 
-      let query = supabase
-        .from("attendance")
-        .select(`
-          id,
-          student_id,
-          status,
-          date,
-          time_in,
-          time_out,
-          students!inner (
-            name,
-            grade
-          )
-        `, { count: 'exact' })
-        .in("student_id", studentIds)
-        .eq("date", dateStr);
+   let query = supabase
+    .from("attendance")
+    .select(`
+     id,
+     student_id,
+     status,
+     date,
+     time_in,
+     time_out,
+     students!inner (
+      name,
+      grade
+     )
+    `, { count: 'exact' })
+    .in("student_id", studentIds)
+    .eq("date", dateStr);
 
-      if (user?.role === UserRole.TEACHER && isRestricted) {
-        query = query.eq('marked_by', user.id);
-      }
+   if (user?.role === UserRole.TEACHER && isRestricted) {
+    query = query.eq('marked_by', user.id);
+   }
 
-      const { data, error, count } = await query
-        .order('students(name)')
-        .range(from, to);
+   const { data, error, count } = await query
+    .order('students(name)')
+    .range(from, to);
 
-      if (error) throw error;
+   if (error) throw error;
 
-      return { data: data as StudentAttendanceRecord[], count: count || 0 };
-    },
-    enabled: filteredStudents.length > 0 });
+   return { data: data as StudentAttendanceRecord[], count: count || 0 };
+  },
+  enabled: filteredStudents.length > 0 });
 
-  const records = recordsData?.data || [];
-  const totalCount = recordsData?.count || 0;
+ const records = recordsData?.data || [];
+ const totalCount = recordsData?.count || 0;
 
-  // Fetch all attendance for a specific student for the detail dialog
-  const { data: studentDetailAttendance = [], refetch: refetchStudentDetailAttendance } = useQuery({
-    queryKey: ["student-detail-attendance", selectedStudentDetail?.id, detailMonthFilter, user?.role, user?.id, isRestricted],
-    queryFn: async () => {
-      if (!selectedStudentDetail?.id) return [];
-      const start = startOfMonth(detailMonthFilter);
-      const end = endOfMonth(detailMonthFilter);
-      let query = supabase
-        .from("attendance")
-        .select("id, date, status, time_in, time_out")
-        .eq("student_id", selectedStudentDetail.id)
-        .gte("date", format(start, "yyyy-MM-dd")) // Corrected format string
-        .lte("date", format(end, "yyyy-MM-dd"));
+ // Fetch all attendance for a specific student for the detail dialog
+ const { data: studentDetailAttendance = [], refetch: refetchStudentDetailAttendance } = useQuery({
+  queryKey: ["student-detail-attendance", selectedStudentDetail?.id, detailMonthFilter, user?.role, user?.id, isRestricted],
+  queryFn: async () => {
+   if (!selectedStudentDetail?.id) return [];
+   const start = startOfMonth(detailMonthFilter);
+   const end = endOfMonth(detailMonthFilter);
+   let query = supabase
+    .from("attendance")
+    .select("id, date, status, time_in, time_out")
+    .eq("student_id", selectedStudentDetail.id)
+    .gte("date", format(start, "yyyy-MM-dd")) // Corrected format string
+    .lte("date", format(end, "yyyy-MM-dd"));
 
-      if (user?.role === UserRole.TEACHER && isRestricted) {
-        query = query.eq('marked_by', user.id);
-      }
+   if (user?.role === UserRole.TEACHER && isRestricted) {
+    query = query.eq('marked_by', user.id);
+   }
 
-      const { data, error } = await query.order("date");
-      if (error) throw error;
-      return data as StudentDetailAttendance[];
-    },
-    enabled: false, // We'll manually trigger this when needed
+   const { data, error } = await query.order("date");
+   if (error) throw error;
+   return data as StudentDetailAttendance[];
+  },
+  enabled: false, // We'll manually trigger this when needed
+ });
+
+ // Refetch student detail attendance when dialog opens or month changes
+ useEffect(() => {
+  if (showStudentDetailDialog && selectedStudentDetail?.id) {
+   refetchStudentDetailAttendance();
+  }
+ }, [showStudentDetailDialog, selectedStudentDetail?.id, detailMonthFilter, refetchStudentDetailAttendance]);
+
+ const presentCount = records?.filter(r => r.status === "present").length || 0;
+ const absentCount = records?.filter(r => r.status === "absent").length || 0;
+
+ const exportToCSV = () => {
+  if (!records || records.length === 0) return;
+  const headers = ["Name", "Grade", "Status", "Date", "Time In", "Time Out"];
+  const rows = records.map(r => [
+   r.students.name,
+   r.students.grade,
+   r.status,
+   format(new Date(r.date), "yyyy-MM-dd"),
+   r.time_in || "-",
+   r.time_out || "-",
+  ]);
+  const csvContent = [
+   headers.join(","),
+   ...rows.map(r => r.join(","))
+  ].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `attendance-${dateStr}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+ };
+
+ const handlePrint = () => {
+  window.print();
+ };
+
+ const handleStudentClick = (studentId: string, studentName: string, studentGrade: string) => {
+  setSelectedStudentDetail({ id: studentId, name: studentName, grade: studentGrade });
+  setDetailMonthFilter(new Date()); // Reset month filter for new student
+  setShowStudentDetailDialog(true);
+ };
+
+ // Calculate punctuality and average time in for student detail dialog
+ const { punctualityPercentage, avgTimeIn, absentDays } = useMemo(() => {
+  let punctualCount = 0;
+  let totalPresentDays = 0;
+  let totalMinutesIn = 0;
+  const absentDaysList: string[] = [];
+
+  studentDetailAttendance.forEach(record => {
+   if (record.status === 'present' && record.time_in) {
+    totalPresentDays++;
+    try {
+     const [hours, minutes] = record.time_in.split(':').map(Number);
+     const timeInDate = new Date();
+     timeInDate.setHours(hours, minutes, 0, 0);
+
+     // Assuming "on time" is before 9:15 AM for example
+     const onTimeCutoff = new Date();
+     onTimeCutoff.setHours(9, 15, 0, 0);
+
+     if (timeInDate <= onTimeCutoff) {
+      punctualCount++;
+     }
+
+     totalMinutesIn += (hours * 60) + minutes;
+    } catch (e) {
+     logger.error("Error parsing time_in:", record.time_in, e);
+    }
+   } else if (record.status === 'absent') {
+    absentDaysList.push(record.date);
+   }
   });
 
-  // Refetch student detail attendance when dialog opens or month changes
-  useEffect(() => {
-    if (showStudentDetailDialog && selectedStudentDetail?.id) {
-      refetchStudentDetailAttendance();
-    }
-  }, [showStudentDetailDialog, selectedStudentDetail?.id, detailMonthFilter, refetchStudentDetailAttendance]);
+  const punctuality = totalPresentDays > 0 ? Math.round((punctualCount / totalPresentDays) * 100) : 0;
+  const averageMinutesIn = totalPresentDays > 0 ? totalMinutesIn / totalPresentDays : 0;
+  const avgHours = Math.floor(averageMinutesIn / 60);
+  const avgMins = Math.round(averageMinutesIn % 60);
+  const formattedAvgTimeIn = totalPresentDays > 0 ? `${String(avgHours).padStart(2, '0')}:${String(avgMins).padStart(2, '0')}` : '-';
 
-  const presentCount = records?.filter(r => r.status === "present").length || 0;
-  const absentCount = records?.filter(r => r.status === "absent").length || 0;
-
-  const exportToCSV = () => {
-    if (!records || records.length === 0) return;
-    const headers = ["Name", "Grade", "Status", "Date", "Time In", "Time Out"];
-    const rows = records.map(r => [
-      r.students.name,
-      r.students.grade,
-      r.status,
-      format(new Date(r.date), "yyyy-MM-dd"),
-      r.time_in || "-",
-      r.time_out || "-",
-    ]);
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(r => r.join(","))
-    ].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `attendance-${dateStr}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  return {
+   punctualityPercentage: punctuality,
+   avgTimeIn: formattedAvgTimeIn,
+   absentDays: absentDaysList
   };
+ }, [studentDetailAttendance]);
 
-  const handlePrint = () => {
-    window.print();
-  };
+ return (
+  <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
+   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-2">
+     <div className="flex items-center gap-3">
+      <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
+       <FileText className="h-8 w-8 text-primary animate-pulse" />
+      </div>
+      <div>
+       <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+        Attendance Archive
+       </h1>
+       <div className="flex items-center gap-2 mt-1">
+         <div className="h-2 w-2 rounded-full bg-primary" />
+         <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Historical Compliance Audit</p>
+       </div>
+      </div>
+     </div>
+    </div>
+    <div className="flex items-center gap-3 bg-white p-1.5 rounded-2xl shadow-sm border border-border/40 group transition-all hover:shadow-sm">
+      <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-primary/5 transition-colors">
+       <CalendarIconLucide className="h-4 w-4 text-slate-400 group-hover:text-primary" />
+      </div>
+      <span className="font-black text-xs uppercase tracking-widest text-slate-700 pr-4">{format(selectedDate, 'EEEE, MMM do')}</span>
+    </div>
+   </div>
 
-  const handleStudentClick = (studentId: string, studentName: string, studentGrade: string) => {
-    setSelectedStudentDetail({ id: studentId, name: studentName, grade: studentGrade });
-    setDetailMonthFilter(new Date()); // Reset month filter for new student
-    setShowStudentDetailDialog(true);
-  };
-
-  // Calculate punctuality and average time in for student detail dialog
-  const { punctualityPercentage, avgTimeIn, absentDays } = useMemo(() => {
-    let punctualCount = 0;
-    let totalPresentDays = 0;
-    let totalMinutesIn = 0;
-    const absentDaysList: string[] = [];
-
-    studentDetailAttendance.forEach(record => {
-      if (record.status === 'present' && record.time_in) {
-        totalPresentDays++;
-        try {
-          const [hours, minutes] = record.time_in.split(':').map(Number);
-          const timeInDate = new Date();
-          timeInDate.setHours(hours, minutes, 0, 0);
-          
-          // Assuming "on time" is before 9:15 AM for example
-          const onTimeCutoff = new Date();
-          onTimeCutoff.setHours(9, 15, 0, 0);
-          
-          if (timeInDate <= onTimeCutoff) {
-            punctualCount++;
-          }
-          
-          totalMinutesIn += (hours * 60) + minutes;
-        } catch (e) {
-          logger.error("Error parsing time_in:", record.time_in, e);
-        }
-      } else if (record.status === 'absent') {
-        absentDaysList.push(record.date);
-      }
-    });
-
-    const punctuality = totalPresentDays > 0 ? Math.round((punctualCount / totalPresentDays) * 100) : 0;
-    const averageMinutesIn = totalPresentDays > 0 ? totalMinutesIn / totalPresentDays : 0;
-    const avgHours = Math.floor(averageMinutesIn / 60);
-    const avgMins = Math.round(averageMinutesIn % 60);
-    const formattedAvgTimeIn = totalPresentDays > 0 ? `${String(avgHours).padStart(2, '0')}:${String(avgMins).padStart(2, '0')}` : '-';
-
-    return {
-      punctualityPercentage: punctuality,
-      avgTimeIn: formattedAvgTimeIn,
-      absentDays: absentDaysList
-    };
-  }, [studentDetailAttendance]);
-
-  return (
-    <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <FileText className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-                Attendance Archive
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Historical Compliance Audit</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 bg-card/60 backdrop-blur-md p-1.5 rounded-2xl shadow-soft border border-border/40 group transition-all hover:shadow-medium">
-           <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-primary/5 transition-colors">
-              <CalendarIconLucide className="h-4 w-4 text-slate-400 group-hover:text-primary" />
-           </div>
-           <span className="font-black text-xs uppercase tracking-widest text-slate-700 pr-4">{format(selectedDate, 'EEEE, MMM do')}</span>
-        </div>
+   {/* Filters Row */}
+   <div className="relative group">
+    <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+    <Card className="relative border border-border shadow-sm p-6 overflow-hidden bg-white border border-white/30 rounded-2xl">
+     <div className="flex flex-wrap gap-6 items-end">
+      <div className="w-[140px] space-y-2">
+       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
+       <Select value={gradeFilter} onValueChange={setGradeFilter}>
+        <SelectTrigger className="h-11 bg-white border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+         <SelectValue placeholder="Select Grade" />
+        </SelectTrigger>
+        <SelectContent className=" bg-white border-muted-foreground/10 rounded-xl">
+         {Array.from(new Set(students.map(s => s.grade))).map(g => (
+          <SelectItem key={g} value={g}>{g}</SelectItem>
+         ))}
+        </SelectContent>
+       </Select>
       </div>
 
-      {/* Filters Row */}
-      <div className="relative group">
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
-          <div className="flex flex-wrap gap-6 items-end">
-            <div className="w-[140px] space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
-                  <SelectValue placeholder="Select Grade" />
-                </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
-                  {Array.from(new Set(students.map(s => s.grade))).map(g => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex-1 min-w-[200px] space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Historical Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full h-11 justify-start text-left font-normal bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl shadow-sm",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIconLucide className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 rounded-2xl border-none shadow-strong" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={date => date && setSelectedDate(date)}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="flex gap-3">
-              <Button variant="outline" size="sm" onClick={exportToCSV} className="rounded-xl h-11 border-2 font-bold px-4">
-                <Download className="mr-2 h-4 w-4" /> EXPORT CSV
-              </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint} className="rounded-xl h-11 border-2 font-bold px-4">
-                <Printer className="mr-2 h-4 w-4" /> PRINT
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Attendance Table */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-white/20">
-        <CardHeader className="border-b border-muted/10 bg-primary/5 py-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <CardTitle className="text-xl font-black flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Clock className="h-6 w-6 text-primary" />
-                </div>
-                Daily Log Analysis
-              </CardTitle>
-              <div className="flex gap-4 ml-11">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{presentCount} Present</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{absentCount} Absent</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Snapshot: {format(selectedDate, "MMMM d, yyyy")}</p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-center py-10">Loading records...</p>
-          ) : records.length > 0 ? (
-            <div className="overflow-x-auto border rounded-xl">
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead>Student Name</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Time In</TableHead>
-                    <TableHead>Time Out</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {records.map(r => (
-                    <TableRow key={r.id} className="group transition-all duration-300 hover:bg-card/60">
-                      <TableCell className="px-6 py-4 font-black text-slate-700 group-hover:text-primary transition-colors">{r.students.name}</TableCell>
-                      <TableCell className="px-6 py-4">
-                        <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-lg px-2 py-0.5 text-[10px] font-bold">
-                          Grade {r.students.grade}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <div className={cn(
-                          "inline-flex items-center gap-1.5 font-black uppercase text-[10px] tracking-tight",
-                          r.status === 'present' ? "text-green-600" : "text-red-600"
-                        )}>
-                          <div className={cn("h-1.5 w-1.5 rounded-full", r.status === 'present' ? "bg-green-600" : "bg-red-600")} />
-                          {r.status}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-4 font-bold text-primary text-xs">{r.time_in || "-"}</TableCell>
-                      <TableCell className="px-6 py-4 font-bold text-primary/80 text-xs">{r.time_out || "-"}</TableCell>
-                      <TableCell className="px-6 py-4 text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-soft group-hover:scale-105 transition-all" onClick={() => handleStudentClick(r.student_id, r.students.name, r.students.grade)}>
-                          <User className="h-4 w-4 text-slate-500" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <ServerPagination
-                currentPage={currentPage}
-                pageSize={pageSize}
-                totalCount={totalCount}
-                onPageChange={setPage}
-              />
-            </div>
-          ) : (
-            <p className="text-center text-muted-foreground">
-              No attendance records found for this date
-            </p>
+      <div className="flex-1 min-w-[200px] space-y-2">
+       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Historical Date</label>
+       <Popover>
+        <PopoverTrigger asChild>
+         <Button
+          variant="outline"
+          className={cn(
+           "w-full h-11 justify-start text-left font-normal bg-white border-muted-foreground/10 focus:ring-primary/20 rounded-xl shadow-sm",
+           !selectedDate && "text-muted-foreground"
           )}
-        </CardContent>
+         >
+          <CalendarIconLucide className="mr-2 h-4 w-4" />
+          {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+         </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 rounded-2xl border border-border shadow-sm" align="start">
+         <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={date => date && setSelectedDate(date)}
+         />
+        </PopoverContent>
+       </Popover>
+      </div>
+
+      <div className="flex gap-3">
+       <Button variant="outline" size="sm" onClick={exportToCSV} className="rounded-xl h-11 border-2 font-bold px-4">
+        <Download className="mr-2 h-4 w-4" /> EXPORT CSV
+       </Button>
+       <Button variant="outline" size="sm" onClick={handlePrint} className="rounded-xl h-11 border-2 font-bold px-4">
+        <Printer className="mr-2 h-4 w-4" /> PRINT
+       </Button>
+      </div>
+     </div>
+    </Card>
+   </div>
+
+   {/* Attendance Table */}
+   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-white/20">
+    <CardHeader className="border-b border-muted/10 bg-primary/5 py-6">
+     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="space-y-1">
+       <CardTitle className="text-xl font-black flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-primary/10">
+         <Clock className="h-6 w-6 text-primary" />
+        </div>
+        Daily Log Analysis
+       </CardTitle>
+       <div className="flex gap-4 ml-11">
+        <div className="flex items-center gap-1.5">
+         <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+         <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{presentCount} Present</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+         <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+         <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">{absentCount} Absent</span>
+        </div>
+       </div>
+      </div>
+      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Snapshot: {format(selectedDate, "MMMM d, yyyy")}</p>
+     </div>
+    </CardHeader>
+    <CardContent>
+     {isLoading ? (
+      <p className="text-center py-10">Loading records...</p>
+     ) : records.length > 0 ? (
+      <div className="overflow-x-auto border rounded-xl">
+       <Table>
+        <TableHeader className="bg-slate-50">
+         <TableRow>
+          <TableHead>Student Name</TableHead>
+          <TableHead>Grade</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Time In</TableHead>
+          <TableHead>Time Out</TableHead>
+          <TableHead>Details</TableHead>
+         </TableRow>
+        </TableHeader>
+        <TableBody>
+         {records.map(r => (
+          <TableRow key={r.id} className="group transition-all duration-300 hover:bg-white">
+           <TableCell className="px-6 py-4 font-black text-slate-700 group-hover:text-primary transition-colors">{r.students.name}</TableCell>
+           <TableCell className="px-6 py-4">
+            <Badge variant="secondary" className="bg-primary/10 text-primary border border-border rounded-lg px-2 py-0.5 text-[10px] font-bold">
+             Grade {r.students.grade}
+            </Badge>
+           </TableCell>
+           <TableCell className="px-6 py-4">
+            <div className={cn(
+             "inline-flex items-center gap-1.5 font-black uppercase text-[10px] tracking-tight",
+             r.status === 'present' ? "text-green-600" : "text-red-600"
+            )}>
+             <div className={cn("h-1.5 w-1.5 rounded-full", r.status === 'present' ? "bg-green-600" : "bg-red-600")} />
+             {r.status}
+            </div>
+           </TableCell>
+           <TableCell className="px-6 py-4 font-bold text-primary text-xs">{r.time_in || "-"}</TableCell>
+           <TableCell className="px-6 py-4 font-bold text-primary/80 text-xs">{r.time_out || "-"}</TableCell>
+           <TableCell className="px-6 py-4 text-right">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm group-hover:scale-105 transition-all" onClick={() => handleStudentClick(r.student_id, r.students.name, r.students.grade)}>
+             <User className="h-4 w-4 text-slate-500" />
+            </Button>
+           </TableCell>
+          </TableRow>
+         ))}
+        </TableBody>
+       </Table>
+       <ServerPagination
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={setPage}
+       />
+      </div>
+     ) : (
+      <p className="text-center text-muted-foreground">
+       No attendance records found for this date
+      </p>
+     )}
+    </CardContent>
+   </Card>
+
+   {/* Student Detail Dialog */}
+   <Dialog open={showStudentDetailDialog} onOpenChange={(open) => {
+    setShowStudentDetailDialog(open);
+    if (!open) {
+     setSelectedStudentDetail(null);
+    }
+   }}>
+    <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+     <DialogHeader>
+      <div className="flex justify-between items-center">
+       <div>
+        <DialogTitle className="flex items-center gap-2">
+         <User className="h-5 w-5" />
+         {selectedStudentDetail?.name} - Grade {selectedStudentDetail?.grade}
+        </DialogTitle>
+        <DialogDescription>
+         Detailed attendance report for {selectedStudentDetail?.name}.
+        </DialogDescription>
+       </div>
+       <Button variant="ghost" size="sm" onClick={() => setShowStudentDetailDialog(false)}>
+        <X className="h-4 w-4" />
+       </Button>
+      </div>
+     </DialogHeader>
+     <div className="space-y-4 py-4">
+      {/* Month Filter for Details */}
+      <div className="flex items-center gap-2">
+       <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setDetailMonthFilter(subMonths(detailMonthFilter, 1))}
+       >
+        Previous Month
+       </Button>
+       <Input
+        type="month"
+        value={format(detailMonthFilter, "yyyy-MM")}
+        onChange={(e) => {
+         const [year, month] = e.target.value.split('-');
+         setDetailMonthFilter(new Date(parseInt(year), parseInt(month) - 1));
+        }}
+        className="w-[150px]"
+       />
+       <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setDetailMonthFilter(addMonths(detailMonthFilter, 1))}
+       >
+        Next Month
+       </Button>
+      </div>
+
+      {/* Punctuality & Avg Time In */}
+      <Card>
+       <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium">Attendance Summary</CardTitle>
+       </CardHeader>
+       <CardContent className="grid grid-cols-3 gap-4">
+        <div className="flex items-center gap-2">
+         <TrendingUp className="h-5 w-5" />
+         <div>
+          <p className="text-sm text-muted-foreground">Punctuality %</p>
+          <p className="text-xl font-bold">{punctualityPercentage}%</p>
+         </div>
+        </div>
+        <div className="flex items-center gap-2">
+         <Clock className="h-5 w-5" />
+         <div>
+          <p className="text-sm text-muted-foreground">Avg. Time In</p>
+          <p className="text-xl font-bold">{avgTimeIn}</p>
+         </div>
+        </div>
+        <div className="flex items-center gap-2">
+         <X className="h-5 w-5" />
+         <div>
+          <p className="text-sm text-muted-foreground">Absent Days</p>
+          <p className="text-xl font-bold">{absentDays.length}</p>
+         </div>
+        </div>
+       </CardContent>
       </Card>
 
-      {/* Student Detail Dialog */}
-      <Dialog open={showStudentDetailDialog} onOpenChange={(open) => {
-        setShowStudentDetailDialog(open);
-        if (!open) {
-          setSelectedStudentDetail(null);
-        }
-      }}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <DialogTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  {selectedStudentDetail?.name} - Grade {selectedStudentDetail?.grade}
-                </DialogTitle>
-                <DialogDescription>
-                  Detailed attendance report for {selectedStudentDetail?.name}.
-                </DialogDescription>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowStudentDetailDialog(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Month Filter for Details */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDetailMonthFilter(subMonths(detailMonthFilter, 1))}
-              >
-                Previous Month
-              </Button>
-              <Input
-                type="month"
-                value={format(detailMonthFilter, "yyyy-MM")}
-                onChange={(e) => {
-                  const [year, month] = e.target.value.split('-');
-                  setDetailMonthFilter(new Date(parseInt(year), parseInt(month) - 1));
-                }}
-                className="w-[150px]"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDetailMonthFilter(addMonths(detailMonthFilter, 1))}
-              >
-                Next Month
-              </Button>
-            </div>
+      {/* Absent Days List */}
+      {absentDays.length > 0 && (
+       <Card>
+        <CardHeader className="pb-2">
+         <CardTitle className="text-sm font-medium">Absent Days</CardTitle>
+        </CardHeader>
+        <CardContent>
+         <div className="flex flex-wrap gap-2">
+          {absentDays.map((date, index) => (
+           <Badge key={index} variant="destructive">
+            {format(new Date(date), "MMM d")}
+           </Badge>
+          ))}
+         </div>
+        </CardContent>
+       </Card>
+      )}
 
-            {/* Punctuality & Avg Time In */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Attendance Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-4">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Punctuality %</p>
-                    <p className="text-xl font-bold">{punctualityPercentage}%</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Avg. Time In</p>
-                    <p className="text-xl font-bold">{avgTimeIn}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <X className="h-5 w-5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Absent Days</p>
-                    <p className="text-xl font-bold">{absentDays.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Absent Days List */}
-            {absentDays.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Absent Days</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {absentDays.map((date, index) => (
-                      <Badge key={index} variant="destructive">
-                        {format(new Date(date), "MMM d")}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Date-wise Attendance Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Attendance for {format(detailMonthFilter, "MMMM yyyy")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {studentDetailAttendance.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No attendance records for this month.</p>
-                ) : (
-                  <div className="overflow-x-auto max-h-64 border rounded">
-                    <div className="overflow-x-auto">
-  <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Time In</TableHead>
-                          <TableHead>Time Out</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {studentDetailAttendance.map(record => (
-                          <TableRow key={record.id}>
-                            <TableCell>{format(new Date(record.date), "PPP")}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={record.status === "present" ? "default" : "destructive"}
-                                className={record.status === "present" ? "bg-secondary hover:bg-secondary/80" : ""}
-                              >
-                                {record.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{record.time_in || "-"}</TableCell>
-                            <TableCell>{record.time_out || "-"}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+      {/* Date-wise Attendance Table */}
+      <Card>
+       <CardHeader>
+        <CardTitle>Attendance for {format(detailMonthFilter, "MMMM yyyy")}</CardTitle>
+       </CardHeader>
+       <CardContent>
+        {studentDetailAttendance.length === 0 ? (
+         <p className="text-muted-foreground text-center py-4">No attendance records for this month.</p>
+        ) : (
+         <div className="overflow-x-auto max-h-64 border rounded">
+          <div className="overflow-x-auto">
+ <Table>
+           <TableHeader>
+            <TableRow>
+             <TableHead>Date</TableHead>
+             <TableHead>Status</TableHead>
+             <TableHead>Time In</TableHead>
+             <TableHead>Time Out</TableHead>
+            </TableRow>
+           </TableHeader>
+           <TableBody>
+            {studentDetailAttendance.map(record => (
+             <TableRow key={record.id}>
+              <TableCell>{format(new Date(record.date), "PPP")}</TableCell>
+              <TableCell>
+               <Badge
+                variant={record.status === "present" ? "default" : "destructive"}
+                className={record.status === "present" ? "bg-secondary hover:bg-secondary/80" : ""}
+               >
+                {record.status}
+               </Badge>
+              </TableCell>
+              <TableCell>{record.time_in || "-"}</TableCell>
+              <TableCell>{record.time_out || "-"}</TableCell>
+             </TableRow>
+            ))}
+           </TableBody>
+          </Table>
 </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+         </div>
+        )}
+       </CardContent>
+      </Card>
+     </div>
+    </DialogContent>
+   </Dialog>
+  </div>
+ );
 }

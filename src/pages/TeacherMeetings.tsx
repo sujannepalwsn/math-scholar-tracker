@@ -17,182 +17,182 @@ type MeetingAttendee = Tables<'meeting_attendees'>;
 type MeetingConclusion = Tables<'meeting_conclusions'>;
 
 export default function TeacherMeetings() {
-  const { user } = useAuth();
-  const [showConclusionDialog, setShowConclusionDialog] = useState(false);
-  const [selectedMeetingConclusion, setSelectedMeetingConclusion] = useState<MeetingConclusion | null>(null);
+ const { user } = useAuth();
+ const [showConclusionDialog, setShowConclusionDialog] = useState(false);
+ const [selectedMeetingConclusion, setSelectedMeetingConclusion] = useState<MeetingConclusion | null>(null);
 
-  if (!user?.teacher_id) {
-    return <div className="p-6 text-center text-muted-foreground">Please log in as a teacher to view meetings.</div>;
+ if (!user?.teacher_id) {
+  return <div className="p-6 text-center text-muted-foreground">Please log in as a teacher to view meetings.</div>;
+ }
+
+ // Fetch meetings relevant to the logged-in teacher - check both user_id and teacher_id
+ const { data: meetings = [], isLoading } = useQuery({
+  queryKey: ["teacher-meetings", user.teacher_id, user.id],
+  queryFn: async () => {
+   // Try fetching by teacher_id first (more reliable)
+   let { data, error } = await supabase
+    .from("meeting_attendees")
+    .select(`
+     *,
+     meetings(
+      id, title, description, meeting_date, meeting_type, status,
+      meeting_conclusions(conclusion_notes, recorded_at)
+     )
+    `)
+    .eq("teacher_id", user.teacher_id!)
+    .order("created_at", { ascending: false });
+
+   if (error) throw error;
+
+   // If no results by teacher_id, try by user_id as fallback
+   if (!data || data.length === 0) {
+    const result = await supabase
+     .from("meeting_attendees")
+     .select(`
+      *,
+      meetings(
+       id, title, description, meeting_date, meeting_type, status,
+       meeting_conclusions(conclusion_notes, recorded_at)
+      )
+     `)
+     .eq("user_id", user.id!)
+     .order("created_at", { ascending: false });
+
+    if (result.error) throw result.error;
+    data = result.data;
+   }
+
+   return data || [];
+  },
+  enabled: !!user.teacher_id || !!user.id });
+
+ const getStatusColor = (status: Meeting['status']) => {
+  switch (status) {
+   case 'scheduled': return 'text-blue-600';
+   case 'completed': return 'text-green-600';
+   case 'cancelled': return 'text-red-600';
+   default: return 'text-gray-600';
   }
+ };
 
-  // Fetch meetings relevant to the logged-in teacher - check both user_id and teacher_id
-  const { data: meetings = [], isLoading } = useQuery({
-    queryKey: ["teacher-meetings", user.teacher_id, user.id],
-    queryFn: async () => {
-      // Try fetching by teacher_id first (more reliable)
-      let { data, error } = await supabase
-        .from("meeting_attendees")
-        .select(`
-          *,
-          meetings(
-            id, title, description, meeting_date, meeting_type, status,
-            meeting_conclusions(conclusion_notes, recorded_at)
-          )
-        `)
-        .eq("teacher_id", user.teacher_id!)
-        .order("created_at", { ascending: false });
+ const getAttendanceStatusColor = (attended: boolean | null) => {
+  if (attended === true) return 'text-green-600';
+  if (attended === false) return 'text-red-600';
+  return 'text-gray-600';
+ };
 
-      if (error) throw error;
-      
-      // If no results by teacher_id, try by user_id as fallback
-      if (!data || data.length === 0) {
-        const result = await supabase
-          .from("meeting_attendees")
-          .select(`
-            *,
-            meetings(
-              id, title, description, meeting_date, meeting_type, status,
-              meeting_conclusions(conclusion_notes, recorded_at)
-            )
-          `)
-          .eq("user_id", user.id!)
-          .order("created_at", { ascending: false });
-        
-        if (result.error) throw result.error;
-        data = result.data;
-      }
-      
-      return data || [];
-    },
-    enabled: !!user.teacher_id || !!user.id });
+ const handleViewConclusion = (conclusion: MeetingConclusion) => {
+  setSelectedMeetingConclusion(conclusion);
+  setShowConclusionDialog(true);
+ };
 
-  const getStatusColor = (status: Meeting['status']) => {
-    switch (status) {
-      case 'scheduled': return 'text-blue-600';
-      case 'completed': return 'text-green-600';
-      case 'cancelled': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const getAttendanceStatusColor = (attended: boolean | null) => {
-    if (attended === true) return 'text-green-600';
-    if (attended === false) return 'text-red-600';
-    return 'text-gray-600';
-  };
-
-  const handleViewConclusion = (conclusion: MeetingConclusion) => {
-    setSelectedMeetingConclusion(conclusion);
-    setShowConclusionDialog(true);
-  };
-
-  return (
-    <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <Users className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-                Staff Assemblies
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Collaborative Consultation & Meeting Log</p>
-              </div>
-            </div>
-          </div>
-        </div>
+ return (
+  <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
+   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-2">
+     <div className="flex items-center gap-3">
+      <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
+       <Users className="h-8 w-8 text-primary animate-pulse" />
       </div>
-
-      <Card className="border-none shadow-strong overflow-hidden rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
-        <CardHeader className="border-b border-border/10 bg-primary/5 py-6">
-          <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <CalendarDays className="h-6 w-6 text-primary" />
-            </div>
-            Personalized Agenda
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p>Loading meetings...</p>
-          ) : meetings.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No meetings scheduled for you.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Your Attendance</TableHead>
-                    <TableHead>Conclusion</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {meetings.map((attendee: any) => {
-                    const meeting = attendee.meetings;
-                    const conclusion = meeting.meeting_conclusions?.[0];
-                    return (
-                      <TableRow key={attendee.id}>
-                        <TableCell className="font-medium">{meeting.title}</TableCell>
-                        <TableCell>{format(new Date(meeting.meeting_date), "PPP")}</TableCell>
-                        <TableCell>{format(new Date(meeting.meeting_date), "p")}</TableCell>
-                        <TableCell>{meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}</TableCell>
-                        <TableCell>
-                          <span className={`font-semibold ${getStatusColor(meeting.status)}`}>
-                            {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`font-semibold ${getAttendanceStatusColor(attendee.attendance_status)}`}>
-                            {attendee.attendance_status.charAt(0).toUpperCase() + attendee.attendance_status.slice(1)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {conclusion ? (
-                            <Button variant="ghost" size="sm" onClick={() => handleViewConclusion(conclusion)}>
-                              <Eye className="h-4 w-4 mr-1" /> View
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Conclusion View Dialog */}
-      <Dialog open={showConclusionDialog} onOpenChange={setShowConclusionDialog}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl" aria-labelledby="conclusion-view-title" aria-describedby="conclusion-view-description">
-          <DialogHeader>
-            <DialogTitle id="conclusion-view-title">Meeting Conclusion</DialogTitle>
-            <DialogDescription id="conclusion-view-description">
-              Summary and notes from the meeting.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedMeetingConclusion && (
-            <div className="space-y-4 py-4">
-              <p className="text-sm text-muted-foreground">Recorded on: {format(new Date(selectedMeetingConclusion.recorded_at!), "PPP 'at' HH:mm")}</p>
-              <div className="border rounded-lg p-4 bg-muted/50">
-                <p className="whitespace-pre-wrap">{selectedMeetingConclusion.conclusion_notes}</p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <div>
+       <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+        Staff Assemblies
+       </h1>
+       <div className="flex items-center gap-2 mt-1">
+         <div className="h-2 w-2 rounded-full bg-primary" />
+         <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Collaborative Consultation & Meeting Log</p>
+       </div>
+      </div>
+     </div>
     </div>
-  );
+   </div>
+
+   <Card className="border border-border shadow-sm overflow-hidden rounded-2xl bg-white border border-white/20">
+    <CardHeader className="border-b border-border/10 bg-primary/5 py-6">
+     <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90">
+      <div className="p-2 rounded-xl bg-primary/10">
+       <CalendarDays className="h-6 w-6 text-primary" />
+      </div>
+      Personalized Agenda
+     </CardTitle>
+    </CardHeader>
+    <CardContent>
+     {isLoading ? (
+      <p>Loading meetings...</p>
+     ) : meetings.length === 0 ? (
+      <p className="text-muted-foreground text-center py-8">No meetings scheduled for you.</p>
+     ) : (
+      <div className="overflow-x-auto">
+       <Table>
+        <TableHeader>
+         <TableRow>
+          <TableHead>Title</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead>Time</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Your Attendance</TableHead>
+          <TableHead>Conclusion</TableHead>
+         </TableRow>
+        </TableHeader>
+        <TableBody>
+         {meetings.map((attendee: any) => {
+          const meeting = attendee.meetings;
+          const conclusion = meeting.meeting_conclusions?.[0];
+          return (
+           <TableRow key={attendee.id}>
+            <TableCell className="font-medium">{meeting.title}</TableCell>
+            <TableCell>{format(new Date(meeting.meeting_date), "PPP")}</TableCell>
+            <TableCell>{format(new Date(meeting.meeting_date), "p")}</TableCell>
+            <TableCell>{meeting.meeting_type.charAt(0).toUpperCase() + meeting.meeting_type.slice(1)}</TableCell>
+            <TableCell>
+             <span className={`font-semibold ${getStatusColor(meeting.status)}`}>
+              {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
+             </span>
+            </TableCell>
+            <TableCell>
+             <span className={`font-semibold ${getAttendanceStatusColor(attendee.attendance_status)}`}>
+              {attendee.attendance_status.charAt(0).toUpperCase() + attendee.attendance_status.slice(1)}
+             </span>
+            </TableCell>
+            <TableCell>
+             {conclusion ? (
+              <Button variant="ghost" size="sm" onClick={() => handleViewConclusion(conclusion)}>
+               <Eye className="h-4 w-4 mr-1" /> View
+              </Button>
+             ) : (
+              <span className="text-muted-foreground">-</span>
+             )}
+            </TableCell>
+           </TableRow>
+          );
+         })}
+        </TableBody>
+       </Table>
+      </div>
+     )}
+    </CardContent>
+   </Card>
+
+   {/* Conclusion View Dialog */}
+   <Dialog open={showConclusionDialog} onOpenChange={setShowConclusionDialog}>
+    <DialogContent className="w-[95vw] sm:max-w-2xl" aria-labelledby="conclusion-view-title" aria-describedby="conclusion-view-description">
+     <DialogHeader>
+      <DialogTitle id="conclusion-view-title">Meeting Conclusion</DialogTitle>
+      <DialogDescription id="conclusion-view-description">
+       Summary and notes from the meeting.
+      </DialogDescription>
+     </DialogHeader>
+     {selectedMeetingConclusion && (
+      <div className="space-y-4 py-4">
+       <p className="text-sm text-muted-foreground">Recorded on: {format(new Date(selectedMeetingConclusion.recorded_at!), "PPP 'at' HH:mm")}</p>
+       <div className="border rounded-lg p-4 bg-muted/50">
+        <p className="whitespace-pre-wrap">{selectedMeetingConclusion.conclusion_notes}</p>
+       </div>
+      </div>
+     )}
+    </DialogContent>
+   </Dialog>
+  </div>
+ );
 }

@@ -31,8 +31,8 @@ export const ActionPlanSection: React.FC<ActionPlanSectionProps> = ({
   };
 
   return (
-    <Card className="border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-primary/20">
-      <CardHeader className="bg-primary/5 border-b border-primary/10 p-6">
+    <Card className="border border-border shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="bg-primary-light border-b border-primary/10 p-6">
         <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
           <ListChecks className="h-5 w-5" /> {title}
         </CardTitle>

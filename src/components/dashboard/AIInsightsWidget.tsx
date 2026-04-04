@@ -42,10 +42,10 @@ export const AIInsightsWidget: React.FC<AIInsightsWidgetProps> = ({
   };
 
   return (
-    <Card className="border-none shadow-strong bg-gradient-to-br from-indigo-50/50 to-white backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-indigo-100/50">
-      <CardHeader className="bg-indigo-500/5 border-b border-indigo-100/30 p-6">
+    <Card className="border border-indigo-100 shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="bg-indigo-50/30 border-b border-indigo-100/50 p-6">
         <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-indigo-600 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 animate-pulse" /> {title}
+          <Sparkles className="h-5 w-5 animate-pulse text-indigo-500" /> {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">

@@ -57,21 +57,21 @@ export const KPICard = ({
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -4 }}
+      whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       className="h-full"
     >
     <Card
       onClick={onClick}
       className={cn(
-        "group overflow-hidden border-none shadow-glass transition-all duration-500 bg-white/70 dark:bg-slate-900/70 backdrop-blur-lg rounded-3xl border border-white/40 dark:border-slate-800/40 h-full flex flex-col justify-between relative",
+        "group overflow-hidden border border-border shadow-sm transition-all duration-300 bg-white rounded-2xl h-full flex flex-col justify-between relative hover:shadow-md hover:border-primary/20",
         onClick && "cursor-pointer",
         className
       )}
     >
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-2">
-          <div className={cn("p-2 rounded-lg", colorVariants[color])}>
+          <div className={cn("p-2 rounded-xl", colorVariants[color])}>
             <Icon className="h-5 w-5" />
           </div>
           {SecondaryIcon && (
@@ -114,7 +114,7 @@ export const KPICard = ({
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="bg-background/80 backdrop-blur-md border shadow-soft px-2 py-1 rounded-lg text-[10px] font-bold">
+                        <div className="bg-white border border-border shadow-md px-2 py-1 rounded-lg text-[10px] font-bold">
                           {payload[0].value}%
                         </div>
                       );
