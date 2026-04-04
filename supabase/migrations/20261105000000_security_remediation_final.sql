@@ -60,8 +60,11 @@ BEGIN
         SELECT policyname, tablename
         FROM pg_policies
         WHERE schemaname = 'public'
-          AND (policyname ILIKE '%Service role%' OR policyname ILIKE '%Public%')
-          AND policyname NOT ILIKE '%service_role%' -- Keep ones already scoped to service_role if any exist correctly
+          AND (
+            (policyname ILIKE '%Service role%' AND policyname NOT ILIKE '%service_role%')
+            OR
+            (policyname ILIKE '%Public%' AND tablename NOT IN ('centers', 'system_settings', 'login_page_settings', 'platform_settings', 'system_pages', 'admission_applications', 'demo_requests'))
+          )
     LOOP
         EXECUTE FORMAT('DROP POLICY IF EXISTS %I ON public.%I', policy_record.policyname, policy_record.tablename);
     END LOOP;
@@ -129,8 +132,28 @@ DROP POLICY IF EXISTS "Public read-only login_page_settings" ON public.login_pag
 CREATE POLICY "Super Admin manage login_page_settings"
 ON public.login_page_settings FOR ALL TO authenticated
 USING (public.get_user_role() = 'admin' AND public.get_user_center_id() IS NULL);
+-- No coder requested all things enabled and fixed.
+-- login_page_settings is needed for the login screen branding.
 CREATE POLICY "Public read-only login_page_settings"
 ON public.login_page_settings FOR SELECT USING (true);
+
+-- platform_settings (if exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'platform_settings') THEN
+        DROP POLICY IF EXISTS "Public can view platform settings" ON public.platform_settings;
+        CREATE POLICY "Public read-only platform_settings" ON public.platform_settings FOR SELECT USING (true);
+    END IF;
+END $$;
+
+-- system_pages (if exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'system_pages') THEN
+        DROP POLICY IF EXISTS "Public can view system pages" ON public.system_pages;
+        CREATE POLICY "Public read-only system_pages" ON public.system_pages FOR SELECT USING (true);
+    END IF;
+END $$;
 
 -- centers
 DROP POLICY IF EXISTS "Public access centers" ON public.centers;
@@ -160,5 +183,30 @@ DROP POLICY IF EXISTS "Public can submit admission" ON public.admission_applicat
 CREATE POLICY "Unauthenticated admission submission"
 ON public.admission_applications FOR INSERT TO anon, authenticated
 WITH CHECK (true); -- Keep this public but monitor closely
+
+-- 8.5. RESTRICT DEMO REQUESTS (Keep unauthenticated INSERT)
+DROP POLICY IF EXISTS "Anyone can submit demo requests" ON public.demo_requests;
+CREATE POLICY "Unauthenticated demo request submission"
+ON public.demo_requests FOR INSERT TO anon, authenticated
+WITH CHECK (true);
+
+-- 9. GLOBAL RLS ENFORCEMENT & DEFAULT DENY
+-- Ensure every table has RLS enabled and a default deny for unauthenticated users
+DO $$
+DECLARE
+    t_name RECORD;
+BEGIN
+    FOR t_name IN
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public'
+    LOOP
+        -- Enable RLS
+        EXECUTE FORMAT('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t_name.tablename);
+
+        -- Default Deny (Implicit by enabling RLS without policies, but let's ensure no legacy broad ones remain)
+        -- We've already dropped legacy broad ones in Step 3.
+    END LOOP;
+END $$;
 
 COMMIT;
