@@ -12,11 +12,20 @@ DECLARE
     funnel_data JSONB;
     top_drop_offs JSONB;
     peak_usage JSONB;
+    active_role JSONB;
+    dau INT;
+    mau INT;
 BEGIN
-    -- 1. Simple counts
+    -- 1. Simple counts & Active Users
     SELECT count(*) INTO total_visitors FROM public.visitors;
     SELECT count(DISTINCT fingerprint_id) INTO unique_visitors FROM public.visitors;
     SELECT count(*) INTO total_sessions FROM public.sessions;
+
+    SELECT count(DISTINCT visitor_id) INTO dau FROM public.sessions
+    WHERE session_start >= now() - interval '24 hours';
+
+    SELECT count(DISTINCT visitor_id) INTO mau FROM public.sessions
+    WHERE session_start >= now() - interval '30 days';
 
     -- 2. Visitor Type Distribution
     SELECT jsonb_agg(d) INTO type_dist FROM (
@@ -35,12 +44,13 @@ BEGIN
         LIMIT 10
     ) f;
 
-    -- 4. Funnel analysis (Landing -> Trial -> Signup)
-    -- Simplified: count unique fingerprints reaching these stages
+    -- 4. Funnel analysis (Landing -> Trial -> Signup -> Active Use)
+    -- Simplified: count unique fingerprints/sessions reaching these stages
     SELECT jsonb_build_object(
         'landing', (SELECT count(DISTINCT session_id) FROM public.events WHERE event_name = 'view_page' AND metadata->>'path' = '/'),
         'trial', (SELECT count(*) FROM public.trial_leads),
-        'signup', (SELECT count(*) FROM public.users WHERE role != 'admin')
+        'signup', (SELECT count(*) FROM public.users WHERE role != 'admin'),
+        'active', (SELECT count(DISTINCT session_id) FROM public.events WHERE event_type = 'feature_action')
     ) INTO funnel_data;
 
     -- 5. Top Drop-off Pages (Exit Pages)
@@ -71,11 +81,22 @@ BEGIN
         )
     ) INTO peak_usage;
 
+    -- 7. Most Active Role
+    SELECT jsonb_build_object('role', role, 'count', count(*)) INTO active_role
+    FROM public.visitors v
+    JOIN public.users u ON v.user_id = u.id
+    GROUP BY role
+    ORDER BY count(*) DESC
+    LIMIT 1;
+
     -- Combine results
     result := jsonb_build_object(
         'total_visitors', total_visitors,
         'unique_visitors', unique_visitors,
         'total_sessions', total_sessions,
+        'dau', dau,
+        'mau', mau,
+        'active_role', active_role,
         'type_dist', type_dist,
         'feature_usage', feature_usage,
         'funnel', funnel_data,

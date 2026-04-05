@@ -61,6 +61,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const VisitorLogs = () => {
   const [visitorTypeFilter, setVisitorTypeFilter] = useState<string>("all");
@@ -124,6 +125,7 @@ const VisitorLogs = () => {
     { name: 'Landing', value: analytics.funnel.landing },
     { name: 'Trial', value: analytics.funnel.trial },
     { name: 'Signup', value: analytics.funnel.signup },
+    { name: 'Active', value: analytics.funnel.active },
   ] : [];
 
   return (
@@ -137,7 +139,36 @@ const VisitorLogs = () => {
           <Button variant="outline" className="rounded-xl border-slate-200">
             <Filter className="h-4 w-4 mr-2" /> Filter Range
           </Button>
-          <Button className="bg-primary text-white rounded-xl shadow-lg shadow-primary/20">
+          <Button
+            className="bg-primary text-white rounded-xl shadow-lg shadow-primary/20"
+            onClick={() => {
+              if (!sessions || sessions.length === 0) {
+                toast.error("No data to export");
+                return;
+              }
+              const headers = ["Visitor Type", "User", "Role", "Duration", "Entry Page", "Exit Page", "Start Time"];
+              const rows = sessions.map(s => [
+                s.visitors.visitor_type,
+                s.visitors.users?.username || 'Anonymous',
+                s.visitors.users?.role || '-',
+                s.duration || 'Active',
+                s.entry_page,
+                s.exit_page || '-',
+                format(new Date(s.session_start), 'yyyy-MM-dd HH:mm:ss')
+              ]);
+              const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const link = document.createElement("a");
+              const url = URL.createObjectURL(blob);
+              link.setAttribute("href", url);
+              link.setAttribute("download", `visitor_logs_${format(new Date(), 'yyyyMMdd')}.csv`);
+              link.style.visibility = 'hidden';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              toast.success("Logs exported successfully");
+            }}
+          >
             Export CSV
           </Button>
         </div>
@@ -233,6 +264,25 @@ const VisitorLogs = () => {
                           <TableRow className="bg-slate-50/30">
                             <TableCell colSpan={8} className="p-8">
                               <div className="space-y-6">
+                                  <div className="grid md:grid-cols-3 gap-6 mb-8">
+                                     <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="text-[10px] font-black uppercase text-slate-400 mb-1">IP Address</div>
+                                        <div className="font-bold text-slate-700">{session.visitors.ip_address || 'Unknown'}</div>
+                                     </div>
+                                     <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Location</div>
+                                        <div className="font-bold text-slate-700">
+                                           {session.visitors.location ?
+                                              `${session.visitors.location.city}, ${session.visitors.location.country}` :
+                                              'Unknown'}
+                                        </div>
+                                     </div>
+                                     <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Fingerprint</div>
+                                        <div className="font-bold text-slate-700 truncate">{session.visitors.fingerprint_id || 'N/A'}</div>
+                                     </div>
+                                  </div>
+
                                 <div className="flex items-center justify-between">
                                   <h4 className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Event Timeline</h4>
                                   <Badge className="bg-white border-slate-100 text-slate-500">{sessionEvents?.length || 0} Events</Badge>
@@ -280,9 +330,9 @@ const VisitorLogs = () => {
         <TabsContent value="analytics" className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard title="Total Visitors" value={analytics?.total_visitors.toString() || "0"} icon={Users} color="indigo" />
-            <KPICard title="Unique Visitors" value={analytics?.unique_visitors.toString() || "0"} icon={MousePointer2} color="emerald" />
-            <KPICard title="Total Sessions" value={analytics?.total_sessions.toString() || "0"} icon={Activity} color="amber" />
-            <KPICard title="Peak Hour" value={analytics?.peak_usage?.hour !== undefined ? `${analytics.peak_usage.hour}:00` : "-"} icon={Clock} color="rose" />
+            <KPICard title="Active Users (DAU)" value={analytics?.dau.toString() || "0"} icon={Activity} color="emerald" />
+            <KPICard title="Retention (MAU)" value={analytics?.mau.toString() || "0"} icon={TrendingUp} color="amber" />
+            <KPICard title="Most Active Role" value={analytics?.active_role?.role || "-"} icon={Users} color="rose" />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
@@ -378,14 +428,21 @@ const VisitorLogs = () => {
                       </ul>
                    </div>
                    <div className="space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-widest text-indigo-300">Peak Usage Time</h4>
-                      <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                         <p className="text-3xl font-black tracking-tighter">
-                           {analytics?.peak_usage?.hour !== undefined ? `${analytics.peak_usage.hour}:00` : "-"}
-                         </p>
-                         <p className="text-xs font-bold text-indigo-300 uppercase mt-2">
-                           Recorded {analytics?.peak_usage?.count || 0} sessions during this hour
-                         </p>
+                      <h4 className="text-xs font-black uppercase tracking-widest text-indigo-300">Intelligence Highlights</h4>
+                      <div className="space-y-3">
+                         {analytics?.top_drop_offs?.[0] && (
+                           <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                              <p className="text-sm font-bold"><span className="text-indigo-300">Drop-off Alert:</span> Users are frequently dropping off at <span className="text-white underline">{analytics.top_drop_offs[0].name}</span>.</p>
+                           </div>
+                         )}
+                         {analytics?.feature_usage?.[0] && (
+                           <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                              <p className="text-sm font-bold"><span className="text-indigo-300">Feature Trend:</span> <span className="text-white underline">{analytics.feature_usage[0].name}</span> is currently your most engaged feature.</p>
+                           </div>
+                         )}
+                         <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                            <p className="text-sm font-bold"><span className="text-indigo-300">Peak Load:</span> System traffic peaks at <span className="text-white underline">{analytics?.peak_usage?.hour}:00</span>. Consider scheduling maintenance outside this window.</p>
+                         </div>
                       </div>
                    </div>
                 </div>

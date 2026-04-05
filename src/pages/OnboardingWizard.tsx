@@ -22,6 +22,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,9 +54,11 @@ const OnboardingWizard = () => {
     location: "",
     website: "",
     adminName: "",
+    adminPhone: "",
     adminEmail: "",
     adminPassword: "",
     studentCount: "0-100",
+    referralSource: "",
     modules: [] as string[]
   });
 
@@ -86,10 +95,12 @@ const OnboardingWizard = () => {
           schoolName: formData.schoolName,
           location: formData.location,
           adminName: formData.adminName,
+          adminPhone: formData.adminPhone,
           adminEmail: formData.adminEmail,
           adminPassword: formData.adminPassword,
           modules: formData.modules,
-          plan: plan
+          plan: plan,
+          referralSource: formData.referralSource
         }
       });
 
@@ -103,11 +114,13 @@ const OnboardingWizard = () => {
           localStorage.setItem('is_trial', 'true');
           await supabase.from('trial_leads').insert({
             name: formData.adminName,
+            phone: formData.adminPhone,
             email: formData.adminEmail,
             organization: formData.schoolName,
             location: formData.location,
             role: 'center_admin',
             expected_students: formData.studentCount,
+            source: formData.referralSource,
             converted_to_center_id: data.centerId,
             converted_at: new Date().toISOString()
           });
@@ -253,6 +266,18 @@ const OnboardingWizard = () => {
                                   </div>
                                </div>
                                <div className="space-y-2">
+                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Phone Number</Label>
+                                  <div className="relative group">
+                                     <Plus className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-primary transition-colors" />
+                                     <Input
+                                        className="h-14 rounded-2xl bg-white/5 border-white/10 pl-12 font-bold placeholder:text-slate-600 focus:bg-white/10 focus:border-primary/50 transition-all"
+                                        placeholder="+977 98XXXXXXX"
+                                        value={formData.adminPhone}
+                                        onChange={(e) => setFormData({...formData, adminPhone: e.target.value})}
+                                     />
+                                  </div>
+                               </div>
+                               <div className="space-y-2">
                                   <Label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Location</Label>
                                   <div className="relative group">
                                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-primary transition-colors" />
@@ -347,11 +372,26 @@ const OnboardingWizard = () => {
                                      />
                                   </div>
                                </div>
-                               <div className="p-6 rounded-2xl bg-primary/10 border border-primary/20 space-y-2 mt-4">
-                                  <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest">
-                                     <Zap className="h-4 w-4" /> Security Tip
+                               <div className="space-y-2">
+                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-500 ml-1">Referral Source</Label>
+                                  <div className="relative group">
+                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-primary transition-colors" />
+                                     <Select
+                                        value={formData.referralSource}
+                                        onValueChange={(val) => setFormData({...formData, referralSource: val})}
+                                     >
+                                        <SelectTrigger className="h-14 rounded-2xl bg-white/5 border-white/10 pl-12 font-bold text-white focus:bg-white/10 focus:border-primary/50 transition-all">
+                                           <SelectValue placeholder="How did you hear about us?" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-slate-900 border-white/10 text-white">
+                                           <SelectItem value="google">Google Search</SelectItem>
+                                           <SelectItem value="facebook">Facebook / Instagram</SelectItem>
+                                           <SelectItem value="linkedin">LinkedIn</SelectItem>
+                                           <SelectItem value="referral">Friend / Referral</SelectItem>
+                                           <SelectItem value="other">Other</SelectItem>
+                                        </SelectContent>
+                                     </Select>
                                   </div>
-                                  <p className="text-xs text-slate-300 leading-relaxed font-medium">Use a mix of letters, numbers, and symbols for maximum security.</p>
                                </div>
                             </div>
                          </div>

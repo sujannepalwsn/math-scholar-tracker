@@ -19,11 +19,12 @@ serve(async (req) => {
     const { action, payload } = await req.json();
     const ip = req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for") || "unknown";
 
-    // Simple geo from headers (Supabase specific)
+    // Geo from headers (Supabase specific)
     const geo = {
       city: req.headers.get("x-vercel-ip-city") || "unknown",
       country: req.headers.get("x-vercel-ip-country") || "unknown",
       region: req.headers.get("x-vercel-ip-country-region") || "unknown",
+      browser: req.headers.get("user-agent") || "unknown",
     };
 
     if (action === "create-session") {

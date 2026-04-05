@@ -26,6 +26,8 @@ class TrackingManager {
 
   private constructor() {
     if (typeof window !== 'undefined') {
+      this.sessionId = localStorage.getItem('tracking_session_id');
+      this.visitorId = localStorage.getItem('tracking_visitor_id');
       this.fpPromise = this.initFingerprint();
       this.setupListeners();
       this.startBatchInterval();
@@ -51,6 +53,26 @@ class TrackingManager {
     window.addEventListener('mousedown', () => this.updateActivity());
     window.addEventListener('keydown', () => this.updateActivity());
     window.addEventListener('scroll', () => this.updateActivity());
+    window.addEventListener('click', (e) => this.handleClick(e));
+  }
+
+  private handleClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (!target) return;
+
+    // Capture meaningful elements
+    const interactive = target.closest('button, a, input, select, [role="button"]');
+    if (interactive) {
+      const el = interactive as HTMLElement;
+      this.trackEvent('click', 'click_element', {
+        tag: el.tagName.toLowerCase(),
+        id: el.id || undefined,
+        text: el.innerText?.slice(0, 50).trim() || undefined,
+        role: el.getAttribute('role') || undefined,
+        type: (el as any).type || undefined,
+        name: (el as any).name || undefined,
+      });
+    }
   }
 
   private updateActivity() {
@@ -110,6 +132,7 @@ class TrackingManager {
         this.sessionId = data.sessionId;
         this.visitorId = data.visitorId;
         localStorage.setItem('tracking_session_id', this.sessionId!);
+        localStorage.setItem('tracking_visitor_id', this.visitorId!);
       }
     } catch (err) {
       console.error('Failed to start tracking session', err);
@@ -169,6 +192,7 @@ class TrackingManager {
     this.sessionId = null;
     this.currentUserId = null;
     localStorage.removeItem('tracking_session_id');
+    localStorage.removeItem('tracking_visitor_id');
 
     try {
       await this.flushEvents();

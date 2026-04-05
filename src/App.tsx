@@ -122,7 +122,10 @@ const VisitorTracker = () => {
   usePageTracking();
 
   useEffect(() => {
-    tracking.startSession(user || undefined);
+    // startSession is async, we don't await it here to avoid blocking
+    tracking.startSession(user || undefined).catch(err => {
+      console.error("Failed to start tracking session:", err);
+    });
   }, [user]);
 
   return null;
@@ -198,7 +201,6 @@ const App = () => {
   return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <VisitorTracker />
       <ActivityTracker />
       <ThemeProvider>
         <GlobalErrorBoundary>
@@ -208,6 +210,7 @@ const App = () => {
           <Sonner />
 
           <BrowserRouter>
+            <VisitorTracker />
             <BackButtonHandler />
 
             <Routes>
