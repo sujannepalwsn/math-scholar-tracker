@@ -77,6 +77,40 @@ export default function TeacherAttendancePage() {
 
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
 
+  const { data: currentAcademicYear } = useQuery({
+    queryKey: ["current-academic-year", user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return null;
+      const { data, error } = await supabase
+        .from("academic_years")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .eq("is_current", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.center_id
+  });
+
+  const { data: calendarEvents = [] } = useQuery({
+    queryKey: ["school-calendar-status", dateStr, user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .eq("date", dateStr);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!dateStr && !!user?.center_id
+  });
+
+  const holidayEvent = calendarEvents.find(e => !e.is_school_day);
+  const isOperationalDay = !holidayEvent;
+
   // Fetch active teachers for the center
   const { data: teachers = [], isLoading: teachersLoading } = useQuery({
     queryKey: ["active-teachers", user?.center_id, isRestricted, user?.teacher_id],
@@ -209,7 +243,7 @@ export default function TeacherAttendancePage() {
         teacher_id: teacher.id,
         center_id: user?.center_id || '',
         date: dateStr,
-        status: 'absent', // Default to absent
+        status: 'pending', // Default to pending
         time_in: null,
         time_out: null,
         notes: null,
@@ -298,6 +332,7 @@ export default function TeacherAttendancePage() {
           teacher_id: teacherProfile.id,
           center_id: user?.center_id!,
           date: todayStr,
+          academic_year_id: currentAcademicYear?.id || null,
           status: 'present',
           time_in: timeStr,
         }, { onConflict: 'teacher_id,date' });
@@ -351,6 +386,7 @@ export default function TeacherAttendancePage() {
           teacher_id: record.teacher_id,
           center_id: user.center_id!,
           date: record.date,
+          academic_year_id: currentAcademicYear?.id || null,
           status: record.status,
           time_in: record.time_in,
           time_out: record.time_out,
@@ -591,6 +627,16 @@ export default function TeacherAttendancePage() {
           <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-[0.2em]">Verify location and record presence</p>
         </div>
 
+        {!isOperationalDay && (
+          <Alert variant="destructive" className="rounded-2xl border-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="font-black uppercase text-xs tracking-widest">Attendance Disabled</AlertTitle>
+            <AlertDescription className="text-xs font-bold">
+              Not a school day. Reason: {holidayEvent?.title || "Institutional Closure"}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {!isWithinTimeBoundary && (
           <Alert variant="destructive" className="rounded-2xl border-2">
             <AlertCircle className="h-4 w-4" />
@@ -626,7 +672,7 @@ export default function TeacherAttendancePage() {
             <div className="space-y-4">
               <Button
                 className="w-full h-20 text-xl font-black rounded-[1.5rem] shadow-strong bg-gradient-to-r from-emerald-500 to-teal-600 hover:scale-[1.02] transition-all disabled:opacity-50"
-                disabled={!!myTodayAttendance?.time_in || !isWithinTimeBoundary || isVerifying}
+                disabled={!!myTodayAttendance?.time_in || !isWithinTimeBoundary || isVerifying || !isOperationalDay}
                 onClick={() => markAttendanceMutation.mutate('in')}
               >
                 {isVerifying ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Locate className="mr-2 h-6 w-6" />}
@@ -636,7 +682,7 @@ export default function TeacherAttendancePage() {
               <Button
                 variant="outline"
                 className="w-full h-20 text-xl font-black rounded-[1.5rem] border-2 shadow-soft hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-all disabled:opacity-50"
-                disabled={!myTodayAttendance?.time_in || !!myTodayAttendance?.time_out || !isWithinTimeBoundary || isVerifying}
+                disabled={!myTodayAttendance?.time_in || !!myTodayAttendance?.time_out || !isWithinTimeBoundary || isVerifying || !isOperationalDay}
                 onClick={() => markAttendanceMutation.mutate('out')}
               >
                 {myTodayAttendance?.time_out ? `OUT AT ${myTodayAttendance.time_out.slice(0, 5)}` : "CHECK OUT"}
@@ -686,6 +732,16 @@ export default function TeacherAttendancePage() {
            <span className="font-black text-xs uppercase tracking-widest text-slate-700 pr-4">{format(selectedDate, 'EEEE, MMM do')}</span>
         </div>
       </div>
+
+      {!isOperationalDay && (
+        <Alert variant="destructive" className="rounded-2xl border-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="font-black uppercase text-xs tracking-widest">Attendance Disabled</AlertTitle>
+          <AlertDescription className="text-xs font-bold">
+            Not a school day. Reason: {holidayEvent?.title || "Institutional Closure"}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* KPI Section */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -745,8 +801,8 @@ export default function TeacherAttendancePage() {
             <div className="flex gap-3">
               {canEdit && (
                 <>
-                  <Button variant="outline" size="sm" onClick={markAllPresent} className="rounded-xl h-11 border-2 font-bold px-4">Mark All Present</Button>
-                  <Button variant="outline" size="sm" onClick={markAllAbsent} className="rounded-xl h-11 border-2 font-bold px-4">Mark All Absent</Button>
+                  <Button variant="outline" size="sm" onClick={markAllPresent} disabled={!isOperationalDay} className="rounded-xl h-11 border-2 font-bold px-4">Mark All Present</Button>
+                  <Button variant="outline" size="sm" onClick={markAllAbsent} disabled={!isOperationalDay} className="rounded-xl h-11 border-2 font-bold px-4">Mark All Absent</Button>
                 </>
               )}
             </div>
@@ -803,7 +859,7 @@ export default function TeacherAttendancePage() {
                             <Select
                               value={record?.status || 'absent'}
                               onValueChange={(value: TeacherAttendance['status']) => handleStatusChange(teacher.id, value)}
-                              disabled={!canEdit}
+                              disabled={!canEdit || !isOperationalDay}
                             >
                               <SelectTrigger className="w-[120px] h-9 bg-white shadow-soft border-none focus:ring-primary/20 rounded-xl font-bold text-xs">
                                 <SelectValue />
@@ -812,6 +868,7 @@ export default function TeacherAttendancePage() {
                                 <SelectItem value="present">Present</SelectItem>
                                 <SelectItem value="absent">Absent</SelectItem>
                                 <SelectItem value="leave">Leave</SelectItem>
+                                <SelectItem value="pending">Pending</SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
@@ -820,7 +877,7 @@ export default function TeacherAttendancePage() {
                               type="time"
                               value={record?.time_in || ''}
                               onChange={(e) => handleTimeChange(teacher.id, 'time_in', e.target.value)}
-                              disabled={record?.status !== 'present' || !canEdit}
+                              disabled={record?.status !== 'present' || !canEdit || !isOperationalDay}
                               className="h-9 w-32 bg-card/80 border-none shadow-soft rounded-xl text-xs font-bold"
                             />
                           </TableCell>
@@ -829,7 +886,7 @@ export default function TeacherAttendancePage() {
                               type="time"
                               value={record?.time_out || ''}
                               onChange={(e) => handleTimeChange(teacher.id, 'time_out', e.target.value)}
-                              disabled={record?.status !== 'present' || !canEdit}
+                              disabled={record?.status !== 'present' || !canEdit || !isOperationalDay}
                               className="h-9 w-32 bg-card/80 border-none shadow-soft rounded-xl text-xs font-bold"
                             />
                           </TableCell>
@@ -845,7 +902,7 @@ export default function TeacherAttendancePage() {
                                 }
                               }))}
                               placeholder="Add observation..."
-                              disabled={!canEdit}
+                              disabled={!canEdit || !isOperationalDay}
                               className="h-9 bg-card/80 border-none shadow-soft rounded-xl text-xs font-medium"
                             />
                           </TableCell>
@@ -860,7 +917,7 @@ export default function TeacherAttendancePage() {
                 <Button
                   type="submit"
                   className="w-full h-14 text-lg font-black shadow-strong rounded-2xl bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.01] transition-all duration-300"
-                  disabled={saveAttendanceMutation.isPending}
+                  disabled={saveAttendanceMutation.isPending || !isOperationalDay}
                 >
                   {saveAttendanceMutation.isPending ? (
                     <div className="flex items-center gap-3">

@@ -36,7 +36,7 @@ interface Student {
   grade: string;
 }
 
-type AttendanceStatus = "present" | "absent" | "late";
+type AttendanceStatus = "present" | "absent" | "late" | "pending";
 
 interface AttendanceRecord {
   studentId: string;
@@ -56,23 +56,38 @@ export default function TakeAttendance() {
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
-  const { data: holidayEvent } = useQuery({
-    queryKey: ["school-holiday-status", dateStr, user?.center_id],
+  const { data: currentAcademicYear } = useQuery({
+    queryKey: ["current-academic-year", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return null;
       const { data, error } = await supabase
-        .from("calendar_events")
+        .from("academic_years")
         .select("*")
         .eq("center_id", user.center_id)
-        .eq("date", dateStr)
-        .eq("is_school_day", false)
+        .eq("is_current", true)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
+    enabled: !!user?.center_id
+  });
+
+  const { data: calendarEvents = [] } = useQuery({
+    queryKey: ["school-calendar-status", dateStr, user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return [];
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("center_id", user.center_id)
+        .eq("date", dateStr);
+      if (error) throw error;
+      return data || [];
+    },
     enabled: !!dateStr && !!user?.center_id
   });
 
+  const holidayEvent = calendarEvents.find(e => !e.is_school_day);
   const isOperationalDay = !holidayEvent;
 
   // Fetch class teacher assignments if teacher role (ONLY from official assignments)
@@ -229,7 +244,7 @@ export default function TakeAttendance() {
       students.forEach((student) => {
         const record = existingAttendance?.find((a: any) => a.student_id === student.id);
         newAttendance[student.id] = {
-          status: (record?.status as AttendanceStatus) || "absent",
+          status: (record?.status as AttendanceStatus) || "pending",
           timeIn: record?.time_in || "",
           timeOut: record?.time_out || "",
           studentId: student.id };
@@ -314,7 +329,8 @@ export default function TakeAttendance() {
         student_id: student.id,
         center_id: user.center_id!,
         date: dateStr,
-        status: attendance[student.id]?.status || "absent",
+        academic_year_id: currentAcademicYear?.id || null,
+        status: attendance[student.id]?.status || "pending",
         time_in: attendance[student.id]?.timeIn || null,
         time_out: attendance[student.id]?.timeOut || null,
         marked_by: user.id,
@@ -364,7 +380,8 @@ export default function TakeAttendance() {
 
   const presentCount = filteredStudents?.filter(s => attendance[s.id]?.status === "present").length || 0;
   const lateCount = filteredStudents?.filter(s => attendance[s.id]?.status === "late").length || 0;
-  const absentCount = (filteredStudents?.length || 0) - presentCount - lateCount;
+  const absentCount = filteredStudents?.filter(s => attendance[s.id]?.status === "absent").length || 0;
+  const pendingCount = filteredStudents?.filter(s => attendance[s.id]?.status === "pending").length || 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
@@ -424,7 +441,7 @@ export default function TakeAttendance() {
           <ShieldAlert className="h-4 w-4" />
           <AlertTitle className="font-black uppercase text-xs tracking-widest">Attendance Disabled</AlertTitle>
           <AlertDescription className="text-sm font-bold">
-          Not a school day. Reason: {holidayEvent?.title || "Institutional Closure"}
+          Not a school day. Reason: {calendarEvent?.title || "Institutional Closure"}
           </AlertDescription>
         </Alert>
       )}
@@ -511,6 +528,10 @@ export default function TakeAttendance() {
                   <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
                   <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Absent: {absentCount}</span>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Pending: {pendingCount}</span>
+                </div>
               </div>
             </div>
             <div className="flex gap-3">
@@ -534,6 +555,7 @@ export default function TakeAttendance() {
                       "rounded-3xl border transition-all duration-500 p-6 flex flex-col gap-6",
                       attendance[student.id]?.status === "present" ? "border-green-500/20 bg-green-500/5 shadow-medium" :
                       attendance[student.id]?.status === "late" ? "border-yellow-500/20 bg-yellow-500/5 shadow-medium" :
+                      attendance[student.id]?.status === "absent" ? "border-red-500/20 bg-red-500/5 shadow-medium" :
                       "border-border/40 bg-white/30 backdrop-blur-sm shadow-soft grayscale-[0.5] opacity-80"
                     )}
                   >
@@ -543,6 +565,7 @@ export default function TakeAttendance() {
                           "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500",
                           attendance[student.id]?.status === "present" ? "bg-green-500 text-white shadow-soft" :
                           attendance[student.id]?.status === "late" ? "bg-yellow-500 text-white shadow-soft" :
+                          attendance[student.id]?.status === "absent" ? "bg-red-500 text-white shadow-soft" :
                           "bg-slate-200 text-slate-500"
                         )}>
                           <Users className="h-5 w-5" />
@@ -645,7 +668,7 @@ export default function TakeAttendance() {
                 ) : !isOperationalDay ? (
                   "ATTENDANCE DISABLED - NOT A SCHOOL DAY"
                 ) : (
-                  `COMMIT ROLL CALL (${presentCount} PRESENT / ${lateCount} LATE / ${absentCount} ABSENT)`
+                  `COMMIT ROLL CALL (${presentCount} PRESENT / ${lateCount} LATE / ${absentCount} ABSENT / ${pendingCount} PENDING)`
                 )}
               </Button>
             </form>
