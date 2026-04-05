@@ -406,6 +406,58 @@ export default function LessonPlans() {
     toast.success("Form populated from pasted text!");
   };
 
+  const handlePasteAndPopulate = async () => {
+    try {
+      // Try to read from clipboard
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) {
+        // Fallback if clipboard is empty
+        setIsPasteDialogOpen(true);
+        return;
+      }
+
+      const data = parseLessonPlanText(text);
+
+      if (data.topic) setTopic(data.topic);
+      if (data.subject) setSubject(data.subject);
+
+      // Fuzzy match for grade
+      if (data.grade) {
+        const extractedGrade = data.grade.toUpperCase().replace(/GRADE\s*/i, '').trim();
+        const matchedGrade = uniqueGrades.find(g => {
+          const gradeStr = g?.toString().toUpperCase().replace(/GRADE\s*/i, '').trim() || "";
+          return gradeStr === extractedGrade || gradeStr.includes(extractedGrade) || extractedGrade.includes(gradeStr);
+        });
+        if (matchedGrade) {
+          setSelectedGrade(matchedGrade);
+        } else {
+          setSelectedGrade(data.grade);
+        }
+      }
+
+      if (data.objectives) setObjectives(data.objectives);
+      if (data.warmUp) setWarmUpReview(data.warmUp);
+
+      if (data.learningActivities && data.learningActivities.length > 0) {
+        setLearningActivities(data.learningActivities);
+      }
+
+      if (data.evaluation && data.evaluation.length > 0) {
+        setEvaluationActivities(data.evaluation);
+      }
+
+      if (data.classWork) setClassWork(data.classWork);
+      if (data.homeAssignment) setHomeAssignment(data.homeAssignment);
+      if (data.remarks) setNotes(data.remarks);
+
+      toast.success("Form populated directly from clipboard!");
+    } catch (err) {
+      logger.warn("Clipboard access denied or failed", err);
+      // Fallback to dialog if permission denied
+      setIsPasteDialogOpen(true);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -447,9 +499,18 @@ export default function LessonPlans() {
             </SelectContent>
           </Select>
           {hasActionPermission(user, 'lesson_plans', 'edit') && (
-            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="rounded-xl h-10 px-4 font-bold shadow-soft transition-all gap-2">
-              <Plus className="h-4 w-4" /> CREATE PLAN
-            </Button>
+            <>
+              <Button
+                onClick={() => setIsGeneratorOpen(true)}
+                size="sm"
+                className="rounded-xl h-10 px-4 font-bold shadow-soft transition-all gap-2 bg-indigo-600 hover:bg-indigo-700"
+              >
+                <ExternalLink className="h-4 w-4" /> GENERATOR
+              </Button>
+              <Button onClick={() => setIsDialogOpen(true)} size="sm" className="rounded-xl h-10 px-4 font-bold shadow-soft transition-all gap-2">
+                <Plus className="h-4 w-4" /> CREATE PLAN
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -563,18 +624,10 @@ export default function LessonPlans() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsGeneratorOpen(true)}
-                  className="rounded-xl border-indigo-600 text-indigo-600 font-black uppercase text-[9px] sm:text-[10px] tracking-widest gap-2 shadow-soft hover:bg-indigo-600 hover:text-white transition-all"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> GENERATOR
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsPasteDialogOpen(true)}
+                  onClick={handlePasteAndPopulate}
                   className="rounded-xl border-violet-600 text-violet-600 font-black uppercase text-[9px] sm:text-[10px] tracking-widest gap-2 shadow-soft hover:bg-violet-600 hover:text-white transition-all"
                 >
-                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> PASTE FROM TEXT
+                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> PASTE & POPULATE
                 </Button>
                 <Button
                   variant="outline"
