@@ -113,11 +113,11 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
   const packages: PackageType[] = ['Basic', 'Standard', 'Premium'];
 
   const devInfo = (settings?.developer_info as any) || { name: "EduFlow Tech", website: "#", copyright: `© ${new Date().getFullYear()}` };
-  const helpInfo = (settings?.help_info as any) || { text: "Documentation", link: "#" };
+  const helpInfo = (settings?.help_info as any) || { text: "Support", link: "/pages/support" };
   const footerLinks = Array.isArray(settings?.footer_links) ? (settings.footer_links as any) : [
-    { title: "Product", links: [{ label: "Features", href: "#features" }, { label: "Pricing", href: "#packages" }, { label: "Testimonials", href: "#" }] },
-    { title: "Support", links: [{ label: "Help Center", href: "/pages/support" }, { label: "API Docs", href: "#" }, { label: "Security", href: "#" }] },
-    { title: "Company", links: [{ label: "About Us", href: "#about" }, { label: "Contact", href: "/contact-sales" }, { label: "Privacy", href: "/pages/privacy" }] }
+    { title: "Product", links: [{ label: "Features", href: "/features" }, { label: "Pricing", href: "/pricing" }, { label: "Security", href: "/pages/security" }] },
+    { title: "Support", links: [{ label: "Help Center", href: "/pages/support" }, { label: "Documentation", href: "/pages/documentation" }, { label: "API Docs", href: "/pages/api-docs" }] },
+    { title: "Company", links: [{ label: "About Us", href: "/about" }, { label: "Contact", href: "/contact-sales" }, { label: "Privacy", href: "/pages/privacy" }] }
   ];
   const toggles = (settings?.section_toggles as any) || { show_features: true, show_packages: true, show_stats: true, show_footer: true };
 
@@ -366,19 +366,29 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
                   <ul className="space-y-4">
                     {column.links.map((link: any, j: number) => (
                       <li key={j}>
-                        <a
-                          href={link.href}
-                          onClick={(e) => {
-                            if (link.href.startsWith('#')) {
-                              e.preventDefault();
-                              document.getElementById(link.href.substring(1))?.scrollIntoView({ behavior: 'smooth' });
-                            }
-                          }}
-                          className="text-slate-400 font-medium hover:text-white transition-colors flex items-center gap-2 group"
-                        >
-                          <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0" />
-                          {link.label}
-                        </a>
+                        {link.href.startsWith('/') ? (
+                          <Link
+                            to={link.href}
+                            className="text-slate-400 font-medium hover:text-white transition-colors flex items-center gap-2 group"
+                          >
+                            <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0" />
+                            {link.label}
+                          </Link>
+                        ) : (
+                          <a
+                            href={link.href}
+                            onClick={(e) => {
+                              if (link.href.startsWith('#')) {
+                                e.preventDefault();
+                                document.getElementById(link.href.substring(1))?.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }}
+                            className="text-slate-400 font-medium hover:text-white transition-colors flex items-center gap-2 group"
+                          >
+                            <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0" />
+                            {link.label}
+                          </a>
+                        )}
                       </li>
                     ))}
                   </ul>

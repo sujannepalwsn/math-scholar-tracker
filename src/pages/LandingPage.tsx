@@ -734,30 +734,30 @@ const LandingPage = () => {
             <div className="space-y-6">
                <h4 className="font-black uppercase tracking-widest text-sm text-white">Product</h4>
                <ul className="space-y-4 text-slate-400 font-bold text-sm">
-                  <li><a href="#features" className="hover:text-primary transition-colors">Features</a></li>
+                  <li><Link to="/features" className="hover:text-primary transition-colors">Features</Link></li>
                   <li><a href="#solutions" className="hover:text-primary transition-colors">Solutions</a></li>
-                  <li><a href="#pricing" className="hover:text-primary transition-colors">Pricing</a></li>
-                  <li className="hover:text-primary transition-colors cursor-pointer">Security</li>
+                  <li><Link to="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
+                  <li><Link to="/pages/security" className="hover:text-primary transition-colors">Security</Link></li>
                </ul>
             </div>
 
             <div className="space-y-6">
                <h4 className="font-black uppercase tracking-widest text-sm text-white">Resources</h4>
                <ul className="space-y-4 text-slate-400 font-bold text-sm">
-                  <li className="hover:text-primary transition-colors cursor-pointer">Documentation</li>
-                  <li className="hover:text-primary transition-colors cursor-pointer">Help Center</li>
-                  <li className="hover:text-primary transition-colors cursor-pointer">API Reference</li>
-                  <li className="hover:text-primary transition-colors cursor-pointer">Community</li>
+                  <li><Link to="/pages/documentation" className="hover:text-primary transition-colors">Documentation</Link></li>
+                  <li><Link to="/pages/support" className="hover:text-primary transition-colors">Help Center</Link></li>
+                  <li><Link to="/pages/api-docs" className="hover:text-primary transition-colors">API Reference</Link></li>
+                  <li><Link to="/pages/community" className="hover:text-primary transition-colors">Community</Link></li>
                </ul>
             </div>
 
             <div className="space-y-6">
                <h4 className="font-black uppercase tracking-widest text-sm text-white">Company</h4>
                <ul className="space-y-4 text-slate-400 font-bold text-sm">
-                  <li className="hover:text-primary transition-colors cursor-pointer">About Us</li>
-                  <li className="hover:text-primary transition-colors cursor-pointer">Contact</li>
-                  <li className="hover:text-primary transition-colors cursor-pointer">Privacy</li>
-                  <li className="hover:text-primary transition-colors cursor-pointer">Terms</li>
+                  <li><Link to="/about" className="hover:text-primary transition-colors">About Us</Link></li>
+                  <li><Link to="/contact-sales" className="hover:text-primary transition-colors">Contact</Link></li>
+                  <li><Link to="/pages/privacy" className="hover:text-primary transition-colors">Privacy</Link></li>
+                  <li><Link to="/pages/terms" className="hover:text-primary transition-colors">Terms</Link></li>
                </ul>
             </div>
           </div>

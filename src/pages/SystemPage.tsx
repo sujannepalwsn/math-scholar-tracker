@@ -19,9 +19,17 @@ export default function SystemPage() {
 
       if (error) {
         // Fallback or handle error
-        if (slug === 'privacy') return { title: "Privacy Policy", content: "Our privacy policy details how we handle your data." };
-        if (slug === 'terms') return { title: "Terms of Service", content: "Our terms of service outline the rules for using our platform." };
-        if (slug === 'support') return { title: "Support", content: "Contact our support team for assistance." };
+        const fallbacks: Record<string, { title: string, content: string }> = {
+          'privacy': { title: "Privacy Policy", content: "Our privacy policy details how we handle your data. We are committed to protecting your personal information and institutional data." },
+          'terms': { title: "Terms of Service", content: "Our terms of service outline the rules for using our platform. By using EduFlow, you agree to comply with these terms." },
+          'support': { title: "Help Center", content: "Welcome to the EduFlow Help Center. If you need assistance, please contact our support team at support@eduflow.com." },
+          'documentation': { title: "Documentation", content: "Welcome to the EduFlow official documentation. Here you will find guides on how to set up and use every module of the system." },
+          'security': { title: "Security & Compliance", content: "EduFlow follows industry-standard security protocols. We are ISO 27001 certified and use end-to-end encryption for sensitive data." },
+          'api-docs': { title: "API Reference", content: "The EduFlow API allows developers to integrate our school management system with other tools. Our RESTful API provides full access to your institution's data." },
+          'community': { title: "EduFlow Community", content: "Join the thousands of educators and administrators using EduFlow. Share best practices and get tips from our global community." }
+        };
+
+        if (slug && fallbacks[slug]) return fallbacks[slug];
         throw error;
       }
       return data;
@@ -61,9 +69,9 @@ export default function SystemPage() {
         <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-slate-100">
            <div className="flex items-center gap-4 mb-8">
               <div className="p-3 rounded-2xl bg-slate-100 text-slate-600">
-                 {slug === 'privacy' && <Shield className="h-8 w-8" />}
-                 {slug === 'terms' && <FileText className="h-8 w-8" />}
-                 {slug === 'support' && <HelpCircle className="h-8 w-8" />}
+                 {(slug === 'privacy' || slug === 'security') && <Shield className="h-8 w-8" />}
+                 {(slug === 'terms' || slug === 'documentation' || slug === 'api-docs') && <FileText className="h-8 w-8" />}
+                 {(slug === 'support' || slug === 'community') && <HelpCircle className="h-8 w-8" />}
               </div>
               <h1 className="text-4xl font-black tracking-tight text-slate-900 capitalize">{page?.title || slug}</h1>
            </div>
