@@ -447,9 +447,18 @@ export default function LessonPlans() {
             </SelectContent>
           </Select>
           {hasActionPermission(user, 'lesson_plans', 'edit') && (
-            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="rounded-xl h-10 px-4 font-bold shadow-soft transition-all gap-2">
-              <Plus className="h-4 w-4" /> CREATE PLAN
-            </Button>
+            <>
+              <Button
+                onClick={() => setIsGeneratorOpen(true)}
+                size="sm"
+                className="rounded-xl h-10 px-4 font-bold shadow-soft transition-all gap-2 bg-indigo-600 hover:bg-indigo-700"
+              >
+                <ExternalLink className="h-4 w-4" /> GENERATOR
+              </Button>
+              <Button onClick={() => setIsDialogOpen(true)} size="sm" className="rounded-xl h-10 px-4 font-bold shadow-soft transition-all gap-2">
+                <Plus className="h-4 w-4" /> CREATE PLAN
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -560,14 +569,6 @@ export default function LessonPlans() {
                 <DialogDescription className="text-xs sm:text-sm font-medium">Define the pedagogical structure for institutional review.</DialogDescription>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsGeneratorOpen(true)}
-                  className="rounded-xl border-indigo-600 text-indigo-600 font-black uppercase text-[9px] sm:text-[10px] tracking-widest gap-2 shadow-soft hover:bg-indigo-600 hover:text-white transition-all"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> GENERATOR
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
