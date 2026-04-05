@@ -90,6 +90,7 @@ const OnboardingWizard = () => {
         adminEmail: formData.adminEmail
       });
 
+      tracking.trackEvent('feature_action', 'onboarding_start', { plan });
       const { data, error } = await supabase.functions.invoke('public-onboarding', {
         body: {
           schoolName: formData.schoolName,
@@ -142,9 +143,11 @@ const OnboardingWizard = () => {
         }
       } else {
         const errorMsg = data?.error || "Registration failed. Please check your connection or try a different email.";
+        tracking.trackEvent('error', 'onboarding_failed', { error: errorMsg });
         toast.error(errorMsg);
       }
     } catch (err: any) {
+      tracking.logError('onboarding_exception', err);
       console.error("Onboarding error:", err);
       // Detailed error breakdown for Edge Function issues
       let message = "An unexpected error occurred.";

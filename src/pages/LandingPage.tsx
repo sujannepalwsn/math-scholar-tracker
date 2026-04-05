@@ -209,12 +209,14 @@ const LandingPage = () => {
                onClick={async () => {
                   const loadingToast = toast.loading("Entering Sandbox Mode...");
                   localStorage.setItem('is_sandbox', 'true');
+                  localStorage.setItem('is_trial', 'false');
 
                   // Use a public demo account
                   // In a real production app, these would be managed credentials
                   const result = await login("demo@eduflow.com", "demo1234");
 
                   if (result.success) {
+                    await tracking.startSession();
                     tracking.trackEvent('feature_action', 'enter_sandbox');
                     toast.dismiss(loadingToast);
                     navigate("/center-dashboard");

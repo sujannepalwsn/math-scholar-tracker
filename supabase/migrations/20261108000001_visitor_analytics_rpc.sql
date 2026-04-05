@@ -1,4 +1,4 @@
--- RPC for Visitor Analytics
+-- RPC for Visitor Analytics (Enhanced)
 
 CREATE OR REPLACE FUNCTION public.get_visitor_analytics()
 RETURNS JSONB AS $$
@@ -13,8 +13,12 @@ DECLARE
     top_drop_offs JSONB;
     peak_usage JSONB;
     active_role JSONB;
+    visitors_over_time JSONB;
+    duration_dist JSONB;
     dau INT;
     mau INT;
+    avg_duration INTERVAL;
+    bounce_rate FLOAT;
 BEGIN
     -- 1. Simple counts & Active Users
     SELECT count(*) INTO total_visitors FROM public.visitors;
@@ -26,6 +30,56 @@ BEGIN
 
     SELECT count(DISTINCT visitor_id) INTO mau FROM public.sessions
     WHERE session_start >= now() - interval '30 days';
+
+    -- 1.1 Average Duration & Bounce Rate
+    SELECT avg(duration) INTO avg_duration FROM public.sessions WHERE duration IS NOT NULL;
+
+    SELECT (count(s.id) FILTER (WHERE e_count.cnt = 1))::FLOAT / NULLIF(count(s.id), 0) * 100 INTO bounce_rate
+    FROM public.sessions s
+    LEFT JOIN (
+        SELECT session_id, count(*) as cnt
+        FROM public.events
+        GROUP BY session_id
+    ) e_count ON s.id = e_count.session_id;
+
+    -- 1.2 Visitors Over Time (Last 30 Days)
+    SELECT jsonb_agg(v) INTO visitors_over_time FROM (
+        SELECT
+            to_char(date_trunc('day', created_at), 'YYYY-MM-DD') as name,
+            count(*) as value
+        FROM public.visitors
+        WHERE created_at >= now() - interval '30 days'
+        GROUP BY date_trunc('day', created_at)
+        ORDER BY date_trunc('day', created_at)
+    ) v;
+
+    -- 1.3 Session Duration Distribution (Histogram)
+    SELECT jsonb_agg(d) INTO duration_dist FROM (
+        SELECT
+            range as name,
+            count(*) as value
+        FROM (
+            SELECT
+                CASE
+                    WHEN extract(epoch FROM duration) < 30 THEN '0-30s'
+                    WHEN extract(epoch FROM duration) < 120 THEN '30s-2m'
+                    WHEN extract(epoch FROM duration) < 600 THEN '2m-10m'
+                    WHEN extract(epoch FROM duration) < 1800 THEN '10m-30m'
+                    ELSE '30m+'
+                END as range
+            FROM public.sessions
+            WHERE duration IS NOT NULL
+        ) s
+        GROUP BY range
+        ORDER BY
+            CASE range
+                WHEN '0-30s' THEN 1
+                WHEN '30s-2m' THEN 2
+                WHEN '2m-10m' THEN 3
+                WHEN '10m-30m' THEN 4
+                ELSE 5
+            END
+    ) d;
 
     -- 2. Visitor Type Distribution
     SELECT jsonb_agg(d) INTO type_dist FROM (
@@ -45,7 +99,6 @@ BEGIN
     ) f;
 
     -- 4. Funnel analysis (Landing -> Trial -> Signup -> Active Use)
-    -- Simplified: count unique fingerprints/sessions reaching these stages
     SELECT jsonb_build_object(
         'landing', (SELECT count(DISTINCT session_id) FROM public.events WHERE event_name = 'view_page' AND metadata->>'path' = '/'),
         'trial', (SELECT count(*) FROM public.trial_leads),
@@ -96,6 +149,10 @@ BEGIN
         'total_sessions', total_sessions,
         'dau', dau,
         'mau', mau,
+        'avg_duration', to_char(avg_duration, 'HH24:MI:SS'),
+        'bounce_rate', round(bounce_rate::numeric, 2),
+        'visitors_over_time', visitors_over_time,
+        'duration_dist', duration_dist,
         'active_role', active_role,
         'type_dist', type_dist,
         'feature_usage', feature_usage,
