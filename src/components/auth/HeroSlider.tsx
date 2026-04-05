@@ -93,7 +93,6 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({ slides }) => {
                         <video
                           src={slide.media_url}
                           autoPlay
-                          muted
                           loop
                           playsInline
                           className="w-full h-full object-cover opacity-60"
@@ -103,7 +102,6 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({ slides }) => {
                       <video
                         src={slide.media_url}
                         autoPlay
-                        muted
                         loop
                         playsInline
                         className="w-full h-full object-cover"
