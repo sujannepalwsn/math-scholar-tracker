@@ -25,6 +25,7 @@ import LessonPlanOCR from "@/components/center/LessonPlanOCR";
 import LessonGeneratorModal from "@/components/center/LessonGeneratorModal";
 import { parseLessonPlanText } from "@/utils/lessonPlanParser";
 import { logger } from "@/utils/logger";
+import { tracking } from "@/utils/tracking";
 
 type LessonPlan = Tables<'lesson_plans'>;
 
@@ -250,6 +251,11 @@ export default function LessonPlans() {
       }
     },
     onSuccess: (_, submit) => {
+      tracking.trackEvent('feature_action', submit ? 'submit_lesson_plan' : 'save_lesson_plan_draft', {
+        subject,
+        grade: selectedGrade,
+        topic
+      });
       queryClient.invalidateQueries({ queryKey: ["lesson-plans-all"] });
       toast.success(submit ? "Lesson Plan submitted for approval!" : "Lesson Plan saved as draft");
       setIsDialogOpen(false);

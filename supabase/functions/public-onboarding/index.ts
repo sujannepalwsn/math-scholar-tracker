@@ -40,10 +40,12 @@ serve(async (req) => {
       schoolName,
       location,
       adminName,
+      adminPhone,
       adminEmail,
       adminPassword,
       modules,
-      plan
+      plan,
+      referralSource
     } = body;
 
     if (!schoolName || !adminEmail || !adminPassword) {
@@ -74,7 +76,8 @@ serve(async (req) => {
         name: schoolName,
         address: location || null,
         is_active: true,
-        header_config: { layout: 'classic', elements: [] }
+        header_config: { layout: 'classic', elements: [] },
+        phone: adminPhone || null
       })
       .select()
       .single();

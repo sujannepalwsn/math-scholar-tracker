@@ -38,6 +38,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FileDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { tracking } from "@/utils/tracking";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -214,6 +215,7 @@ const LandingPage = () => {
                   const result = await login("demo@eduflow.com", "demo1234");
 
                   if (result.success) {
+                    tracking.trackEvent('feature_action', 'enter_sandbox');
                     toast.dismiss(loadingToast);
                     navigate("/center-dashboard");
                     setTimeout(() => {

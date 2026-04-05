@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { tracking } from "@/utils/tracking";
+import { usePageTracking } from "@/hooks/use-page-tracking";
 import GlobalErrorBoundary from "@/components/error-tracking/GlobalErrorBoundary";
 import { ErrorTrackingProvider } from "@/components/error-tracking/ErrorTrackingProvider";
 import { useEffect } from "react";
@@ -88,6 +90,7 @@ import ErrorTracking from "./pages/admin/ErrorTracking";
 import LandingPageEditor from "./pages/admin/LandingPageEditor";
 import DemoRequests from "./pages/admin/DemoRequests";
 import SystemPagesEditor from "./pages/admin/SystemPagesEditor";
+import VisitorLogs from "./pages/admin/VisitorLogs";
 import ContactSales from "./pages/ContactSales";
 import CenterSettings from "./pages/CenterSettings";
 import GeneralSettings from "./pages/GeneralSettings";
@@ -113,6 +116,20 @@ import SuiteExplorer from "./pages/SuiteExplorer";
 import ComingSoonPage from "./pages/ComingSoonPage";
 
 const queryClient = new QueryClient();
+
+const VisitorTracker = () => {
+  const { user } = useAuth();
+  usePageTracking();
+
+  useEffect(() => {
+    // startSession is async, we don't await it here to avoid blocking
+    tracking.startSession(user || undefined).catch(err => {
+      console.error("Failed to start tracking session:", err);
+    });
+  }, [user]);
+
+  return null;
+};
 
 const ActivityTracker = () => {
   const { user } = useAuth();
@@ -193,6 +210,7 @@ const App = () => {
           <Sonner />
 
           <BrowserRouter>
+            <VisitorTracker />
             <BackButtonHandler />
 
             <Routes>
@@ -335,6 +353,7 @@ const App = () => {
               <Route path="/admin/landing-page" element={<ProtectedRoute role="admin"><AdminLayout><LandingPageEditor /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/demo-requests" element={<ProtectedRoute role="admin"><AdminLayout><DemoRequests /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/system-pages" element={<ProtectedRoute role="admin"><AdminLayout><SystemPagesEditor /></AdminLayout></ProtectedRoute>} />
+              <Route path="/admin/visitor-logs" element={<ProtectedRoute role="admin"><AdminLayout><VisitorLogs /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminLayout><ComingSoonPage /></AdminLayout></ProtectedRoute>} />
               <Route path="/admin/revenue" element={<ProtectedRoute role="admin"><AdminLayout><ComingSoonPage /></AdminLayout></ProtectedRoute>} />
 
