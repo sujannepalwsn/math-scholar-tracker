@@ -157,7 +157,7 @@ export const SYSTEM_MODULES: SystemModule[] = [
     id: 17,
     name: "Calendar Events",
     description: "Displays school-wide events and personal schedules.",
-    key_functionalities: ["Event display", "Personal schedule integration"],
+    key_functionalities: ["Event display", "Personal schedule integration", "Holiday & School Day Management"],
     completeness: "Fully implemented",
     feature_mapping: ["calendar_events"],
     icon: "Calendar"
@@ -197,15 +197,6 @@ export const SYSTEM_MODULES: SystemModule[] = [
     completeness: "Fully implemented",
     feature_mapping: ["register_student"],
     icon: "UserPlus"
-  },
-  {
-    id: 22,
-    name: "School Days Management",
-    description: "Manages the school's academic calendar and working days.",
-    key_functionalities: ["Defining school days", "Managing holidays and breaks"],
-    completeness: "Fully implemented",
-    feature_mapping: ["school_days"],
-    icon: "Calendar"
   },
   {
     id: 23,

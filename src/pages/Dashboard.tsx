@@ -68,11 +68,12 @@ export default function Dashboard() {
         "students": true, "teachers": true, "student-attendance": true, "teacher-attendance": true,
         "lesson-plans": true, "approvals": true, "leave-requests": true, "messages": true,
         "attendance-overview": true, "ai-insights": true, "performers": true, "teacher-status": true, "financial-health": true,
-        "leave-applications": true, "activities-discipline": true, "chapter-mastery": true, "academic-efficiency": true, "effort-outcome-distribution": true, "academic-trends": true, "notice-board": true, "alerts": true, "class-schedule": true
+        "leave-applications": true, "activities-discipline": true, "chapter-mastery": true, "academic-efficiency": true, "effort-outcome-distribution": true, "academic-trends": true, "notice-board": true, "alerts": true, "class-schedule": true,
+        "pending-attendance": true
       };
 
       const defaultMain = [
-        "attendance-overview", "ai-insights", "performers", "teacher-status", "leave-applications", "activities-discipline", "chapter-mastery", "academic-efficiency", "effort-outcome-distribution", "academic-trends"
+        "attendance-overview", "pending-attendance", "ai-insights", "performers", "teacher-status", "leave-applications", "activities-discipline", "chapter-mastery", "academic-efficiency", "effort-outcome-distribution", "academic-trends"
       ];
 
       setKpiOrder(savedKpi ? JSON.parse(savedKpi) : [
@@ -462,6 +463,34 @@ export default function Dashboard() {
     enabled: !!centerId,
   });
 
+  const { data: pendingAttendanceByGrade = [] } = useQuery({
+    queryKey: ["pending-attendance-by-grade", centerId, today],
+    queryFn: async () => {
+      if (!centerId) return [];
+      const { data, error } = await supabase.rpc("get_pending_attendance_by_grade", {
+        p_center_id: centerId,
+        p_date: today
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!centerId,
+  });
+
+  const { data: pendingTeachers = [] } = useQuery({
+    queryKey: ["pending-teacher-attendance", centerId, today],
+    queryFn: async () => {
+      if (!centerId) return [];
+      const { data, error } = await supabase.rpc("get_pending_teacher_attendance", {
+        p_center_id: centerId,
+        p_date: today
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!centerId,
+  });
+
   const { data: upcomingLessons = [] } = useQuery({
     queryKey: ["upcoming-lessons-dashboard", centerId, today, isRestricted],
     queryFn: async () => {
@@ -833,6 +862,22 @@ export default function Dashboard() {
 
   const recentAlerts = [
     ...aiInsightNotifications,
+    ...pendingAttendanceByGrade.map((p: any) => ({
+      id: `pending-att-${p.grade}`,
+      title: `Pending Attendance: Grade ${p.grade}`,
+      description: `${p.pending_count} students records missing for today`,
+      type: "warning" as const,
+      timestamp: new Date().toISOString(),
+      onClick: () => navigate(user?.role === UserRole.TEACHER ? "/teacher/take-attendance" : "/attendance")
+    })),
+    ...pendingTeachers.map((p: any) => ({
+      id: `pending-teacher-att-${p.teacher_id}`,
+      title: `Pending Attendance: ${p.teacher_name}`,
+      description: `Faculty attendance not recorded for today`,
+      type: "warning" as const,
+      timestamp: new Date().toISOString(),
+      onClick: () => navigate("/teacher-attendance")
+    })),
     ...allAttendance
       .filter((a) => a.status === "absent")
       .slice(0, 3)
@@ -1728,6 +1773,53 @@ export default function Dashboard() {
                        </Card>
                     </div>
                   );
+                  break;
+
+                case "pending-attendance":
+                  const totalPendingStudents = pendingAttendanceByGrade.reduce((acc: number, curr: any) => acc + Number(curr.pending_count), 0);
+                  const isVisibleForUser = role === UserRole.ADMIN || role === UserRole.CENTER || (role === UserRole.TEACHER && pendingAttendanceByGrade.length > 0);
+
+                  content = isVisibleForUser ? (
+                    <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")} key={id}>
+                      <CardHeader className="bg-amber-50 border-b border-amber-100 p-6 flex flex-row items-center justify-between">
+                        <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-600 flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4" /> Pending Roll Call
+                        </CardTitle>
+                        {totalPendingStudents > 0 && <Badge variant="warning" className="bg-amber-500 text-white">{totalPendingStudents} Students</Badge>}
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="divide-y divide-border/10 max-h-[300px] overflow-y-auto">
+                          {pendingAttendanceByGrade.length === 0 && pendingTeachers.length === 0 ? (
+                            <div className="p-8 text-center">
+                              <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                              <p className="text-xs font-bold text-emerald-600 uppercase">All Attendance Completed</p>
+                            </div>
+                          ) : (
+                            <>
+                              {pendingAttendanceByGrade.map((p: any) => (
+                                <div key={p.grade} className="p-4 flex justify-between items-center hover:bg-amber-50/50 transition-colors cursor-pointer" onClick={() => navigate(role === UserRole.TEACHER ? "/teacher/take-attendance" : "/attendance")}>
+                                  <div>
+                                    <p className="text-sm font-black text-slate-800">Grade {p.grade}</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Student Attendance Missing</p>
+                                  </div>
+                                  <Badge variant="outline" className="text-amber-600 border-amber-200">{p.pending_count} Pending</Badge>
+                                </div>
+                              ))}
+                              {(role === UserRole.ADMIN || role === UserRole.CENTER) && pendingTeachers.map((p: any) => (
+                                <div key={p.teacher_id} className="p-4 flex justify-between items-center hover:bg-amber-50/50 transition-colors cursor-pointer" onClick={() => navigate("/teacher-attendance")}>
+                                  <div>
+                                    <p className="text-sm font-black text-slate-800">{p.teacher_name}</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Faculty Attendance Missing</p>
+                                  </div>
+                                  <Badge variant="outline" className="text-amber-600 border-amber-200">Pending</Badge>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : null;
                   break;
 
                 case "activities-discipline":
