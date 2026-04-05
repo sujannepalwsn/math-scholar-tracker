@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 import { useLoginSettings } from "@/hooks/use-login-settings";
 import LoginLayout from "@/components/auth/LoginLayout";
+import { tracking } from "@/utils/tracking";
 
 const CenterLogin = () => {
   const [username, setUsername] = useState('');
@@ -26,6 +27,7 @@ const CenterLogin = () => {
     const result = await login(username, password);
 
     if (result.success) {
+      tracking.trackEvent('feature_action', 'login_success', { role: 'center' });
       toast({
         title: 'Login successful',
         description: 'Welcome back!' });

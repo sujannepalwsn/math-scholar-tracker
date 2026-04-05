@@ -36,6 +36,7 @@ import AlumniManagement from "@/components/center/AlumniManagement"
 import ParentManagement from "@/components/center/ParentManagement"
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import { logger } from "@/utils/logger";
+import { tracking } from "@/utils/tracking";
 
 interface Student {
   id: string;
@@ -271,7 +272,11 @@ export default function RegisterStudent() {
       ]);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      tracking.trackEvent('feature_action', 'create_student', {
+        grade: variables.grade,
+        school: variables.school_name
+      });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       setFormData({
         name: "",

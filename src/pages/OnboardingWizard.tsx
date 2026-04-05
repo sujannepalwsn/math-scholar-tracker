@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { tracking } from "@/utils/tracking";
 
 const OnboardingWizard = () => {
   const navigate = useNavigate();
@@ -96,6 +97,26 @@ const OnboardingWizard = () => {
 
       if (data && data.success) {
         toast.success("Account created successfully! Logging you in...");
+
+        // Log trial lead
+        if (plan === "Free Trial") {
+          localStorage.setItem('is_trial', 'true');
+          await supabase.from('trial_leads').insert({
+            name: formData.adminName,
+            email: formData.adminEmail,
+            organization: formData.schoolName,
+            location: formData.location,
+            role: 'center_admin',
+            expected_students: formData.studentCount,
+            converted_to_center_id: data.centerId,
+            converted_at: new Date().toISOString()
+          });
+        }
+
+        tracking.trackEvent('form_submission', 'onboarding_complete', {
+          schoolName: formData.schoolName,
+          plan: plan
+        });
 
         // Auto-login after successful registration
         const loginResult = await login(formData.adminEmail, formData.adminPassword);

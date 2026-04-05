@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import { cn } from "@/lib/utils"
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
+import { tracking } from "@/utils/tracking";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -360,6 +361,11 @@ export default function TakeAttendance() {
       }
     },
     onSuccess: () => {
+      tracking.trackEvent('feature_action', 'take_attendance', {
+        grade: gradeFilter,
+        present: presentCount,
+        absent: absentCount
+      });
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
       toast.success("Attendance saved and locked!");
     },

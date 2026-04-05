@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-utils";
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import { logger } from "@/utils/logger";
+import { tracking } from "@/utils/tracking";
 
 type Homework = Tables<'homework'>;
 type Student = Tables<'students'>;
@@ -215,7 +216,17 @@ export default function HomeworkManagement() {
         }
       }
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["homework"] }); toast.success("Homework created!"); setIsDialogOpen(false); resetForm(); },
+    onSuccess: () => {
+      tracking.trackEvent('feature_action', 'create_homework', {
+        grade,
+        subject,
+        title
+      });
+      queryClient.invalidateQueries({ queryKey: ["homework"] });
+      toast.success("Homework created!");
+      setIsDialogOpen(false);
+      resetForm();
+    },
     onError: (error: any) => toast.error(error.message || "Failed to create homework") });
 
   const updateHomeworkMutation = useMutation({
