@@ -79,13 +79,25 @@ export const PERMISSION_MAPPING: Record<string, string> = {
   'settings': 'settings_access',
   'about_institution': 'about_institution',
   'about-institution': 'about_institution',
-  'class_routine': 'class_routine',
-  'parent_portal': 'parent_portal',
+  '/teacher/about-institution': 'about_institution',
+  'about_institution_access': 'about_institution',
+  'exams_results': 'exams_results',
+  'published_results': 'published_results',
   'hr_management': 'hr_management',
   'leave_management': 'leave_management',
   'inventory_assets': 'inventory_assets',
   'transport_tracking': 'transport_tracking',
   'student_id_cards': 'student_id_cards',
+  'class_routine': 'class_routine',
+  'school_days': 'calendar_events',
+  'parent_portal': 'parent_portal',
+  'teachers_attendance': 'teachers_attendance',
+  'ai_insights': 'ai_insights',
+  'marks_entry': 'exams_results',
+  'test_management': 'test_management',
+  'my_attendance': 'teachers_attendance',
+  'leave_applications': 'leave_management',
+  'registration': 'register_student',
 
   // Route Fallbacks (to handle items with null feature_name in DB)
   '/register': 'register_student',
@@ -189,10 +201,6 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
     }
 
     // RESTRICTED SCOPE MODE: Apply strict restrictions
-    // Ensure '/teacher/leave' is ALWAYS accessible if leave_management is enabled globally.
-    if (route === '/teacher/leave' || featureKey === 'leave_management') {
-      return centerPerms['leave_management'] !== false;
-    }
 
     // In restricted scope, if it's explicitly disabled at center level, deny it immediately.
     if (centerPerms[dbColumnName] === false) {
@@ -209,7 +217,9 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       'finance',
       'settings_access',
       'about_institution',
-      'teachers_attendance'
+      'teachers_attendance',
+      'student_id_cards',
+      'chapter_performance'
     ];
 
     // 2. Specific route-based blocks for restricted mode (legacy/explicit)
@@ -279,11 +289,14 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
 export const hasActionPermission = (user: any, featureKey: string, action: 'view' | 'edit' | 'approve' | 'publish'): boolean => {
   if (!user) return false;
 
-  if (action === 'view') return hasPermission(user, featureKey);
+  // EVERY ACTION starts with a basic permission check (Respects global center toggles)
+  if (!hasPermission(user, featureKey)) return false;
 
-  // Super Admin/Center Admin bypass
+  if (action === 'view') return true; // hasPermission already confirmed visibility
+
+  // Super Admin/Center Admin bypass (Already verified hasPermission above)
   if (user.role === UserRole.ADMIN || user.role === UserRole.CENTER) {
-    return hasPermission(user, featureKey);
+    return true;
   }
 
   // Parents can only 'edit' (create) for specific modules
@@ -299,7 +312,7 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
   const isFullScope = user.teacher_scope_mode === 'full';
   const teacherPerms = user.teacherPermissions || {};
 
-  // FULL SCOPE MODE: Bypasses action checks
+  // FULL SCOPE MODE: Only bypasses checks if module is enabled for teacher role (verified via hasPermission above)
   if (isFullScope) {
     return true;
   }
