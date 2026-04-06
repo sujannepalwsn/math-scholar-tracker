@@ -325,18 +325,41 @@ export default function TakeAttendance() {
       const { error: deleteError } = await supabase.from("attendance").delete().eq("date", dateStr).in("student_id", studentsToProcess.map((s) => s.id));
       if (deleteError) throw deleteError;
 
-      // 3. Insert ALL filtered students
-      const records = studentsToProcess.map((student) => ({
-        student_id: student.id,
-        center_id: user.center_id!,
-        date: dateStr,
-        academic_year_id: currentAcademicYear?.id || null,
-        status: attendance[student.id]?.status || "pending",
-        time_in: attendance[student.id]?.timeIn || null,
-        time_out: attendance[student.id]?.timeOut || null,
-        marked_by: user.id,
-        is_locked: true, // Lock after submission
-      }));
+      // 3. Insert marked students only
+      // DEFENSIVE: Filter out "pending" status if the database doesn't support it yet
+      // This prevents the 400 error while ensuring we don't misrepresent attendance data.
+      const records = studentsToProcess
+        .filter(student => {
+          const status = attendance[student.id]?.status;
+          return status && status !== "pending";
+        })
+        .map((student) => {
+          const statusValue = attendance[student.id]?.status;
+
+          const record: any = {
+            student_id: student.id,
+            center_id: user.center_id!,
+            date: dateStr,
+            status: statusValue,
+            time_in: attendance[student.id]?.timeIn || null,
+            time_out: attendance[student.id]?.timeOut || null,
+            marked_by: user.id,
+            is_locked: true, // Lock after submission
+          };
+
+          // ONLY add academic_year_id if it exists in currentAcademicYear (avoiding 400 if column is missing)
+          if (currentAcademicYear?.id) {
+            record.academic_year_id = currentAcademicYear.id;
+          }
+
+          return record;
+        });
+
+      if (records.length === 0) {
+        toast.error("Please mark at least one student before saving.");
+        return;
+      }
+
       const { error } = await supabase.from("attendance").insert(records);
       if (error) throw error;
 
