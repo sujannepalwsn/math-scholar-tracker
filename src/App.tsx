@@ -145,15 +145,20 @@ const ActivityTracker = () => {
       const now = Date.now();
       if (now - lastUpdate < MIN_UPDATE_DIFF) return;
 
-      const { error } = await supabase
-        .from('users')
-        .update({ last_active_at: new Date().toISOString() })
-        .eq('id', user.id);
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ last_active_at: new Date().toISOString() })
+          .eq('id', user.id);
 
-      if (error) {
-        logger.error("Error updating activity", error, { userId: user.id });
-      } else {
-        lastUpdate = now;
+        if (error) {
+          // Soft log for activity tracking to avoid flooding production logs
+          console.warn("Activity tracking update failed:", error.message);
+        } else {
+          lastUpdate = now;
+        }
+      } catch (err) {
+        console.warn("Activity tracking exception:", err);
       }
     };
 

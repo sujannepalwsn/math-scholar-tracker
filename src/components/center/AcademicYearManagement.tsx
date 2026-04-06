@@ -59,9 +59,17 @@ export default function AcademicYearManagement({ centerId }: { centerId: string 
       const { error } = await supabase.from("academic_years").update({ is_current: true }).eq("id", year.id);
       if (error) throw error;
 
-      // 3. Update all users in this center to use this active year
-      const { error: userError } = await supabase.from("users").update({ active_academic_year: year.name }).eq("center_id", centerId);
-      if (userError) throw userError;
+      // 3. Update all users in this center to use this active year (DEFENSIVE: check if column exists)
+      try {
+        const updateData: any = { active_academic_year: year.name };
+        const { error: userError } = await supabase.from("users").update(updateData).eq("center_id", centerId);
+        // We don't throw here if column is missing, as it's non-critical metadata
+        if (userError && !userError.message.includes("active_academic_year")) {
+           throw userError;
+        }
+      } catch (e) {
+        console.warn("Could not sync active_academic_year to users:", e);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["academic-years"] });

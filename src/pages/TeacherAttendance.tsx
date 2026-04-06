@@ -328,14 +328,14 @@ export default function TeacherAttendancePage() {
       }
 
       if (type === 'in') {
-        const { error } = await supabase.from("teacher_attendance").upsert({
+        const record: any = {
           teacher_id: teacherProfile.id,
           center_id: user?.center_id!,
           date: todayStr,
-          academic_year_id: currentAcademicYear?.id || null,
           status: 'present',
           time_in: timeStr,
-        }, { onConflict: 'teacher_id,date' });
+        };
+        const { error } = await supabase.from("teacher_attendance").upsert(record, { onConflict: 'teacher_id,date' });
         if (error) throw error;
       } else {
         const { error } = await supabase.from("teacher_attendance").update({
@@ -381,12 +381,12 @@ export default function TeacherAttendancePage() {
 
       for (const teacherId in attendanceRecords) {
         const record = attendanceRecords[teacherId];
+        if (record.status === 'pending') continue; // Don't upsert pending
+
         recordsToUpsert.push({
-          id: record.id || undefined,
           teacher_id: record.teacher_id,
           center_id: user.center_id!,
           date: record.date,
-          academic_year_id: currentAcademicYear?.id || null,
           status: record.status,
           time_in: record.time_in,
           time_out: record.time_out,
