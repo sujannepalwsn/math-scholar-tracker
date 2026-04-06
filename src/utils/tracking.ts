@@ -181,7 +181,13 @@ class TrackingManager {
             keepalive: true
         }).catch(err => console.error('Failed to flush events on unload', err));
     } else {
-        await supabase.functions.invoke('visitor-tracking', { body });
+        try {
+            await supabase.functions.invoke('visitor-tracking', { body });
+        } catch (err) {
+            // Re-queue events if failed
+            this.eventQueue = [...eventsToFlush, ...this.eventQueue];
+            console.error('Failed to flush events, re-queueing', err);
+        }
     }
   }
 

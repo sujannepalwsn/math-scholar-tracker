@@ -65,10 +65,12 @@ import { toast } from "sonner";
 
 const VisitorLogs = () => {
   const [visitorTypeFilter, setVisitorTypeFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [durationFilter, setDurationFilter] = useState<string>("all");
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ['visitor-sessions', visitorTypeFilter],
+    queryKey: ['visitor-sessions', visitorTypeFilter, roleFilter, durationFilter],
     queryFn: async () => {
       let query = supabase
         .from('sessions')
@@ -83,16 +85,42 @@ const VisitorLogs = () => {
               role
             )
           )
-        `)
-        .order('session_start', { ascending: false });
+        `);
 
       if (visitorTypeFilter !== 'all') {
         query = query.eq('visitors.visitor_type', visitorTypeFilter);
       }
 
-      const { data, error } = await query.limit(50);
+      if (roleFilter !== 'all') {
+        query = query.eq('visitors.users.role', roleFilter);
+      }
+
+      // Filter null roles when role filter is active
+      if (roleFilter !== 'all' && roleFilter !== 'anonymous') {
+         query = query.not('visitors.users', 'is', null);
+      }
+
+      const { data, error } = await query
+        .order('session_start', { ascending: false })
+        .limit(100);
+
       if (error) throw error;
-      return data;
+
+      // Post-filtering for duration since interval filtering is tricky via JS client sometimes
+      let filteredData = data;
+      if (durationFilter !== 'all') {
+        filteredData = data.filter(s => {
+          if (!s.duration) return false;
+          // Simple heuristic for duration filtering from string "X seconds"
+          const seconds = parseInt(s.duration);
+          if (durationFilter === 'short') return seconds < 60;
+          if (durationFilter === 'medium') return seconds >= 60 && seconds < 600;
+          if (durationFilter === 'long') return seconds >= 600;
+          return true;
+        });
+      }
+
+      return filteredData;
     }
   });
 
@@ -183,23 +211,50 @@ const VisitorLogs = () => {
         <TabsContent value="logs" className="space-y-6">
           <Card className="border-none shadow-sm overflow-hidden rounded-[2rem]">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <CardTitle className="text-2xl font-black tracking-tight uppercase">Session Feed</CardTitle>
                   <CardDescription className="font-medium">Browse individual user journeys.</CardDescription>
                 </div>
-                <Select value={visitorTypeFilter} onValueChange={setVisitorTypeFilter}>
-                  <SelectTrigger className="w-[180px] rounded-xl">
-                    <SelectValue placeholder="Visitor Type" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="registered">Registered</SelectItem>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="sandbox">Sandbox</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value={visitorTypeFilter} onValueChange={setVisitorTypeFilter}>
+                    <SelectTrigger className="w-[140px] rounded-xl h-9 text-xs">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="registered">Registered</SelectItem>
+                      <SelectItem value="trial">Trial</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="sandbox">Sandbox</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-[140px] rounded-xl h-9 text-xs">
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="center">Center</SelectItem>
+                      <SelectItem value="teacher">Teacher</SelectItem>
+                      <SelectItem value="parent">Parent</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={durationFilter} onValueChange={setDurationFilter}>
+                    <SelectTrigger className="w-[140px] rounded-xl h-9 text-xs">
+                      <SelectValue placeholder="Duration" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="all">Any Duration</SelectItem>
+                      <SelectItem value="short">Short (&lt;1m)</SelectItem>
+                      <SelectItem value="medium">Medium (1m-10m)</SelectItem>
+                      <SelectItem value="long">Long (&gt;10m)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -398,6 +453,25 @@ const VisitorLogs = () => {
                     <YAxis fontSize={10} />
                     <Tooltip />
                     <Bar dataKey="value" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" /> Session Durations
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analytics?.duration_dist} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" fontSize={10} />
+                    <YAxis dataKey="name" type="category" fontSize={10} width={60} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>

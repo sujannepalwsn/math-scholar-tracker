@@ -1,5 +1,6 @@
 import { logger } from "@/utils/logger";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { tracking } from "@/utils/tracking";
 import { UserRole } from "@/types/roles";
 import { User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client"
@@ -168,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     }
 
+
     try {
       logger.debug('AuthContext: Preparing to invoke auth-login Edge Function...');
       const { data, error: invokeError } = await supabase.functions.invoke('auth-login', {
@@ -176,11 +178,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (invokeError) {
         logger.error('AuthContext: Edge Function invocation error:', invokeError);
+        tracking.trackEvent('error', 'login_exception', { error: invokeError.message });
         return { success: false, error: invokeError.message || 'Login failed' };
       }
 
       if (!data.success) {
         logger.error('AuthContext: Login failed from Edge Function:', data.error);
+        tracking.trackEvent('error', 'login_failed', { error: data.error });
         return { success: false, error: data.error || 'Login failed' };
       }
 
