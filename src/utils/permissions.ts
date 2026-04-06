@@ -1,4 +1,19 @@
 import { UserRole } from "@/types/roles";
+
+/**
+ * Returns the default dashboard path for a given user role.
+ */
+export const getDashboardPath = (role?: string | null): string => {
+  if (!role) return "/";
+  switch (role) {
+    case UserRole.ADMIN: return "/admin-dashboard";
+    case UserRole.CENTER: return "/center-dashboard";
+    case UserRole.TEACHER: return "/teacher-dashboard";
+    case UserRole.PARENT: return "/parent-dashboard";
+    default: return "/";
+  }
+};
+
 /**
  * SECURITY WARNING: This utility is for FRONTEND UI/UX purposes only.
  * It determines whether to hide or show buttons, menu items, or views based on
@@ -64,8 +79,25 @@ export const PERMISSION_MAPPING: Record<string, string> = {
   'settings': 'settings_access',
   'about_institution': 'about_institution',
   'about-institution': 'about_institution',
+  '/teacher/about-institution': 'about_institution',
+  'about_institution_access': 'about_institution',
+  'exams_results': 'exams_results',
+  'published_results': 'published_results',
+  'hr_management': 'hr_management',
+  'leave_management': 'leave_management',
+  'inventory_assets': 'inventory_assets',
+  'transport_tracking': 'transport_tracking',
+  'student_id_cards': 'student_id_cards',
   'class_routine': 'class_routine',
+  'school_days': 'calendar_events',
   'parent_portal': 'parent_portal',
+  'teachers_attendance': 'teachers_attendance',
+  'ai_insights': 'ai_insights',
+  'marks_entry': 'exams_results',
+  'test_management': 'test_management',
+  'my_attendance': 'teachers_attendance',
+  'leave_applications': 'leave_management',
+  'registration': 'register_student',
 
   // Route Fallbacks (to handle items with null feature_name in DB)
   '/register': 'register_student',
@@ -162,18 +194,35 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
   if (user.role === UserRole.TEACHER) {
     const isFullScope = user.teacher_scope_mode === 'full';
 
-    // FULL SCOPE MODE: Equivalent to Center Admin
+    // FULL SCOPE MODE: Equivalent to Center Admin, but still respects global center overrides
     if (isFullScope) {
-      return true;
+      // In full scope, we still must check if the feature is enabled at the center level
+      return centerPerms[dbColumnName] !== false;
     }
 
     // RESTRICTED SCOPE MODE: Apply strict restrictions
-    // Ensure '/teacher/leave' is ALWAYS accessible if leave_management is enabled globally.
-    if (route === '/teacher/leave' || featureKey === 'leave_management') {
-      return centerPerms['leave_management'] !== false;
+
+    // In restricted scope, if it's explicitly disabled at center level, deny it immediately.
+    if (centerPerms[dbColumnName] === false) {
+      return false;
     }
 
-    // 1. Specific route-based blocks for restricted mode
+    // 1. Administrative Features: Strictly blocked in restricted mode unless explicitly enabled
+    const adminOnlyFeatures = [
+      'register_student',
+      'teacher_management',
+      'hr_management',
+      'inventory_assets',
+      'transport_tracking',
+      'finance',
+      'settings_access',
+      'about_institution',
+      'teachers_attendance',
+      'student_id_cards',
+      'chapter_performance'
+    ];
+
+    // 2. Specific route-based blocks for restricted mode (legacy/explicit)
     if (dbColumnName === 'lesson_plans' && (featureKey === 'lesson_plan_management' || route === '/lesson-plan-management')) {
       return false;
     }
@@ -184,18 +233,24 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       return false;
     }
 
-    // 3. Check granular JSONB permissions
+    // 3. Check granular JSONB permissions (new system)
     if (teacherPerms.permissions && teacherPerms.permissions[dbColumnName]) {
       const modulePerms = teacherPerms.permissions[dbColumnName];
       return modulePerms.enabled === true && modulePerms.can_view === true;
     }
 
-    // 4. Fallback to legacy boolean columns
+    // 4. Fallback to legacy boolean columns (check if teacher has specific toggle on)
     if (teacherPerms[dbColumnName] === true) return true;
     if (teacherPerms[dbColumnName] === false) return false;
 
-    // 5. Default for restricted: allow non-admin modules if globally enabled
-    return true;
+    // 5. Default Policy for Restricted Mode:
+    // If it's an admin feature, block it by default.
+    // Otherwise, allow it ONLY if it's globally enabled at the center level.
+    if (adminOnlyFeatures.includes(dbColumnName)) {
+      return false;
+    }
+
+    return centerPerms[dbColumnName] !== false;
   }
 
   // Parents follow center global override
@@ -234,11 +289,14 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
 export const hasActionPermission = (user: any, featureKey: string, action: 'view' | 'edit' | 'approve' | 'publish'): boolean => {
   if (!user) return false;
 
-  if (action === 'view') return hasPermission(user, featureKey);
+  // EVERY ACTION starts with a basic permission check (Respects global center toggles)
+  if (!hasPermission(user, featureKey)) return false;
 
-  // Super Admin/Center Admin bypass
+  if (action === 'view') return true; // hasPermission already confirmed visibility
+
+  // Super Admin/Center Admin bypass (Already verified hasPermission above)
   if (user.role === UserRole.ADMIN || user.role === UserRole.CENTER) {
-    return hasPermission(user, featureKey);
+    return true;
   }
 
   // Parents can only 'edit' (create) for specific modules
@@ -254,7 +312,7 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
   const isFullScope = user.teacher_scope_mode === 'full';
   const teacherPerms = user.teacherPermissions || {};
 
-  // FULL SCOPE MODE: Bypasses action checks
+  // FULL SCOPE MODE: Only bypasses checks if module is enabled for teacher role (verified via hasPermission above)
   if (isFullScope) {
     return true;
   }

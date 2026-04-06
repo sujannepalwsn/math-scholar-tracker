@@ -189,8 +189,11 @@ export default function Sidebar({
       if ((item as any).is_active === false && !isEditMode) return false;
 
       const featureKey = item.featureName || (item as any).feature_name;
+      const route = item.to;
+      const isDashboard = route === '/center-dashboard' || route === '/teacher-dashboard' || route === '/parent-dashboard' || route === '/admin-dashboard' || route === '/';
+
       // Sidebar relies on the centralized hasPermission logic for visibility filtering.
-      return hasPermission(user, featureKey || 'unknown', item.to);
+      return hasPermission(user, featureKey || 'unknown', route) || isDashboard;
     } catch (err) {
       logger.error("Error filtering nav item:", item, err);
       return false;

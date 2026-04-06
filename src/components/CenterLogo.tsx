@@ -2,6 +2,9 @@ import { Building } from "lucide-react";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
+import { Link } from "react-router-dom";
+import { UserRole } from "@/types/roles";
+import { getDashboardPath } from "@/utils/permissions";
 
 interface CenterLogoProps {
   size?: "sm" | "md" | "lg";
@@ -38,7 +41,7 @@ export default function CenterLogo({ size = "md", showName = true }: CenterLogoP
     lg: "text-lg" };
 
   return (
-    <div className="flex items-center gap-2">
+    <Link to={getDashboardPath(user?.role)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
       {center?.logo_url ? (
         <img
           src={center.logo_url}
@@ -58,6 +61,6 @@ export default function CenterLogo({ size = "md", showName = true }: CenterLogoP
           {center?.name || user?.center_name}
         </span>
       )}
-    </div>
+    </Link>
   );
 }
