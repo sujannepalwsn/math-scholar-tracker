@@ -336,7 +336,7 @@ export default function TakeAttendance() {
         .map((student) => {
           const statusValue = attendance[student.id]?.status;
 
-          const record: any = {
+          return {
             student_id: student.id,
             center_id: user.center_id!,
             date: dateStr,
@@ -346,13 +346,6 @@ export default function TakeAttendance() {
             marked_by: user.id,
             is_locked: true, // Lock after submission
           };
-
-          // ONLY add academic_year_id if it exists in currentAcademicYear (avoiding 400 if column is missing)
-          if (currentAcademicYear?.id) {
-            record.academic_year_id = currentAcademicYear.id;
-          }
-
-          return record;
         });
 
       if (records.length === 0) {

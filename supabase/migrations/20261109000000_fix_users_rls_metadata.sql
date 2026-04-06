@@ -1,4 +1,4 @@
--- Migration to ensure users can read and update their own metadata (e.g., active_academic_year)
+-- Migration to ensure users can read and update their own metadata (e.g., last_active_at)
 -- This migration hardens the RLS policies on the users table and fixes 403 Forbidden errors.
 
 BEGIN;
@@ -22,9 +22,11 @@ DROP POLICY IF EXISTS "Allow users to update their own record" ON public.users;
 DROP POLICY IF EXISTS "Center Admin manage users" ON public.users;
 
 -- Re-apply policies with corrected logic
-CREATE POLICY "User self view users" ON public.users FOR SELECT TO authenticated USING (id = auth.uid());
+-- Users can always see their own full record
+CREATE POLICY "Allow users to view their own record" ON public.users FOR SELECT TO authenticated USING (id = auth.uid());
 
-CREATE POLICY "User self update users" ON public.users
+-- Users can update their own record but cannot change role or center_id
+CREATE POLICY "Allow users to update their own record" ON public.users
 FOR UPDATE TO authenticated
 USING (id = auth.uid())
 WITH CHECK (
@@ -33,6 +35,7 @@ WITH CHECK (
   (center_id IS NOT DISTINCT FROM public.get_user_center_id())
 );
 
+-- Center Admins can manage users in their center
 CREATE POLICY "Center Admin manage users" ON public.users
 FOR ALL TO authenticated
 USING (public.get_user_role() IN ('admin', 'center') AND public.get_user_center_id() = center_id);
