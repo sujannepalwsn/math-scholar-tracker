@@ -120,6 +120,16 @@ export class SupabaseSandboxMock {
             error: null
           });
         }
+        if (name === 'visitor-tracking') {
+          return Promise.resolve({
+            data: {
+              success: true,
+              sessionId: 'mock-session-id',
+              visitorId: 'mock-visitor-id'
+            },
+            error: null
+          });
+        }
         return Promise.resolve({ data: null, error: null });
       }
     };

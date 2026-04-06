@@ -3,7 +3,7 @@ export const sandboxData = {
     { id: 'demo-center-id', name: 'Demo Academy', logo_url: '', address: 'EduFlow HQ' }
   ],
   users: [
-    { id: 'demo-user-id', username: 'demo@eduflow.com', role: 'center', center_id: 'demo-center-id' }
+    { id: 'demo-user-id', username: 'demo@eduflow.com', role: 'admin', center_id: 'demo-center-id' }
   ],
   center_feature_permissions: [
     {
