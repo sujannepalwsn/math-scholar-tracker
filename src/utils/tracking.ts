@@ -1,5 +1,6 @@
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/utils/logger";
 
 export type VisitorType = 'registered' | 'trial' | 'general' | 'sandbox';
 export type EventType = 'page_view' | 'click' | 'feature_action' | 'form_submission' | 'error';
@@ -42,10 +43,16 @@ class TrackingManager {
   }
 
   private async initFingerprint(): Promise<string> {
-    const fp = await FingerprintJS.load();
-    const result = await fp.get();
-    this.fingerprint = result.visitorId;
-    return result.visitorId;
+    try {
+      const fp = await FingerprintJS.load();
+      const result = await fp.get();
+      this.fingerprint = result.visitorId;
+      return result.visitorId;
+    } catch (err) {
+      console.error('Failed to initialize fingerprinting:', err);
+      this.fingerprint = 'anonymous-' + Math.random().toString(36).substr(2, 9);
+      return this.fingerprint;
+    }
   }
 
   private setupListeners() {
@@ -112,7 +119,11 @@ class TrackingManager {
     }
 
     if (!this.fingerprint && this.fpPromise) {
-      await this.fpPromise;
+      // Don't wait forever, timeout after 2 seconds
+      await Promise.race([
+        this.fpPromise,
+        new Promise(resolve => setTimeout(resolve, 2000))
+      ]);
     }
 
     try {
@@ -122,20 +133,39 @@ class TrackingManager {
           payload: {
             visitor_type: visitorType,
             user_id: user?.id,
-            fingerprint_id: this.fingerprint,
+            fingerprint_id: this.fingerprint || 'unknown',
             entry_page: window.location.pathname,
           },
         },
       });
 
-      if (!error && data.success) {
+      if (error) {
+        logger.error('Edge function error starting tracking session', error, {
+          errorType: 'runtime',
+          component: 'TrackingManager',
+          action: 'create-session'
+        });
+        return;
+      }
+
+      if (data?.success) {
         this.sessionId = data.sessionId;
         this.visitorId = data.visitorId;
         localStorage.setItem('tracking_session_id', this.sessionId!);
         localStorage.setItem('tracking_visitor_id', this.visitorId!);
+      } else {
+        logger.error('Failed to start tracking session: response unsuccessful', data?.error || 'Unknown error', {
+          errorType: 'runtime',
+          component: 'TrackingManager',
+          action: 'create-session'
+        });
       }
     } catch (err) {
-      console.error('Failed to start tracking session', err);
+      logger.error('Exception starting tracking session', err, {
+        errorType: 'runtime',
+        component: 'TrackingManager',
+        action: 'create-session'
+      });
     }
   }
 

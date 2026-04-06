@@ -19,13 +19,15 @@ serve(async (req) => {
     const { action, payload } = await req.json();
     const ip = req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for") || "unknown";
 
-    // Geo from headers (Supabase specific)
+    // Geo from headers (Supabase/Vercel specific)
     const geo = {
-      city: req.headers.get("x-vercel-ip-city") || "unknown",
-      country: req.headers.get("x-vercel-ip-country") || "unknown",
-      region: req.headers.get("x-vercel-ip-country-region") || "unknown",
+      city: req.headers.get("x-vercel-ip-city") || req.headers.get("cf-ipcity") || "unknown",
+      country: req.headers.get("x-vercel-ip-country") || req.headers.get("cf-ipcountry") || "unknown",
+      region: req.headers.get("x-vercel-ip-country-region") || req.headers.get("cf-region") || "unknown",
       browser: req.headers.get("user-agent") || "unknown",
     };
+
+    console.log(\`Visitor tracking action: \${action}\`, { ip, geo });
 
     if (action === "create-session") {
       const { visitor_type, user_id, fingerprint_id, entry_page } = payload;
@@ -55,9 +57,13 @@ serve(async (req) => {
       // 2. Create session
       const { data: session, error: sessionError } = await supabase.from("sessions").insert({
         visitor_id: visitor.id,
-        entry_page,
+        entry_page: entry_page || '/',
       }).select().single();
-      if (sessionError) throw sessionError;
+
+      if (sessionError) {
+        console.error('Error creating session:', sessionError);
+        throw sessionError;
+      }
 
       return new Response(JSON.stringify({ success: true, sessionId: session.id, visitorId: visitor.id }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -66,10 +72,17 @@ serve(async (req) => {
 
     if (action === "log-events") {
       const { sessionId, events } = payload;
-      if (!sessionId || !events || !events.length) {
-        return new Response(JSON.stringify({ success: false, error: "Missing sessionId or events" }), {
+      if (!sessionId) {
+        console.error('Missing sessionId in log-events');
+        return new Response(JSON.stringify({ success: false, error: "Missing sessionId" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
+        });
+      }
+
+      if (!events || !events.length) {
+        return new Response(JSON.stringify({ success: true, message: "No events to log" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 

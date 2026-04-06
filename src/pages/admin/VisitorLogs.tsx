@@ -69,7 +69,7 @@ const VisitorLogs = () => {
   const [durationFilter, setDurationFilter] = useState<string>("all");
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
-  const { data: sessions, isLoading: sessionsLoading } = useQuery({
+  const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = useQuery({
     queryKey: ['visitor-sessions', visitorTypeFilter, roleFilter, durationFilter],
     queryFn: async () => {
       let query = supabase
@@ -138,9 +138,25 @@ const VisitorLogs = () => {
     }
   });
 
-  const { data: analytics } = useQuery({
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery({
     queryKey: ['visitor-analytics'],
     queryFn: async () => {
+      // Don't call RPC if we're in sandbox mode as it's not implemented in the mock
+      if (typeof window !== 'undefined' && localStorage.getItem('is_sandbox') === 'true') {
+        return {
+          total_visitors: 0,
+          unique_visitors: 0,
+          dau: 0,
+          mau: 0,
+          type_dist: [],
+          feature_usage: [],
+          funnel: { landing: 0, trial: 0, signup: 0, active: 0 },
+          duration_dist: [],
+          top_drop_offs: [],
+          peak_usage: { hour: 0, count: 0 },
+          active_role: { role: 'None', count: 0 }
+        };
+      }
       const { data, error } = await supabase.rpc('get_visitor_analytics');
       if (error) throw error;
       return data;
@@ -150,11 +166,27 @@ const VisitorLogs = () => {
   const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444'];
 
   const funnelData = analytics?.funnel ? [
-    { name: 'Landing', value: analytics.funnel.landing },
-    { name: 'Trial', value: analytics.funnel.trial },
-    { name: 'Signup', value: analytics.funnel.signup },
-    { name: 'Active', value: analytics.funnel.active },
-  ] : [];
+    { name: 'Landing', value: analytics.funnel.landing || 0 },
+    { name: 'Trial', value: analytics.funnel.trial || 0 },
+    { name: 'Signup', value: analytics.funnel.signup || 0 },
+    { name: 'Active', value: analytics.funnel.active || 0 },
+  ] : [
+    { name: 'Landing', value: 0 },
+    { name: 'Trial', value: 0 },
+    { name: 'Signup', value: 0 },
+    { name: 'Active', value: 0 },
+  ];
+
+  if (sessionsError || analyticsError) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <h2 className="text-xl font-bold">Error Loading Visitor Logs</h2>
+        <p className="text-slate-500">{(sessionsError as any)?.message || (analyticsError as any)?.message}</p>
+        <Button onClick={() => window.location.reload()}>Retry</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
@@ -274,10 +306,10 @@ const VisitorLogs = () => {
                 <TableBody>
                   {sessionsLoading ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-20 font-bold text-slate-400">Loading sessions...</TableCell></TableRow>
-                  ) : sessions?.length === 0 ? (
+                  ) : (!sessions || sessions.length === 0) ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-20 font-bold text-slate-400">No sessions found.</TableCell></TableRow>
                   ) : (
-                    sessions?.map((session) => (
+                    sessions.map((session) => (
                       <React.Fragment key={session.id}>
                         <TableRow
                           className="hover:bg-slate-50/50 cursor-pointer transition-colors"
