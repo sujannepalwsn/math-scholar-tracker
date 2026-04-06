@@ -30,10 +30,8 @@ export default function BottomNav({ navItems }: BottomNavProps) {
 
   const filteredItems = navItems.filter(item => {
     if (item.is_active === false) return false;
-    if (item.featureName) {
-      return hasPermission(user, item.featureName);
-    }
-    return true;
+    const featureKey = item.featureName || (item as any).feature_name;
+    return hasPermission(user, featureKey || 'unknown', item.to);
   });
 
   const dashboardItem = filteredItems.find(item => item.label === "Dashboard" || item.to?.includes('dashboard'));

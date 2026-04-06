@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Building, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
+import { UserRole } from "@/types/roles";
+import { getDashboardPath } from "@/utils/permissions";
 
 interface SchoolBrandingProps {
   className?: string;
@@ -35,7 +38,10 @@ export default function SchoolBranding({ className, isMobileCompact }: SchoolBra
   const header_address_visible = center?.header_address_visible !== false;
 
   return (
-    <div className={cn("flex items-center justify-center gap-2 px-2 py-1 rounded-xl relative overflow-hidden transition-all duration-300", className)}>
+    <Link
+      to={getDashboardPath(user?.role)}
+      className={cn("flex items-center justify-center gap-2 px-2 py-1 rounded-xl relative overflow-hidden transition-all duration-300 hover:bg-primary/5", className)}
+    >
       {/* Optional Header Background Mini-Overlay if needed */}
       {center?.header_bg_url && (
         <div
@@ -85,6 +91,6 @@ export default function SchoolBranding({ className, isMobileCompact }: SchoolBra
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }

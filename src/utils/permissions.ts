@@ -1,4 +1,19 @@
 import { UserRole } from "@/types/roles";
+
+/**
+ * Returns the default dashboard path for a given user role.
+ */
+export const getDashboardPath = (role?: string | null): string => {
+  if (!role) return "/";
+  switch (role) {
+    case UserRole.ADMIN: return "/admin-dashboard";
+    case UserRole.CENTER: return "/center-dashboard";
+    case UserRole.TEACHER: return "/teacher-dashboard";
+    case UserRole.PARENT: return "/parent-dashboard";
+    default: return "/";
+  }
+};
+
 /**
  * SECURITY WARNING: This utility is for FRONTEND UI/UX purposes only.
  * It determines whether to hide or show buttons, menu items, or views based on
@@ -162,15 +177,21 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
   if (user.role === UserRole.TEACHER) {
     const isFullScope = user.teacher_scope_mode === 'full';
 
-    // FULL SCOPE MODE: Equivalent to Center Admin
+    // FULL SCOPE MODE: Equivalent to Center Admin, but still respects global center overrides
     if (isFullScope) {
-      return true;
+      // In full scope, we still must check if the feature is enabled at the center level
+      return centerPerms[dbColumnName] !== false;
     }
 
     // RESTRICTED SCOPE MODE: Apply strict restrictions
     // Ensure '/teacher/leave' is ALWAYS accessible if leave_management is enabled globally.
     if (route === '/teacher/leave' || featureKey === 'leave_management') {
       return centerPerms['leave_management'] !== false;
+    }
+
+    // In restricted scope, if it's explicitly disabled at center level, deny it immediately.
+    if (centerPerms[dbColumnName] === false) {
+      return false;
     }
 
     // 1. Specific route-based blocks for restricted mode
