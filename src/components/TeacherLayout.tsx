@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { useDynamicNavigation } from "@/hooks/useDynamicNavigation";
 import { DEFAULT_NAV_ITEMS } from "@/lib/navigation-defaults";
 import { logger } from "@/utils/logger";
+import { getDashboardPath } from "@/utils/permissions";
 
 const staticNavItems = DEFAULT_NAV_ITEMS.filter(it => it.role === UserRole.TEACHER);
 
@@ -124,6 +125,11 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     let route = it.route;
     if (it.feature_name === 'leave_management') {
       route = '/teacher/leave';
+    }
+
+    // Ensure dashboard links point to the role-specific dashboard instead of root
+    if (route === '/' || route?.includes('center-dashboard')) {
+      route = getDashboardPath(UserRole.TEACHER);
     }
 
     return {

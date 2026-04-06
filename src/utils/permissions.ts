@@ -81,6 +81,11 @@ export const PERMISSION_MAPPING: Record<string, string> = {
   'about-institution': 'about_institution',
   'class_routine': 'class_routine',
   'parent_portal': 'parent_portal',
+  'hr_management': 'hr_management',
+  'leave_management': 'leave_management',
+  'inventory_assets': 'inventory_assets',
+  'transport_tracking': 'transport_tracking',
+  'student_id_cards': 'student_id_cards',
 
   // Route Fallbacks (to handle items with null feature_name in DB)
   '/register': 'register_student',
@@ -194,7 +199,20 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       return false;
     }
 
-    // 1. Specific route-based blocks for restricted mode
+    // 1. Administrative Features: Strictly blocked in restricted mode unless explicitly enabled
+    const adminOnlyFeatures = [
+      'register_student',
+      'teacher_management',
+      'hr_management',
+      'inventory_assets',
+      'transport_tracking',
+      'finance',
+      'settings_access',
+      'about_institution',
+      'teachers_attendance'
+    ];
+
+    // 2. Specific route-based blocks for restricted mode (legacy/explicit)
     if (dbColumnName === 'lesson_plans' && (featureKey === 'lesson_plan_management' || route === '/lesson-plan-management')) {
       return false;
     }
@@ -205,18 +223,24 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       return false;
     }
 
-    // 3. Check granular JSONB permissions
+    // 3. Check granular JSONB permissions (new system)
     if (teacherPerms.permissions && teacherPerms.permissions[dbColumnName]) {
       const modulePerms = teacherPerms.permissions[dbColumnName];
       return modulePerms.enabled === true && modulePerms.can_view === true;
     }
 
-    // 4. Fallback to legacy boolean columns
+    // 4. Fallback to legacy boolean columns (check if teacher has specific toggle on)
     if (teacherPerms[dbColumnName] === true) return true;
     if (teacherPerms[dbColumnName] === false) return false;
 
-    // 5. Default for restricted: allow non-admin modules if globally enabled
-    return true;
+    // 5. Default Policy for Restricted Mode:
+    // If it's an admin feature, block it by default.
+    // Otherwise, allow it ONLY if it's globally enabled at the center level.
+    if (adminOnlyFeatures.includes(dbColumnName)) {
+      return false;
+    }
+
+    return centerPerms[dbColumnName] !== false;
   }
 
   // Parents follow center global override

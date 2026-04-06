@@ -6,7 +6,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/AuthContext"
-import { hasPermission } from "@/utils/permissions"
+import { hasPermission, getDashboardPath } from "@/utils/permissions"
 
 interface NavItem {
   to: string;
@@ -28,7 +28,14 @@ export default function BottomNav({ navItems }: BottomNavProps) {
   const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  const filteredItems = navItems.filter(item => {
+  const filteredItems = navItems.map(item => {
+    let route = item.to;
+    // Map dashboard routes to the correct role-specific dashboard path
+    if (route === '/' || route?.includes('center-dashboard') || route?.includes('teacher-dashboard') || route?.includes('parent-dashboard')) {
+      route = getDashboardPath(user?.role);
+    }
+    return { ...item, to: route };
+  }).filter(item => {
     if (item.is_active === false) return false;
     const featureKey = item.featureName || (item as any).feature_name;
     return hasPermission(user, featureKey || 'unknown', item.to);
