@@ -34,7 +34,7 @@ import AdmissionWorkflow from "@/components/center/AdmissionWorkflow"
 import StudentPromotion from "@/components/center/StudentPromotion"
 import AlumniManagement from "@/components/center/AlumniManagement"
 import ParentManagement from "@/components/center/ParentManagement"
-import { hasPermission, hasActionPermission } from "@/utils/permissions";
+import { hasPermission, hasActionPermission, isTeacherRestricted as isTeacherRestrictedUtil } from "@/utils/permissions";
 import { logger } from "@/utils/logger";
 import { tracking } from "@/utils/tracking";
 
@@ -101,7 +101,7 @@ export default function RegisterStudent() {
   const [showLinkChildDialog, setShowLinkChildDialog] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
-  const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
+  const isRestricted = isTeacherRestrictedUtil(user, 'register_student');
   const { currentPage, pageSize, setPage, getRange } = usePagination(10, 1, 'st');
 
   // Reset to page 1 when filters change

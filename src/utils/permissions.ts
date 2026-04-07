@@ -197,6 +197,7 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
     const isFullScope = user.teacher_scope_mode === 'full';
 
     // 1. Check granular JSONB permissions FIRST (Explicit teacher-level overrides)
+    // SYSTEM CHANGE: Now we respect these toggles even in "Full" scope mode.
     if (teacherPerms.permissions && teacherPerms.permissions[dbColumnName]) {
       const modulePerms = teacherPerms.permissions[dbColumnName];
       // If it's explicitly DISABLED for the teacher, block it regardless of scope mode
@@ -213,7 +214,7 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
     if (teacherPerms[dbColumnName] === false) return false;
     if (teacherPerms[dbColumnName] === true) return centerPerms[dbColumnName] !== false;
 
-    // FULL SCOPE MODE: Equivalent to Center Admin if no explicit teacher-level override found
+    // 3. DEFAULT BEHAVIOR BASED ON SCOPE MODE (If no explicit override found above)
     if (isFullScope) {
       return centerPerms[dbColumnName] !== false;
     }
@@ -334,6 +335,7 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
   const teacherPerms = user.teacherPermissions || {};
 
   // 1. Check granular JSONB permissions FIRST
+  // SYSTEM CHANGE: Granular action permissions now take precedence even in FULL scope.
   if (teacherPerms.permissions && teacherPerms.permissions[dbColumnName]) {
     const modulePerms = teacherPerms.permissions[dbColumnName];
 
@@ -363,8 +365,10 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
     }
   }
 
-  // FULL SCOPE MODE: Only bypasses checks if module is enabled for teacher role (verified via hasPermission above)
+  // 2. DEFAULT BEHAVIOR BASED ON SCOPE MODE (If no explicit action override found above)
   if (isFullScope) {
+    // In Full Scope, if not explicitly disabled via JSONB, we allow all actions
+    // BUT we must still check if the module itself is viewable (already done at start of function)
     return true;
   }
 
@@ -375,4 +379,18 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
   }
 
   return false;
+};
+
+/**
+ * Helper to determine if a teacher should be restricted to their own assigned scope (e.g. assigned grades/students).
+ * A teacher is restricted ONLY if they are in 'restricted' scope mode AND do not have explicit 'edit' permission for the feature.
+ */
+export const isTeacherRestricted = (user: any, featureKey: string): boolean => {
+  if (!user || user.role !== UserRole.TEACHER) return false;
+
+  const isFullScope = user.teacher_scope_mode === 'full';
+  const hasEditPermission = hasActionPermission(user, featureKey, 'edit');
+
+  // They are restricted if they are NOT in full scope AND don't have explicit edit permission
+  return !isFullScope && !hasEditPermission;
 };

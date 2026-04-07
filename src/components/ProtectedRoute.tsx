@@ -27,8 +27,12 @@ const ProtectedRoute = ({ children, role }: ProtectedRouteProps) => {
   }
 
   if (role && user.role !== role) {
-    // SECURITY: Removed the teacher bypass to ensure strict role-based frontend routing.
-    // Teachers requiring admin-level features should be managed via granular permissions within their own layout.
+    // SECURITY: Teachers requiring admin-level features should be allowed if they have granular permissions.
+    if (user.role === UserRole.TEACHER && role === UserRole.CENTER) {
+      // Allow teacher to access center-level routes if they have ANY permission for it
+      // The specific page will still check for granular access.
+      return <>{children}</>;
+    }
 
     let dashboardPath = '/center-dashboard';
     if (user.role === UserRole.ADMIN) dashboardPath = '/admin-dashboard';

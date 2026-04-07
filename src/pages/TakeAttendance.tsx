@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import { cn } from "@/lib/utils"
-import { hasPermission, hasActionPermission } from "@/utils/permissions";
+import { hasPermission, hasActionPermission, isTeacherRestricted as isTeacherRestrictedUtil } from "@/utils/permissions";
 import { tracking } from "@/utils/tracking";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -114,14 +114,13 @@ export default function TakeAttendance() {
   const isTeacher = user?.role === UserRole.TEACHER;
   const isCenter = user?.role === UserRole.CENTER || user?.role === UserRole.ADMIN;
 
-  // Restricted by default for teachers. ONLY explicitly 'full' bypasses.
+  // Restricted by default for teachers. ONLY explicitly 'full' scope OR 'edit' permission bypasses.
   const isRestricted = React.useMemo(() => {
     if (isCenter) return false;
-    // For teachers, treat as restricted if mode is 'restricted', null, undefined, or anything not 'full'
-    if (isTeacher) return user?.teacher_scope_mode !== 'full';
+    if (isTeacher) return isTeacherRestrictedUtil(user, 'take_attendance');
     // Any other role is restricted by default on this page
     return true;
-  }, [isTeacher, isCenter, user?.teacher_scope_mode]);
+  }, [isTeacher, isCenter, user?.teacher_scope_mode, user?.teacherPermissions]);
 
   const hasEditPermission = hasActionPermission(user, 'take_attendance', 'edit');
 

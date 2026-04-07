@@ -50,7 +50,7 @@ interface BulkTeacherEntry {
   regularOutTime: string;
 }
 
-import { hasPermission, hasActionPermission } from "@/utils/permissions";
+import { hasPermission, hasActionPermission, isTeacherRestricted as isTeacherRestrictedUtil } from "@/utils/permissions";
 
 export default function TeacherManagement() {
   const queryClient = useQueryClient();
@@ -102,7 +102,7 @@ export default function TeacherManagement() {
   const [selectedTeacherForClassAssign, setSelectedTeacherForClassAssign] = useState<Teacher | null>(null);
   const [classTeacherGrade, setClassTeacherGrade] = useState("select-grade");
 
-  const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
+  const isRestricted = isTeacherRestrictedUtil(user, 'teacher_management');
   const { currentPage, pageSize, setPage, getRange } = usePagination(10, 1, 'tr');
 
   const { data: teachersData, isLoading } = useQuery({
