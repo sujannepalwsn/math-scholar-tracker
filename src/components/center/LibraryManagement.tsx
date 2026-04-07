@@ -62,11 +62,14 @@ export default function LibraryManagement({ centerId, canEdit }: { centerId: str
       if (!canEdit) throw new Error("Access Denied: You do not have permission to issue books.");
 
       // Single atomic RPC call to handle book copy decrement and loan record
+      // Ensure date is valid or null
+      const formattedDueDate = issueForm.dueDate || null;
+
       const { error } = await supabase.rpc('issue_book_securely', {
         p_center_id: centerId,
         p_book_id: issueForm.bookId,
         p_student_id: issueForm.studentId,
-        p_due_date: issueForm.dueDate
+        p_due_date: formattedDueDate
       });
 
       if (error) throw error;

@@ -75,7 +75,7 @@ export default function TeacherAttendancePage() {
   const dateStr = format(selectedDate, "yyyy-MM-dd");
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
+  const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full' && !canEdit;
 
   const { data: currentAcademicYear } = useQuery({
     queryKey: ["current-academic-year", user?.center_id],

@@ -38,19 +38,18 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     queryKey: ["unread-messages-teacher", user?.id, user?.center_id],
     queryFn: async () => {
       if (!user?.id || !user?.center_id) return 0;
-      const { data: conversation, error: convError } = await supabase
+      const { data: conversations, error: convError } = await supabase
         .from('chat_conversations')
         .select('id')
-        .eq('parent_user_id', user.id)
-        .eq('center_id', user.center_id)
-        .is('student_id', null)
-        .maybeSingle();
-      if (convError || !conversation) return 0;
+        .eq('center_id', user.center_id);
+      if (convError || !conversations) return 0;
+      const conversationIds = conversations.map(c => c.id);
+      if (conversationIds.length === 0) return 0;
 
       const { count, error } = await supabase
         .from('chat_messages')
         .select('id', { count: 'exact' })
-        .eq('conversation_id', conversation.id)
+        .in('conversation_id', conversationIds)
         .eq('is_read', false)
         .neq('sender_user_id', user.id);
       if (error) return 0;

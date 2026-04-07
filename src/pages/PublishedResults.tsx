@@ -160,6 +160,7 @@ export default function PublishedResults() {
         query = query.eq('student_id', activeStudentId);
       }
 
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -466,14 +467,26 @@ export default function PublishedResults() {
               </div>
 
               <div className="space-y-3">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Included Subjects</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Subject-wise Schedule</p>
                 <div className="grid grid-cols-1 gap-2">
-                  {selectedExamSchedule.results.map((subj: any) => (
-                    <div key={subj.id} className="flex justify-between items-center p-3 bg-white border rounded-xl shadow-sm">
-                      <span className="font-bold text-sm text-foreground/80">{subj.subject_name}</span>
-                      <div className="flex gap-4 text-[10px] font-bold uppercase tracking-tighter">
-                        <span className="text-muted-foreground">Full: {subj.full_marks}</span>
-                        <span className="text-muted-foreground">Pass: {subj.pass_marks}</span>
+                  {selectedExamSchedule.results.sort((a: any, b: any) => {
+                    if (!a.exam_date) return 1;
+                    if (!b.exam_date) return -1;
+                    return new Date(a.exam_date).getTime() - new Date(b.exam_date).getTime();
+                  }).map((subj: any) => (
+                    <div key={subj.id} className="p-3 bg-white border rounded-xl shadow-sm space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-sm text-foreground/80">{subj.subject_name}</span>
+                        <div className="flex gap-4 text-[10px] font-bold uppercase tracking-tighter">
+                          <span className="text-muted-foreground">Full: {subj.full_marks}</span>
+                          <span className="text-muted-foreground">Pass: {subj.pass_marks}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1 border-t border-slate-50">
+                         <Calendar className="h-3 w-3 text-primary" />
+                         <span className="text-xs font-black text-primary uppercase tracking-tight">
+                            {subj.exam_date ? safeFormatDate(subj.exam_date, "PPP") : "DATE NOT SET"}
+                         </span>
                       </div>
                     </div>
                   ))}
@@ -518,8 +531,14 @@ export default function PublishedResults() {
                   <p className="text-lg font-bold">Grade {selectedStudentResult.student.grade}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Exam Date</p>
-                  <p className="text-lg font-bold">{selectedExam?.exam_date ? safeFormatDate(selectedExam.exam_date, "PPP") : "-"}</p>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Period</p>
+                  <p className="text-lg font-bold">
+                    {selectedExam?.start_date ? (
+                      <>{safeFormatDate(selectedExam.start_date, "MMM dd")} - {safeFormatDate(selectedExam.end_date, "MMM dd, yyyy")}</>
+                    ) : (
+                      selectedExam?.exam_date ? safeFormatDate(selectedExam.exam_date, "PPP") : "-"
+                    )}
+                  </p>
                 </div>
               </div>
 

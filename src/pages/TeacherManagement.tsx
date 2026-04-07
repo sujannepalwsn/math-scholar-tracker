@@ -737,9 +737,10 @@ export default function TeacherManagement() {
                         </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label>Monthly Salary</Label><Input type="number" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Monthly Salary</Label><Input type="number" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} disabled={isRestricted} /></div>
                         <div className="space-y-2"><Label>Skills & Qualifications (Comma Separated)</Label><Input value={qualifications} onChange={(e) => setQualifications(e.target.value)} placeholder="B.Ed, Mathematics, 5y Experience" /></div>
                       </div>
+                      {!isRestricted && (
                       <div className="border p-3 rounded-lg space-y-3">
                          <Label className="font-bold">Bank Details</Label>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -748,6 +749,7 @@ export default function TeacherManagement() {
                             <div className="space-y-1"><Label className="text-[10px]">Bank Name</Label><Input value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
                          </div>
                       </div>
+                      )}
                       <div className="border p-3 rounded-lg space-y-3">
                          <Label className="font-bold">Emergency Contact</Label>
                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -759,12 +761,12 @@ export default function TeacherManagement() {
                     </TabsContent>
                     <TabsContent value="timing" className="space-y-4 pt-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-in Boundary</Label><Input type="time" value={expectedCheckIn} onChange={(e) => setExpectedCheckIn(e.target.value)} /></div>
-                        <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-out Boundary</Label><Input type="time" value={expectedCheckOut} onChange={(e) => setExpectedCheckOut(e.target.value)} /></div>
+                      <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-in Boundary</Label><Input type="time" value={expectedCheckIn} onChange={(e) => setExpectedCheckIn(e.target.value)} disabled={isRestricted} /></div>
+                      <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Expected Check-out Boundary</Label><Input type="time" value={expectedCheckOut} onChange={(e) => setExpectedCheckOut(e.target.value)} disabled={isRestricted} /></div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular Start Time</Label><Input type="time" value={regularInTime} onChange={(e) => setRegularInTime(e.target.value)} /></div>
-                        <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular End Time</Label><Input type="time" value={regularOutTime} onChange={(e) => setRegularOutTime(e.target.value)} /></div>
+                      <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular Start Time</Label><Input type="time" value={regularInTime} onChange={(e) => setRegularInTime(e.target.value)} disabled={isRestricted} /></div>
+                      <div className="space-y-2"><Label><Clock className="h-4 w-4 inline" /> Regular End Time</Label><Input type="time" value={regularOutTime} onChange={(e) => setRegularOutTime(e.target.value)} disabled={isRestricted} /></div>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -995,10 +997,12 @@ export default function TeacherManagement() {
                       <p className="label-caps">Contact Number</p>
                       <p className="font-black text-slate-700">{selectedTeacher.contact_number || selectedTeacher.phone || 'N/A'}</p>
                    </div>
+                   {!isRestricted && (
                    <div className="space-y-1">
                       <p className="label-caps">Monthly Salary</p>
                       <p className="font-black text-slate-700">NPR {selectedTeacher.monthly_salary?.toLocaleString() || '0'}</p>
                    </div>
+                   )}
                    <div className="space-y-1">
                       <p className="label-caps">Hire Date</p>
                       <p className="font-black text-slate-700">{selectedTeacher.hire_date ? format(new Date(selectedTeacher.hire_date), "MMM d, yyyy") : 'N/A'}</p>
@@ -1032,11 +1036,13 @@ export default function TeacherManagement() {
                   <Button variant="outline" className="rounded-xl font-black uppercase text-[10px] tracking-widest h-11" onClick={() => handleEditClick(selectedTeacher)}>
                     <Edit className="h-3.5 w-3.5 mr-2" /> Edit Profile
                   </Button>
-                  {selectedTeacher.user_id && (
+                  {selectedTeacher.user_id && !isRestricted && (
                     <Button variant="outline" className="rounded-xl font-black uppercase text-[10px] tracking-widest h-11" onClick={() => setIsChangingTeacherPassword(true)}>
                       <KeyRound className="h-3.5 w-3.5 mr-2" /> Change Password
                     </Button>
                   )}
+                  {!isRestricted && (
+                    <>
                   <Button
                     variant="outline"
                     className={cn(
@@ -1060,6 +1066,8 @@ export default function TeacherManagement() {
                   <Button variant="outline" className="rounded-xl font-black uppercase text-[10px] tracking-widest h-11" onClick={() => handleClassTeacherClick(selectedTeacher)}>
                     <GraduationCap className="h-3.5 w-3.5 mr-2" /> Assign Grade
                   </Button>
+                    </>
+                  )}
                   {!selectedTeacher.user_id && (
                     <Button
                       variant="default"

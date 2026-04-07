@@ -20,7 +20,12 @@ import { format } from "date-fns";
 import * as bcrypt from "bcryptjs";
 import { cn } from "@/lib/utils";
 
+import { useAuth } from "@/contexts/AuthContext";
+import { hasActionPermission } from "@/utils/permissions";
+
 export default function ParentManagement({ centerId }: { centerId: string }) {
+  const { user } = useAuth();
+  const canEdit = hasActionPermission(user, 'register_student', 'edit');
   const queryClient = useQueryClient();
   const [searchFilter, setSearchFilter] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -203,43 +208,47 @@ export default function ParentManagement({ centerId }: { centerId: string }) {
                     </TableCell>
                     <TableCell className="px-8 py-5 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5"
-                          onClick={() => {
-                            setSelectedParent(parent);
-                            setIsChangingPassword(true);
-                          }}
-                          title="Change Password"
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5"
-                          onClick={() => {
-                            setSelectedParent(parent);
-                            setNewExpiry(parent.expiry_date ? parent.expiry_date.split('T')[0] : "");
-                            setIsChangingExpiry(true);
-                          }}
-                          title="Set Expiry Date"
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "h-9 w-9 rounded-xl bg-white shadow-soft transition-all",
-                            parent.is_active ? "text-rose-500 hover:bg-rose-50" : "text-emerald-500 hover:bg-emerald-50"
-                          )}
-                          onClick={() => toggleStatusMutation.mutate({ id: parent.id, is_active: !parent.is_active })}
-                          title={parent.is_active ? "Deactivate Account" : "Activate Account"}
-                        >
-                          {parent.is_active ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
-                        </Button>
+                        {canEdit && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5"
+                              onClick={() => {
+                                setSelectedParent(parent);
+                                setIsChangingPassword(true);
+                              }}
+                              title="Change Password"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5"
+                              onClick={() => {
+                                setSelectedParent(parent);
+                                setNewExpiry(parent.expiry_date ? parent.expiry_date.split('T')[0] : "");
+                                setIsChangingExpiry(true);
+                              }}
+                              title="Set Expiry Date"
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                "h-9 w-9 rounded-xl bg-white shadow-soft transition-all",
+                                parent.is_active ? "text-rose-500 hover:bg-rose-50" : "text-emerald-500 hover:bg-emerald-50"
+                              )}
+                              onClick={() => toggleStatusMutation.mutate({ id: parent.id, is_active: !parent.is_active })}
+                              title={parent.is_active ? "Deactivate Account" : "Activate Account"}
+                            >
+                              {parent.is_active ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

@@ -288,7 +288,8 @@ const App = () => {
               <Route path="/teacher/finance" element={<ProtectedRoute role="teacher"><TeacherLayout><AdminFinance /></TeacherLayout></ProtectedRoute>} />
               <Route path="/teacher/my-attendance" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherAttendancePage /></TeacherLayout></ProtectedRoute>} />
               <Route path="/teacher-meetings" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherMeetings /></TeacherLayout></ProtectedRoute>} />
-              <Route path="/teacher-messages" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherMessaging /></TeacherLayout></ProtectedRoute>} />
+              <Route path="/teacher/messages" element={<ProtectedRoute role="teacher"><TeacherLayout><Messaging /></TeacherLayout></ProtectedRoute>} />
+              <Route path="/teacher-messages" element={<ProtectedRoute role="teacher"><TeacherLayout><Messaging /></TeacherLayout></ProtectedRoute>} />
               <Route path="/teacher/class-routine" element={<ProtectedRoute role="teacher"><TeacherLayout><ClassRoutine /></TeacherLayout></ProtectedRoute>} />
               <Route path="/teacher/calendar" element={<ProtectedRoute role="teacher"><TeacherLayout><CalendarEvents /></TeacherLayout></ProtectedRoute>} />
               <Route path="/teacher/leave" element={<ProtectedRoute role="teacher"><TeacherLayout><LeaveApplications /></TeacherLayout></ProtectedRoute>} />
