@@ -135,6 +135,10 @@ export const PERMISSION_MAPPING: Record<string, string> = {
   '/teacher-dashboard': 'dashboard_access',
   '/teacher-performance': 'teacher_reports',
   '/chapter-performance-overview': 'chapter_performance',
+  '/parent/performance': 'student_report',
+  '/parent/routine': 'class_routine',
+  '/parent/attendance': 'take_attendance',
+  '/parent/fees': 'finance',
 };
 
 /**
@@ -283,9 +287,12 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       'student_report',
       'calendar_events',
       'finance',
+      'test_management',
       'chapter_performance',
       'about_institution',
-      'daily_snapshot'
+      'daily_snapshot',
+      'take_attendance',
+      'class_routine'
     ];
     if (allowedParent.includes(dbColumnName)) {
       return true;

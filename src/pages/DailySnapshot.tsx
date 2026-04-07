@@ -71,7 +71,7 @@ export default function DailySnapshot() {
   if (!activeStudentId) return <div className="p-8 text-center font-bold">No linked student found.</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className="min-h-screen bg-white pb-24">
       <div className="p-4 md:p-8 space-y-6 max-w-lg mx-auto">
         <DashboardHeader />
 

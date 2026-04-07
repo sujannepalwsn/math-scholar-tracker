@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { UserRole } from "@/types/roles";
 import { Download, Eye, GraduationCap, Printer, Search, BarChart3, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -16,9 +16,25 @@ import { cn, safeFormatDate, getGradeFormal } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { subYears, endOfMonth } from "date-fns";
 
+import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
+
 export default function PublishedResults() {
   const { user } = useAuth();
   const centerId = user?.center_id;
+
+  const linkedStudents = useMemo(() => {
+    const raw = user?.linked_students;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(s => typeof s === 'string' ? { id: s, name: 'Student' } : s);
+  }, [user?.linked_students]);
+
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(() => {
+    if (user?.student_id) return user.student_id;
+    if (linkedStudents.length > 0) return linkedStudents[0].id;
+    return null;
+  });
+
+  const activeStudentId = selectedStudentId || user?.student_id;
 
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: subYears(new Date(), 1),
@@ -95,7 +111,7 @@ export default function PublishedResults() {
 
   // Fetch Students
   const { data: students = [] } = useQuery({
-    queryKey: ["students-for-results", centerId, selectedExam?.grade, user?.role, user?.id],
+    queryKey: ["students-for-results", centerId, selectedExam?.grade, user?.role, user?.id, activeStudentId],
     queryFn: async () => {
       if (!centerId) return [];
       let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
@@ -117,9 +133,13 @@ export default function PublishedResults() {
         }
       }
 
-      if (user?.role === UserRole.PARENT && user?.linked_students) {
-        const studentIds = user.linked_students.map((s: any) => typeof s === 'string' ? s : s.id);
-        query = query.in('id', studentIds);
+      if (user?.role === UserRole.PARENT) {
+        if (activeStudentId) {
+          query = query.eq('id', activeStudentId);
+        } else if (user?.linked_students) {
+          const studentIds = user.linked_students.map((s: any) => typeof s === 'string' ? s : s.id);
+          query = query.in('id', studentIds);
+        }
       }
 
       const { data, error } = await query.order("name");
@@ -131,10 +151,15 @@ export default function PublishedResults() {
 
   // Fetch Marks
   const { data: marks = [] } = useQuery({
-    queryKey: ["exam-marks", selectedExamId],
+    queryKey: ["exam-marks", selectedExamId, activeStudentId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId);
+      let query = supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId);
+
+      if (user?.role === UserRole.PARENT && activeStudentId) {
+        query = query.eq('student_id', activeStudentId);
+      }
+
       if (error) throw error;
       return data;
     },
@@ -227,23 +252,20 @@ export default function PublishedResults() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <GraduationCap className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-                {user?.role === UserRole.PARENT ? "Scholar Records" : "Exam Analytics"}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Formal Assessment & Outcome Registry</p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-1000 page-enter bg-white min-h-screen p-4 md:p-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black tracking-tight text-slate-900">
+            {user?.role === UserRole.PARENT ? "Exam Records" : "Examination Analytics"}
+          </h1>
+          <p className="text-slate-500 font-medium text-lg">
+            {user?.role === UserRole.PARENT
+              ? `Formal assessment and marksheet registry for ${students.find(s => s.id === activeStudentId)?.name || 'your child'}.`
+              : "Institutional assessment registry and outcome analysis."}
+          </p>
+          {user?.role === UserRole.PARENT && (
+            <ChildSwitcher selectedId={activeStudentId} onSelect={setSelectedStudentId} />
+          )}
         </div>
       </div>
 
@@ -253,7 +275,7 @@ export default function PublishedResults() {
         <CardContent className="p-6">
           <div className="flex flex-wrap gap-6 items-end">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Reporting Period</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Reporting Period</label>
               <div className="flex gap-2">
                 <Input
                   type="date"

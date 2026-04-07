@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { Invoice, Payment } from "@/integrations/supabase/finance-types"
 import { format, isPast } from "date-fns"
 import { cn } from "@/lib/utils"
-
+import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 
 const ParentFinanceDashboard = () => {
   const { user } = useAuth();
@@ -23,40 +23,52 @@ const ParentFinanceDashboard = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
 
-  // Check if user is parent with student
-  if (user?.role !== UserRole.PARENT || !user?.student_id) {
-    navigate('/login-parent');
+  const linkedStudents = React.useMemo(() => {
+    const raw = user?.linked_students;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(s => typeof s === 'string' ? { id: s, name: 'Student' } : s);
+  }, [user?.linked_students]);
+
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(() => {
+    if (user?.student_id) return user.student_id;
+    if (linkedStudents.length > 0) return linkedStudents[0].id;
     return null;
-  }
+  });
+
+  const activeStudentId = selectedStudentId || user?.student_id;
 
   // Fetch student details
   const { data: student, isLoading: studentLoading } = useQuery({
-    queryKey: ['student', user.student_id],
+    queryKey: ['student-finance-detail', activeStudentId],
     queryFn: async () => {
+      if (!activeStudentId) return null;
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .eq('id', user.student_id!)
-        .single();
+        .eq('id', activeStudentId)
+        .maybeSingle();
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!activeStudentId
   });
 
   // Fetch student's invoices
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
-    queryKey: ['student-invoices', user.student_id],
+    queryKey: ['student-invoices', activeStudentId],
     queryFn: async () => {
+      if (!activeStudentId) return [];
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('student_id', user.student_id!)
+        .eq('student_id', activeStudentId)
         .order('invoice_date', { ascending: false });
 
       if (error) throw error;
       return data as Invoice[];
-    }
+    },
+    enabled: !!activeStudentId
   });
 
   // Calculate summary - handle null paid_amount
@@ -72,12 +84,13 @@ const ParentFinanceDashboard = () => {
 
   // Fetch payment history via invoices
   const { data: payments = [], isLoading: paymentsLoading } = useQuery({
-    queryKey: ['student-payments', user.student_id],
+    queryKey: ['student-payments', activeStudentId],
     queryFn: async () => {
+      if (!activeStudentId) return [];
       const { data: studentInvoices, error: invError } = await supabase
         .from('invoices')
         .select('id')
-        .eq('student_id', user.student_id!);
+        .eq('student_id', activeStudentId);
       
       if (invError) throw invError;
       if (!studentInvoices || studentInvoices.length === 0) return [];
@@ -142,32 +155,38 @@ const ParentFinanceDashboard = () => {
     );
   }
 
+  if (!activeStudentId) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="p-4 rounded-full bg-slate-100/50 backdrop-blur-sm border border-slate-200">
+          <Info className="h-8 w-8 text-slate-400" />
+        </div>
+        <p className="text-muted-foreground font-medium">Please select a student to view financial records.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-1000">
+    <div className="space-y-8 animate-in fade-in duration-1000 bg-white min-h-screen p-4 md:p-8">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-            Treasury Matrix
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black tracking-tight text-slate-900">
+            Financial Ledger
           </h1>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <p className="text-muted-foreground text-sm font-medium">Financial oversight for <span className="text-slate-700 font-bold">{student?.name}</span></p>
-          </div>
+          <p className="text-slate-500 font-medium text-lg">
+            Invoice tracking and payment history for <span className="text-primary font-bold">{student?.name}</span>.
+          </p>
+          <ChildSwitcher selectedId={activeStudentId} onSelect={setSelectedStudentId} />
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Button variant="ghost" onClick={() => navigate('/parent-dashboard')} className="rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-card/60">
-            <ArrowLeft className="h-4 w-4 mr-2" /> EXIT TO HUB
-          </Button>
-          <div className="bg-card/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-soft flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Wallet className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Net Balance</span>
-              <span className="font-black text-slate-700 text-sm">{formatCurrency(summary.total_outstanding)}</span>
-            </div>
+        <div className="bg-slate-50 px-6 py-4 rounded-3xl border border-slate-100 shadow-soft flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-primary/10">
+            <Wallet className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Total Outstanding</span>
+            <span className="font-black text-slate-900 text-xl">{formatCurrency(summary.total_outstanding)}</span>
           </div>
         </div>
       </div>

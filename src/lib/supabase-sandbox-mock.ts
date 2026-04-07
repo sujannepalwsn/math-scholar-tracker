@@ -111,10 +111,12 @@ export class SupabaseSandboxMock {
     return {
       invoke: (name: string, options?: any) => {
         if (name === 'auth-login') {
+          const { username } = options?.body || {};
+          const user = (sandboxData as any).users.find((u: any) => u.username === username) || (sandboxData as any).users[0];
           return Promise.resolve({
             data: {
               success: true,
-              user: (sandboxData as any).users[0],
+              user: user,
               session: { access_token: 'mock-token', refresh_token: 'mock-refresh' }
             },
             error: null

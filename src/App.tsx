@@ -65,6 +65,10 @@ import ParentChapterRating from "./pages/ParentChapterRating";
 import ParentLessonTracking from "./pages/ParentLessonTracking";
 import ParentStudentReport from "./pages/ParentStudentReport";
 import ParentMessaging from "./pages/ParentMessaging";
+import ParentAttendance from "./pages/ParentAttendance";
+import ParentRoutine from "./pages/ParentRoutine";
+import ParentLeave from "./pages/ParentLeave";
+import ParentTests from "./pages/ParentTests";
 import DailySnapshot from "./pages/DailySnapshot";
 
 import TeacherDashboard from "./pages/TeacherDashboard";
@@ -252,24 +256,18 @@ const App = () => {
 
               {/* Parent */}
               <Route path="/parent-dashboard" element={<ProtectedRoute role="parent"><ParentLayout><ParentDashboard /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-finance" element={<ProtectedRoute role="parent"><ParentLayout><ParentFinanceDashboard /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/performance" element={<ProtectedRoute role="parent"><ParentLayout><ParentStudentReport /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/attendance" element={<ProtectedRoute role="parent"><ParentLayout><ParentAttendance /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-homework" element={<ProtectedRoute role="parent"><ParentLayout><ParentHomework /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-activities" element={<ProtectedRoute role="parent"><ParentLayout><ParentActivities /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-discipline" element={<ProtectedRoute role="parent"><ParentLayout><ParentDiscipline /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-meetings" element={<ProtectedRoute role="parent"><ParentLayout><ParentMeetings /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-messages" element={<ProtectedRoute role="parent"><ParentLayout><ParentMessaging /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-about-institution" element={<ProtectedRoute role="parent"><ParentLayout><AboutInstitution /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-chapter-rating" element={<ProtectedRoute role="parent"><ParentLayout><ParentChapterRating /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-lesson-tracking" element={<ProtectedRoute role="parent"><ParentLayout><ParentLessonTracking /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-student-report" element={<ProtectedRoute role="parent"><ParentLayout><ParentStudentReport /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-results" element={<ProtectedRoute role="parent"><ParentLayout><PublishedResults /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-calendar" element={<ProtectedRoute role="parent"><ParentLayout><CalendarEvents /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-leave" element={<ProtectedRoute role="parent"><ParentLayout><LeaveApplications /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent-snapshot" element={<ProtectedRoute role="parent"><ParentLayout><DailySnapshot /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent-finance" element={<ProtectedRoute role="parent"><ParentLayout><ParentFinanceDashboard /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/routine" element={<ProtectedRoute role="parent"><ParentLayout><ParentRoutine /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/fees" element={<ProtectedRoute role="parent"><ParentLayout><ParentFinanceDashboard /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/leave" element={<ProtectedRoute role="parent"><ParentLayout><ParentLeave /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/tests" element={<ProtectedRoute role="parent"><ParentLayout><ParentTests /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent-messages" element={<ProtectedRoute role="parent"><ParentLayout><ParentMessaging /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-settings" element={<ProtectedRoute role="parent"><ParentLayout><GeneralSettings /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent/attendance" element={<ProtectedRoute role="parent"><ParentLayout><ComingSoonPage /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent/performance" element={<ProtectedRoute role="parent"><ParentLayout><ComingSoonPage /></ParentLayout></ProtectedRoute>} />
-              <Route path="/parent/fees" element={<ProtectedRoute role="parent"><ParentLayout><ComingSoonPage /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent-snapshot" element={<ProtectedRoute role="parent"><ParentLayout><DailySnapshot /></ParentLayout></ProtectedRoute>} />
 
               {/* Teacher */}
               <Route path="/teacher-dashboard" element={<ProtectedRoute role="teacher"><TeacherLayout><TeacherDashboard /></TeacherLayout></ProtectedRoute>} />
