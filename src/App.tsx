@@ -67,6 +67,8 @@ import ParentStudentReport from "./pages/ParentStudentReport";
 import ParentMessaging from "./pages/ParentMessaging";
 import ParentAttendance from "./pages/ParentAttendance";
 import ParentRoutine from "./pages/ParentRoutine";
+import ParentLeave from "./pages/ParentLeave";
+import ParentTests from "./pages/ParentTests";
 import DailySnapshot from "./pages/DailySnapshot";
 
 import TeacherDashboard from "./pages/TeacherDashboard";
@@ -261,6 +263,8 @@ const App = () => {
               <Route path="/parent-finance" element={<ProtectedRoute role="parent"><ParentLayout><ParentFinanceDashboard /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent/routine" element={<ProtectedRoute role="parent"><ParentLayout><ParentRoutine /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent/fees" element={<ProtectedRoute role="parent"><ParentLayout><ParentFinanceDashboard /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/leave" element={<ProtectedRoute role="parent"><ParentLayout><ParentLeave /></ParentLayout></ProtectedRoute>} />
+              <Route path="/parent/tests" element={<ProtectedRoute role="parent"><ParentLayout><ParentTests /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-messages" element={<ProtectedRoute role="parent"><ParentLayout><ParentMessaging /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-settings" element={<ProtectedRoute role="parent"><ParentLayout><GeneralSettings /></ParentLayout></ProtectedRoute>} />
               <Route path="/parent-snapshot" element={<ProtectedRoute role="parent"><ParentLayout><DailySnapshot /></ParentLayout></ProtectedRoute>} />

@@ -287,6 +287,7 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       'student_report',
       'calendar_events',
       'finance',
+      'test_management',
       'chapter_performance',
       'about_institution',
       'daily_snapshot',
