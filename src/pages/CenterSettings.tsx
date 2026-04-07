@@ -23,6 +23,7 @@ import CenterRequirements from "@/components/center/CenterRequirements";
 import CenterSuggestions from "@/components/center/CenterSuggestions";
 import HeaderSettings from "@/components/center/HeaderSettings";
 import { logger } from "@/utils/logger";
+import { Json } from "@/integrations/supabase/types";
 
 interface CenterTheme {
   primary: string;
@@ -98,12 +99,12 @@ export default function CenterSettings() {
       const savedTheme = center.theme;
       if (savedTheme && typeof savedTheme === 'object') {
         setTheme({
-          primary: savedTheme.primary || "#6366f1",
-          background: savedTheme.background || "#ffffff",
-          sidebar: savedTheme.sidebar || "#1e293b",
-          foreground: savedTheme.foreground || "#1e293b",
-          cardBackground: savedTheme.cardBackground || "#ffffff",
-          mutedForeground: savedTheme.mutedForeground || "#64748b" });
+          primary: (savedTheme as any).primary || "#6366f1",
+          background: (savedTheme as any).background || "#ffffff",
+          sidebar: (savedTheme as any).sidebar || "#1e293b",
+          foreground: (savedTheme as any).foreground || "#1e293b",
+          cardBackground: (savedTheme as any).cardBackground || "#ffffff",
+          mutedForeground: (savedTheme as any).mutedForeground || "#64748b" });
       }
     }
   }, [center]);
@@ -291,377 +292,394 @@ export default function CenterSettings() {
     return <div className="p-6">Loading settings...</div>;
   }
 
+  const isTeacher = user?.role === UserRole.TEACHER;
+  const isFullScope = user?.teacher_scope_mode === 'full';
+
   return (
     <div className="space-y-8 animate-in fade-in duration-1000 max-w-full overflow-x-hidden">
       <Tabs defaultValue={defaultTab} className="space-y-8 w-full">
         <TabsList className="bg-card/40 border border-border/40 p-1.5 rounded-2xl h-14 shadow-soft backdrop-blur-md w-full justify-start overflow-x-auto no-scrollbar">
           <TabsTrigger value="general" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">General</TabsTrigger>
-          <TabsTrigger value="payroll" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Payroll Config</TabsTrigger>
-          <TabsTrigger value="academic" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Academic Cycles</TabsTrigger>
-          <TabsTrigger value="communication" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Communication</TabsTrigger>
-          <TabsTrigger value="header" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Header Edit</TabsTrigger>
-          <TabsTrigger value="compliance" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Compliance</TabsTrigger>
-          <TabsTrigger value="requirements" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Requirements</TabsTrigger>
-          <TabsTrigger value="suggestions" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Suggestions</TabsTrigger>
-          <TabsTrigger value="subscription" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">SaaS Plan</TabsTrigger>
+          {(!isTeacher || isFullScope) && (
+            <>
+              <TabsTrigger value="payroll" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Payroll Config</TabsTrigger>
+              <TabsTrigger value="academic" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Academic Cycles</TabsTrigger>
+              <TabsTrigger value="communication" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Communication</TabsTrigger>
+              <TabsTrigger value="header" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Header Edit</TabsTrigger>
+              <TabsTrigger value="compliance" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Compliance</TabsTrigger>
+              <TabsTrigger value="requirements" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Requirements</TabsTrigger>
+              <TabsTrigger value="suggestions" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">Suggestions</TabsTrigger>
+              <TabsTrigger value="subscription" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest data-[state=active]:shadow-soft">SaaS Plan</TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         <TabsContent value="general" className="space-y-8 outline-none">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-            Center Control
-          </h1>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <p className="text-muted-foreground text-sm font-medium">Configure institutional parameters and visual identity.</p>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+                Center Control
+              </h1>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                <p className="text-muted-foreground text-sm font-medium">Configure institutional parameters and visual identity.</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        {/* Basic Information */}
-        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Building className="h-6 w-6 text-primary" />
-              </div>
-              Identity Matrix
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Center Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your Center Name"
-              />
-            </div>
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* Basic Information (Restricted) */}
+            {(!isTeacher || isFullScope) && (
+              <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+                <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+                  <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                      <Building className="h-6 w-6 text-primary" />
+                    </div>
+                    Identity Matrix
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Center Name *</Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your Center Name"
+                    />
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="contactPerson" className="flex items-center gap-1">
-                <User className="h-4 w-4" />
-                Contact Person
-              </Label>
-              <Input
-                id="contactPerson"
-                value={contactPerson}
-                onChange={(e) => setContactPerson(e.target.value)}
-                placeholder="e.g., John Doe"
-              />
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactPerson" className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      Contact Person
+                    </Label>
+                    <Input
+                      id="contactPerson"
+                      value={contactPerson}
+                      onChange={(e) => setContactPerson(e.target.value)}
+                      placeholder="e.g., John Doe"
+                    />
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="shortCode">Center Short Code (for ID generation)</Label>
-              <Input
-                id="shortCode"
-                value={shortCode}
-                onChange={(e) => setShortCode(e.target.value)}
-                placeholder="e.g., KTM"
-              />
-            </div>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="shortCode">Center Short Code (for ID generation)</Label>
+                    <Input
+                      id="shortCode"
+                      value={shortCode}
+                      onChange={(e) => setShortCode(e.target.value)}
+                      placeholder="e.g., KTM"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Location Tracking Card */}
-        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
-              <div className="p-2 rounded-xl bg-primary/10">
-              <MapPin className="h-6 w-6 text-primary" />
-              </div>
-              Geofencing Protocols
-            </CardTitle>
-            <CardDescription className="font-medium">Define institutional perimeter for faculty attendance tracking.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Latitude</Label>
-                <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="0.0000" />
-              </div>
-              <div className="space-y-2">
-                <Label>Longitude</Label>
-                <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="0.0000" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Geofence Radius (Meters)</Label>
-              <Input type="number" value={radiusMeters} onChange={(e) => setRadiusMeters(e.target.value)} placeholder="100" />
-              <p className="text-[10px] text-muted-foreground italic">Faculty must be within this range to mark attendance.</p>
-            </div>
-            <Button variant="outline" className="w-full rounded-xl gap-2 font-bold" onClick={getCurrentLocation}>
-              <Locate className="h-4 w-4" />
-              FETCH CURRENT COORDINATES
-            </Button>
-          </CardContent>
-        </Card>
+            {/* Location Tracking Card (Restricted) */}
+            {(!isTeacher || isFullScope) && (
+              <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+                <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+                  <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                    <MapPin className="h-6 w-6 text-primary" />
+                    </div>
+                    Geofencing Protocols
+                  </CardTitle>
+                  <CardDescription className="font-medium">Define institutional perimeter for faculty attendance tracking.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Latitude</Label>
+                      <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="0.0000" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Longitude</Label>
+                      <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="0.0000" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Geofence Radius (Meters)</Label>
+                    <Input type="number" value={radiusMeters} onChange={(e) => setRadiusMeters(e.target.value)} placeholder="100" />
+                    <p className="text-[10px] text-muted-foreground italic">Faculty must be within this range to mark attendance.</p>
+                  </div>
+                  <Button variant="outline" className="w-full rounded-xl gap-2 font-bold" onClick={getCurrentLocation}>
+                    <Locate className="h-4 w-4" />
+                    FETCH CURRENT COORDINATES
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Logo & Branding */}
-        <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
-              <div className="p-2 rounded-xl bg-primary/10">
-              <ImageIcon className="h-6 w-6 text-primary" />
-              </div>
-              Visual Assets
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="logoUrl">Logo URL</Label>
-              <Input
-                id="logoUrl"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://example.com/logo.png"
-              />
-              {logoUrl && (
-                <div className="mt-2 p-4 border rounded-lg bg-muted/50">
-                  <img
-                    src={logoUrl}
-                    alt="Center Logo Preview"
-                    className="max-h-24 object-contain mx-auto"
-                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                          e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            {/* Logo & Branding (Restricted) */}
+            {(!isTeacher || isFullScope) && (
+              <Card className="border-none shadow-strong overflow-hidden h-fit rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+                <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+                  <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                    <ImageIcon className="h-6 w-6 text-primary" />
+                    </div>
+                    Visual Assets
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="logoUrl">Logo URL</Label>
+                    <Input
+                      id="logoUrl"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                    />
+                    {logoUrl && (
+                      <div className="mt-2 p-4 border rounded-lg bg-muted/50">
+                        <img
+                          src={logoUrl}
+                          alt="Center Logo Preview"
+                          className="max-h-24 object-contain mx-auto"
+                              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                                e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Personal Appearance Settings */}
-        <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Palette className="h-6 w-6 text-primary" />
-              </div>
-              Personal Appearance
-            </CardTitle>
-            <CardDescription className="font-medium">Customize your own viewing experience</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <ThemeSelector />
-          </CardContent>
-        </Card>
+            {/* Personal Appearance Settings (Always visible) */}
+            <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+              <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+                <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Palette className="h-6 w-6 text-primary" />
+                  </div>
+                  Personal Appearance
+                </CardTitle>
+                <CardDescription className="font-medium">Customize your own viewing experience</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ThemeSelector />
+              </CardContent>
+            </Card>
 
-        {/* Global Institution Theme (Admin Only) */}
-        <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Settings className="h-6 w-6 text-primary" />
-              </div>
-              Institutional Branding Override
-            </CardTitle>
-            <CardDescription className="font-medium">Set the default color palette for all institutional users</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="primaryColor">Primary Color</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    id="primaryColor"
-                    value={theme.primary}
-                    onChange={(e) => setTheme({ ...theme, primary: e.target.value })}
-                    className="w-12 h-10 rounded border cursor-pointer"
-                  />
-                  <Input
-                    value={theme.primary}
-                    onChange={(e) => setTheme({ ...theme, primary: e.target.value })}
-                    placeholder="#6366f1"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Buttons, links, accents</p>
-              </div>
+            {/* Global Institution Theme (Admin Only) */}
+            {(!isTeacher || isFullScope) && (
+              <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+                <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+                  <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+                    <div className="p-2 rounded-xl bg-primary/10">
+                      <Settings className="h-6 w-6 text-primary" />
+                    </div>
+                    Institutional Branding Override
+                  </CardTitle>
+                  <CardDescription className="font-medium">Set the default color palette for all institutional users</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="primaryColor">Primary Color</Label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          id="primaryColor"
+                          value={theme.primary}
+                          onChange={(e) => setTheme({ ...theme, primary: e.target.value })}
+                          className="w-12 h-10 rounded border cursor-pointer"
+                        />
+                        <Input
+                          value={theme.primary}
+                          onChange={(e) => setTheme({ ...theme, primary: e.target.value })}
+                          placeholder="#6366f1"
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Buttons, links, accents</p>
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="backgroundColor">Background Color</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    id="backgroundColor"
-                    value={theme.background}
-                    onChange={(e) => setTheme({ ...theme, background: e.target.value })}
-                    className="w-12 h-10 rounded border cursor-pointer"
-                  />
-                  <Input
-                    value={theme.background}
-                    onChange={(e) => setTheme({ ...theme, background: e.target.value })}
-                    placeholder="#ffffff"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Main page background</p>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="backgroundColor">Background Color</Label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          id="backgroundColor"
+                          value={theme.background}
+                          onChange={(e) => setTheme({ ...theme, background: e.target.value })}
+                          className="w-12 h-10 rounded border cursor-pointer"
+                        />
+                        <Input
+                          value={theme.background}
+                          onChange={(e) => setTheme({ ...theme, background: e.target.value })}
+                          placeholder="#ffffff"
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Main page background</p>
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="sidebarColor">Sidebar Color</Label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="color"
-                    id="sidebarColor"
-                    value={theme.sidebar}
-                    onChange={(e) => setTheme({ ...theme, sidebar: e.target.value })}
-                    className="w-12 h-10 rounded border cursor-pointer"
-                  />
-                  <Input
-                    value={theme.sidebar}
-                    onChange={(e) => setTheme({ ...theme, sidebar: e.target.value })}
-                    placeholder="#1e293b"
-                    className="flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">Sidebar background</p>
-              </div>
-            </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sidebarColor">Sidebar Color</Label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          id="sidebarColor"
+                          value={theme.sidebar}
+                          onChange={(e) => setTheme({ ...theme, sidebar: e.target.value })}
+                          className="w-12 h-10 rounded border cursor-pointer"
+                        />
+                        <Input
+                          value={theme.sidebar}
+                          onChange={(e) => setTheme({ ...theme, sidebar: e.target.value })}
+                          placeholder="#1e293b"
+                          className="flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Sidebar background</p>
+                    </div>
+                  </div>
 
-            {/* Theme Preview */}
-            <div className="mt-8 p-6 border-2 border-dashed rounded-2xl bg-slate-50/50">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Preview Synthesis</p>
-              <div className="flex rounded-2xl overflow-hidden h-32 shadow-soft border border-white">
-                <div
-                  className="w-20 p-3"
-                  style={{ backgroundColor: theme.sidebar }}
-                >
-                  <div className="w-full h-4 rounded-lg mb-3" style={{ backgroundColor: theme.primary }} />
-                  <div className="w-full h-2 rounded-full mb-2 bg-white/20" />
-                  <div className="w-full h-2 rounded-full mb-2 bg-white/20" />
-                  <div className="w-full h-2 rounded-full bg-white/20" />
-                </div>
-                <div
-                  className="flex-1 p-4"
-                  style={{ backgroundColor: theme.background }}
-                >
-                  <div
-                    className="w-24 h-8 rounded-xl mb-3"
-                    style={{ backgroundColor: theme.primary }}
-                  />
-                  <div className="w-full h-3 rounded-full mb-2 bg-slate-200" />
-                  <div className="w-3/4 h-3 rounded-full bg-slate-200" />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  {/* Theme Preview */}
+                  <div className="mt-8 p-6 border-2 border-dashed rounded-2xl bg-slate-50/50">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Preview Synthesis</p>
+                    <div className="flex rounded-2xl overflow-hidden h-32 shadow-soft border border-white">
+                      <div
+                        className="w-20 p-3"
+                        style={{ backgroundColor: theme.sidebar }}
+                      >
+                        <div className="w-full h-4 rounded-lg mb-3" style={{ backgroundColor: theme.primary }} />
+                        <div className="w-full h-2 rounded-full mb-2 bg-white/20" />
+                        <div className="w-full h-2 rounded-full mb-2 bg-white/20" />
+                        <div className="w-full h-2 rounded-full bg-white/20" />
+                      </div>
+                      <div
+                        className="flex-1 p-4"
+                        style={{ backgroundColor: theme.background }}
+                      >
+                        <div
+                          className="w-24 h-8 rounded-xl mb-3"
+                          style={{ backgroundColor: theme.primary }}
+                        />
+                        <div className="w-full h-3 rounded-full mb-2 bg-slate-200" />
+                        <div className="w-3/4 h-3 rounded-full bg-slate-200" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* Security Settings */}
-        <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <ShieldCheck className="h-6 w-6 text-primary" />
-              </div>
-              Security Protocols
-            </CardTitle>
-            <CardDescription className="font-medium text-slate-500">Update your access keys and authentication credentials</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 md:p-8">
-            <form onSubmit={handlePasswordChange} className="max-w-md space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="oldPassword">Current Access Key</Label>
-                <Input
-                  id="oldPassword"
-                  type="password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  required
-                  disabled={passwordLoading}
-                  className="h-12 rounded-xl bg-card/50"
-                  placeholder="••••••••"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Identity Token</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  disabled={passwordLoading}
-                  className="h-12 rounded-xl bg-card/50"
-                  placeholder="Minimum 6 characters"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmNewPassword">Verify New Token</Label>
-                <Input
-                  id="confirmNewPassword"
-                  type="password"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  required
-                  disabled={passwordLoading}
-                  className="h-12 rounded-xl bg-card/50"
-                  placeholder="Re-enter new token"
-                />
-              </div>
-              <Button type="submit" className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px]" disabled={passwordLoading}>
-                {passwordLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> SYNCHRONIZING...</> : <><Save className="h-4 w-4 mr-2" /> UPDATE CREDENTIALS</>}
+            {/* Security Settings (Always visible) */}
+            <Card className="lg:col-span-2 border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
+              <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
+                <CardTitle className="text-xl font-black flex items-center gap-3 text-foreground/90 uppercase tracking-widest">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <ShieldCheck className="h-6 w-6 text-primary" />
+                  </div>
+                  Security Protocols
+                </CardTitle>
+                <CardDescription className="font-medium text-slate-500">Update your access keys and authentication credentials</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 md:p-8">
+                <form onSubmit={handlePasswordChange} className="max-w-md space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="oldPassword">Current Access Key</Label>
+                    <Input
+                      id="oldPassword"
+                      type="password"
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      required
+                      disabled={passwordLoading}
+                      className="h-12 rounded-xl bg-card/50"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Identity Token</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      disabled={passwordLoading}
+                      className="h-12 rounded-xl bg-card/50"
+                      placeholder="Minimum 6 characters"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmNewPassword">Verify New Token</Label>
+                    <Input
+                      id="confirmNewPassword"
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      required
+                      disabled={passwordLoading}
+                      className="h-12 rounded-xl bg-card/50"
+                      placeholder="Re-enter new token"
+                    />
+                  </div>
+                  <Button type="submit" className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[10px]" disabled={passwordLoading}>
+                    {passwordLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> SYNCHRONIZING...</> : <><Save className="h-4 w-4 mr-2" /> UPDATE CREDENTIALS</>}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Save Button */}
+          {(!isTeacher || isFullScope) && (
+            <div className="flex flex-col sm:flex-row justify-end gap-4">
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-2xl border-2 h-14 px-8 font-black uppercase text-xs tracking-widest"
+                onClick={() => {
+                  const defaultTheme: CenterTheme = {
+                    primary: "#6366f1",
+                    background: "#ffffff",
+                    sidebar: "#1e293b",
+                    foreground: "#1e293b",
+                    cardBackground: "#ffffff",
+                    mutedForeground: "#64748b" };
+                  setTheme(defaultTheme);
+                  // Remove all inline CSS overrides to restore stylesheet defaults
+                  const root = document.documentElement;
+                  root.style.removeProperty('--primary');
+                  root.style.removeProperty('--background');
+                  root.style.removeProperty('--sidebar-background');
+                  root.style.removeProperty('--sidebar-foreground');
+                  root.style.removeProperty('--foreground');
+                  root.style.removeProperty('--card');
+                  root.style.removeProperty('--muted-foreground');
+                  toast.success("Default theme restored. Click Save to persist.");
+                }}
+              >
+                Reset to Default Theme
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex flex-col sm:flex-row justify-end gap-4">
-        <Button
-          variant="outline"
-          size="lg"
-          className="rounded-2xl border-2 h-14 px-8 font-black uppercase text-xs tracking-widest"
-          onClick={() => {
-            const defaultTheme: CenterTheme = {
-              primary: "#6366f1",
-              background: "#ffffff",
-              sidebar: "#1e293b",
-              foreground: "#1e293b",
-              cardBackground: "#ffffff",
-              mutedForeground: "#64748b" };
-            setTheme(defaultTheme);
-            // Remove all inline CSS overrides to restore stylesheet defaults
-            const root = document.documentElement;
-            root.style.removeProperty('--primary');
-            root.style.removeProperty('--background');
-            root.style.removeProperty('--sidebar-background');
-            root.style.removeProperty('--sidebar-foreground');
-            root.style.removeProperty('--foreground');
-            root.style.removeProperty('--card');
-            root.style.removeProperty('--muted-foreground');
-            toast.success("Default theme restored. Click Save to persist.");
-          }}
-        >
-          Reset to Default Theme
-        </Button>
-        <Button
-          onClick={() => updateCenterMutation.mutate()}
-          disabled={!name || updateCenterMutation.isPending}
-          size="lg"
-          className="rounded-2xl shadow-strong h-14 px-10 font-black uppercase text-xs tracking-widest bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.02] transition-all"
-        >
-          {updateCenterMutation.isPending ? (
-            <div className="flex items-center gap-3">
-              <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              <span>COMMITTING...</span>
+              <Button
+                onClick={() => updateCenterMutation.mutate()}
+                disabled={!name || updateCenterMutation.isPending}
+                size="lg"
+                className="rounded-2xl shadow-strong h-14 px-10 font-black uppercase text-xs tracking-widest bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.02] transition-all"
+              >
+                {updateCenterMutation.isPending ? (
+                  <div className="flex items-center gap-3">
+                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <span>COMMITTING...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    SYNCHRONIZE SETTINGS
+                  </>
+                )}
+              </Button>
             </div>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              SYNCHRONIZE SETTINGS
-            </>
           )}
-        </Button>
-      </div>
         </TabsContent>
 
         <TabsContent value="communication" className="outline-none">

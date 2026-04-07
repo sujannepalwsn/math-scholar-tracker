@@ -35,6 +35,7 @@ const TEACHER_FEATURES = [
   { name: 'register_student', label: 'Students Registration' },
   { name: 'teacher_management', label: 'Teachers Registration' },
   { name: 'teachers_attendance', label: 'Teachers Attendance' },
+  { name: 'my_attendance', label: 'My Attendance' },
   { name: 'hr_management', label: 'HR Management' },
   { name: 'student_id_cards', label: 'Student ID Cards' },
   { name: 'inventory_assets', label: 'Inventory & Assets' },

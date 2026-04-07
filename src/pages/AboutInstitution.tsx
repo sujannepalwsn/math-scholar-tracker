@@ -354,6 +354,23 @@ export default function AboutInstitution() {
 
   const canView = isPublicView || hasPermission(user, 'about_institution');
 
+  if (!canView) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="p-4 rounded-full bg-rose-50 text-rose-500">
+          <Building className="h-12 w-12" />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-black uppercase tracking-tight">Access Restricted</h2>
+          <p className="text-muted-foreground font-medium">You do not have permission to view institutional details.</p>
+        </div>
+        <Button onClick={() => navigate(-1)} variant="outline" className="rounded-xl font-bold uppercase text-[10px] tracking-widest">
+           <ArrowLeft className="h-4 w-4 mr-2" /> GO BACK
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("space-y-8 animate-in fade-in duration-700 pb-20", isPublicView && "bg-slate-50 min-h-screen px-4 md:px-20")}>
       {isPublicView && (

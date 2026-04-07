@@ -52,7 +52,7 @@ export default function ExamManagement() {
   // Subject management for exam
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
-  const [subjectForm, setSubjectForm] = useState({ subject_name: "", full_marks: "100", pass_marks: "40" });
+  const [subjectForm, setSubjectForm] = useState({ subject_name: "", full_marks: "100", pass_marks: "40", exam_date: "" });
 
   const { data: examTypes } = useQuery({
     queryKey: ["exam-types", centerId],
@@ -258,12 +258,13 @@ export default function ExamManagement() {
         subject_name: subjectForm.subject_name,
         full_marks: parseFloat(subjectForm.full_marks),
         pass_marks: parseFloat(subjectForm.pass_marks),
-      });
+        exam_date: subjectForm.exam_date || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exam-subjects"] });
-      setSubjectForm({ subject_name: "", full_marks: "100", pass_marks: "40" });
+      setSubjectForm({ subject_name: "", full_marks: "100", pass_marks: "40", exam_date: "" });
       toast.success("Subject added");
     },
     onError: (err: any) => toast.error(err.message),
@@ -448,56 +449,62 @@ export default function ExamManagement() {
 
       {/* Subject Management Dialog */}
       <Dialog open={showSubjectDialog} onOpenChange={setShowSubjectDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Manage Subjects</DialogTitle>
-            <DialogDescription>Add subjects with marks structure</DialogDescription>
+            <DialogTitle>Manage Subjects & Schedule</DialogTitle>
+            <DialogDescription>Add subjects with marks structure and specific dates</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label>Subject</Label>
-                <Input value={subjectForm.subject_name} onChange={(e) => setSubjectForm({ ...subjectForm, subject_name: e.target.value })} placeholder="Math" />
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase">Subject</Label>
+                <Input value={subjectForm.subject_name} onChange={(e) => setSubjectForm({ ...subjectForm, subject_name: e.target.value })} placeholder="Math" className="h-9" />
               </div>
-              <div>
-                <Label>Full Marks</Label>
-                <Input type="number" value={subjectForm.full_marks} onChange={(e) => setSubjectForm({ ...subjectForm, full_marks: e.target.value })} />
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase">Date (Optional)</Label>
+                <Input type="date" value={subjectForm.exam_date} onChange={(e) => setSubjectForm({ ...subjectForm, exam_date: e.target.value })} className="h-9" />
               </div>
-              <div>
-                <Label>Pass Marks</Label>
-                <Input type="number" value={subjectForm.pass_marks} onChange={(e) => setSubjectForm({ ...subjectForm, pass_marks: e.target.value })} />
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase">Full Marks</Label>
+                <Input type="number" value={subjectForm.full_marks} onChange={(e) => setSubjectForm({ ...subjectForm, full_marks: e.target.value })} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase">Pass Marks</Label>
+                <Input type="number" value={subjectForm.pass_marks} onChange={(e) => setSubjectForm({ ...subjectForm, pass_marks: e.target.value })} className="h-9" />
               </div>
             </div>
-            <Button onClick={() => addSubject.mutate()} disabled={!subjectForm.subject_name} size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Add Subject
+            <Button onClick={() => addSubject.mutate()} disabled={!subjectForm.subject_name} className="w-full h-10 font-bold uppercase text-xs">
+              <Plus className="h-4 w-4 mr-1" /> Add Subject to Schedule
             </Button>
             {subjects.length > 0 && (
-              <div className="overflow-x-auto">
-  <Table>
-                <TableHeader>
+              <div className="overflow-x-auto border rounded-xl">
+                <Table>
+                <TableHeader className="bg-slate-50">
                   <TableRow>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Full Marks</TableHead>
-                    <TableHead>Pass Marks</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead className="text-[10px] font-black uppercase">Subject</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase">Date</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-center">Full Marks</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-center">Pass Marks</TableHead>
+                    <TableHead className="text-right"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {subjects.map((s: any) => (
                     <TableRow key={s.id}>
-                      <TableCell>{s.subject_name}</TableCell>
-                      <TableCell>{s.full_marks}</TableCell>
-                      <TableCell>{s.pass_marks}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => deleteSubject.mutate(s.id)}>
-                          <Trash2 className="h-3 w-3" />
+                      <TableCell className="font-bold text-sm">{s.subject_name}</TableCell>
+                      <TableCell className="text-xs font-medium text-slate-500">{s.exam_date ? safeFormatDate(s.exam_date, "PPP") : "-"}</TableCell>
+                      <TableCell className="text-center font-bold">{s.full_marks}</TableCell>
+                      <TableCell className="text-center font-bold">{s.pass_marks}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => deleteSubject.mutate(s.id)} className="h-8 w-8 text-rose-500 hover:bg-rose-50">
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-</div>
+              </div>
             )}
           </div>
         </DialogContent>

@@ -52,7 +52,7 @@ export default function Messaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id && user?.role === UserRole.CENTER,
+    enabled: !!user?.center_id && (user?.role === UserRole.CENTER || user?.role === UserRole.TEACHER),
   });
 
   const { data: parentConversations = [] } = useQuery({
@@ -212,44 +212,109 @@ export default function Messaging() {
 
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
 
-  // Students with parents
-  const { data: studentsWithParents = [] } = useQuery({
-    queryKey: ["students-with-parents", user?.center_id, isRestricted, user?.teacher_id],
+  // Fetch potential chat partners (Parents and Teachers)
+  const { data: availablePartners = [] } = useQuery({
+    queryKey: ["available-chat-partners", user?.center_id, isRestricted, user?.teacher_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data: parentUsers, error: usersError } = await supabase.from("users").select("id, username, student_id").eq("role", "parent").not("student_id", "is", null);
+
+      // 1. Fetch Parents
+      const { data: parentUsers, error: usersError } = await supabase
+        .from("users")
+        .select("id, username, student_id")
+        .eq("role", "parent")
+        .not("student_id", "is", null);
+
       if (usersError) throw usersError;
+
       const allParentStudentIds = parentUsers?.map((u) => u.student_id).filter(Boolean) || [];
-      if (allParentStudentIds.length === 0) return [];
+      let students: any[] = [];
 
-      let query = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).in("id", allParentStudentIds);
+      if (allParentStudentIds.length > 0) {
+        let studentQuery = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).in("id", allParentStudentIds);
 
-      if (isRestricted) {
-        const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
-        const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
-        const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
-
-        if (myGrades.length > 0) {
-          query = query.in('grade', myGrades);
-        } else {
-          return [];
+        if (isRestricted) {
+          const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);
+          const { data: schedules } = await supabase.from('period_schedules').select('grade').eq('teacher_id', user?.teacher_id);
+          const myGrades = Array.from(new Set([...(assignments?.map(a => a.grade) || []), ...(schedules?.map(s => s.grade) || [])]));
+          if (myGrades.length > 0) studentQuery = studentQuery.in('grade', myGrades);
+          else studentQuery = studentQuery.eq('id', 'none'); // Block if restricted but no assignments
         }
+
+        const { data, error: studentsError } = await studentQuery;
+        if (!studentsError) students = data || [];
       }
 
-      const { data: students, error: studentsError } = await query;
-      if (studentsError) throw studentsError;
-      return students?.map((s) => ({ ...s, parentUser: parentUsers?.find((u) => u.student_id === s.id) })) || [];
+      const mappedStudents = students.map((s) => ({
+        id: s.id,
+        name: s.name,
+        grade: s.grade,
+        type: 'student',
+        parentUser: parentUsers?.find((u) => u.student_id === s.id)
+      }));
+
+      // 2. Fetch Teachers & Center Admin (Liaison)
+      let otherStaff: any[] = [];
+
+      const staffQuery = supabase
+        .from("users")
+        .select("id, username, role")
+        .eq("center_id", user.center_id)
+        .in("role", ["teacher", "center"])
+        .neq("id", user.id);
+
+      const { data: staffUsers, error: staffError } = await staffQuery;
+
+      if (!staffError && staffUsers) {
+        otherStaff = staffUsers
+          .filter(u => {
+            if (u.role === 'center') return true; // Always allow messaging center admin
+            return !isRestricted; // Only allow messaging other teachers if not restricted
+          })
+          .map(u => ({
+            id: null,
+            name: u.role === 'center' ? 'Center Admin (Liaison)' : u.username,
+            grade: u.role === 'center' ? 'Admin' : 'Staff',
+            type: u.role === 'center' ? 'admin' : 'teacher',
+            parentUser: u
+          }));
+      }
+
+      return [...mappedStudents, ...otherStaff];
     },
     enabled: !!user?.center_id && (user?.role === UserRole.CENTER || user?.role === UserRole.TEACHER),
   });
 
   const createConversationMutation = useMutation({
-    mutationFn: async (studentData: any) => {
+    mutationFn: async (partnerData: any) => {
       if (!user?.center_id) throw new Error("Center ID not found");
       if (!canEdit && user.role !== UserRole.PARENT) throw new Error("Access Denied: You do not have permission to start conversations.");
-      const { data: existing } = await supabase.from("chat_conversations").select("id").eq("center_id", user.center_id).eq("student_id", studentData.id).eq("parent_user_id", studentData.parentUser.id).maybeSingle();
+
+      let query = supabase
+        .from("chat_conversations")
+        .select("id")
+        .eq("center_id", user.center_id)
+        .eq("parent_user_id", partnerData.parentUser.id);
+
+      if (partnerData.id) {
+        query = query.eq("student_id", partnerData.id);
+      } else {
+        query = query.is("student_id", null);
+      }
+
+      const { data: existing } = await query.maybeSingle();
       if (existing) return existing;
-      const { data, error } = await supabase.from("chat_conversations").insert({ center_id: user.center_id, student_id: studentData.id, parent_user_id: studentData.parentUser.id }).select().single();
+
+      const { data, error } = await supabase
+        .from("chat_conversations")
+        .insert({
+          center_id: user.center_id,
+          student_id: partnerData.id || null,
+          parent_user_id: partnerData.parentUser.id
+        })
+        .select()
+        .single();
+
       if (error) throw error;
       return data;
     },
@@ -303,7 +368,7 @@ export default function Messaging() {
     if (newMessage.trim()) sendMessageMutation.mutate();
   };
 
-  const uniqueGrades = Array.from(new Set(studentsWithParents.map((s) => s.grade))).sort();
+  const uniqueGrades = Array.from(new Set(availablePartners.filter(p => p.type === 'student').map((s) => s.grade))).sort();
   const filteredConversations = activeConversations.filter((conv: any) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -314,12 +379,24 @@ export default function Messaging() {
     );
   });
 
-  const filteredStudentsForNew = studentsWithParents.filter(
+  const filteredPartnersForNew = availablePartners.filter(
     (s) => (newConversationGradeFilter === "all" || s.grade === newConversationGradeFilter) && s.name.toLowerCase().includes(newConversationStudentSearch.toLowerCase())
   );
 
-  const getConversationName = (conv: any) => (user?.role === UserRole.PARENT ? conv.centers?.name || "Center" : conv.students?.name || "Student");
-  const getConversationSub = (conv: any) => (user?.role === UserRole.PARENT ? `Student: ${conv.students?.name}` : `Parent: ${conv.parent_user?.username}`);
+  const getConversationName = (conv: any) => {
+    if (user?.role === UserRole.PARENT) return conv.centers?.name || "Center";
+    if (conv.students?.name) return conv.students.name;
+    if (conv.parent_user?.username) {
+        if (conv.parent_user.id === user?.id) return "Center Admin (Liaison)";
+        return conv.parent_user.username;
+    }
+    return "Unknown";
+  };
+  const getConversationSub = (conv: any) => {
+    if (user?.role === UserRole.PARENT) return `Student: ${conv.students?.name}`;
+    if (conv.students?.name) return `Parent: ${conv.parent_user?.username || 'N/A'}`;
+    return "Staff/Liaison";
+  };
 
   // Mobile: show chat list or chat view
   const showChatView = isMobile && selectedConversation;
@@ -331,26 +408,27 @@ export default function Messaging() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search conversations..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-9" />
         </div>
-        {(user?.role === UserRole.CENTER || canEdit) && (
+        {(user?.role === UserRole.CENTER || user?.role === UserRole.TEACHER) && canEdit && (
           <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setShowNewConversation(!showNewConversation)}>
             + New Conversation
           </Button>
         )}
       </div>
 
-      {showNewConversation && user?.role === UserRole.CENTER && (
+      {showNewConversation && (user?.role === UserRole.CENTER || user?.role === UserRole.TEACHER) && (
         <div className="p-3 border-b bg-muted/30 space-y-2">
           <Select value={newConversationGradeFilter} onValueChange={setNewConversationGradeFilter}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Grade" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Grade / Type" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Grades</SelectItem>
-              {uniqueGrades.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="Staff">Staff Only</SelectItem>
+              {uniqueGrades.map((g) => (<SelectItem key={g} value={g}>Grade {g}</SelectItem>))}
             </SelectContent>
           </Select>
-          <Input placeholder="Search student..." value={newConversationStudentSearch} onChange={(e) => setNewConversationStudentSearch(e.target.value)} className="h-8 text-xs" />
-          {filteredStudentsForNew.filter((s) => !activeConversations.some((c: any) => c.student_id === s.id)).slice(0, 5).map((student: any) => (
-            <Button key={student.id} variant="ghost" size="sm" className="w-full justify-start text-xs h-8" onClick={() => createConversationMutation.mutate(student)}>
-              + {student.name} ({student.grade})
+          <Input placeholder="Search partner..." value={newConversationStudentSearch} onChange={(e) => setNewConversationStudentSearch(e.target.value)} className="h-8 text-xs" />
+          {filteredPartnersForNew.filter((s) => !activeConversations.some((c: any) => c.student_id === s.id && c.parent_user_id === s.parentUser.id)).slice(0, 5).map((partner: any) => (
+            <Button key={partner.parentUser.id} variant="ghost" size="sm" className="w-full justify-start text-xs h-8" onClick={() => createConversationMutation.mutate(partner)}>
+              + {partner.name} ({partner.grade})
             </Button>
           ))}
         </div>

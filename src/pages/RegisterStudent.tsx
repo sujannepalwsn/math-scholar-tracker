@@ -1403,15 +1403,15 @@ export default function RegisterStudent() {
         </TabsContent>
 
         <TabsContent value="admission" className="outline-none">
-          <AdmissionWorkflow centerId={user?.center_id || ""} canEdit={hasFullAccess} />
+          <AdmissionWorkflow centerId={user?.center_id || ""} canEdit={hasFullAccess && !isRestricted} />
         </TabsContent>
 
         <TabsContent value="promotion" className="outline-none">
-          <StudentPromotion centerId={user?.center_id || ""} canEdit={hasFullAccess} />
+          <StudentPromotion centerId={user?.center_id || ""} canEdit={hasFullAccess && !isRestricted} />
         </TabsContent>
 
         <TabsContent value="alumni" className="outline-none">
-          <AlumniManagement centerId={user?.center_id || ""} canEdit={hasFullAccess} />
+          <AlumniManagement centerId={user?.center_id || ""} canEdit={hasFullAccess && !isRestricted} />
         </TabsContent>
 
         <TabsContent value="parents" className="outline-none">

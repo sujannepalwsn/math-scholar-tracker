@@ -86,7 +86,7 @@ export const PERMISSION_MAPPING: Record<string, string> = {
   'ai_insights': 'ai_insights',
   'marks_entry': 'exams_results',
   'test_management': 'test_management',
-  'my_attendance': 'teachers_attendance',
+  'my_attendance': 'my_attendance',
   'leave_applications': 'leave_management',
   'registration': 'register_student',
 
