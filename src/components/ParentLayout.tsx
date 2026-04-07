@@ -84,23 +84,28 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
   // Combine dynamic items and missing static items
   const combinedItems = React.useMemo(() => {
-    const items = [...parentDynamicItems];
+    const items = parentDynamicItems.length > 0 ? [...parentDynamicItems] : [...staticNavItems];
 
-    staticNavItems.forEach(staticItem => {
-      if (!items.some(it => it.route === staticItem.route)) {
-        items.push({
-          id: `static-${staticItem.route}`,
-          route: staticItem.route,
-          name: staticItem.name,
-          icon: staticItem.icon,
-          role: staticItem.role,
-          feature_name: staticItem.feature_name,
-          is_active: true,
-          category_id: null,
-          category_name: staticItem.category // Temporary for mapping
-        } as any);
-      }
-    });
+    if (parentDynamicItems.length > 0) {
+      staticNavItems.forEach(staticItem => {
+        if (!items.some(it => it.route === staticItem.route)) {
+          items.push({
+            ...staticItem,
+            id: `static-${staticItem.route}`,
+            feature_name: staticItem.feature_name,
+            is_active: true,
+            category_id: null,
+            category_name: staticItem.category // Temporary for mapping
+          } as any);
+        }
+      });
+    } else {
+       // Map static items to expected structure
+       return staticNavItems.map(si => ({
+          ...si,
+          category_name: si.category
+       }));
+    }
 
     return items;
   }, [parentDynamicItems]);
@@ -108,7 +113,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   const updatedNavItems = React.useMemo(() => {
     const processedItems = combinedItems.map(it => {
       const cat = dynamicCategories.find(c => c.id === it.category_id) ||
-                  dynamicCategories.find(c => c.name === (it as any).category_name);
+                  ((it as any).category_name ? { name: (it as any).category_name } : null);
 
       let route = it.route;
       // Fix incorrect dashboard links leading to landing page

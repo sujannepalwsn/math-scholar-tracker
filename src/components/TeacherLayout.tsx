@@ -120,7 +120,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const updatedNavItems = React.useMemo(() => {
     const processedItems = combinedItems.map(it => {
       const cat = dynamicCategories.find(c => c.id === it.category_id) ||
-                  dynamicCategories.find(c => c.name === (it as any).category_name);
+                  ((it as any).category_name ? { name: (it as any).category_name } : null);
 
       // Force specific routes for teachers to prevent navigating to center-admin pages
       let route = it.route;
