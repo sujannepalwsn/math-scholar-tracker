@@ -192,9 +192,25 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
   if (user.role === UserRole.TEACHER) {
     const isFullScope = user.teacher_scope_mode === 'full';
 
-    // FULL SCOPE MODE: Equivalent to Center Admin, but still respects global center overrides
+    // 1. Check granular JSONB permissions FIRST (Explicit teacher-level overrides)
+    if (teacherPerms.permissions && teacherPerms.permissions[dbColumnName]) {
+      const modulePerms = teacherPerms.permissions[dbColumnName];
+      // If it's explicitly DISABLED for the teacher, block it regardless of scope mode
+      if (modulePerms.enabled === false || modulePerms.can_view === false) {
+        return false;
+      }
+      // If it's explicitly ENABLED, we still must check global center override
+      if (modulePerms.enabled === true && modulePerms.can_view === true) {
+        return centerPerms[dbColumnName] !== false;
+      }
+    }
+
+    // 2. Fallback to legacy boolean columns (check if teacher has specific toggle on)
+    if (teacherPerms[dbColumnName] === false) return false;
+    if (teacherPerms[dbColumnName] === true) return centerPerms[dbColumnName] !== false;
+
+    // FULL SCOPE MODE: Equivalent to Center Admin if no explicit teacher-level override found
     if (isFullScope) {
-      // In full scope, we still must check if the feature is enabled at the center level
       return centerPerms[dbColumnName] !== false;
     }
 
@@ -310,40 +326,45 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
   const isFullScope = user.teacher_scope_mode === 'full';
   const teacherPerms = user.teacherPermissions || {};
 
-  // FULL SCOPE MODE: Only bypasses checks if module is enabled for teacher role (verified via hasPermission above)
-  if (isFullScope) {
-    return true;
-  }
-
-  // RESTRICTED SCOPE MODE
+  // 1. Check granular JSONB permissions FIRST
   if (teacherPerms.permissions && teacherPerms.permissions[dbColumnName]) {
     const modulePerms = teacherPerms.permissions[dbColumnName];
 
     switch (action) {
       case 'edit':
+        // If it's explicitly DISABLED for the teacher, block it regardless of scope mode
+        if (modulePerms.can_edit === false) return false;
+
+        // Special case: self-leave and self-attendance are usually allowed
         if (dbColumnName === 'leave_management' || dbColumnName === 'teachers_attendance') return true;
 
         const readOnlyInRestricted = ['class_routine', 'published_results'];
-        if (readOnlyInRestricted.includes(dbColumnName)) return false;
+        if (readOnlyInRestricted.includes(dbColumnName) && !isFullScope) return false;
 
-        return modulePerms.can_edit === true;
+        if (modulePerms.can_edit === true) return true;
+        break;
 
       case 'approve':
-        if (dbColumnName === 'lesson_plans' || dbColumnName === 'leave_management') return false;
-        return modulePerms.can_approve === true;
+        if (modulePerms.can_approve === false) return false;
+        if (modulePerms.can_approve === true) return true;
+        break;
 
       case 'publish':
-        return modulePerms.can_publish === true;
-
-      default:
-        return false;
+        if (modulePerms.can_publish === false) return false;
+        if (modulePerms.can_publish === true) return true;
+        break;
     }
   }
 
-  // Fallback for missing JSONB keys
+  // FULL SCOPE MODE: Only bypasses checks if module is enabled for teacher role (verified via hasPermission above)
+  if (isFullScope) {
+    return true;
+  }
+
+  // RESTRICTED SCOPE MODE Fallbacks
   if (action === 'edit') {
     if (dbColumnName === 'leave_management' || dbColumnName === 'teachers_attendance') return true;
-    return hasPermission(user, featureKey);
+    return false; // Fail-closed for other actions in restricted mode if not explicitly enabled
   }
 
   return false;
