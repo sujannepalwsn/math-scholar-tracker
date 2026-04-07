@@ -190,10 +190,9 @@ export default function Sidebar({
 
       const featureKey = item.featureName || (item as any).feature_name;
       const route = item.to;
-      const isDashboard = route === '/center-dashboard' || route === '/teacher-dashboard' || route === '/parent-dashboard' || route === '/admin-dashboard' || route === '/';
 
       // Sidebar relies on the centralized hasPermission logic for visibility filtering.
-      return hasPermission(user, featureKey || 'unknown', route) || isDashboard;
+      return hasPermission(user, featureKey || 'unknown', route);
     } catch (err) {
       logger.error("Error filtering nav item:", item, err);
       return false;

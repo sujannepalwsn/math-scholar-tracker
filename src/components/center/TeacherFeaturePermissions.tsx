@@ -116,6 +116,7 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-feature-permissions', teacherId] });
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
       toast.success('Permissions updated successfully!');
     },
     onError: (error: any) => {
@@ -179,9 +180,13 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
     // Legacy column should be true ONLY if both enabled and can_view are true
     // This ensures that backend RLS (which relies on boolean columns) correctly blocks access.
     // ALSO: Explicitly handle dashboard_access which might not have can_view toggle in UI but needs to be synced
-    const legacyFields = {
+    const legacyFields: Record<string, boolean> = {
       [featureName]: updatedModule.enabled && (featureName === 'dashboard_access' ? true : updatedModule.can_view)
     };
+
+    // If it's a major feature like student_report or preschool_activities, sync specialized column names too
+    if (featureName === 'student_report') legacyFields['student_report_access'] = legacyFields[featureName];
+    if (featureName === 'preschool_activities') legacyFields['activities'] = legacyFields[featureName];
 
     updatePermissionMutation.mutate({ updatedPermissions, legacyFields });
   };

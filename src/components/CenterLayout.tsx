@@ -98,35 +98,62 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
   }, [user?.id, user?.center_id, queryClient]);
 
   const centerDynamicItems = dynamicItems.filter(it => it.role === UserRole.CENTER);
-  let updatedNavItems = centerDynamicItems.length > 1
-    ? centerDynamicItems.map(it => {
-        const cat = dynamicCategories.find(c => c.id === it.category_id);
-        return {
-          to: it.route,
-          label: it.name,
-          icon: getIcon(it.icon),
-          role: it.role as any,
-          featureName: it.feature_name,
-          feature_name: it.feature_name,
-          category: cat?.name,
-          unreadCount: it.route === "/messages" ? unreadMessageCount : undefined,
-          is_active: it.is_active
-        };
-      })
-    : staticNavItems.map(item => ({
-        to: item.route,
-        label: item.name,
-        icon: getIcon(item.icon),
-        role: item.role as any,
-        featureName: item.feature_name,
-        feature_name: item.feature_name,
-        category: item.category as any,
-        unreadCount: item.route === "/messages" ? unreadMessageCount : undefined
-      }));
+
+  const updatedNavItems = React.useMemo(() => {
+    const items = centerDynamicItems.length > 0 ? [...centerDynamicItems] : [...staticNavItems];
+
+    // Ensure all static mandatory items are present if using dynamic items
+    if (centerDynamicItems.length > 0) {
+      staticNavItems.forEach(staticItem => {
+        if (!items.some(it => it.route === staticItem.route)) {
+          items.push({
+            ...staticItem,
+            id: `static-${staticItem.route}`,
+            feature_name: staticItem.feature_name,
+            is_active: true,
+            category_id: null
+          } as any);
+        }
+      });
+    }
+
+    const processedItems = items.map(it => {
+      const cat = dynamicCategories.find(c => c.id === it.category_id) ||
+                  (it as any).category ? { name: (it as any).category } : null;
+
+      let route = it.route;
+      // Fix incorrect dashboard links leading to landing page
+      if (it.name === "Dashboard" || route === "/" || route?.includes("dashboard")) {
+        route = "/center-dashboard";
+      }
+
+      return {
+        to: route,
+        label: it.name,
+        icon: getIcon(it.icon),
+        role: it.role as any,
+        featureName: it.feature_name,
+        feature_name: it.feature_name,
+        category: cat?.name,
+        unreadCount: it.route === "/messages" ? unreadMessageCount : undefined,
+        is_active: (it as any).is_active !== false
+      };
+    });
+
+    // Deduplicate by route to prevent triple Dashboard items
+    const uniqueItemsMap = new Map();
+    processedItems.forEach(item => {
+      if (!uniqueItemsMap.has(item.to)) {
+        uniqueItemsMap.set(item.to, item);
+      }
+    });
+
+    return Array.from(uniqueItemsMap.values());
+  }, [centerDynamicItems, staticNavItems, dynamicCategories, getIcon, unreadMessageCount]);
 
   // Ensure mandatory items from defaults are always present (fixing issue for existing customized navigation)
   React.useEffect(() => {
-    if (centerDynamicItems.length > 1) {
+    if (centerDynamicItems.length > 0) {
       const hasMissing = staticNavItems.some(
         staticItem => !centerDynamicItems.some(it => it.route === staticItem.route)
       );
@@ -136,26 +163,6 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
       }
     }
   }, [centerDynamicItems.length, staticNavItems.length]);
-
-  if (centerDynamicItems.length > 1) {
-    const missingItems = staticNavItems.filter(
-      staticItem => !centerDynamicItems.some(it => it.route === staticItem.route)
-    );
-
-    if (missingItems.length > 0) {
-      const additionalItems = missingItems.map(item => ({
-        to: item.route,
-        label: item.name,
-        icon: getIcon(item.icon),
-        role: item.role as any,
-        featureName: item.feature_name,
-        feature_name: item.feature_name,
-        category: item.category as any,
-        unreadCount: item.route === "/messages" ? unreadMessageCount : undefined
-      }));
-      updatedNavItems = [...updatedNavItems, ...additionalItems];
-    }
-  }
 
   const headerContent = (
     <SchoolBranding />
