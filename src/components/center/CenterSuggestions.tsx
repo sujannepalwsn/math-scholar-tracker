@@ -19,7 +19,7 @@ export default function CenterSuggestions({ centerId }: { centerId: string }) {
     queryFn: async () => {
       let query = supabase
         .from("suggestions")
-        .select("*, users(name)")
+        .select("*, users(first_name, last_name)")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
 
@@ -121,7 +121,7 @@ export default function CenterSuggestions({ centerId }: { centerId: string }) {
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3" />
-                        <span>{sug.users?.name} ({sug.role_type})</span>
+                        <span>{sug.users ? `${sug.users.first_name} ${sug.users.last_name}` : 'Unknown User'} ({sug.role_type})</span>
                       </div>
                       <span>•</span>
                       <span>{format(new Date(sug.created_at), "MMM d, yyyy")}</span>
