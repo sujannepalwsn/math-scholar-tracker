@@ -165,7 +165,7 @@ export default function ParentMessaging() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-1000 max-w-5xl mx-auto h-[calc(100vh-12rem)] flex flex-col page-enter">
+    <div className="space-y-8 animate-in fade-in duration-1000 max-w-5xl mx-auto h-[calc(100vh-12rem)] flex flex-col page-enter bg-white p-4 md:p-8 rounded-[3rem] shadow-soft">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 shrink-0">
         <div className="space-y-2">
           <div className="flex items-center gap-3">

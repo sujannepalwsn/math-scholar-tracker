@@ -6,7 +6,8 @@ import {
   ClipboardCheck, GraduationCap, Award, Paintbrush, AlertTriangle,
   UserPlus, Users, UserCheck, Plane, IdCard, Archive, Bus,
   CalendarDays, Settings, MessageSquare, Video, Calendar,
-  User, BarChart3, TrendingUp, FileText, DollarSign, PenTool, Sparkles, Star, Building
+  User, BarChart3, TrendingUp, FileText, DollarSign, PenTool, Sparkles, Star, Building,
+  CalendarCheck
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -22,7 +23,8 @@ export function useDynamicNavigation() {
       ClipboardCheck, GraduationCap, Award, Paintbrush, AlertTriangle,
       UserPlus, Users, UserCheck, Plane, IdCard, Archive, Bus,
       CalendarDays, Settings, MessageSquare, Video, Calendar,
-      User, BarChart3, TrendingUp, FileText, DollarSign, PenTool, Sparkles, Star, Building
+      User, BarChart3, TrendingUp, FileText, DollarSign, PenTool, Sparkles, Star, Building,
+      CalendarCheck
     };
     return icons[name] || Home;
   };

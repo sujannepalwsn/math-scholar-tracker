@@ -16,34 +16,52 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 type StudentHomeworkRecord = Tables<'student_homework_records'>;
 
+import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
+
 export default function ParentHomework() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  if (!user?.student_id) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
-        <div className="p-4 rounded-full bg-slate-100/50 backdrop-blur-sm border border-slate-200">
-          <Info className="h-8 w-8 text-slate-400" />
-        </div>
-        <p className="text-muted-foreground font-medium">Please log in as a parent to view homework records.</p>
-      </div>
-    );
-  }
+  const linkedStudents = React.useMemo(() => {
+    const raw = user?.linked_students;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(s => typeof s === 'string' ? { id: s, name: 'Student' } : s);
+  }, [user?.linked_students]);
+
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(() => {
+    if (user?.student_id) return user.student_id;
+    if (linkedStudents.length > 0) return linkedStudents[0].id;
+    return null;
+  });
+
+  const activeStudentId = selectedStudentId || user?.student_id;
+
+  // Fetch student details
+  const { data: student } = useQuery({
+    queryKey: ['student-homework-detail', activeStudentId],
+    queryFn: async () => {
+      if (!activeStudentId) return null;
+      const { data, error } = await supabase.from('students').select('*').eq('id', activeStudentId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeStudentId
+  });
 
   // Fetch student's homework records
   const { data: homeworkStatus = [], isLoading } = useQuery({
-    queryKey: ['parent-homework-records', user.student_id],
+    queryKey: ['parent-homework-records', activeStudentId],
     queryFn: async () => {
+      if (!activeStudentId) return [];
       const { data, error } = await supabase
         .from('student_homework_records')
         .select('*, homework(*)')
-        .eq('student_id', user.student_id!)
+        .eq('student_id', activeStudentId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user.student_id });
+    enabled: !!activeStudentId });
 
   const getStatusStyles = (status: StudentHomeworkRecord['status']) => {
     switch (status) {
@@ -165,24 +183,28 @@ export default function ParentHomework() {
     </div>
   );
 
+  if (!activeStudentId) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="p-4 rounded-full bg-slate-100/50 backdrop-blur-sm border border-slate-200">
+          <Info className="h-8 w-8 text-slate-400" />
+        </div>
+        <p className="text-muted-foreground font-medium">Please select a student to view homework records.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <Book className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
-                Homework Hub
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Scholar Assignment Lifecycle Monitor</p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-1000 page-enter bg-white min-h-screen p-4 md:p-8">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+        <div className="space-y-4">
+          <h1 className="text-4xl font-black tracking-tight text-slate-900">
+            Homework Monitor
+          </h1>
+          <p className="text-slate-500 font-medium text-lg">
+            Assignment tracking and submission status for <span className="text-primary font-bold">{student?.name}</span>.
+          </p>
+          <ChildSwitcher selectedId={activeStudentId} onSelect={setSelectedStudentId} />
         </div>
       </div>
 

@@ -192,7 +192,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto mesh-gradient transition-all duration-300",
+        "flex-1 overflow-y-auto transition-all duration-300 bg-white",
         "md:h-screen",
         "pt-14 md:pt-0",
         "px-4 pb-20 md:p-6 lg:p-8",
