@@ -106,12 +106,18 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   }, [parentDynamicItems]);
 
   const updatedNavItems = React.useMemo(() => {
-    return combinedItems.map(it => {
+    const processedItems = combinedItems.map(it => {
       const cat = dynamicCategories.find(c => c.id === it.category_id) ||
                   dynamicCategories.find(c => c.name === (it as any).category_name);
 
+      let route = it.route;
+      // Fix incorrect dashboard links leading to landing page
+      if (it.name === "Dashboard" || route === "/" || route?.includes('dashboard')) {
+        route = "/parent-dashboard";
+      }
+
       return {
-        to: it.route,
+        to: route,
         label: it.name,
         icon: getIcon(it.icon),
         role: it.role as any,
@@ -119,9 +125,19 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         feature_name: it.feature_name,
         category: cat?.name,
         unreadCount: it.route === "/parent-messages" ? unreadMessageCount : undefined,
-        is_active: it.is_active
+        is_active: (it as any).is_active !== false
       };
     });
+
+    // Deduplicate by route to prevent triple Dashboard items
+    const uniqueItemsMap = new Map();
+    processedItems.forEach(item => {
+      if (!uniqueItemsMap.has(item.to)) {
+        uniqueItemsMap.set(item.to, item);
+      }
+    });
+
+    return Array.from(uniqueItemsMap.values());
   }, [combinedItems, dynamicCategories, getIcon, unreadMessageCount]);
 
 

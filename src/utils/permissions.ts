@@ -172,7 +172,15 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
 
   // 4. Special case for Dashboard - usually always allowed if not explicitly disabled
   if (dbColumnName === 'dashboard_access') {
-    return centerPerms['dashboard_access'] !== false;
+    const isCenterEnabled = centerPerms['dashboard_access'] !== false;
+    if (user.role === UserRole.TEACHER) {
+      // If it's a teacher, we must also check their specific toggle
+      if (teacherPerms.permissions && teacherPerms.permissions['dashboard_access']) {
+        return isCenterEnabled && teacherPerms.permissions['dashboard_access'].enabled !== false;
+      }
+      return isCenterEnabled && teacherPerms['dashboard_access'] !== false;
+    }
+    return isCenterEnabled;
   }
 
   // 5. Role-based logic

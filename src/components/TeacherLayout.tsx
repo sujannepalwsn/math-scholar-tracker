@@ -117,33 +117,45 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     return items;
   }, [teacherDynamicItems, teacherStaticItems]);
 
-  const updatedNavItems = combinedItems.map(it => {
-    const cat = dynamicCategories.find(c => c.id === it.category_id) ||
-                dynamicCategories.find(c => c.name === (it as any).category_name);
+  const updatedNavItems = React.useMemo(() => {
+    const processedItems = combinedItems.map(it => {
+      const cat = dynamicCategories.find(c => c.id === it.category_id) ||
+                  dynamicCategories.find(c => c.name === (it as any).category_name);
 
-    // Force specific routes for teachers to prevent navigating to center-admin pages
-    let route = it.route;
-    if (it.feature_name === 'leave_management') {
-      route = '/teacher/leave';
-    }
+      // Force specific routes for teachers to prevent navigating to center-admin pages
+      let route = it.route;
+      if (it.feature_name === 'leave_management') {
+        route = '/teacher/leave';
+      }
 
-    // Ensure dashboard links point to the role-specific dashboard instead of root
-    if (route === '/' || route?.includes('center-dashboard')) {
-      route = getDashboardPath(UserRole.TEACHER);
-    }
+      // Ensure dashboard links point to the role-specific dashboard instead of root
+      if (it.name === "Dashboard" || route === "/" || route?.includes('dashboard') || route?.includes('center-dashboard')) {
+        route = getDashboardPath(UserRole.TEACHER);
+      }
 
-    return {
-      to: route,
-      label: it.name,
-      icon: getIcon(it.icon),
-      role: it.role as any,
-      featureName: it.feature_name,
-      feature_name: it.feature_name,
-      category: cat?.name,
-      unreadCount: (it.route === "/teacher-messages" || it.route === "/messages") ? unreadMessageCount : undefined,
-      is_active: it.is_active
-    };
-  });
+      return {
+        to: route,
+        label: it.name,
+        icon: getIcon(it.icon),
+        role: it.role as any,
+        featureName: it.feature_name,
+        feature_name: it.feature_name,
+        category: cat?.name,
+        unreadCount: (it.route === "/teacher-messages" || it.route === "/messages") ? unreadMessageCount : undefined,
+        is_active: (it as any).is_active !== false
+      };
+    });
+
+    // Deduplicate by route to prevent triple Dashboard items
+    const uniqueItemsMap = new Map();
+    processedItems.forEach(item => {
+      if (!uniqueItemsMap.has(item.to)) {
+        uniqueItemsMap.set(item.to, item);
+      }
+    });
+
+    return Array.from(uniqueItemsMap.values());
+  }, [combinedItems, dynamicCategories, getIcon, unreadMessageCount]);
 
   // Ensure mandatory items from defaults are always present (fixing issue for existing customized navigation)
   React.useEffect(() => {

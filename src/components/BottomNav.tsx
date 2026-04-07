@@ -28,18 +28,20 @@ export default function BottomNav({ navItems }: BottomNavProps) {
   const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  const filteredItems = navItems.map(item => {
-    let route = item.to;
-    // Map dashboard routes to the correct role-specific dashboard path
-    if (route === '/' || route?.includes('center-dashboard') || route?.includes('teacher-dashboard') || route?.includes('parent-dashboard')) {
-      route = getDashboardPath(user?.role);
-    }
-    return { ...item, to: route };
-  }).filter(item => {
-    if (item.is_active === false) return false;
-    const featureKey = item.featureName || (item as any).feature_name;
-    return hasPermission(user, featureKey || 'unknown', item.to);
-  });
+  const filteredItems = useMemo(() => {
+    return navItems.map(item => {
+      let route = item.to;
+      // Map dashboard routes to the correct role-specific dashboard path
+      if (route === '/' || route?.includes('center-dashboard') || route?.includes('teacher-dashboard') || route?.includes('parent-dashboard')) {
+        route = getDashboardPath(user?.role);
+      }
+      return { ...item, to: route };
+    }).filter(item => {
+      if (item.is_active === false) return false;
+      const featureKey = item.featureName || (item as any).feature_name;
+      return hasPermission(user, featureKey || 'unknown', item.to);
+    });
+  }, [navItems, user]);
 
   const dashboardItem = filteredItems.find(item => item.label === "Dashboard" || item.to?.includes('dashboard'));
 

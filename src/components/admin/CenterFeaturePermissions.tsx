@@ -351,49 +351,6 @@ export default function CenterFeaturePermissions() {
       </CardContent>
     </Card>
 
-    <Card>
-      <CardHeader>
-        <CardTitle>Manage Teacher Administrative Permissions</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-auto max-h-[500px]">
-          <div className="overflow-x-auto">
-  <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="sticky left-0 top-0 bg-background z-20">Teacher Name (Center)</TableHead>
-                {TEACHER_FEATURES.map(feature => (
-                  <TableHead key={feature.name} className="text-center min-w-[120px] sticky top-0 bg-background z-10">{feature.label}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {teachers.map((teacher: any) => (
-                <TableRow key={teacher.id}>
-                  <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">
-                    {teacher.name} <span className="text-[10px] text-muted-foreground">({teacher.centers?.name})</span>
-                  </TableCell>
-                  {TEACHER_FEATURES.map(feature => {
-                    const tPerm = permissionsByTeacher[teacher.id];
-                    const isEnabled = tPerm?.[feature.name] ?? false;
-                    return (
-                      <TableCell key={feature.name} className="text-center">
-                        <Switch
-                          checked={isEnabled}
-                          onCheckedChange={() => handleTeacherToggle(teacher.id, feature.name, isEnabled)}
-                          disabled={updateTeacherPermissionMutation.isPending}
-                        />
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-</div>
-        </div>
-      </CardContent>
-    </Card>
     </div>
   );
 }
