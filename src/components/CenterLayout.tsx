@@ -119,7 +119,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
 
     const processedItems = items.map(it => {
       const cat = dynamicCategories.find(c => c.id === it.category_id) ||
-                  (it as any).category ? { name: (it as any).category } : null;
+                  ((it as any).category ? { name: (it as any).category } : null);
 
       let route = it.route;
       // Fix incorrect dashboard links leading to landing page
