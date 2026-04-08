@@ -20,7 +20,6 @@ import { ServerPagination } from "@/components/ui/ServerPagination";
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { Tables } from "@/integrations/supabase/types"
-import * as bcrypt from 'bcryptjs';
 import TeacherFeaturePermissions from '@/components/center/TeacherFeaturePermissions';
 import StaffHRModule from '@/components/center/StaffHRModule';
 import { logger } from "@/utils/logger";
@@ -485,47 +484,41 @@ export default function TeacherManagement() {
       if (!hasActionPermission(user, 'teacher_management', 'edit')) {
         throw new Error("Access Denied: You do not have permission to generate faculty logins.");
       }
-      const { data: existingUser, error: existingUserError } = await supabase.from('users').select('id').eq('username', teacherUsername).single();
-      if (existingUserError && existingUserError.code !== 'PGRST116') throw existingUserError;
-      if (existingUser) throw new Error('Username already exists.');
 
-      if (selectedTeacherForLogin.contract_end_date && new Date(selectedTeacherForLogin.contract_end_date) < new Date()) {
-        throw new Error("Cannot create login for teacher with expired contract.");
+      const { data, error: invokeError } = await supabase.functions.invoke('manage-teacher-login', {
+        body: {
+          action: 'create',
+          teacherId: selectedTeacherForLogin.id,
+          username: teacherUsername,
+          password: teacherPassword
+        }
+      });
+
+      if (invokeError) {
+        logger.error('Edge Function invocation error:', invokeError);
+        throw new Error(invokeError.message || 'Network error while creating login');
       }
 
-      const hashedPassword = await bcrypt.hash(teacherPassword, 12);
-      const { data: newUser, error: userError } = await supabase
-        .from("users")
-        .insert({
-          username: teacherUsername,
-          password_hash: hashedPassword,
-          role: 'teacher',
-          center_id: user.center_id,
-          teacher_id: selectedTeacherForLogin.id,
-          is_active: true
-        })
-        .select()
-        .single();
+      if (!data?.success) {
+        logger.error('Login creation failed:', data?.error);
+        throw new Error(data?.error || 'Failed to create login');
+      }
 
-      if (userError) throw userError;
-
-      // Link user to teacher
-      const { error: teacherUpdateError } = await supabase
-        .from("teachers")
-        .update({ user_id: newUser.id })
-        .eq("id", selectedTeacherForLogin.id);
-
-      if (teacherUpdateError) throw teacherUpdateError;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
-      toast.success("Login created!");
+      toast.success("Teacher login account established successfully!");
       setIsCreatingTeacherLogin(false);
       setSelectedTeacherForLogin(null);
       setTeacherUsername("");
       setTeacherPassword("");
     },
-    onError: (error: any) => toast.error(error.message) });
+    onError: (error: any) => {
+      logger.error("Teacher login creation error:", error);
+      toast.error(error.message || "Failed to create login");
+    }
+  });
 
   // Class teacher assignment mutation
   const assignClassTeacherMutation = useMutation({
@@ -552,12 +545,17 @@ export default function TeacherManagement() {
   const changeTeacherPasswordMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTeacher || !teacherPassword) throw new Error("Missing info");
-      const hashedPassword = await bcrypt.hash(teacherPassword, 12);
-      const { error } = await supabase
-        .from("users")
-        .update({ password_hash: hashedPassword })
-        .eq("id", selectedTeacher.user_id);
-      if (error) throw error;
+
+      const { data, error: invokeError } = await supabase.functions.invoke('manage-teacher-login', {
+        body: {
+          action: 'update-password',
+          teacherId: selectedTeacher.id,
+          password: teacherPassword
+        }
+      });
+
+      if (invokeError) throw invokeError;
+      if (!data.success) throw new Error(data.error || 'Failed to change password');
     },
     onSuccess: () => {
       toast.success("Password changed successfully!");

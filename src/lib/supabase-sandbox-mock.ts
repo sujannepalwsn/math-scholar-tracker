@@ -179,7 +179,16 @@ export class SupabaseSandboxMock {
             error: null
           });
         }
-        return Promise.resolve({ data: null, error: null });
+        if (name === 'manage-teacher-login') {
+          return Promise.resolve({
+            data: {
+              success: true,
+              message: 'Mock operation successful'
+            },
+            error: null
+          });
+        }
+        return Promise.resolve({ data: { success: true }, error: null });
       }
     };
   }
