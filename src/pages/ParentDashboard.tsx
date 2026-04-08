@@ -5,7 +5,7 @@ import {
   Brain, Activity, Sparkles, TrendingUp, Clock, Wallet, Book,
   GraduationCap, MessageSquare, ChevronRight,
   AlertTriangle, ClipboardCheck, BarChart3, Loader2,
-  CalendarCheck, BookOpen
+  CalendarCheck, BookOpen, Paintbrush, Star
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
@@ -17,7 +17,7 @@ import { KPICard } from "@/components/dashboard/KPICard"
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DigitalNoticeBoard from "@/components/center/NoticeBoard";
 import SuggestionForm from "@/components/center/SuggestionForm";
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
 // New Analytics Components
@@ -29,6 +29,7 @@ import { HomeworkHealth } from "@/components/parent/HomeworkHealth";
 import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
 import { InsightAlerts } from "@/components/parent/InsightAlerts";
 import { useParentInsights } from "@/hooks/useParentInsights";
+import { hasPermission } from "@/utils/permissions";
 
 export default function ParentDashboard() {
   const { user } = useAuth();
@@ -147,6 +148,22 @@ export default function ParentDashboard() {
         date: d.date_achieved ? format(new Date(d.date_achieved), "MMM d") : 'Recent',
         metadata: d.metadata || {}
       }));
+    },
+    enabled: !!activeStudentId
+  });
+
+  const { data: recentActivities = [] } = useQuery({
+    queryKey: ['parent-recent-activities', activeStudentId],
+    queryFn: async () => {
+      if (!activeStudentId) return [];
+      const { data, error } = await supabase
+        .from('student_activities')
+        .select('*, activities(*)')
+        .eq('student_id', activeStudentId)
+        .order('created_at', { ascending: false })
+        .limit(4);
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!activeStudentId
   });
@@ -271,6 +288,14 @@ export default function ParentDashboard() {
           onClick={() => navigate("/parent/performance")}
         />
         <KPICard
+          title="Activities"
+          value={recentActivities.length}
+          description="Creative Milestones"
+          icon={Paintbrush}
+          color="indigo"
+          onClick={() => navigate("/parent/activities")}
+        />
+        <KPICard
           title="Due Fees"
           value={formatCurrency(stats.totalDues)}
           description="Pending Payment"
@@ -301,6 +326,42 @@ export default function ParentDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              <HomeworkHealth records={homeworkRecords} />
+             {hasPermission(user, 'preschool_activities') && (
+                <Card className="border-none shadow-soft bg-card/60 backdrop-blur-md rounded-[2rem] overflow-hidden border border-border/20">
+                  <CardHeader className="bg-primary/5 border-b border-primary/10 p-6 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                      <Paintbrush className="h-4 w-4" /> Activity Journal
+                    </CardTitle>
+                    <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase text-primary" onClick={() => navigate("/parent/activities")}>View All</Button>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {recentActivities.length === 0 ? (
+                      <p className="p-8 text-center text-xs italic text-muted-foreground">No recent activities logged</p>
+                    ) : (
+                      <div className="divide-y divide-primary/5">
+                        {recentActivities.map((sa: any) => (
+                          <div key={sa.id} className="p-4 flex gap-4 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => navigate("/parent/activities")}>
+                            {sa.activities?.photo_url ? (
+                               <img src={supabase.storage.from("activity-photos").getPublicUrl(sa.activities.photo_url).data.publicUrl} className="h-12 w-12 rounded-lg object-cover" alt="" />
+                            ) : (
+                               <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center"><Paintbrush className="h-5 w-5 text-slate-300" /></div>
+                            )}
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-slate-800">{sa.activities?.title}</p>
+                              <p className="text-[10px] text-slate-400 font-medium">{sa.activities?.activity_date ? format(new Date(sa.activities.activity_date), "MMM d, yyyy") : 'Recent'}</p>
+                            </div>
+                            {sa.involvement_score && (
+                               <div className="flex items-center gap-1 text-amber-500 font-black text-xs">
+                                  <Star className="h-3 w-3 fill-current" /> {sa.involvement_score}
+                               </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+             )}
              <CelebrationsGrowth milestones={milestones} />
           </div>
         </div>

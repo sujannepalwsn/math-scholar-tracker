@@ -287,6 +287,23 @@ export default function TeacherDashboard() {
     },
     enabled: !!centerId && !!user?.id });
 
+  const { data: recentActivities = [] } = useQuery({
+    queryKey: ["recent-activities-teacher-dash", centerId, user?.id],
+    queryFn: async () => {
+      if (!centerId) return [];
+      const { data, error } = await supabase
+        .from("activities")
+        .select("id, name, title, grade, activity_date")
+        .eq("center_id", centerId)
+        .eq("created_by", user?.id)
+        .order("activity_date", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!centerId && !!user?.id
+  });
+
   const attendanceRate = attendanceData.length > 0 ? Math.round((attendanceData.filter(a => a.status === 'present').length / attendanceData.length) * 100) : 0;
 
   const dailyAttendanceSummary = useMemo(() => {
@@ -428,6 +445,7 @@ export default function TeacherDashboard() {
         {hasPermission(user, 'leave_management') && <KPICard title="Leave Applications" value="Portal" description="Absence Management" icon={Plane} color="rose" onClick={() => navigate("/teacher/leave")} />}
         {hasPermission(user, 'messaging') && <KPICard title="Messages" value={unreadCount > 0 ? unreadCount : "View"} description={unreadCount > 0 ? "New Messages" : "Admin Liaison"} icon={MessageSquare} color="pink" onClick={() => navigate("/teacher-messages")} delta={unreadCount > 0 ? unreadCount : undefined} />}
         {hasPermission(user, 'lesson_plans') && <KPICard title="Lesson Plans" value={allLessonPlans.length} description="Instructional Assets" icon={FileText} color="purple" onClick={() => navigate("/teacher/lesson-plans")} />}
+        {hasPermission(user, 'preschool_activities') && <KPICard title="Activities" value={recentActivities.length} description="Engagement Logs" icon={Paintbrush} color="indigo" onClick={() => navigate("/teacher/activities")} />}
         {hasPermission(user, 'test_management') && <KPICard title="Class Proficiency" value={`${avgPerformance}%`} description="Score Synthesis" icon={TrendingUp} color="purple" onClick={() => navigate("/teacher/results-dashboard")} />}
       </div>
 
@@ -488,6 +506,29 @@ export default function TeacherDashboard() {
            </Card>
         </div>
         <div className="space-y-6">
+           {hasPermission(user, 'preschool_activities') && (
+             <Card className="border-none shadow-soft bg-card/60 backdrop-blur-md rounded-2xl overflow-hidden border border-border/20">
+               <CardHeader className="bg-primary/5 border-b border-primary/10">
+                 <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                   <Paintbrush className="h-4 w-4" /> Recent Activities
+                 </CardTitle>
+               </CardHeader>
+               <CardContent className="p-0">
+                 {recentActivities.length === 0 ? (
+                   <p className="p-8 text-center text-xs italic text-muted-foreground">No recent activities</p>
+                 ) : (
+                   <div className="divide-y divide-primary/5">
+                     {recentActivities.map((a: any) => (
+                       <div key={a.id} className="p-4 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => navigate("/teacher/activities")}>
+                         <p className="text-sm font-bold text-foreground/90">{a.title || a.name}</p>
+                         <p className="text-[10px] text-slate-400 font-medium">Grade {a.grade || "All"} • {a.activity_date ? format(new Date(a.activity_date), "MMM d") : "No date"}</p>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
+           )}
            <DigitalNoticeBoard centerId={centerId || ""} role="teacher" />
            <SuggestionForm role="teacher" />
            <AlertList alerts={teacherAlerts} onViewAll={() => navigate("/teacher-messages")} />

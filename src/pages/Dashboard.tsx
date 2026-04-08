@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { UserRole } from "@/types/roles";
-import { AlertTriangle, ArrowRight, Bell, Book, BookOpen, Bus, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Package, Search, TrendingUp, Users, Wallet, GripVertical, Settings2, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, Book, BookOpen, Bus, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Package, Search, TrendingUp, Users, Wallet, GripVertical, Settings2, Eye, EyeOff, Paintbrush } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,10 +76,16 @@ export default function Dashboard() {
         "attendance-overview", "pending-attendance", "ai-insights", "performers", "teacher-status", "leave-applications", "activities-discipline", "chapter-mastery", "academic-efficiency", "effort-outcome-distribution", "academic-trends"
       ];
 
-      setKpiOrder(savedKpi ? JSON.parse(savedKpi) : [
+      const defaultKpi = [
         "students", "teachers", "student-attendance", "teacher-attendance",
-        "lesson-plans", "approvals", "leave-requests", "messages"
-      ]);
+        "lesson-plans", "approvals", "leave-requests", "activities", "messages"
+      ];
+      const parsedKpi = savedKpi ? JSON.parse(savedKpi) : [];
+      const mergedKpi = [...parsedKpi];
+      defaultKpi.forEach(id => {
+        if (!mergedKpi.includes(id)) mergedKpi.push(id);
+      });
+      setKpiOrder(mergedKpi.length > 0 ? mergedKpi : defaultKpi);
 
       // Merge saved visibility with defaults to ensure new widgets appear for existing users
       const parsedVisible = savedVisible ? JSON.parse(savedVisible) : {};
@@ -1187,6 +1193,16 @@ export default function Dashboard() {
           color="rose"
           delta={pendingLeavesCount > 0 ? 15 : 0}
           onClick={() => navigate("/leave-management")}
+        />
+      ) : null,
+      "activities": hasPermission(user, 'preschool_activities') ? (
+        <KPICard
+          title="Activities"
+          value={recentActivities.length}
+          description="Engagement Logs"
+          icon={Paintbrush}
+          color="purple"
+          onClick={() => navigate("/activities")}
         />
       ) : null,
       "messages": hasPermission(user, 'messaging') ? (
