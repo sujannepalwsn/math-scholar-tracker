@@ -1,15 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.40.0';
 import * as bcrypt from "https://esm.sh/bcryptjs";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGINS') ?? '*',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 };
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -35,13 +38,33 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Verify requesting user and get context
-    // We use the authHeader to get the user making the request
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (authError || !authUser) throw new Error('Unauthorized');
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
 
-    const { data: profile } = await supabase.from('users').select('id, role, center_id').eq('id', authUser.id).single();
-    if (!profile) throw new Error('Profile not found');
-    if (profile.role !== 'center' && profile.role !== 'admin') throw new Error('Forbidden');
+    if (authError || !authUser) {
+      console.error('Unauthorized attempt:', authError);
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, role, center_id')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profileError || !profile) {
+      return new Response(JSON.stringify({ success: false, error: 'User profile not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (profile.role !== 'center' && profile.role !== 'admin') {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden: Insufficient privileges' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const requesterCenterId = profile.center_id;
 
@@ -74,7 +97,6 @@ serve(async (req) => {
         );
       }
 
-      // Check if teacher already has a login
       if (teacher.user_id) {
         return new Response(
           JSON.stringify({ success: false, error: 'Teacher already has a system access account' }),
@@ -82,7 +104,6 @@ serve(async (req) => {
         );
       }
 
-      // Check if username already exists in public.users
       const { data: existingUser } = await supabase
         .from('users')
         .select('id')
@@ -96,7 +117,6 @@ serve(async (req) => {
         );
       }
 
-      // Check for contract expiry
       if (teacher.contract_end_date && new Date(teacher.contract_end_date) < new Date()) {
         return new Response(
           JSON.stringify({ success: false, error: 'Cannot create login for teacher with expired contract' }),
@@ -104,9 +124,7 @@ serve(async (req) => {
         );
       }
 
-      // 1. Create user in Supabase Auth (auth.users)
-      // We use the teacher's email if available, otherwise we use the username as a placeholder email
-      // standard Supabase Auth requires an email or phone.
+      // Create user in Supabase Auth
       const userEmail = username.includes('@') ? username : `${username}@internal.eduflow.com`;
 
       const { data: authData, error: authCreateError } = await supabase.auth.admin.createUser({
@@ -119,7 +137,7 @@ serve(async (req) => {
       if (authCreateError) {
         console.error('Auth User Creation Error:', authCreateError);
         return new Response(
-          JSON.stringify({ success: false, error: \`Auth creation failed: \${authCreateError.message}\` }),
+          JSON.stringify({ success: false, error: `Auth creation failed: ${authCreateError.message}` }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
@@ -127,9 +145,8 @@ serve(async (req) => {
       const newUserId = authData.user.id;
       const passwordHash = bcrypt.hashSync(password, 10);
 
-      // 2. Create teacher user in public.users
-      // We use the same ID as auth.users to maintain consistency for auth.uid()
-      const { data: newUser, error: userCreateError } = await supabase
+      // Create teacher user in public.users
+      const { error: userCreateError } = await supabase
         .from('users')
         .insert({
           id: newUserId,
@@ -139,24 +156,24 @@ serve(async (req) => {
           center_id: teacher.center_id,
           teacher_id: teacher.id,
           is_active: true
-        })
-        .select()
-        .single();
+        });
 
       if (userCreateError) {
-        // Rollback Auth User
         await supabase.auth.admin.deleteUser(newUserId);
-        throw userCreateError;
+        console.error('Public User Insertion Error:', userCreateError);
+        return new Response(
+          JSON.stringify({ success: false, error: `Database insertion failed: ${userCreateError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
       }
 
-      // 3. Link public user to teacher record
+      // Link public user to teacher record
       const { error: teacherUpdateError } = await supabase
         .from('teachers')
         .update({ user_id: newUserId })
         .eq('id', teacher.id);
 
       if (teacherUpdateError) {
-        // We don't rollback everything here but we should log it
         console.error('Failed to link user to teacher:', teacherUpdateError);
       }
 
@@ -180,23 +197,31 @@ serve(async (req) => {
         );
       }
 
-      // Update in Supabase Auth
       const { error: authUpdateError } = await supabase.auth.admin.updateUserById(teacher.user_id, {
         password: password
       });
 
       if (authUpdateError) {
         console.error('Auth Password Update Error:', authUpdateError);
+        return new Response(
+          JSON.stringify({ success: false, error: `Auth update failed: ${authUpdateError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
       }
 
-      // Update in public.users for the custom auth-login flow
       const passwordHash = bcrypt.hashSync(password, 10);
       const { error: passwordUpdateError } = await supabase
         .from('users')
         .update({ password_hash: passwordHash })
         .eq('id', teacher.user_id);
 
-      if (passwordUpdateError) throw passwordUpdateError;
+      if (passwordUpdateError) {
+        console.error('Password Hash Sync Error:', passwordUpdateError);
+        return new Response(
+          JSON.stringify({ success: false, error: `Database update failed: ${passwordUpdateError.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
 
       return new Response(
         JSON.stringify({ success: true, message: 'Password updated successfully' }),
@@ -211,7 +236,7 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error(JSON.stringify({ event: 'error', message: 'Manage teacher login error:', details: error }));
+    console.error('Internal Server Error:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.lesson-plan-ocr]
 verify_jwt = false
+
+[functions.manage-teacher-login]
+verify_jwt = false
