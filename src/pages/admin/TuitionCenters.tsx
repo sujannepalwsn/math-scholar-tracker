@@ -41,6 +41,7 @@ const TuitionCenters = () => {
         .from('centers')
         .select('*, users(*)')
         .order('created_at', { ascending: false });
+
       if (error) throw error;
       return data;
     }

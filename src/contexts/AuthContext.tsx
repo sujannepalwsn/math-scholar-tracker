@@ -2,9 +2,10 @@ import { logger } from "@/utils/logger";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { tracking } from "@/utils/tracking";
 import { UserRole } from "@/types/roles";
-import { User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client"
 import { Tables } from "@/integrations/supabase/types"
+import { sandboxData } from "@/lib/sandbox-mock-data";
+
 // Auth context for managing user authentication state
 
 // Define linked student interface
@@ -140,21 +141,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logger.debug('AuthContext: login function called');
 
     // MOCK LOGIN FOR DEMO/PLAYWRIGHT TESTING
-    if (username === 'demo@eduflow.com' && password === 'demo1234') {
-      const mockUser: User = {
-        id: 'demo-user-id',
-        username: 'demo@eduflow.com',
-        role: UserRole.CENTER,
-        center_id: 'demo-center-id',
-        center_name: 'Demo Academy',
-        untrusted_metadata: {
-          permissions_fetched_at: new Date().toISOString(),
-          is_ui_restricted: false
-        }
-      };
-      setUser(mockUser);
-      localStorage.setItem('auth_user', JSON.stringify(mockUser));
-      return { success: true };
+    const isSandbox = typeof window !== 'undefined' && localStorage.getItem('is_sandbox') === 'true';
+    if (isSandbox || (username === 'demo@eduflow.com' && password === 'demo1234')) {
+      const sandboxUser = sandboxData.users.find(u => u.username === username);
+      if (sandboxUser) {
+        const mockUser: User = {
+          id: sandboxUser.id,
+          username: sandboxUser.username,
+          role: sandboxUser.role as any,
+          center_id: sandboxUser.center_id,
+          center_name: sandboxUser.center_id ? (sandboxData.centers.find(c => c.id === sandboxUser.center_id)?.name || 'Demo Center') : undefined,
+          student_id: (sandboxUser as any).student_id,
+          linked_students: (sandboxUser as any).linked_students,
+          untrusted_metadata: {
+            permissions_fetched_at: new Date().toISOString(),
+            is_ui_restricted: false
+          }
+        };
+        setUser(mockUser);
+        localStorage.setItem('auth_user', JSON.stringify(mockUser));
+        return { success: true };
+      }
+
+      // Fallback for default demo account if not found in list (though it should be)
+      if (username === 'demo@eduflow.com' && password === 'demo1234') {
+        const mockUser: User = {
+          id: 'demo-user-id',
+          username: 'demo@eduflow.com',
+          role: UserRole.ADMIN,
+          center_id: null,
+          center_name: undefined,
+          untrusted_metadata: {
+            permissions_fetched_at: new Date().toISOString(),
+            is_ui_restricted: false
+          }
+        };
+        setUser(mockUser);
+        localStorage.setItem('auth_user', JSON.stringify(mockUser));
+        return { success: true };
+      }
     }
 
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Building, ImageIcon, KeyRound, Loader2, MapPin, Palette, Phone as PhoneIcon, Save, Settings, ShieldCheck, User, Locate } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, hexToHSL } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ import CenterSuggestions from "@/components/center/CenterSuggestions";
 import HeaderSettings from "@/components/center/HeaderSettings";
 import { logger } from "@/utils/logger";
 import { Json } from "@/integrations/supabase/types";
+import { UserRole } from "@/types/roles";
 
 interface CenterTheme {
   primary: string;
@@ -146,30 +147,6 @@ export default function CenterSettings() {
   // Function to apply theme to CSS variables
   const applyTheme = (themeData: CenterTheme) => {
     const root = document.documentElement;
-    
-    // Convert hex to HSL for CSS variables
-    const hexToHSL = (hex: string) => {
-      if (!hex || !hex.startsWith('#')) return null;
-      const r = parseInt(hex.slice(1, 3), 16) / 255;
-      const g = parseInt(hex.slice(3, 5), 16) / 255;
-      const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-      const max = Math.max(r, g, b), min = Math.min(r, g, b);
-      let h = 0, s = 0;
-      const l = (max + min) / 2;
-
-      if (max !== min) {
-        const d = max - min;
-        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-        switch (max) {
-          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-          case g: h = ((b - r) / d + 2) / 6; break;
-          case b: h = ((r - g) / d + 4) / 6; break;
-        }
-      }
-
-      return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-    };
 
     if (themeData.primary) {
       const hsl = hexToHSL(themeData.primary);
