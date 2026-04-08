@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ChildSwitcher } from "@/components/parent/ChildSwitcher";
+import { cn } from "@/lib/utils";
 
 export default function ParentTests() {
   const { user } = useAuth();
