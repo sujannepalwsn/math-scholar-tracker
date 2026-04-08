@@ -485,8 +485,11 @@ export default function TeacherManagement() {
       if (!hasActionPermission(user, 'teacher_management', 'edit')) {
         throw new Error("Access Denied: You do not have permission to generate faculty logins.");
       }
-      const { data: existingUser, error: existingUserError } = await supabase.from('users').select('id').eq('username', teacherUsername).single();
-      if (existingUserError && existingUserError.code !== 'PGRST116') throw existingUserError;
+      const { data: existingUser, error: existingUserError } = await supabase.from('users').select('id').eq('username', teacherUsername).maybeSingle();
+      if (existingUserError) {
+        logger.error('Error checking for existing user:', existingUserError);
+        throw new Error('Failed to verify username availability.');
+      }
       if (existingUser) throw new Error('Username already exists.');
 
       if (selectedTeacherForLogin.contract_end_date && new Date(selectedTeacherForLogin.contract_end_date) < new Date()) {
@@ -1096,10 +1099,10 @@ export default function TeacherManagement() {
 
       {/* Class Teacher Assignment Dialog */}
       <Dialog open={showClassTeacherDialog} onOpenChange={setShowClassTeacherDialog}>
-        <DialogContent>
+        <DialogContent aria-labelledby="assign-class-teacher-title" aria-describedby="assign-class-teacher-description">
           <DialogHeader>
-            <DialogTitle>Assign Class Teacher</DialogTitle>
-            <DialogDescription>Assign {selectedTeacherForClassAssign?.name} as class teacher for a grade.</DialogDescription>
+            <DialogTitle id="assign-class-teacher-title">Assign Class Teacher</DialogTitle>
+            <DialogDescription id="assign-class-teacher-description">Assign {selectedTeacherForClassAssign?.name} as class teacher for a grade.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
@@ -1124,10 +1127,10 @@ export default function TeacherManagement() {
 
       {/* Create Teacher Login Dialog */}
       <Dialog open={isCreatingTeacherLogin} onOpenChange={setIsCreatingTeacherLogin}>
-        <DialogContent>
+        <DialogContent aria-labelledby="create-login-title" aria-describedby="create-login-description">
           <DialogHeader>
-            <DialogTitle>Create Login for {selectedTeacherForLogin?.name}</DialogTitle>
-            <DialogDescription>Set username and password.</DialogDescription>
+            <DialogTitle id="create-login-title">Create Login for {selectedTeacherForLogin?.name}</DialogTitle>
+            <DialogDescription id="create-login-description">Set username and password.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2"><Label>Username</Label><Input value={teacherUsername} onChange={(e) => setTeacherUsername(e.target.value)} /></div>
@@ -1144,10 +1147,10 @@ export default function TeacherManagement() {
 
       {/* Manage Teacher Permissions Dialog */}
       <Dialog open={showPermissionsDialog} onOpenChange={setShowPermissionsDialog}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-2xl" aria-labelledby="manage-permissions-title" aria-describedby="manage-permissions-description">
           <DialogHeader>
-            <DialogTitle>Manage Permissions</DialogTitle>
-            <DialogDescription>Toggle features for {selectedTeacherForPermissions?.name}.</DialogDescription>
+            <DialogTitle id="manage-permissions-title">Manage Permissions</DialogTitle>
+            <DialogDescription id="manage-permissions-description">Toggle features for {selectedTeacherForPermissions?.name}.</DialogDescription>
           </DialogHeader>
           {selectedTeacherForPermissions && <TeacherFeaturePermissions teacherId={selectedTeacherForPermissions.id} teacherName={selectedTeacherForPermissions.name} />}
         </DialogContent>
@@ -1155,10 +1158,10 @@ export default function TeacherManagement() {
 
       {/* Change Password Dialog */}
       <Dialog open={isChangingTeacherPassword} onOpenChange={setIsChangingTeacherPassword}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-labelledby="change-password-title" aria-describedby="change-password-description">
           <DialogHeader>
-            <DialogTitle>Change Password for {selectedTeacher?.name}</DialogTitle>
-            <DialogDescription>Enter a new secure password for this faculty member.</DialogDescription>
+            <DialogTitle id="change-password-title">Change Password for {selectedTeacher?.name}</DialogTitle>
+            <DialogDescription id="change-password-description">Enter a new secure password for this faculty member.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

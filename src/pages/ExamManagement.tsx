@@ -363,10 +363,10 @@ export default function ExamManagement() {
 
       {/* Exam Form Dialog */}
       <Dialog open={showForm} onOpenChange={(v) => { if (!v) resetForm(); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-labelledby="exam-form-title" aria-describedby="exam-form-description">
           <DialogHeader>
-            <DialogTitle>{editingExam ? "Edit Exam" : "Create Exam"}</DialogTitle>
-            <DialogDescription>Fill in the exam details</DialogDescription>
+            <DialogTitle id="exam-form-title">{editingExam ? "Edit Exam" : "Create Exam"}</DialogTitle>
+            <DialogDescription id="exam-form-description">Fill in the exam details</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -449,10 +449,10 @@ export default function ExamManagement() {
 
       {/* Subject Management Dialog */}
       <Dialog open={showSubjectDialog} onOpenChange={setShowSubjectDialog}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl" aria-labelledby="subject-mgmt-title" aria-describedby="subject-mgmt-description">
           <DialogHeader>
-            <DialogTitle>Manage Subjects & Schedule</DialogTitle>
-            <DialogDescription>Add subjects with marks structure and specific dates</DialogDescription>
+            <DialogTitle id="subject-mgmt-title">Manage Subjects & Schedule</DialogTitle>
+            <DialogDescription id="subject-mgmt-description">Add subjects with marks structure and specific dates</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">

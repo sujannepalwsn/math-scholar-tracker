@@ -1064,6 +1064,7 @@ export type Database = {
           center_id: string
           created_at: string
           exam_id: string
+          exam_date: string | null
           full_marks: number
           id: string
           pass_marks: number
@@ -1073,6 +1074,7 @@ export type Database = {
           center_id: string
           created_at?: string
           exam_id: string
+          exam_date?: string | null
           full_marks?: number
           id?: string
           pass_marks?: number
@@ -1082,6 +1084,7 @@ export type Database = {
           center_id?: string
           created_at?: string
           exam_id?: string
+          exam_date?: string | null
           full_marks?: number
           id?: string
           pass_marks?: number
