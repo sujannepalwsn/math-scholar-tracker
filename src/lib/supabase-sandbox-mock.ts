@@ -16,13 +16,20 @@ export class SupabaseSandboxMock {
     this.rpc = this.rpc.bind(this);
   }
 
-  from(table: string) {
-    return new SupabaseSandboxMock(table);
+  from(table: string, options?: any) {
+    let finalTableName = table;
+    if (options?.count) {
+      finalTableName = `${table}?count=${options.count}`;
+    }
+    return new SupabaseSandboxMock(finalTableName);
   }
 
   // Handle common filtering/chaining methods
   select(query: string = "*") { return this; }
-  eq(column: string, value: any) { return this; }
+  eq(column: string, value: any) {
+    this.filters.push({ column, value });
+    return this;
+  }
   neq(column: string, value: any) { return this; }
   gt(column: string, value: any) { return this; }
   gte(column: string, value: any) { return this; }
@@ -55,8 +62,40 @@ export class SupabaseSandboxMock {
     return this.single();
   }
 
+  private filters: Array<{ column: string, value: any }> = [];
+
   async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any): Promise<any> {
-    const data = (sandboxData as any)[this.tableName] || [];
+    // Handle complex table names like "centers?count=exact"
+    let tableName = this.tableName.split('(')[0];
+    if (tableName.includes('?')) {
+      tableName = tableName.split('?')[0];
+    }
+
+    // Clean up trailing slash if any
+    tableName = tableName.replace(/\/$/, '');
+
+    let data = (sandboxData as any)[tableName] || [];
+
+    // Apply simple equality filters
+    if (this.filters.length > 0 && Array.isArray(data)) {
+      data = data.filter(item =>
+        this.filters.every(f => (item as any)[f.column] === f.value)
+      );
+    }
+
+    // Simulate join for centers with users
+    if (tableName === 'centers' && Array.isArray(data)) {
+      data = data.map(center => ({
+        ...center,
+        users: (sandboxData as any).users.filter((u: any) => u.center_id === center.id)
+      }));
+    }
+
+    // Handle count only requests
+    if (this.tableName.includes('count=exact')) {
+       return { data: null, error: null, count: Array.isArray(data) ? data.length : 0 };
+    }
+
     const response = {
       data,
       error: null,
@@ -112,11 +151,19 @@ export class SupabaseSandboxMock {
       invoke: (name: string, options?: any) => {
         if (name === 'auth-login') {
           const { username } = options?.body || {};
-          const user = (sandboxData as any).users.find((u: any) => u.username === username) || (sandboxData as any).users[0];
+          const sandboxUser = (sandboxData as any).users.find((u: any) => u.username === username);
+
+          if (!sandboxUser) {
+            return Promise.resolve({
+              data: { success: false, error: 'Invalid credentials' },
+              error: null
+            });
+          }
+
           return Promise.resolve({
             data: {
               success: true,
-              user: user,
+              user: sandboxUser,
               session: { access_token: 'mock-token', refresh_token: 'mock-refresh' }
             },
             error: null

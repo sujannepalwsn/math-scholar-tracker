@@ -85,16 +85,28 @@ function wrapQueryBuilder(builder: any, tableName: string, queryLog: any[] = [])
  */
 export const supabase = new Proxy(rawSupabase, {
   get(target, prop, receiver) {
+    const isSandbox = typeof window !== 'undefined' && (localStorage.getItem('is_sandbox') === 'true' || window.__IS_SANDBOX__);
+
     // REDIRECT TO SANDBOX IF is_sandbox FLAG IS PRESENT IN LOCALSTORAGE
-    if (typeof window !== 'undefined' && localStorage.getItem('is_sandbox') === 'true') {
-      return Reflect.get(sandboxClient, prop);
+    if (isSandbox) {
+      const sandboxValue = Reflect.get(sandboxClient, prop);
+      if (typeof sandboxValue === 'function') {
+        return sandboxValue.bind(sandboxClient);
+      }
+      return sandboxValue;
     }
 
     const value = Reflect.get(target, prop, receiver);
 
     if (prop === 'from' && typeof value === 'function') {
-      return (tableName: string) => {
-        const queryBuilder = value.call(target, tableName);
+      return (tableName: string, options?: any) => {
+        if (isSandbox) {
+          // Capture count option in table name for sandbox mock
+          const sandboxTableName = (options && options.count) ? `${tableName}?count=${options.count}` : tableName;
+          return sandboxClient.from(sandboxTableName);
+        }
+
+        const queryBuilder = value.call(target, tableName, options);
 
         // Skip interception for the logs table to prevent infinite loops
         if (tableName === 'error_logs') {

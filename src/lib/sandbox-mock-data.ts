@@ -3,7 +3,8 @@ export const sandboxData = {
     { id: 'demo-center-id', name: 'Demo Academy', logo_url: '', address: 'EduFlow HQ' }
   ],
   users: [
-    { id: 'demo-user-id', username: 'demo@eduflow.com', role: 'admin', center_id: 'demo-center-id' },
+    { id: 'demo-user-id', username: 'demo@eduflow.com', role: 'admin', center_id: null, is_active: true, first_name: 'Super', last_name: 'Admin' },
+    { id: 'center-user-id', username: 'center@demo.com', role: 'center', center_id: 'demo-center-id', is_active: true, first_name: 'Center', last_name: 'Admin' },
     { id: 'parent-demo-id', username: 'parent@demo.com', role: 'parent', center_id: 'demo-center-id', student_id: 's1', linked_students: [{ id: 's1', name: 'John Doe', grade: '10' }, { id: 's2', name: 'Jane Smith', grade: '10' }] }
   ],
   center_feature_permissions: [
@@ -66,5 +67,11 @@ export const sandboxData = {
   academic_performance_history: [],
   predictive_scores: [],
   ai_insights: [],
-  fee_default_predictions: []
+  fee_default_predictions: [],
+  login_page_settings: [
+    { page_type: 'admin', title: 'Admin Login', primary_color: '#4f46e5', background_color: '#020617' },
+    { page_type: 'center', title: 'Center Login', primary_color: '#4f46e5', background_color: '#020617' },
+    { page_type: 'parent', title: 'Parent Login', primary_color: '#4f46e5', background_color: '#020617' },
+    { page_type: 'teacher', title: 'Teacher Login', primary_color: '#4f46e5', background_color: '#020617' }
+  ]
 };
