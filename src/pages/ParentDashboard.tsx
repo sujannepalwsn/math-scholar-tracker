@@ -287,14 +287,16 @@ export default function ParentDashboard() {
           color="indigo"
           onClick={() => navigate("/parent/performance")}
         />
-        <KPICard
-          title="Activities"
-          value={recentActivities.length}
-          description="Creative Milestones"
-          icon={Paintbrush}
-          color="indigo"
-          onClick={() => navigate("/parent/activities")}
-        />
+        {hasPermission(user, 'preschool_activities') && (
+          <KPICard
+            title="Pre School Activities"
+            value={recentActivities.length}
+            description="Creative Milestones"
+            icon={Paintbrush}
+            color="indigo"
+            onClick={() => navigate("/parent/activities")}
+          />
+        )}
         <KPICard
           title="Due Fees"
           value={formatCurrency(stats.totalDues)}
@@ -330,7 +332,7 @@ export default function ParentDashboard() {
                 <Card className="border-none shadow-soft bg-card/60 backdrop-blur-md rounded-[2rem] overflow-hidden border border-border/20">
                   <CardHeader className="bg-primary/5 border-b border-primary/10 p-6 flex flex-row items-center justify-between">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                      <Paintbrush className="h-4 w-4" /> Activity Journal
+                      <Paintbrush className="h-4 w-4" /> Pre School Activity Journal
                     </CardTitle>
                     <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase text-primary" onClick={() => navigate("/parent/activities")}>View All</Button>
                   </CardHeader>

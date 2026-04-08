@@ -17,7 +17,7 @@ export const DEFAULT_NAV_ITEMS = [
   { name: "Tests", route: "/tests", icon: "ClipboardCheck", role: "center", feature_name: "test_management", category: 'Academics', order: 7 },
   { name: "Exams & Results", route: "/exams", icon: "GraduationCap", role: "center", feature_name: "exams_results", category: 'Academics', order: 8 },
   { name: "Published Results", route: "/published-results", icon: "Award", role: "center", feature_name: "published_results", category: 'Academics', order: 9 },
-  { name: "Activities", route: "/activities", icon: "Paintbrush", role: "center", feature_name: "preschool_activities", category: 'Academics', order: 10 },
+  { name: "Pre School Activities", route: "/activities", icon: "Paintbrush", role: "center", feature_name: "preschool_activities", category: 'Academics', order: 10 },
   { name: "Discipline", route: "/discipline", icon: "AlertTriangle", role: "center", feature_name: "discipline_issues", category: 'Academics', order: 11 },
 
   // Administration Group
@@ -63,7 +63,7 @@ export const DEFAULT_NAV_ITEMS = [
   { name: "Published Results", route: "/teacher/published-results", icon: "Award", role: "teacher", feature_name: "published_results", category: 'Academics', order: 7 },
   { name: "Marks Entry", route: "/teacher/marks-entry", icon: "PenTool", role: "teacher", feature_name: "exams_results", category: 'Academics', order: 8 },
   { name: "My Attendance", route: "/teacher/my-attendance", icon: "Clock", role: "teacher", feature_name: "my_attendance", category: 'Academics', order: 9 },
-  { name: "Activities", route: "/teacher/activities", icon: "Paintbrush", role: "teacher", feature_name: "preschool_activities", category: 'Academics', order: 10 },
+  { name: "Pre School Activities", route: "/teacher/activities", icon: "Paintbrush", role: "teacher", feature_name: "preschool_activities", category: 'Academics', order: 10 },
   { name: "Discipline", route: "/teacher/discipline-issues", icon: "AlertTriangle", role: "teacher", feature_name: "discipline_issues", category: 'Academics', order: 11 },
   { name: "Class Routine", route: "/teacher/class-routine", icon: "Clock", role: "teacher", feature_name: "class_routine", category: 'Academics', order: 12 },
   { name: "Teacher Reports", route: "/teacher-performance", icon: "BarChart3", role: "teacher", feature_name: "teacher_reports", category: 'Reports and Communication', order: 13 },
@@ -90,5 +90,6 @@ export const DEFAULT_NAV_ITEMS = [
   { name: "Finance", route: "/parent/fees", icon: "DollarSign", role: "parent", feature_name: "finance", category: 'Administration', order: 7 },
   { name: "Leave", route: "/parent/leave", icon: "Plane", role: "parent", feature_name: "leave_management", category: 'Administration', order: 8 },
   { name: "Messages", route: "/parent-messages", icon: "MessageSquare", role: "parent", feature_name: "messaging", category: 'Reports and Communication', order: 9 },
-  { name: "Settings", route: "/parent-settings", icon: "Settings", role: "parent", feature_name: "settings_access", category: 'Administration', order: 10 },
+  { name: "Pre School Activities", route: "/parent/activities", icon: "Paintbrush", role: "parent", feature_name: "preschool_activities", category: 'Academics', order: 10 },
+  { name: "Settings", route: "/parent-settings", icon: "Settings", role: "parent", feature_name: "settings_access", category: 'Administration', order: 11 },
 ];

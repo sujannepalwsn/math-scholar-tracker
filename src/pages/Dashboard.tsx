@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { UserRole } from "@/types/roles";
-import { AlertTriangle, ArrowRight, Bell, Book, BookOpen, Bus, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Package, Search, TrendingUp, Users, Wallet, GripVertical, Settings2, Eye, EyeOff, Paintbrush } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, Book, BookOpen, Bus, Calendar, CalendarIcon, CheckCircle2, ChevronDown, Clock, FileText, Home, Package, Search, Star, TrendingUp, Users, Wallet, GripVertical, Settings2, Eye, EyeOff, Paintbrush } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -409,23 +409,51 @@ export default function Dashboard() {
     enabled: !!centerId,
   });
 
-  // Recent activities for preview card
+  // Count total recent activities for the KPI card
+  const { data: totalRecentActivitiesCount = 0 } = useQuery({
+    queryKey: ["recent-activities-count-dashboard", centerId, isRestricted, user?.id],
+    queryFn: async () => {
+      if (!centerId) return 0;
+      let query = supabase
+        .from("student_activities")
+        .select(`id, students!inner(center_id), activities!inner(created_by)`, { count: 'exact', head: true })
+        .eq("students.center_id", centerId);
+
+      if (isRestricted && user?.id) {
+        query = query.eq('activities.created_by', user.id);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!centerId,
+  });
+
+  // Recent activities for preview card - Now fetching student logs for individual tracking
   const { data: recentActivities = [] } = useQuery({
     queryKey: ["recent-activities-dashboard", centerId, isRestricted, user?.id],
     queryFn: async () => {
       if (!centerId) return [];
       let query = supabase
-        .from("activities")
-        .select("id, name, title, grade, activity_date")
-        .eq("center_id", centerId)
-        .order("activity_date", { ascending: false })
-        .limit(5);
+        .from("student_activities")
+        .select(`
+          id,
+          involvement_score,
+          created_at,
+          students!inner(name, grade, center_id),
+          activities!inner(title, activity_date, created_by)
+        `)
+        .eq("students.center_id", centerId);
 
       if (isRestricted && user?.id) {
-        query = query.eq('created_by', user.id);
+        query = query.eq('activities.created_by', user.id);
       }
 
-      const { data, error } = await query;
+      const { data, error } = await query
+        .order("created_at", { ascending: false })
+        .limit(5);
+
       if (error) throw error;
       return data || [];
     },
@@ -1197,8 +1225,8 @@ export default function Dashboard() {
       ) : null,
       "activities": hasPermission(user, 'preschool_activities') ? (
         <KPICard
-          title="Activities"
-          value={recentActivities.length}
+          title="Pre School Activities"
+          value={totalRecentActivitiesCount}
           description="Engagement Logs"
           icon={Paintbrush}
           color="purple"
@@ -1863,7 +1891,7 @@ export default function Dashboard() {
                               <div className="p-2 rounded-xl bg-primary/10 text-primary">
                                 <BookOpen className="h-5 w-5" />
                               </div>
-                              Activities
+                              Pre School Activities
                             </CardTitle>
                             <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest text-primary h-7" onClick={() => navigate("/activities")}>
                               View All <ArrowRight className="h-3 w-3 ml-1" />
@@ -1871,14 +1899,24 @@ export default function Dashboard() {
                           </CardHeader>
                           <CardContent className="p-0">
                             {recentActivities.length === 0 ? (
-                              <p className="p-8 text-center text-sm text-muted-foreground font-medium italic">No upcoming activities</p>
+                              <p className="p-8 text-center text-sm text-muted-foreground font-medium italic">No recent activity logs</p>
                             ) : (
                               <div className="divide-y divide-border/10">
-                                {recentActivities.map((a: any) => (
-                                  <div key={a.id} className="p-5 hover:bg-primary/5 transition-colors">
-                                    <p className="text-sm font-black text-slate-800">{a.title || a.name}</p>
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
-                                      Grade {a.grade || "All"} · {a.activity_date ? format(new Date(a.activity_date), "MMM d") : "No date"}
+                                {recentActivities.map((sa: any) => (
+                                  <div key={sa.id} className="p-5 hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => navigate("/activities")}>
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <p className="text-sm font-black text-slate-800">{sa.students?.name}</p>
+                                        <p className="text-xs font-bold text-muted-foreground">{sa.activities?.title}</p>
+                                      </div>
+                                      {sa.involvement_score && (
+                                        <div className="flex items-center gap-1 text-orange-500 font-black text-[10px]">
+                                          <Star className="h-3 w-3 fill-current" /> {sa.involvement_score}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5">
+                                      Grade {sa.students?.grade} · {sa.activities?.activity_date ? format(new Date(sa.activities.activity_date), "MMM d") : "No date"}
                                     </p>
                                   </div>
                                 ))}
