@@ -123,6 +123,15 @@ export default function CostIntelligence() {
     setCounts(prev => ({ ...prev, [role]: num }));
   };
 
+  if (statsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <Activity className="h-12 w-12 text-primary animate-spin" />
+        <p className="text-slate-500 font-black uppercase tracking-widest animate-pulse">Initializing Cost Engine...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <Tabs defaultValue="overview" className="space-y-8">
@@ -426,7 +435,12 @@ export default function CostIntelligence() {
 
         <TabsContent value="centers">
           <div className="space-y-6">
-            {systemStats?.center_breakdown?.map((c: any) => {
+            {(!systemStats?.center_breakdown || systemStats.center_breakdown.length === 0) ? (
+              <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden p-20 text-center">
+                <Info className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+                <p className="text-slate-400 font-bold">No center-specific usage data discovered yet.</p>
+              </Card>
+            ) : systemStats.center_breakdown.map((c: any) => {
                const centerCounts = {
                  teachers: c.teacher_count || 0,
                  students: c.student_count || 0,
