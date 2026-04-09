@@ -18,17 +18,16 @@ BEGIN
     SELECT count(*) INTO total_parents FROM public.parents;
     SELECT count(*) INTO total_admins FROM public.users WHERE role = 'admin';
 
-    -- Center Breakdown
+    -- Center Breakdown (Enhanced with correct column names for current schema)
     SELECT jsonb_agg(c) INTO result FROM (
         SELECT
             c.id,
             c.name,
-            count(DISTINCT s.id) as student_count,
-            count(DISTINCT t.id) as teacher_count
+            (SELECT count(*) FROM public.students s WHERE s.center_id = c.id) as student_count,
+            (SELECT count(*) FROM public.teachers t WHERE t.center_id = c.id) as teacher_count,
+            (SELECT count(*) FROM public.attendance a WHERE a.center_id = c.id) as activity_row_count
         FROM public.centers c
-        LEFT JOIN public.students s ON s.school_id = c.id
-        LEFT JOIN public.teachers t ON t.school_id = c.id
-        GROUP BY c.id, c.name
+        WHERE c.is_active = true
     ) c;
 
     -- Table Stats (Estimated row counts and sizes)
