@@ -128,6 +128,22 @@ export class SupabaseSandboxMock {
         { evaluation_date: new Date().toISOString(), score: 82, max_score: 100, percentage: 82, trend_status: 'Improving', risk_level: 'Low' }
       ];
     }
+    if (fn === 'get_system_stats') {
+      data = {
+        counts: {
+          centers: 12,
+          teachers: 45,
+          students: 420,
+          parents: 380,
+          admins: 4
+        },
+        table_stats: [
+          { table_name: 'attendance', estimated_rows: 15000, total_size_bytes: 2048000 },
+          { table_name: 'invoices', estimated_rows: 5000, total_size_bytes: 1024000 }
+        ],
+        timestamp: new Date().toISOString()
+      };
+    }
     return {
       then: (onfulfilled: any) => onfulfilled({ data, error: null })
     };
