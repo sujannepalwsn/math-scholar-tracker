@@ -16,6 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +33,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   LineChart,
   Line,
@@ -55,13 +56,17 @@ export default function CostIntelligence() {
   });
 
   // Fetch real system stats
-  const { data: systemStats, isLoading: statsLoading } = useQuery({
+  const { data: systemStats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['system-stats'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_system_stats');
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to fetch system stats:', error);
+        throw error;
+      }
       return data;
-    }
+    },
+    retry: 1
   });
 
   const projectedCost = useMemo(() => {
@@ -69,14 +74,18 @@ export default function CostIntelligence() {
   }, [counts, tier]);
 
   // Actual cost calculation based on real counts
-  const actualCounts = systemStats?.counts ? {
-    teachers: systemStats.counts.teachers || 0,
-    students: systemStats.counts.students || 0,
-    parents: systemStats.counts.parents || 0,
-    admins: systemStats.counts.admins || 0
-  } : counts;
+  const actualCounts = useMemo(() => {
+    if (!systemStats?.counts) return null;
+    return {
+      teachers: systemStats.counts.teachers || 0,
+      students: systemStats.counts.students || 0,
+      parents: systemStats.counts.parents || 0,
+      admins: systemStats.counts.admins || 0
+    };
+  }, [systemStats]);
 
   const actualCost = useMemo(() => {
+    if (!actualCounts) return null;
     return CostEngine.calculateProjectedCost(actualCounts, tier);
   }, [actualCounts, tier]);
 
@@ -101,6 +110,8 @@ export default function CostIntelligence() {
   const forecastData = useMemo(() => {
     const data = [];
     const baseCounts = actualCounts;
+    if (!baseCounts) return [];
+
     // Growth rate: 5% student growth per month
     for (let i = 0; i <= 6; i++) {
       const projectedCounts = {
@@ -132,6 +143,26 @@ export default function CostIntelligence() {
     );
   }
 
+  if (statsError || !actualCost || !actualCounts) {
+    return (
+      <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden p-20 text-center">
+        <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+        <p className="text-slate-900 font-black uppercase tracking-tight mb-2">Supabase Connectivity Required</p>
+        <p className="text-slate-500 text-sm max-w-md mx-auto">
+          Actual cost calculation requires a live connection to the Supabase RPC <span className="font-mono bg-slate-100 px-1 rounded text-primary">get_system_stats</span>.
+          Please ensure your database migration has been applied.
+        </p>
+        <Button
+          variant="outline"
+          className="mt-6 rounded-xl border-slate-200"
+          onClick={() => window.location.reload()}
+        >
+          Retry Connection
+        </Button>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <Tabs defaultValue="overview" className="space-y-8">
@@ -149,9 +180,15 @@ export default function CostIntelligence() {
                 <DollarSign className="h-24 w-24" />
               </div>
               <CardContent className="p-8 space-y-2">
-                <p className="text-xs font-black uppercase tracking-widest text-primary-foreground/60">Actual Monthly Est.</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-black uppercase tracking-widest text-primary-foreground/60">Actual Monthly Est.</p>
+                  <Badge className="bg-white/20 text-white border-none text-[8px] font-black">{tier}</Badge>
+                </div>
                 <h3 className="text-4xl font-black">${actualCost.totalMonthlyCost.toFixed(2)}</h3>
-                <p className="text-[10px] font-bold opacity-80">Based on {actualCounts.students} students</p>
+                <p className="text-[10px] font-bold opacity-80 flex items-center gap-1">
+                   {systemStats?.counts ? <Activity className="h-3 w-3" /> : <Calculator className="h-3 w-3" />}
+                   Based on {actualCounts.students} students {systemStats?.counts ? '(Real Data)' : '(Simulated)'}
+                </p>
               </CardContent>
             </Card>
 
@@ -211,8 +248,20 @@ export default function CostIntelligence() {
                 <CardHeader className="p-8 border-b border-slate-50">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-2xl font-black uppercase tracking-tight">Module Cost Analysis</CardTitle>
-                      <CardDescription>Estimated cost contribution by system module.</CardDescription>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-2xl font-black uppercase tracking-tight">Module Cost Analysis</CardTitle>
+                        <TooltipProvider>
+                           <Tooltip>
+                              <TooltipTrigger>
+                                 <Info className="h-4 w-4 text-slate-300 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs p-3 bg-slate-900 text-white text-[10px] rounded-xl">
+                                 Costs are estimated using behavioral weights (requests/day) and average payload sizes (KB) mapped to each system module.
+                              </TooltipContent>
+                           </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <CardDescription>Estimated cost contribution based on user behavior models.</CardDescription>
                     </div>
                     <Badge variant="outline" className="rounded-xl px-4 py-1 font-bold">
                       Top 10 Expensive
@@ -233,7 +282,7 @@ export default function CostIntelligence() {
                             fontWeight="bold"
                             tick={{ fill: '#64748b' }}
                           />
-                         <Tooltip
+                         <RechartsTooltip
                             formatter={(value: number) => [`$${value.toFixed(2)}`, 'Monthly Cost']}
                             contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                           />
@@ -264,7 +313,7 @@ export default function CostIntelligence() {
                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                              </Pie>
-                             <Tooltip />
+                             <RechartsTooltip />
                              <Legend verticalAlign="bottom" height={36}/>
                           </PieChart>
                        </ResponsiveContainer>
@@ -294,7 +343,7 @@ export default function CostIntelligence() {
                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                              </Pie>
-                             <Tooltip />
+                             <RechartsTooltip />
                              <Legend verticalAlign="bottom" height={36}/>
                           </PieChart>
                        </ResponsiveContainer>
@@ -595,7 +644,7 @@ export default function CostIntelligence() {
                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
                          <XAxis dataKey="month" fontSize={10} fontWeight="bold" />
                          <YAxis fontSize={10} fontWeight="bold" />
-                         <Tooltip />
+                         <RechartsTooltip />
                          <Area type="monotone" dataKey="cost" stroke="#4f46e5" fillOpacity={1} fill="url(#colorCost)" strokeWidth={3} />
                       </AreaChart>
                    </ResponsiveContainer>

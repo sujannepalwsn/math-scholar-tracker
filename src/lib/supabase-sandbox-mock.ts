@@ -128,28 +128,6 @@ export class SupabaseSandboxMock {
         { evaluation_date: new Date().toISOString(), score: 82, max_score: 100, percentage: 82, trend_status: 'Improving', risk_level: 'Low' }
       ];
     }
-    if (fn === 'get_system_stats') {
-      data = {
-        counts: {
-          centers: 12,
-          teachers: 45,
-          students: 420,
-          parents: 380,
-          admins: 4
-        },
-        center_breakdown: [
-          { id: 'c1', name: 'Elite Academy', student_count: 150, teacher_count: 15, activity_row_count: 4500 },
-          { id: 'c2', name: 'Global Scholars', student_count: 120, teacher_count: 12, activity_row_count: 3200 },
-          { id: 'c3', name: 'Premier Tuition', student_count: 80, teacher_count: 8, activity_row_count: 1800 },
-          { id: 'c4', name: 'Bright Future', student_count: 70, teacher_count: 10, activity_row_count: 2100 }
-        ],
-        table_stats: [
-          { table_name: 'attendance', estimated_rows: 15000, total_size_bytes: 2048000 },
-          { table_name: 'invoices', estimated_rows: 5000, total_size_bytes: 1024000 }
-        ],
-        timestamp: new Date().toISOString()
-      };
-    }
     return {
       then: (onfulfilled: any) => onfulfilled({ data, error: null })
     };

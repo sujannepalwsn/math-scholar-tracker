@@ -110,10 +110,13 @@ export class CostEngine {
     const fileStorageOverageGb = Math.max(0, fileStorageGb - tier.includedFileStorageGb);
     const edgeFunctionOverage = Math.max(0, edgeFunctionInvocations - tier.includedEdgeFunctionInvocations);
 
-    const egressCost = egressOverageGb * tier.overageRates.egressPerGb;
-    const dbStorageCost = dbStorageOverageGb * tier.overageRates.databaseStoragePerGb;
-    const fileStorageCost = fileStorageOverageGb * tier.overageRates.fileStoragePerGb;
-    const edgeFunctionCost = (edgeFunctionOverage / 1000000) * tier.overageRates.edgeFunctionPer1M;
+    // If on FREE tier, we calculate "Shadow Cost" (what it would cost on PRO) for better insight
+    const rateTier = tierId === 'FREE' ? PRICING_TIERS['PRO'] : tier;
+
+    const egressCost = egressOverageGb * rateTier.overageRates.egressPerGb;
+    const dbStorageCost = dbStorageOverageGb * rateTier.overageRates.databaseStoragePerGb;
+    const fileStorageCost = fileStorageOverageGb * rateTier.overageRates.fileStoragePerGb;
+    const edgeFunctionCost = (edgeFunctionOverage / 1000000) * rateTier.overageRates.edgeFunctionPer1M;
 
     const overageCost = egressCost + dbStorageCost + fileStorageCost + edgeFunctionCost;
     const totalMonthlyCost = tier.baseMonthlyPrice + overageCost;
