@@ -110,6 +110,8 @@ export default function CostIntelligence() {
   const forecastData = useMemo(() => {
     const data = [];
     const baseCounts = actualCounts;
+    if (!baseCounts) return [];
+
     // Growth rate: 5% student growth per month
     for (let i = 0; i <= 6; i++) {
       const projectedCounts = {
