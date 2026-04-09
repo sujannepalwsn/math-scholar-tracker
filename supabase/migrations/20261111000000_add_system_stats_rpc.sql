@@ -1,7 +1,7 @@
 -- RPC to get system-wide statistics for cost engine
 
 CREATE OR REPLACE FUNCTION public.get_system_stats()
-RETURNS JSONB AS $$
+RETURNS JSONB AS $6172$
 DECLARE
     result JSONB;
     total_centers INT;
@@ -15,10 +15,11 @@ BEGIN
     SELECT count(*) INTO total_centers FROM public.centers;
     SELECT count(*) INTO total_teachers FROM public.teachers;
     SELECT count(*) INTO total_students FROM public.students;
-    SELECT count(*) INTO total_parents FROM public.parents;
+    -- In this schema, parents are users with the role 'parent'
+    SELECT count(*) INTO total_parents FROM public.users WHERE role = 'parent';
     SELECT count(*) INTO total_admins FROM public.users WHERE role = 'admin';
 
-    -- Center Breakdown (Enhanced with correct column names for current schema)
+    -- Center Breakdown (Fixed with correct column names for current schema)
     SELECT jsonb_agg(c) INTO result FROM (
         SELECT
             c.id,
@@ -27,7 +28,6 @@ BEGIN
             (SELECT count(*) FROM public.teachers t WHERE t.center_id = c.id) as teacher_count,
             (SELECT count(*) FROM public.attendance a WHERE a.center_id = c.id) as activity_row_count
         FROM public.centers c
-        WHERE c.is_active = true
     ) c;
 
     -- Table Stats (Estimated row counts and sizes)
@@ -60,4 +60,4 @@ BEGIN
 
     RETURN result;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$6172$ LANGUAGE plpgsql SECURITY DEFINER;
