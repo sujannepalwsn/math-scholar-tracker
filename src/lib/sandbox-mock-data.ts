@@ -32,8 +32,8 @@ export const sandboxData = {
     }
   ],
   students: [
-    { id: 's1', name: 'John Doe', grade: '10', center_id: 'demo-center-id', is_active: true },
-    { id: 's2', name: 'Jane Smith', grade: '10', center_id: 'demo-center-id', is_active: true }
+    { id: 's1', name: 'John Doe', grade: '10', center_id: 'demo-center-id', is_active: true, gender: 'male', photo_url: 'https://broken-link.com/photo1.jpg' },
+    { id: 's2', name: 'Jane Smith', grade: '10', center_id: 'demo-center-id', is_active: true, gender: 'female', photo_url: 'https://broken-link.com/photo2.jpg' }
   ],
   teachers: [
     { id: 't1', name: 'Prof. Xavier', center_id: 'demo-center-id' }
