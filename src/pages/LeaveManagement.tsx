@@ -113,7 +113,7 @@ export default function LeaveManagement() {
         title: `Leave Application ${status.toUpperCase()}`,
         message: `Your leave application has been ${status}.`,
         type: "leave_status",
-        link: teacherId ? "/teacher/leave" : "/parent-leave"
+        link: teacherId ? "/teacher/leave" : "/parent/leave"
       });
 
       if (error) {
@@ -191,7 +191,7 @@ export default function LeaveManagement() {
 
   const handleApplyClick = () => {
     if (user?.role === UserRole.TEACHER) navigate('/teacher/leave');
-    else if (user?.role === UserRole.PARENT) navigate('/parent-leave');
+    else if (user?.role === UserRole.PARENT) navigate('/parent/leave');
   };
 
   return (

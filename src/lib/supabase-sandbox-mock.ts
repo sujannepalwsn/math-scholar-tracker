@@ -118,8 +118,18 @@ export class SupabaseSandboxMock {
 
   // RPC
   rpc(fn: string, args?: any) {
+    let data: any = [];
+    if (fn === 'calculate_effort_index') data = 85;
+    if (fn === 'calculate_outcome_index') data = 78;
+    if (fn === 'get_student_performance_trends') {
+      data = [
+        { evaluation_date: new Date(Date.now() - 20*24*60*60*1000).toISOString(), score: 70, max_score: 100, percentage: 70, trend_status: 'Stable', risk_level: 'Low' },
+        { evaluation_date: new Date(Date.now() - 10*24*60*60*1000).toISOString(), score: 75, max_score: 100, percentage: 75, trend_status: 'Improving', risk_level: 'Low' },
+        { evaluation_date: new Date().toISOString(), score: 82, max_score: 100, percentage: 82, trend_status: 'Improving', risk_level: 'Low' }
+      ];
+    }
     return {
-      then: (onfulfilled: any) => onfulfilled({ data: [], error: null })
+      then: (onfulfilled: any) => onfulfilled({ data, error: null })
     };
   }
 

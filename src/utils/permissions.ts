@@ -139,6 +139,15 @@ export const PERMISSION_MAPPING: Record<string, string> = {
   '/parent/routine': 'class_routine',
   '/parent/attendance': 'take_attendance',
   '/parent/fees': 'finance',
+  '/parent/leave': 'leave_management',
+  '/parent/tests': 'test_management',
+  '/parent/activities': 'preschool_activities',
+  '/parent/homework': 'homework_management',
+  '/parent/messages': 'messaging',
+  '/parent/settings': 'settings_access',
+  '/parent/about-institution': 'about_institution',
+  '/parent/results': 'exams_results',
+  '/parent/snapshot': 'daily_snapshot',
 };
 
 /**

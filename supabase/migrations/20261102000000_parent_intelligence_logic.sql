@@ -2,7 +2,7 @@
 -- Backend Intelligence Functions for Parent Decision Intelligence System
 
 -- 1. Calculate Effort Index
-CREATE OR REPLACE FUNCTION public.calculate_effort_index(p_student_id uuid, p_start_date date, p_end_date date)
+CREATE OR REPLACE FUNCTION public.calculate_effort_index(p_student_id uuid, p_start_date date DEFAULT (CURRENT_DATE - INTERVAL '30 days')::date, p_end_date date DEFAULT CURRENT_DATE)
 RETURNS numeric AS $$
 DECLARE
     avg_study_time numeric;
@@ -29,7 +29,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 2. Calculate Outcome Index
-CREATE OR REPLACE FUNCTION public.calculate_outcome_index(p_student_id uuid, p_start_date date, p_end_date date)
+CREATE OR REPLACE FUNCTION public.calculate_outcome_index(p_student_id uuid, p_start_date date DEFAULT (CURRENT_DATE - INTERVAL '30 days')::date, p_end_date date DEFAULT CURRENT_DATE)
 RETURNS numeric AS $$
 DECLARE
     avg_test_score numeric;
@@ -48,7 +48,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 3. Detect Performance Trends (Recommendation 1 & 14)
-CREATE OR REPLACE FUNCTION public.get_student_performance_trends(p_student_id uuid, p_subject text)
+CREATE OR REPLACE FUNCTION public.get_student_performance_trends(p_student_id uuid, p_subject text DEFAULT NULL)
 RETURNS TABLE (
     evaluation_date timestamp with time zone,
     score numeric,

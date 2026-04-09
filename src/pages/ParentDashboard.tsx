@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
-import { format } from "date-fns"
+import { format, subDays } from "date-fns"
 import { cn, formatCurrency } from "@/lib/utils"
 import { KPICard } from "@/components/dashboard/KPICard"
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -85,9 +85,13 @@ export default function ParentDashboard() {
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase.rpc('get_student_performance_trends', {
-        p_student_id: activeStudentId
+        p_student_id: activeStudentId,
+        p_subject: null
       });
-      if (error) throw error;
+      if (error) {
+        console.error("Performance trends RPC error:", error);
+        return [];
+      }
       return (data as any[] || []).map(d => ({
         date: d.evaluation_date ? format(new Date(d.evaluation_date), "MMM d") : 'N/A',
         score: d.score || 0,
@@ -105,9 +109,14 @@ export default function ParentDashboard() {
     queryFn: async () => {
       if (!activeStudentId) return 0;
       const { data, error } = await supabase.rpc('calculate_effort_index', {
-        p_student_id: activeStudentId
+        p_student_id: activeStudentId,
+        p_start_date: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+        p_end_date: format(new Date(), 'yyyy-MM-dd')
       });
-      if (error) throw error;
+      if (error) {
+        console.warn("Effort index RPC error:", error);
+        return 0;
+      }
       return data as number;
     },
     enabled: !!activeStudentId
@@ -118,9 +127,14 @@ export default function ParentDashboard() {
     queryFn: async () => {
       if (!activeStudentId) return 0;
       const { data, error } = await supabase.rpc('calculate_outcome_index', {
-        p_student_id: activeStudentId
+        p_student_id: activeStudentId,
+        p_start_date: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+        p_end_date: format(new Date(), 'yyyy-MM-dd')
       });
-      if (error) throw error;
+      if (error) {
+        console.warn("Outcome index RPC error:", error);
+        return 0;
+      }
       return data as number;
     },
     enabled: !!activeStudentId
