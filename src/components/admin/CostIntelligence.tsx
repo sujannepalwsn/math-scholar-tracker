@@ -425,28 +425,141 @@ export default function CostIntelligence() {
         </TabsContent>
 
         <TabsContent value="centers">
-          <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
-            <CardHeader className="p-8">
-              <CardTitle className="text-2xl font-black uppercase tracking-tight">Center Cost Breakdown</CardTitle>
-              <CardDescription>Estimated Supabase cost contribution per tuition center.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8">
-               <div className="h-[400px]">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={centerCostData}>
-                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                     <XAxis dataKey="name" fontSize={10} fontWeight="bold" />
-                     <YAxis fontSize={10} fontWeight="bold" />
-                     <Tooltip
-                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Monthly Cost']}
-                        contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      />
-                     <Bar dataKey="cost" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                   </BarChart>
-                 </ResponsiveContainer>
-               </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {systemStats?.center_breakdown?.map((c: any) => {
+               const centerCounts = {
+                 teachers: c.teacher_count || 0,
+                 students: c.student_count || 0,
+                 parents: Math.round((c.student_count || 0) * 0.9),
+                 admins: 1
+               };
+               const cost = CostEngine.calculateProjectedCost(centerCounts, tier);
+               const pricing = PRICING_TIERS[tier];
+
+               // Recommended Tier logic
+               let recommendedTier: SupabaseTier = 'FREE';
+               if (cost.categories.egress.usageGb > 2 || cost.categories.dbStorage.usageGb > 0.5) recommendedTier = 'PRO';
+               if (cost.categories.egress.usageGb > 50 || cost.categories.dbStorage.usageGb > 8) recommendedTier = 'ENTERPRISE';
+
+               // 3 and 6 month projections
+               const proj3 = CostEngine.calculateProjectedCost({
+                 ...centerCounts,
+                 students: Math.round(centerCounts.students * 1.15)
+               }, tier);
+               const proj6 = CostEngine.calculateProjectedCost({
+                 ...centerCounts,
+                 students: Math.round(centerCounts.students * 1.30)
+               }, tier);
+
+               return (
+                 <Card key={c.id} className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+                   <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
+                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                       <div className="space-y-1">
+                         <div className="flex items-center gap-3">
+                            <CardTitle className="text-xl font-black uppercase tracking-tight">{c.name}</CardTitle>
+                            <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-none font-black text-[10px]">
+                               REQ: {recommendedTier}
+                            </Badge>
+                         </div>
+                         <CardDescription>Monthly Resource Consumption & Cost Breakdown</CardDescription>
+                       </div>
+                       <div className="text-right">
+                         <p className="text-[10px] font-black uppercase text-slate-400">Monthly Estimate</p>
+                         <h4 className="text-3xl font-black text-primary">${cost.totalMonthlyCost.toFixed(2)}</h4>
+                       </div>
+                     </div>
+                   </CardHeader>
+                   <CardContent className="p-8 space-y-8">
+                     <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                        <div className="space-y-1">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">MAU (Auth)</p>
+                           <p className="text-xl font-black text-slate-700">{centerCounts.teachers + centerCounts.students + centerCounts.parents + 1}</p>
+                        </div>
+                        <div className="space-y-1">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">DB Storage</p>
+                           <p className="text-xl font-black text-slate-700">{cost.categories.dbStorage.usageGb.toFixed(3)} GB</p>
+                        </div>
+                        <div className="space-y-1">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">File Storage</p>
+                           <p className="text-xl font-black text-slate-700">{cost.categories.fileStorage.usageGb.toFixed(2)} GB</p>
+                        </div>
+                        <div className="space-y-1">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bandwidth</p>
+                           <p className="text-xl font-black text-slate-700">{cost.categories.egress.usageGb.toFixed(2)} GB</p>
+                        </div>
+                        <div className="space-y-1">
+                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invocations</p>
+                           <p className="text-xl font-black text-slate-700">{(cost.categories.edgeFunctions.invocations / 1000).toFixed(1)}K</p>
+                        </div>
+                     </div>
+
+                     <div className="grid md:grid-cols-3 gap-8">
+                        <div className="p-6 bg-slate-50 rounded-[1.5rem] border border-slate-100 space-y-4">
+                           <h5 className="text-xs font-black uppercase tracking-widest text-slate-500">Usage vs Included Quota</h5>
+                           <div className="space-y-3">
+                              <div className="space-y-1">
+                                 <div className="flex justify-between text-[10px] font-bold uppercase">
+                                    <span>Egress</span>
+                                    <span>{((cost.categories.egress.usageGb / (pricing.includedEgressGb || 1)) * 100).toFixed(1)}%</span>
+                                 </div>
+                                 <div className="w-full h-1.5 bg-white rounded-full overflow-hidden border border-slate-200">
+                                    <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, (cost.categories.egress.usageGb / pricing.includedEgressGb) * 100)}%` }} />
+                                 </div>
+                              </div>
+                              <div className="space-y-1">
+                                 <div className="flex justify-between text-[10px] font-bold uppercase">
+                                    <span>Database</span>
+                                    <span>{((cost.categories.dbStorage.usageGb / (pricing.includedDatabaseStorageGb || 1)) * 100).toFixed(1)}%</span>
+                                 </div>
+                                 <div className="w-full h-1.5 bg-white rounded-full overflow-hidden border border-slate-200">
+                                    <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, (cost.categories.dbStorage.usageGb / pricing.includedDatabaseStorageGb) * 100)}%` }} />
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="p-6 bg-slate-900 text-white rounded-[1.5rem] border border-slate-800 space-y-4">
+                           <h5 className="text-xs font-black uppercase tracking-widest text-slate-400">Cost Breakdown</h5>
+                           <div className="space-y-2">
+                              <div className="flex justify-between text-[10px] font-bold">
+                                 <span className="text-slate-500 uppercase">Egress Overage</span>
+                                 <span>${cost.categories.egress.cost.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-[10px] font-bold">
+                                 <span className="text-slate-500 uppercase">Storage Overage</span>
+                                 <span>${(cost.categories.dbStorage.cost + cost.categories.fileStorage.cost).toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-[10px] font-bold">
+                                 <span className="text-slate-500 uppercase">Functions Overage</span>
+                                 <span>${cost.categories.edgeFunctions.cost.toFixed(2)}</span>
+                              </div>
+                              <div className="pt-2 border-t border-white/10 flex justify-between text-[10px] font-black">
+                                 <span className="text-primary uppercase">Base Plan</span>
+                                 <span>${cost.basePrice.toFixed(2)}</span>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="p-6 bg-primary/5 rounded-[1.5rem] border border-primary/10 space-y-4">
+                           <h5 className="text-xs font-black uppercase tracking-widest text-primary/70">Scale Forecast</h5>
+                           <div className="grid grid-cols-2 gap-4">
+                              <div className="p-4 bg-white rounded-2xl shadow-sm border border-primary/5">
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase">3-Month (15% Δ)</p>
+                                 <p className="text-xl font-black text-primary">${proj3.totalMonthlyCost.toFixed(2)}</p>
+                              </div>
+                              <div className="p-4 bg-white rounded-2xl shadow-sm border border-primary/5">
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase">6-Month (30% Δ)</p>
+                                 <p className="text-xl font-black text-primary">${proj6.totalMonthlyCost.toFixed(2)}</p>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                   </CardContent>
+                 </Card>
+               );
+            })}
+          </div>
         </TabsContent>
 
         <TabsContent value="forecast">
