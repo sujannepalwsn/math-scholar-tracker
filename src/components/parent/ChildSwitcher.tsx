@@ -13,6 +13,7 @@ interface ChildSwitcherProps {
 
 export const ChildSwitcher: React.FC<ChildSwitcherProps> = ({ selectedId, onSelect }) => {
   const { user } = useAuth();
+  const [imageErrors, setImageErrors] = React.useState<Record<string, boolean>>({});
 
   const linkedStudents = React.useMemo(() => {
     const raw = user?.linked_students;
@@ -27,7 +28,7 @@ export const ChildSwitcher: React.FC<ChildSwitcherProps> = ({ selectedId, onSele
       if (ids.length === 0) return [];
       const { data, error } = await supabase
         .from('students')
-        .select('id, name, grade, section, photo_url')
+        .select('id, name, grade, section, photo_url, gender')
         .in('id', ids);
       if (error) throw error;
       return data;
@@ -41,6 +42,9 @@ export const ChildSwitcher: React.FC<ChildSwitcherProps> = ({ selectedId, onSele
     <div className="flex flex-wrap gap-3">
       {childrenDetails.map((child) => {
         const isActive = selectedId === child.id;
+        const hasError = !child.photo_url || imageErrors[child.id];
+        const gender = child.gender?.toLowerCase();
+
         return (
           <motion.button
             key={child.id}
@@ -55,13 +59,31 @@ export const ChildSwitcher: React.FC<ChildSwitcherProps> = ({ selectedId, onSele
             )}
           >
             <div className={cn(
-              "h-10 w-10 rounded-xl overflow-hidden bg-slate-200 flex items-center justify-center border",
-              isActive ? "border-primary/20" : "border-slate-300"
+              "h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center border transition-colors",
+              hasError
+                ? gender === 'female'
+                  ? "bg-rose-100 border-rose-200"
+                  : gender === 'male'
+                    ? "bg-blue-100 border-blue-200"
+                    : "bg-slate-200 border-slate-300"
+                : isActive ? "border-primary/20" : "border-slate-300"
             )}>
-              {child.photo_url ? (
-                <img src={child.photo_url} alt={child.name} className="h-full w-full object-cover" />
+              {child.photo_url && !imageErrors[child.id] ? (
+                <img
+                  src={child.photo_url}
+                  alt={child.name}
+                  className="h-full w-full object-cover"
+                  onError={() => setImageErrors(prev => ({ ...prev, [child.id]: true }))}
+                />
               ) : (
-                <User className="h-5 w-5 text-slate-400" />
+                <User className={cn(
+                  "h-5 w-5",
+                  gender === 'female'
+                    ? "text-rose-500"
+                    : gender === 'male'
+                      ? "text-blue-500"
+                      : "text-slate-400"
+                )} />
               )}
             </div>
             <div className="text-left">
