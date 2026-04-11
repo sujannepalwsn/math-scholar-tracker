@@ -55,8 +55,7 @@ const DemoRequests = () => {
     queryKey: ['demo_requests'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('demo_requests')
-        .select('*')
+        .from("demo_requests").select("id, name, email, status")
         .order('created_at', { ascending: false });
 
       if (error) throw error;

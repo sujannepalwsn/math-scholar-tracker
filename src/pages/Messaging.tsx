@@ -46,7 +46,7 @@ export default function Messaging() {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("chat_conversations")
-        .select(`*, students:students!student_id(id, name, grade), parent_user:users!parent_user_id(id, username)`)
+        .select(`id, center_id, student_id, parent_user_id, last_message_at, students:students!student_id(id, name, grade), parent_user:users!parent_user_id(id, username)`)
         .eq("center_id", user.center_id)
         .order("updated_at", { ascending: false });
       if (error) throw error;
@@ -61,7 +61,7 @@ export default function Messaging() {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("chat_conversations")
-        .select(`*, students:students!student_id(id, name, grade), centers:centers!center_id(id, name)`)
+        .select(`id, center_id, student_id, parent_user_id, last_message_at, students:students!student_id(id, name, grade), centers:centers!center_id(id, name)`)
         .eq("parent_user_id", user.id)
         .order("updated_at", { ascending: false });
       if (error) throw error;

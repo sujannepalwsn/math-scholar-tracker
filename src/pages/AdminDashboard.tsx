@@ -23,8 +23,8 @@ const AdminDashboard = () => {
   const { data: stats } = useQuery({
     queryKey: ['admin-summary-stats'],
     queryFn: async () => {
-      const { count: centersCount } = await supabase.from('centers').select('*', { count: 'exact', head: true });
-      const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const { count: centersCount } = await supabase.from("centers").select("id, name, logo_url, address, phone, email", { count: 'exact', head: true });
+      const { count: usersCount } = await supabase.from("users").select("id, username, role, center_id, teacher_id, student_id, is_active", { count: 'exact', head: true });
       const { count: errorLogsCount } = await supabase.from('error_logs').select('*', { count: 'exact', head: true });
       const { data: globalInvoices } = await supabase.from('invoices').select('total_amount, paid_amount');
 
@@ -45,7 +45,7 @@ const AdminDashboard = () => {
       const { data: centers } = await supabase.from('centers').select('id, name');
       const trends = [];
       for (const center of centers || []) {
-        const { count: students } = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('center_id', center.id);
+        const { count: students } = await supabase.from("students").select("id, name, grade, roll_number, status, center_id, photo_url", { count: 'exact', head: true }).eq('center_id', center.id);
         const { data: invoices } = await supabase.from('invoices').select('paid_amount').eq('center_id', center.id);
         const revenue = invoices?.reduce((acc, inv) => acc + (inv.paid_amount || 0), 0) || 0;
         trends.push({ name: center.name, students: students || 0, revenue });
@@ -58,8 +58,7 @@ const AdminDashboard = () => {
     queryKey: ['admin-global-ai-insights'],
     queryFn: async () => {
       const { data } = await supabase
-        .from('predictive_scores')
-        .select('*, students(name)')
+        .from("predictive_scores").select("id, risk_level, risk_score, student_id, students(name)")
         .eq('risk_level', 'High')
         .limit(10);
 

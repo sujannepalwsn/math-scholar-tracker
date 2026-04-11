@@ -82,8 +82,7 @@ export default function TeacherAttendancePage() {
     queryFn: async () => {
       if (!user?.center_id) return null;
       const { data, error } = await supabase
-        .from("academic_years")
-        .select("*")
+        .from("academic_years").select("id, name, start_date, end_date, is_active, is_current")
         .eq("center_id", user.center_id)
         .eq("is_current", true)
         .maybeSingle();
@@ -98,8 +97,7 @@ export default function TeacherAttendancePage() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("calendar_events")
-        .select("*")
+        .from("calendar_events").select("id, title, date, is_school_day")
         .eq("center_id", user.center_id)
         .eq("date", dateStr);
       if (error) throw error;
@@ -117,8 +115,7 @@ export default function TeacherAttendancePage() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase
-        .from("teachers")
-        .select("*")
+        .from("teachers").select("id, name, email, department, subject, grade, status, user_id")
         .eq("center_id", user.center_id)
         .eq("is_active", true);
 
@@ -139,8 +136,7 @@ export default function TeacherAttendancePage() {
       if (!user?.center_id || teachers.length === 0) return [];
       const teacherIds = teachers.map(t => t.id);
       const { data, error } = await supabase
-        .from("teacher_attendance")
-        .select("*")
+        .from("teacher_attendance").select("id, teacher_id, date, status, time_in, time_out")
         .in("teacher_id", teacherIds)
         .eq("date", dateStr);
       if (error) throw error;
@@ -190,8 +186,7 @@ export default function TeacherAttendancePage() {
       const end = endOfMonth(parseISO(reportMonthFilter + "-01"));
 
       const { data, error, count } = await supabase
-        .from("teacher_attendance")
-        .select("*, teachers(name)", { count: 'exact' })
+        .from("teacher_attendance").select("id, teacher_id, date, status, time_in, time_out, teachers(name)", { count: 'exact' })
         .eq("center_id", user.center_id)
         .gte("date", format(start, "yyyy-MM-dd"))
         .lte("date", format(end, "yyyy-MM-dd"))

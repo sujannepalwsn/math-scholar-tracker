@@ -119,7 +119,16 @@ import OnboardingWizard from "./pages/OnboardingWizard";
 import SuiteExplorer from "./pages/SuiteExplorer";
 import ComingSoonPage from "./pages/ComingSoonPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+      retry: 1,
+      retryDelay: 1000,
+    },
+  },
+});
 
 const VisitorTracker = () => {
   const { user } = useAuth();

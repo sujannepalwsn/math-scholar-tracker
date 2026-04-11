@@ -73,7 +73,7 @@ export default function ParentDashboard() {
     queryKey: ['student', activeStudentId],
     queryFn: async () => {
       if (!activeStudentId) return null;
-      const { data, error } = await supabase.from('students').select('*').eq('id', activeStudentId).maybeSingle();
+      const { data, error } = await supabase.from("students").select("id, name, grade, photo_url").eq('id', activeStudentId).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -149,8 +149,7 @@ export default function ParentDashboard() {
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase
-        .from('student_milestones')
-        .select('*')
+        .from('student_milestones').select('id, milestone_type, description')
         .eq('student_id', activeStudentId)
         .order('date_achieved', { ascending: false });
       if (error) throw error;
@@ -171,8 +170,7 @@ export default function ParentDashboard() {
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase
-        .from('student_activities')
-        .select('*, activities(*)')
+        .from("student_activities").select("id, involvement_score, created_at, student_id, activity_id, activities(id, title, activity_date)")
         .eq('student_id', activeStudentId)
         .order('created_at', { ascending: false })
         .limit(4);
@@ -187,8 +185,7 @@ export default function ParentDashboard() {
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase
-        .from('student_homework_records')
-        .select('*, homework(*)')
+        .from("student_homework_records").select("id, status, created_at, student_id, homework_id, homework(id, title, description, due_date, grade, subject)")
         .eq('student_id', activeStudentId)
         .order('created_at', { ascending: false })
         .limit(10);

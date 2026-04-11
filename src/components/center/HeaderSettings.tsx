@@ -14,7 +14,7 @@ export default function HeaderSettings({ centerId }: { centerId: string }) {
   const { data: center, isLoading } = useQuery({
     queryKey: ["center-header-settings", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("centers").select("*").eq("id", centerId).single();
+      const { data, error } = await supabase.from("centers").select("id, name, logo_url, address, phone, email").eq("id", centerId).single();
       if (error) throw error;
       return data;
     },

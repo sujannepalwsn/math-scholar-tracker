@@ -25,7 +25,7 @@ export default function HRManagement() {
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ["teachers-hr", centerId, isRestricted, user?.teacher_id],
     queryFn: async () => {
-      let query = supabase.from("teachers").select("*").eq("center_id", centerId);
+      let query = supabase.from("teachers").select("id, name, email, contact_number, hire_date, is_active, monthly_salary, user_id, employee_id, contract_end_date").eq("center_id", centerId);
 
       if (isRestricted) {
         query = query.eq('id', user?.teacher_id);

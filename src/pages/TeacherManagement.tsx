@@ -113,7 +113,7 @@ export default function TeacherManagement() {
 
       let query = supabase
         .from("teachers")
-        .select("*, users!teachers_user_id_fkey(id, username, is_active)", { count: 'exact' })
+        .select("id, name, email, contact_number, hire_date, is_active, monthly_salary, user_id, employee_id, contract_end_date, users!teachers_user_id_fkey(id, username, is_active)", { count: 'exact' })
         .eq("center_id", user.center_id);
 
       if (isRestricted) {
@@ -321,7 +321,7 @@ export default function TeacherManagement() {
         qualifications: qualifications.split(',').map(q => q.trim()).filter(Boolean),
         bank_details: { account_name: bankAccountName, account_number: bankAccountNumber, bank_name: bankName },
         emergency_contact: { name: emergencyContactName, relation: emergencyContactRelation, phone: emergencyContactPhone }
-      } as any).select().single();
+      } as any).select("id").single();
       if (error) throw error;
       const defaultModules = [
         'take_attendance', 'lesson_tracking', 'homework_management', 'preschool_activities',
@@ -389,7 +389,7 @@ export default function TeacherManagement() {
         regular_in_time: entry.regularInTime || '09:00',
         regular_out_time: entry.regularOutTime || '17:00'
       }));
-      const { data: newTeachers, error } = await supabase.from("teachers").insert(teachersToInsert as any).select();
+      const { data: newTeachers, error } = await supabase.from("teachers").insert(teachersToInsert as any).select("id");
       if (error) throw error;
       if (newTeachers && newTeachers.length > 0) {
         const defaultModules = [
@@ -507,7 +507,7 @@ export default function TeacherManagement() {
           teacher_id: selectedTeacherForLogin.id,
           is_active: true
         })
-        .select()
+        .select("id")
         .single();
 
       if (userError) throw userError;

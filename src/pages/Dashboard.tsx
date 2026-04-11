@@ -234,7 +234,7 @@ export default function Dashboard() {
   const { data: students = [], isLoading: isStudentsLoading } = useQuery({
     queryKey: ["students", centerId, isRestricted, myAssignedGrades],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").eq("is_active", true).order("name");
+      let query = supabase.from("students").select("id, name, grade, roll_number, status, center_id").eq("is_active", true).order("name");
       if (role !== UserRole.ADMIN && centerId) query = query.eq("center_id", centerId);
 
       // SECURITY: Frontend filtering is for UI/UX. RLS enforces the actual restriction.
@@ -250,24 +250,62 @@ export default function Dashboard() {
     enabled: !!user && !loading,
   });
 
-  const { data: teachers = [], isLoading: isTeachersLoading } = useQuery({
-    queryKey: ["teachers", centerId],
+  const { data: teacherStatusData = [], isLoading: isTeachersLoading } = useQuery({
+    queryKey: ["teacher-status-dashboard", centerId, today],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase.from("teachers").select("*").eq("center_id", centerId).eq("is_active", true);
+      const { data, error } = await supabase
+        .from("teachers")
+        .select(`
+          id, name, email, subject, grade, status,
+          teacher_attendance(status, date),
+          leave_applications(status, start_date, end_date)
+        `)
+        .eq("center_id", centerId)
+        .eq("is_active", true)
+        .eq("teacher_attendance.date", today)
+        .eq("leave_applications.status", "approved")
+        .lte("leave_applications.start_date", today)
+        .gte("leave_applications.end_date", today);
+
       if (error) throw error;
       return data || [];
     },
     enabled: !!centerId,
   });
 
+  const { teachers, teacherAttendance, todayApprovedLeaves } = useMemo(() => {
+    const teachersList: any[] = [];
+    const attendance: any[] = [];
+    const leaves: any[] = [];
+
+    (teacherStatusData as any[]).forEach(t => {
+      teachersList.push({
+        id: t.id,
+        name: t.name,
+        email: t.email,
+        subject: t.subject,
+        grade: t.grade,
+        status: t.status
+      });
+
+      if (t.teacher_attendance?.[0]) {
+        attendance.push({ ...t.teacher_attendance[0], teacher_id: t.id });
+      }
+      if (t.leave_applications?.[0]) {
+        leaves.push({ ...t.leave_applications[0], teacher_id: t.id });
+      }
+    });
+
+    return { teachers: teachersList, teacherAttendance: attendance, todayApprovedLeaves: leaves };
+  }, [teacherStatusData]);
+
   const { data: pendingLeavesCount = 0 } = useQuery({
     queryKey: ["pending-leaves-count", centerId],
     queryFn: async () => {
       if (!centerId) return 0;
       const { count, error } = await supabase
-        .from("leave_applications")
-        .select("*", { count: "exact", head: true })
+        .from("leave_applications").select("id, status, start_date, end_date, teacher_id, student_id, center_id, category_id", { count: "exact", head: true })
         .eq("center_id", centerId)
         .eq("status", "pending");
       if (error) throw error;
@@ -298,9 +336,9 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!centerId) return [];
       const [riskScores, feePredictions, sentimentInsights] = await Promise.all([
-        supabase.from('predictive_scores').select('*, students(name)').eq('center_id', centerId).neq('risk_level', 'Low').limit(5),
-        supabase.from('fee_default_predictions').select('*, students(name)').eq('center_id', centerId).eq('risk_level', 'High').limit(5),
-        supabase.from('ai_insights').select('*').eq('center_id', centerId).lt('sentiment_score', -0.5).limit(5)
+        supabase.from("predictive_scores").select("id, risk_level, risk_score, student_id, students(name)").eq('center_id', centerId).neq('risk_level', 'Low').limit(5),
+        supabase.from("fee_default_predictions").select("id, risk_level, student_id, students(name)").eq('center_id', centerId).eq('risk_level', 'High').limit(5),
+        supabase.from("ai_insights").select("id, content, sentiment_score, created_at").eq('center_id', centerId).lt('sentiment_score', -0.5).limit(5)
       ]);
 
       const insights: any[] = [];
@@ -322,33 +360,6 @@ export default function Dashboard() {
     enabled: !!centerId
   });
 
-  const { data: teacherAttendance = [] } = useQuery({
-    queryKey: ["teacher-attendance-dashboard", centerId, today],
-    queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase.from("teacher_attendance").select("*, teachers(*)").eq("center_id", centerId).eq("date", today);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!centerId,
-  });
-
-  const { data: todayApprovedLeaves = [] } = useQuery({
-    queryKey: ["approved-leaves-dashboard", centerId, today],
-    queryFn: async () => {
-      if (!centerId) return [];
-      const { data, error } = await supabase
-        .from("leave_applications")
-        .select("*")
-        .eq("center_id", centerId)
-        .eq("status", "approved")
-        .lte("start_date", today)
-        .gte("end_date", today);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!centerId,
-  });
 
   const { data: homeworkStats = [] } = useQuery({
     queryKey: ["homework-stats-dashboard", centerId, dateRange.from, dateRange.to, isRestricted],
@@ -399,8 +410,7 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!centerId) return 0;
       const { count, error } = await supabase
-        .from("lesson_plans")
-        .select("*", { count: "exact", head: true })
+        .from("lesson_plans").select("id, subject, chapter, topic, grade, lesson_date, status, teacher_id, center_id", { count: "exact", head: true })
         .eq("center_id", centerId)
         .eq("status", "pending");
       if (error) throw error;
@@ -529,7 +539,7 @@ export default function Dashboard() {
     queryKey: ["upcoming-lessons-dashboard", centerId, today, isRestricted],
     queryFn: async () => {
       if (!centerId) return [];
-      let query = supabase.from("lesson_plans").select("*").eq("center_id", centerId).gte("lesson_date", today).order("lesson_date").limit(8);
+      let query = supabase.from("lesson_plans").select("id, subject, chapter, topic, grade, lesson_date, status").eq("center_id", centerId).gte("lesson_date", today).order("lesson_date").limit(8);
 
       if (isRestricted) {
         query = query.eq('teacher_id', user?.teacher_id);
@@ -547,8 +557,7 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!centerId) return [];
       let query = supabase
-        .from("test_results")
-        .select("*, students(name, grade), tests!inner(name, total_marks, subject, created_by)")
+        .from("test_results").select("id, marks_obtained, test_id, student_id, date_taken, students(name, grade), tests!inner(name, total_marks, subject, created_by)")
         .gte("date_taken", dateRange.from)
         .lte("date_taken", dateRange.to)
         .order("date_taken", { ascending: false });
@@ -569,8 +578,7 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!centerId) return [];
       const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
+        .from("invoices").select("id, total_amount, paid_amount, invoice_date, status")
         .eq("center_id", centerId)
         .gte("invoice_date", dateRange.from)
         .lte("invoice_date", dateRange.to);
@@ -641,8 +649,7 @@ export default function Dashboard() {
       if (dayOfWeek === 6) return [];
 
       let query = supabase
-        .from("period_schedules")
-        .select("*, teachers:teachers!period_schedules_teacher_id_fkey(*), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(name), class_periods:class_periods!inner(*)")
+        .from("period_schedules").select("id, teacher_id, grade, subject, class_period_id, center_id, day_of_week, teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(name), class_periods:class_periods!inner(id, start_time, end_time, is_published)")
         .eq("center_id", centerId)
         .eq("day_of_week", dayOfWeek);
 
@@ -666,8 +673,7 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!centerId) return [];
       const { data, error } = await supabase
-        .from("class_substitutions")
-        .select("*, substitute_teacher:teachers!substitute_teacher_id(name)")
+        .from("class_substitutions").select("id, date, status, substitute_teacher_id, period_schedule_id, center_id, substitute_teacher:teachers!substitute_teacher_id(name)")
         .eq("center_id", centerId)
         .eq("date", today);
       if (error) throw error;
@@ -681,8 +687,7 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!centerId) return [];
       const { data, error } = await supabase
-        .from("leave_applications")
-        .select("*, teachers(name), students(name, grade), leave_categories(name)")
+        .from("leave_applications").select("id, status, start_date, end_date, teacher_id, student_id, center_id, category_id, teachers(name), students(name, grade), leave_categories(name)")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -695,7 +700,7 @@ export default function Dashboard() {
     queryKey: ["homework-defaulters-dashboard", centerId],
     queryFn: async () => {
       if (!centerId) return [];
-      const { data, error } = await supabase.from("student_homework_records").select("*, students(name, grade), homework(title, subject, due_date)").eq("status", "assigned").order("created_at", { ascending: false }).limit(5);
+      const { data, error } = await supabase.from("student_homework_records").select("id, status, created_at, student_id, homework_id, students(name, grade), homework(title, subject, due_date)").eq("status", "assigned").order("created_at", { ascending: false }).limit(5);
       if (error) throw error;
       return data || [];
     },
@@ -876,8 +881,7 @@ export default function Dashboard() {
     queryFn: async () => {
       if (!centerId) return [];
       const { data } = await supabase
-        .from('notifications')
-        .select('*')
+        .from("notifications").select("id, title, message, type, created_at, is_ai_insight")
         .eq('center_id', centerId)
         .eq('is_ai_insight', true)
         .order('created_at', { ascending: false })

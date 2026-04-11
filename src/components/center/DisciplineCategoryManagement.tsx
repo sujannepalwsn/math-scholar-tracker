@@ -37,8 +37,7 @@ export default function DisciplineCategoryManagement() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("discipline_categories")
-        .select("*")
+        .from("discipline_categories").select("id, name, center_id")
         .eq("center_id", user.center_id)
         .order("name");
       if (error) throw error;

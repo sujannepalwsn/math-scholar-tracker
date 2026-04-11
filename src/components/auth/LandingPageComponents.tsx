@@ -99,7 +99,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({ type, index, allModule
   const { data: plans } = useQuery({
     queryKey: ["subscription-plans-public"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("subscription_plans").select("*");
+      const { data, error } = await supabase.from("subscription_plans").select("id, name, price, interval");
       if (error) throw error;
       return data;
     },

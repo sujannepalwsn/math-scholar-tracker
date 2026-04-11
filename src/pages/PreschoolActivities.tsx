@@ -98,8 +98,7 @@ export default function PreschoolActivities() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("activity_types")
-        .select("*")
+        .from("activity_types").select("id, name, description")
         .eq("center_id", user.center_id)
         .eq("is_active", true);
       if (error) throw error;
@@ -117,7 +116,7 @@ export default function PreschoolActivities() {
       // Optimize: Instead of getting all student IDs first, we can join with students table and filter by center_id
       let query = supabase
         .from("student_activities")
-        .select("*, students!inner(name, grade, center_id), activities!inner(*), activity_types(name)", { count: 'exact' })
+        .select("id, involvement_score, created_at, student_id, activity_id, students!inner(id, name, grade, center_id), activities!inner(id, title, activity_date), activity_types(id, name)", { count: "exact" })
         .eq("students.center_id", user.center_id);
 
       if (gradeFilter !== "all") {

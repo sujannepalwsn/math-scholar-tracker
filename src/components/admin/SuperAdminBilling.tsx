@@ -20,7 +20,7 @@ export default function SuperAdminBilling() {
   const { data: centers = [] } = useQuery({
     queryKey: ["admin-centers-billing"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("centers").select("*").order("name");
+      const { data, error } = await supabase.from("centers").select("id, name, logo_url, address, phone, email").order("name");
       if (error) throw error;
       return data;
     },

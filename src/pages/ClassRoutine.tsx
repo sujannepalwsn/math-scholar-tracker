@@ -93,7 +93,7 @@ export default function ClassRoutine() {
     queryKey: ["class-periods", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("class_periods").select("*").eq("center_id", user.center_id).eq("is_active", true).order("period_number");
+      const { data, error } = await supabase.from("class_periods").select("id, period_number, start_time, end_time").eq("center_id", user.center_id).eq("is_active", true).order("period_number");
       if (error) throw error;
       return data;
     },
@@ -105,7 +105,7 @@ export default function ClassRoutine() {
     queryKey: ["period-schedules", user?.center_id, selectedGrade, user?.role, user?.teacher_id, isRestricted],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("period_schedules").select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`).eq("center_id", user.center_id);
+      let query = supabase.from("period_schedules").select(`id, teacher_id, grade, subject, class_period_id, day_of_week, class_periods:class_periods(id, name, start_time, end_time), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`).eq("center_id", user.center_id);
 
       if (user?.role === UserRole.TEACHER && user?.teacher_id) {
         query = query.eq('teacher_id', user.teacher_id);
@@ -123,7 +123,7 @@ export default function ClassRoutine() {
     queryKey: ["all-period-schedules", user?.center_id, isRestricted],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("period_schedules").select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`).eq("center_id", user.center_id);
+      let query = supabase.from("period_schedules").select(`id, teacher_id, grade, subject, class_period_id, day_of_week, class_periods:class_periods(id, name, start_time, end_time), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`).eq("center_id", user.center_id);
 
       if (isRestricted) {
         query = query.eq('teacher_id', user?.teacher_id);
@@ -139,7 +139,7 @@ export default function ClassRoutine() {
     queryKey: ["registered-subjects", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("subjects").select("*").eq("center_id", user.center_id).order("name");
+      const { data, error } = await supabase.from("subjects").select("id, name").eq("center_id", user.center_id).order("name");
       if (error) throw error;
       return data;
     },
@@ -149,7 +149,7 @@ export default function ClassRoutine() {
     queryKey: ["teachers-list", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("teachers").select("*").eq("center_id", user.center_id).eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("teachers").select("id, name").eq("center_id", user.center_id).eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
@@ -159,7 +159,7 @@ export default function ClassRoutine() {
     queryKey: ["teacher-attendance-routine", user?.center_id, today],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("teacher_attendance").select("*").eq("center_id", user.center_id).eq("date", today);
+      const { data, error } = await supabase.from("teacher_attendance").select("id, status, date, teacher_id").eq("center_id", user.center_id).eq("date", today);
       if (error) throw error;
       return data;
     },
@@ -169,7 +169,7 @@ export default function ClassRoutine() {
     queryKey: ["class-substitutions-routine", user?.center_id, today],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("class_substitutions").select("*, substitute_teacher:teachers!substitute_teacher_id(name)").eq("center_id", user.center_id).eq("date", today);
+      const { data, error } = await supabase.from("class_substitutions").select("id, date, status, substitute_teacher_id, period_schedule_id, center_id, substitute_teacher:teachers!substitute_teacher_id(name)").eq("center_id", user.center_id).eq("date", today);
       if (error) throw error;
       return data;
     },
@@ -180,8 +180,7 @@ export default function ClassRoutine() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("leave_applications")
-        .select("*")
+        .from("leave_applications").select("id, status, start_date, end_date, teacher_id, student_id, center_id, category_id")
         .eq("center_id", user.center_id)
         .eq("status", "approved")
         .lte("start_date", today)

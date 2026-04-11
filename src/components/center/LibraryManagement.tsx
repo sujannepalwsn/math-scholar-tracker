@@ -32,7 +32,7 @@ export default function LibraryManagement({ centerId, canEdit }: { centerId: str
   const { data: books, isLoading: booksLoading } = useQuery({
     queryKey: ["library-books", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("books").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("books").select("id, title, author, status").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },

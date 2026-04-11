@@ -21,7 +21,7 @@ export default function AssetTracking({ centerId, canEdit }: { centerId: string,
   const { data: assets, isLoading } = useQuery({
     queryKey: ["school-assets", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("assets").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("assets").select("id, name, category, status, center_id").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },

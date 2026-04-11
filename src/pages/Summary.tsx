@@ -43,7 +43,7 @@ export default function Summary() {
     queryKey: ["students-summary", user?.center_id, gradeFilter, isRestricted, user?.teacher_id, currentPage, pageSize],
     queryFn: async () => {
       const { from, to } = getRange();
-      let query = supabase.from("students").select("*", { count: 'exact' }).order("name");
+      let query = supabase.from("students").select("id, name, grade, roll_number, status, center_id, photo_url", { count: 'exact' }).order("name");
 
       if (user?.role !== UserRole.ADMIN && user?.center_id) query = query.eq("center_id", user.center_id);
       if (gradeFilter !== "all") query = query.eq("grade", gradeFilter);
@@ -89,8 +89,7 @@ export default function Summary() {
       const end = format(endOfMonth(parseISO(monthFilter + "-01")), "yyyy-MM-dd");
 
       let query = supabase
-        .from("attendance")
-        .select("*")
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks")
         .in("student_id", studentIds)
         .gte("date", start)
         .lte("date", end);

@@ -74,8 +74,7 @@ export default function LeaveApplications() {
     queryKey: ["leave-categories", user?.center_id, user?.role],
     queryFn: async () => {
       let query = supabase
-        .from("leave_categories")
-        .select("*")
+        .from("leave_categories").select("id, name, center_id")
         .eq("is_active", true);
 
       if (user?.center_id) {
@@ -118,8 +117,7 @@ export default function LeaveApplications() {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
-        .from("leave_applications")
-        .select("*, leave_categories(name), students(name)")
+        .from("leave_applications").select("id, status, start_date, end_date, teacher_id, student_id, center_id, category_id, leave_categories(name), students(name)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;

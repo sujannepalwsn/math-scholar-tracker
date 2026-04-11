@@ -27,7 +27,7 @@ export default function ExamSettings({ centerId }: { centerId: string }) {
   const { data: examTypes } = useQuery({
     queryKey: ["exam-types", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("exam_types").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("exam_types").select("id, name, center_id").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },
@@ -36,7 +36,7 @@ export default function ExamSettings({ centerId }: { centerId: string }) {
   const { data: gradingSystems } = useQuery({
     queryKey: ["grading-systems", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("grading_systems").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("grading_systems").select("id, name, center_id").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },

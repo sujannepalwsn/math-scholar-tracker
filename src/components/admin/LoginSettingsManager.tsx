@@ -26,8 +26,7 @@ const LoginSettingsManager = () => {
     queryKey: ['login_page_settings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('login_page_settings')
-        .select('*');
+        .from('login_page_settings').select('id');
       if (error) throw error;
       return data;
     },

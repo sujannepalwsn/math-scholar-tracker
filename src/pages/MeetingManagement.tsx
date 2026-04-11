@@ -56,7 +56,7 @@ export default function MeetingManagement() {
         const meetingIds = attendedMeetings?.map(m => m.meeting_id) || [];
         let query = supabase
           .from("meetings")
-          .select("*, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:meetings!related_meeting_id(id, title, meeting_date)")
+          .select("id, title, meeting_date, center_id, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:meetings!related_meeting_id(id, title, meeting_date)")
           .eq("center_id", user.center_id);
 
         if (meetingIds.length > 0) {
@@ -72,7 +72,7 @@ export default function MeetingManagement() {
 
       const { data, error } = await supabase
         .from("meetings")
-        .select("*, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:meetings!related_meeting_id(id, title, meeting_date)")
+        .select("id, title, meeting_date, center_id, meeting_conclusions(conclusion_notes, recorded_at), meeting_attendees(student_id, user_id, teacher_id), related_meeting:meetings!related_meeting_id(id, title, meeting_date)")
         .eq("center_id", user.center_id)
         .order("meeting_date", { ascending: false });
 

@@ -103,7 +103,7 @@ export default function AboutInstitution() {
         return data;
       } else {
         const { data, error } = await query
-          .select("*")
+          .select("id")
           .eq("id", centerId)
           .single();
         if (error) throw error;

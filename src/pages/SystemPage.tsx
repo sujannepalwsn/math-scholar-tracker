@@ -12,8 +12,7 @@ export default function SystemPage() {
     queryKey: ["system-page", slug],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("system_pages")
-        .select("*")
+        .from("system_pages").select("id, title, slug")
         .eq("slug", slug)
         .single();
 

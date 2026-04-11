@@ -59,7 +59,7 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
   const { data: centerPermissions } = useQuery({
     queryKey: ['center-feature-permissions', user?.center_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('center_feature_permissions').select('*').eq('center_id', user?.center_id).maybeSingle();
+      const { data, error } = await supabase.from('center_feature_permissions').select('id, academics, finance, attendance, messaging, exams, students, teachers, preschool_activities, hr_management, leave_management').eq('center_id', user?.center_id).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -69,7 +69,7 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
   const { data: permissionMeta, isLoading: metaLoading } = useQuery({
     queryKey: ['module-permissions-meta'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('module_permissions_meta').select('*');
+      const { data, error } = await supabase.from('module_permissions_meta').select('id, module_name, permission_name, label');
       if (error) throw error;
       return data || [];
     }
@@ -79,8 +79,7 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
     queryKey: ['teacher-feature-permissions', teacherId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('teacher_feature_permissions')
-        .select('*')
+        .from('teacher_feature_permissions').select('id, teacher_id, student_report_access, activities, attendance_edit, teacher_scope_mode')
         .eq('teacher_id', teacherId)
         .maybeSingle();
       if (error) throw error;

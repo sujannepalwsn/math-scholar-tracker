@@ -27,8 +27,7 @@ const FeeManagement = ({ canEdit }: { canEdit?: boolean }) => {
     queryKey: ['fee-headings', user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('fee_headings')
-        .select('*')
+        .from('fee_headings').select('id')
         .eq('center_id', user?.center_id!)
         .order('name');
       if (error) throw error;
@@ -41,8 +40,7 @@ const FeeManagement = ({ canEdit }: { canEdit?: boolean }) => {
     queryKey: ['fee-structures', user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('fee_structures')
-        .select('*')
+        .from('fee_structures').select('id')
         .eq('center_id', user?.center_id!)
         .order('class');
       if (error) throw error;

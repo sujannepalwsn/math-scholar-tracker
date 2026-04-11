@@ -16,7 +16,7 @@ export default function UsageMonitoring() {
       const stats = await Promise.all((centers || []).map(async (c) => {
         // Mocking some metrics as per requirement for demonstration,
         // in production these would come from real system metrics.
-        const { count: rows, error: rowsError } = await supabase.from("attendance").select("*", { count: "exact", head: true }).eq("center_id", c.id);
+        const { count: rows, error: rowsError } = await supabase.from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks", { count: "exact", head: true }).eq("center_id", c.id);
         if (rowsError) logger.error(`Error fetching rows for center ${c.id}:`, rowsError);
 
         return {

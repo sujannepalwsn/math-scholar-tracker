@@ -30,8 +30,7 @@ const ExpenseManagement = ({ canEdit }: { canEdit?: boolean }) => {
     queryKey: ['expenses', user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
+        .from('expenses').select('id')
         .eq('center_id', user?.center_id!)
         .order('expense_date', { ascending: false });
 

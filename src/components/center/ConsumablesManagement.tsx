@@ -41,7 +41,7 @@ export default function ConsumablesManagement({ centerId, canEdit }: { centerId:
   const { data: consumables, isLoading } = useQuery({
     queryKey: ["consumables", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("consumables").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("consumables").select("id, name, quantity, unit, center_id").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },

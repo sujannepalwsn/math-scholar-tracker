@@ -41,7 +41,7 @@ export default function ParentHomework() {
     queryKey: ['student-homework-detail', activeStudentId],
     queryFn: async () => {
       if (!activeStudentId) return null;
-      const { data, error } = await supabase.from('students').select('*').eq('id', activeStudentId).maybeSingle();
+      const { data, error } = await supabase.from("students").select("id, name, grade").eq('id', activeStudentId).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -54,8 +54,7 @@ export default function ParentHomework() {
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase
-        .from('student_homework_records')
-        .select('*, homework(*)')
+        .from("student_homework_records").select("id, status, created_at, student_id, homework_id, homework(id, title, description, due_date, grade, subject)")
         .eq('student_id', activeStudentId)
         .order('created_at', { ascending: false });
       if (error) throw error;

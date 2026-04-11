@@ -34,8 +34,7 @@ export function useDynamicNavigation() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("nav_categories")
-        .select("*")
+        .from("nav_categories").select("id")
         .eq("center_id", user.center_id)
         .order("order");
       if (error) return [];
@@ -49,8 +48,7 @@ export function useDynamicNavigation() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("nav_items")
-        .select("*")
+        .from("nav_items").select("id")
         .eq("center_id", user.center_id)
         .order("order");
       if (error) return [];
@@ -123,8 +121,7 @@ export function useDynamicNavigation() {
 
       // Re-fetch to get IDs
       const { data: latestCats, error: fetchCatsError } = await supabase
-        .from("nav_categories")
-        .select("*")
+        .from("nav_categories").select("id")
         .eq("center_id", user.center_id);
 
       if (fetchCatsError) throw fetchCatsError;

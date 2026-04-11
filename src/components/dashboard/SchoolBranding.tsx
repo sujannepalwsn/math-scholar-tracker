@@ -21,8 +21,7 @@ export default function SchoolBranding({ className, isMobileCompact }: SchoolBra
     queryFn: async () => {
       if (!user?.center_id) return null;
       const { data, error } = await supabase
-        .from("centers")
-        .select("*")
+        .from("centers").select("id, name, logo_url, address, phone, email")
         .eq("id", user.center_id)
         .maybeSingle();
       if (error) return null;

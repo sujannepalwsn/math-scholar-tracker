@@ -89,7 +89,7 @@ export default function Tests() {
       const { from, to } = getRange();
       let query = supabase
         .from("tests")
-        .select("*, lesson_plans(id, subject, chapter, topic, grade)", { count: 'exact' })
+        .select("id, name, total_marks, subject, center_id, lesson_plan_id, lesson_plans(id, subject, chapter, topic, grade)", { count: "exact" })
         .order("date", { ascending: false });
       
       if (user?.role === UserRole.TEACHER) {
@@ -137,8 +137,7 @@ export default function Tests() {
     queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id],
     queryFn: async () => {
       let query = supabase
-        .from("students")
-        .select("*")
+        .from("students").select("id, name, grade")
         .eq("is_active", true)
         .order("name");
       
@@ -171,7 +170,7 @@ export default function Tests() {
       if (!selectedTest) return [];
       const { data, error } = await supabase
         .from("test_results")
-        .select("*, students(name, grade)")
+        .select("id, marks_obtained, student_id, test_id, date_taken, students(id, name, grade)")
         .eq("test_id", selectedTest)
         .order("marks_obtained", { ascending: false });
       if (error) throw error;

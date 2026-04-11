@@ -86,8 +86,7 @@ export default function GeneralSettings() {
     queryFn: async () => {
       if (!user?.teacher_id) return null;
       const { data, error } = await supabase
-        .from('teachers')
-        .select('*')
+        .from("teachers").select("id, name, email, department, subject, grade, status, user_id")
         .eq('id', user.teacher_id)
         .single();
       if (error) throw error;

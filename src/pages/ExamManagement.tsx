@@ -57,7 +57,7 @@ export default function ExamManagement() {
   const { data: examTypes } = useQuery({
     queryKey: ["exam-types", centerId],
     queryFn: async () => {
-      const { data } = await supabase.from("exam_types").select("*").eq("center_id", centerId);
+      const { data } = await supabase.from("exam_types").select("id, name, description").eq("center_id", centerId);
       return data;
     },
     enabled: !!centerId,
@@ -66,7 +66,7 @@ export default function ExamManagement() {
   const { data: gradingSystems } = useQuery({
     queryKey: ["grading-systems", centerId],
     queryFn: async () => {
-      const { data } = await supabase.from("grading_systems").select("*").eq("center_id", centerId);
+      const { data } = await supabase.from("grading_systems").select("id, name, grading_scale").eq("center_id", centerId);
       return data;
     },
     enabled: !!centerId,
@@ -81,8 +81,7 @@ export default function ExamManagement() {
       if (!centerId) return { data: [], count: 0 };
       const { from, to } = getRange();
       let query = supabase
-        .from("exams")
-        .select("*", { count: 'exact' })
+        .from("exams").select("id, name, grade, academic_year, exam_date, status, center_id", { count: 'exact' })
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
 
@@ -117,8 +116,7 @@ export default function ExamManagement() {
     queryFn: async () => {
       if (!selectedExamId) return [];
       const { data, error } = await supabase
-        .from("exam_subjects")
-        .select("*")
+        .from("exam_subjects").select("id, exam_id, subject_name, full_marks, pass_marks")
         .eq("exam_id", selectedExamId)
         .order("subject_name");
       if (error) throw error;
@@ -191,8 +189,7 @@ export default function ExamManagement() {
 
       // 2. Get active students for all applicable grades
       const { count: studentCount, error: studError } = await supabase
-        .from("students")
-        .select("*", { count: 'exact', head: true })
+        .from("students").select("id, name, grade, roll_number, status, center_id, photo_url", { count: 'exact', head: true })
         .eq("center_id", centerId!)
         .in("grade", exam.applicable_grades || [exam.grade])
         .eq("is_active", true);
@@ -204,8 +201,7 @@ export default function ExamManagement() {
 
       // 3. Get entered marks count
       const { count: marksCount, error: marksError } = await supabase
-        .from("exam_marks")
-        .select("*", { count: 'exact', head: true })
+        .from("exam_marks").select("id, marks_obtained, student_id, exam_id, exam_subject_id", { count: 'exact', head: true })
         .eq("exam_id", exam.id);
 
       if (marksError) throw marksError;

@@ -50,7 +50,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
     queryKey: ["tax-slabs", authCenterId],
     queryFn: async () => {
       if (!authCenterId) return [];
-      const { data, error } = await supabase.from("tax_slabs").select("*").eq("center_id", authCenterId).order("min_income");
+      const { data, error } = await supabase.from("tax_slabs").select("id, min_income, max_income, tax_rate").eq("center_id", authCenterId).order("min_income");
       if (error) throw error;
       return data;
     },
@@ -60,7 +60,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
   const { data: contracts } = useQuery({
     queryKey: ["staff-contracts", teacherId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("staff_contracts").select("*").eq("teacher_id", teacherId);
+      const { data, error } = await supabase.from("staff_contracts").select("id, start_date, end_date, salary, status").eq("teacher_id", teacherId);
       if (error) throw error;
       return data;
     },
@@ -69,7 +69,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
   const { data: evaluations } = useQuery({
     queryKey: ["staff-evaluations", teacherId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("performance_evaluations").select("*").eq("teacher_id", teacherId).order("evaluation_date", { ascending: false });
+      const { data, error } = await supabase.from("performance_evaluations").select("id, rating, evaluation_date, remarks").eq("teacher_id", teacherId).order("evaluation_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -78,7 +78,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
   const { data: documents } = useQuery({
     queryKey: ["staff-documents", teacherId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("staff_documents").select("*").eq("teacher_id", teacherId);
+      const { data, error } = await supabase.from("staff_documents").select("id, document_name, document_url, created_at").eq("teacher_id", teacherId);
       if (error) throw error;
       return data;
     },
@@ -87,7 +87,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
   const { data: payrollLogs } = useQuery({
     queryKey: ["payroll-logs", teacherId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("payroll_logs").select("*").eq("teacher_id", teacherId).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("payroll_logs").select("id, amount, status, period_start, period_end, created_at").eq("teacher_id", teacherId).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -199,8 +199,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
       const endDate = new Date(year, monthIdx + 1, 0).toISOString().split('T')[0];
 
       const { data: attendance } = await supabase
-        .from('teacher_attendance')
-        .select('*')
+        .from("teacher_attendance").select("id, teacher_id, date, status, time_in, time_out")
         .eq('teacher_id', teacherId)
         .gte('date', startDate)
         .lte('date', endDate);
@@ -258,7 +257,7 @@ export default function StaffHRModule({ teacherId, teacherName, canEdit }: { tea
   const { data: teacherProfile } = useQuery({
     queryKey: ["teacher-profile", teacherId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("teachers").select("*").eq("id", teacherId).single();
+      const { data, error } = await supabase.from("teachers").select("id, name, email, contact_number, hire_date, monthly_salary, bank_details, qualifications").eq("id", teacherId).single();
       if (error) throw error;
       return data;
     },

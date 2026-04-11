@@ -29,8 +29,7 @@ export default function ActivityTypeManagement() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("activity_types")
-        .select("*")
+        .from("activity_types").select("id, name")
         .eq("center_id", user.center_id)
         .order("name");
       if (error) throw error;

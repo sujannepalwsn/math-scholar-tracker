@@ -6,8 +6,7 @@ export const useLoginSettings = (pageType: 'center' | 'admin' | 'parent' | 'teac
     queryKey: ['login_page_settings', pageType],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('login_page_settings')
-        .select('*')
+        .from('login_page_settings').select('id')
         .eq('page_type', pageType)
         .maybeSingle();
 

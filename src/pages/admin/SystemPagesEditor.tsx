@@ -18,7 +18,7 @@ export default function SystemPagesEditor() {
   const { data: pages, isLoading: pagesLoading } = useQuery({
     queryKey: ["admin-system-pages"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("system_pages").select("*");
+      const { data, error } = await supabase.from("system_pages").select("id, title, slug");
       if (error) throw error;
       return data;
     },
@@ -37,7 +37,7 @@ export default function SystemPagesEditor() {
   const { data: platformSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ["platform-settings", "saas_payment_details"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("platform_settings").select("*").eq("key", "saas_payment_details").single();
+      const { data, error } = await supabase.from("platform_settings").select("id, key, value").eq("key", "saas_payment_details").single();
       if (error) throw error;
       return data;
     },

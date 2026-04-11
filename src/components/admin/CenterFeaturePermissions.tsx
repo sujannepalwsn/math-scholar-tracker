@@ -89,8 +89,7 @@ export default function CenterFeaturePermissions() {
     queryKey: ['admin-centers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('centers')
-        .select('*')
+        .from("centers").select("id, name, logo_url, address, phone, email")
         .order('name');
       if (error) throw error;
       return data;
@@ -100,8 +99,7 @@ export default function CenterFeaturePermissions() {
     queryKey: ['admin-teachers'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('teachers')
-        .select('*, centers(name)');
+        .from("teachers").select("id, name, email, department, subject, grade, status, user_id, centers(name)");
       if (error) throw error;
       return data;
     } });
@@ -110,8 +108,7 @@ export default function CenterFeaturePermissions() {
     queryKey: ['teacher-feature-permissions'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('teacher_feature_permissions')
-        .select('*');
+        .from('teacher_feature_permissions').select('id, teacher_id, student_report_access, activities, attendance_edit, teacher_scope_mode');
       if (error) throw error;
       return data;
     } });
@@ -120,8 +117,7 @@ export default function CenterFeaturePermissions() {
     queryKey: ['center-feature-permissions'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('center_feature_permissions')
-        .select('*');
+        .from('center_feature_permissions').select('id, academics, finance, attendance, messaging, exams, students, teachers, preschool_activities, hr_management, leave_management');
       if (error) throw error;
       return data;
     } });
@@ -198,13 +194,12 @@ export default function CenterFeaturePermissions() {
     mutationFn: async ({ centerId, packageType }: { centerId: string; packageType: PackageType }) => {
       // 1. Get current subscription and plans for invoice generation
       const { data: currentSub } = await supabase
-        .from("center_subscriptions")
-        .select("*, subscription_plans(*)")
+        .from("center_subscriptions").select("id, center_id, plan_id, status, subscription_plans(id, name, price)")
         .eq("center_id", centerId)
         .eq("status", "Active")
         .maybeSingle();
 
-      const { data: plans } = await supabase.from("subscription_plans").select("*");
+      const { data: plans } = await supabase.from("subscription_plans").select("id, name, price, interval");
       const targetPlan = plans?.find(p => p.features?.[0] === packageType);
 
       if (targetPlan) {

@@ -20,8 +20,7 @@ export default function AdmissionWorkflow({ centerId, canEdit }: { centerId: str
     queryKey: ["admission-applications", centerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("admission_applications")
-        .select("*")
+        .from("admission_applications").select("id, name, email, status")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
       if (error) throw error;

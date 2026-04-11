@@ -43,8 +43,7 @@ const ParentFinanceDashboard = () => {
     queryFn: async () => {
       if (!activeStudentId) return null;
       const { data, error } = await supabase
-        .from('students')
-        .select('*')
+        .from("students").select("id, name, grade, roll_number, status, center_id, photo_url")
         .eq('id', activeStudentId)
         .maybeSingle();
 
@@ -60,8 +59,7 @@ const ParentFinanceDashboard = () => {
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
+        .from("invoices").select("id, total_amount, paid_amount, invoice_date, status, student_id, center_id, invoice_number")
         .eq('student_id', activeStudentId)
         .order('invoice_date', { ascending: false });
 
@@ -97,8 +95,7 @@ const ParentFinanceDashboard = () => {
       
       const invoiceIds = studentInvoices.map(inv => inv.id);
       const { data, error } = await supabase
-        .from('payments')
-        .select('*')
+        .from("payments").select("id, amount, payment_date, payment_method, reference_number, invoice_id")
         .in('invoice_id', invoiceIds)
         .order('payment_date', { ascending: false });
 
