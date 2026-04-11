@@ -103,7 +103,7 @@ export default function AboutInstitution() {
         return data;
       } else {
         const { data, error } = await query
-          .select("id")
+          .select("id, name, about_description, mission, vision, principal_message, principal_name, established_date, academic_info, facilities, achievements, gallery, social_links, institution_type, phone, email, address, website_url, header_bg_url")
           .eq("id", centerId)
           .single();
         if (error) throw error;

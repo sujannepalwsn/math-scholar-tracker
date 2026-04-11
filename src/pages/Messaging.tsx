@@ -52,7 +52,8 @@ export default function Messaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id && (user?.role === UserRole.CENTER || user?.role === UserRole.TEACHER),
+    enabled: !!user?.center_id && (user.role === UserRole.CENTER || user.role === UserRole.ADMIN),
+    staleTime: 0
   });
 
   const { data: parentConversations = [] } = useQuery({
@@ -67,7 +68,8 @@ export default function Messaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === UserRole.PARENT,
+    enabled: !!user?.id && user.role === UserRole.PARENT,
+    staleTime: 0
   });
 
   const activeConversations = user?.role === UserRole.PARENT ? parentConversations : conversations;
@@ -105,7 +107,8 @@ export default function Messaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedConversation?.id,
+    enabled: !!activeConversationId,
+    staleTime: 0
   });
 
   // Real-time subscription

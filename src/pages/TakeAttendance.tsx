@@ -69,7 +69,8 @@ export default function TakeAttendance() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    staleTime: 0
   });
 
   const { data: calendarEvents = [] } = useQuery({
@@ -83,7 +84,8 @@ export default function TakeAttendance() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!dateStr && !!user?.center_id
+    enabled: !!dateStr && !!user?.center_id,
+    staleTime: 0
   });
 
   const holidayEvent = calendarEvents.find(e => !e.is_school_day);
@@ -189,7 +191,8 @@ export default function TakeAttendance() {
       if (error) throw error;
       return data;
     },
-    enabled: !!dateStr && !!user?.center_id && (!isRestricted || !!classTeacherGrades)
+    enabled: !!dateStr && !!user?.center_id && (!isRestricted || !!classTeacherGrades),
+    staleTime: 0
   });
 
   const { data: existingAttendance } = useQuery({

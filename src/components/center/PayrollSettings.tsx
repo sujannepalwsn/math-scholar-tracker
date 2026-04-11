@@ -18,7 +18,7 @@ export default function PayrollSettings({ centerId, canEdit }: { centerId: strin
     queryKey: ["tax-slabs", centerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("tax_slabs").select("id")
+        .from("tax_slabs").select("id, min_income, max_income, tax_percent")
         .eq("center_id", centerId)
         .order("min_income");
       if (error) throw error;

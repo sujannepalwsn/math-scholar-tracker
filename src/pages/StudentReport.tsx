@@ -98,7 +98,7 @@ export default function StudentReport() {
     queryFn: async () => {
       if (studentIds.length === 0) return [];
       const { data, error } = await supabase
-        .from("student_report_summary").select("id")
+        .from("student_report_summary").select("id, total_attendance_days, present_days, avg_percentage, discipline_count, last_test_date")
         .in("id", studentIds);
       if (error) throw error;
       return data;

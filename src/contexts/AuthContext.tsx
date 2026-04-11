@@ -59,6 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const buildUserObject = (profileData: any): User => {
+    if (!profileData || !profileData.user) {
+      logger.error("Invalid profileData passed to buildUserObject", profileData);
+      throw new Error("Invalid profile data");
+    }
+
     return {
       id: profileData.user.id,
       username: profileData.user.username,
@@ -66,11 +71,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       center_id: profileData.user.center_id,
       teacher_id: profileData.user.teacher_id,
       student_id: profileData.user.student_id,
-      center_name: profileData.center.name,
+      center_name: profileData.center?.name,
       centerPermissions: profileData.centerPermissions,
       teacherPermissions: profileData.teacherPermissions,
       teacher_scope_mode: profileData.teacherPermissions?.teacher_scope_mode || 'restricted',
-      linked_students: profileData.linkedStudents,
+      linked_students: profileData.linkedStudents || [],
       untrusted_metadata: {
         permissions_fetched_at: new Date().toISOString(),
         is_ui_restricted: profileData.teacherPermissions?.teacher_scope_mode === 'restricted'
