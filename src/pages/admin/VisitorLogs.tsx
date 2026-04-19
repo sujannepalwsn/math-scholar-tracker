@@ -129,8 +129,7 @@ const VisitorLogs = () => {
     enabled: !!expandedSession,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('events')
-        .select('*')
+        .from('events').select('id')
         .eq('session_id', expandedSession!)
         .order('timestamp', { ascending: true });
       if (error) throw error;

@@ -21,8 +21,7 @@ export const useHeroSlides = (includeInactive = false) => {
     queryKey: ['hero-slides', includeInactive],
     queryFn: async () => {
       let query = supabase
-        .from('hero_slides')
-        .select('*')
+        .from('hero_slides').select('id, title, image_url')
         .order('order_index', { ascending: true });
 
       if (!includeInactive) {

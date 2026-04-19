@@ -25,8 +25,7 @@ export default function SaaSBookingPage() {
     queryKey: ["booking-plan", planName],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("subscription_plans")
-        .select("*")
+        .from("subscription_plans").select("id, name, price, interval")
         .ilike("name", planName)
         .maybeSingle();
       if (error) throw error;
@@ -37,7 +36,7 @@ export default function SaaSBookingPage() {
   const { data: platformSettings, isLoading: settingsLoading } = useQuery({
     queryKey: ["platform-settings", "saas_payment_details"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("platform_settings").select("*").eq("key", "saas_payment_details").maybeSingle();
+      const { data, error } = await supabase.from("platform_settings").select("id, key, value").eq("key", "saas_payment_details").maybeSingle();
       if (error) throw error;
       return data;
     },

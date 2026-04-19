@@ -59,7 +59,8 @@ const AdminFinance = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    staleTime: 0
   });
 
   // Fetch payments - CORRECTED to filter by invoices belonging to the center
@@ -104,7 +105,8 @@ const AdminFinance = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    staleTime: 0
   });
 
   // Fetch expenses
@@ -125,7 +127,8 @@ const AdminFinance = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    staleTime: 0
   });
 
   const isDemo = user?.username === 'demo@eduflow.com' || user?.username === 'demo';

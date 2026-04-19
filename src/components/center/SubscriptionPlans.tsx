@@ -24,7 +24,7 @@ export default function SubscriptionPlans() {
   const { data: plans } = useQuery({
     queryKey: ["subscription-plans"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("subscription_plans").select("*").order("price");
+      const { data, error } = await supabase.from("subscription_plans").select("id, name, price, interval").order("price");
       if (error) throw error;
       return data;
     },
@@ -35,8 +35,7 @@ export default function SubscriptionPlans() {
     queryFn: async () => {
       // Fetch the most recent subscription (Active, Pending, or Rejected)
       const { data, error } = await supabase
-        .from("center_subscriptions")
-        .select("*, subscription_plans(*)")
+        .from("center_subscriptions").select("id, center_id, plan_id, status, subscription_plans(id, name, price)")
         .eq("center_id", user?.center_id)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -51,8 +50,7 @@ export default function SubscriptionPlans() {
     queryKey: ["center-saas-invoices", user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("saas_invoices")
-        .select("*, subscription_plans(name)")
+        .from("saas_invoices").select("id, center_id, amount, status, created_at, subscription_plans(name)")
         .eq("center_id", user?.center_id)
         .order("created_at", { ascending: false });
       if (error) throw error;

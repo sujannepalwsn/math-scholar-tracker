@@ -70,7 +70,7 @@ export default function TeacherDashboard() {
     queryKey: ["teacher-students", teacherId, user?.role, isRestricted],
     queryFn: async () => {
       if (!teacherId) return [];
-      let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      let query = supabase.from("students").select("id, name, grade").eq("center_id", centerId).eq("is_active", true);
 
       if (user?.role === UserRole.TEACHER) {
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', teacherId);
@@ -94,8 +94,7 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       if (!teacherId) return [];
       const { data, error } = await supabase
-        .from("test_results")
-        .select("*, students(name, grade), tests!inner(*)")
+        .from("test_results").select("id, marks_obtained, test_id, student_id, date_taken, students(name, grade), tests!inner(id, name, total_marks)")
         .eq("tests.created_by", user?.id)
         .gte("date_taken", dateRange.from)
         .lte("date_taken", dateRange.to);
@@ -114,15 +113,13 @@ export default function TeacherDashboard() {
       if (!teacherId) return [];
       const dayOfWeek = new Date(dateRange.to).getDay();
       const { data: regular, error } = await supabase
-        .from("period_schedules")
-        .select("*, teachers!period_schedules_teacher_id_fkey(name), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(name), class_periods:class_periods!inner(*)")
+        .from("period_schedules").select("id, teacher_id, grade, subject, class_period_id, center_id, day_of_week, teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(name), class_periods:class_periods!inner(id, start_time, end_time, period_number)")
         .eq("teacher_id", teacherId)
         .eq("day_of_week", dayOfWeek);
       if (error) throw error;
 
       const { data: subs, error: subError } = await supabase
-        .from("class_substitutions")
-        .select("*, period_schedules:period_schedules(*, class_periods:class_periods(*))")
+        .from("class_substitutions").select("id, date, status, substitute_teacher_id, period_schedule_id, center_id, period_schedules:period_schedules(*, class_periods:class_periods(id, name, start_time, end_time, period_number, is_published))")
         .eq("substitute_teacher_id", teacherId)
         .eq("date", today);
       if (subError) throw subError;
@@ -157,7 +154,7 @@ export default function TeacherDashboard() {
       if (!teacherId && !user?.id) return [];
       const { data, error } = await supabase
         .from('meeting_attendees')
-        .select('*, meetings(*)')
+        .select('id, teacher_id, user_id, meetings(id, title, meeting_date)')
         .or(`teacher_id.eq."${teacherId}",user_id.eq."${user?.id}"`)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -170,8 +167,7 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       if (!teacherId) return [];
       const { data, error } = await supabase
-        .from("student_homework_records")
-        .select("*, students(name, grade), homework!inner(*)")
+        .from("student_homework_records").select("id, status, created_at, student_id, homework_id, students(name, grade), homework!inner(id, title, subject)")
         .eq("homework.teacher_id", teacherId)
         .eq("status", "submitted")
         .gte("created_at", `${dateRange.from}T00:00:00`)
@@ -187,8 +183,7 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       if (!centerId || !user?.id) return [];
       const { data, error } = await supabase
-        .from("attendance")
-        .select("*")
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks")
         .eq("center_id", centerId)
         .eq("marked_by", user.id)
         .gte("date", attendanceDateRange.from)
@@ -233,8 +228,7 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       if (!teacherId) return [];
       const { data: riskScores } = await supabase
-        .from('predictive_scores')
-        .select('*, students(name)')
+        .from("predictive_scores").select("id, risk_level, risk_score, student_id, students(name)")
         .eq('center_id', centerId)
         .neq('risk_level', 'Low')
         .limit(10);
@@ -257,8 +251,7 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       if (!teacherId) return [];
       const { data, error } = await supabase
-        .from("lesson_plans")
-        .select("*")
+        .from("lesson_plans").select("id, subject, chapter, topic, grade, lesson_date, status, teacher_id, center_id")
         .eq("center_id", centerId)
         .eq("teacher_id", teacherId)
         .order("lesson_date", { ascending: false });
@@ -271,7 +264,7 @@ export default function TeacherDashboard() {
     queryKey: ["teacher-discipline-issues-dash", user?.id, dateRange, isRestricted],
     queryFn: async () => {
       if (!centerId || !user?.id) return [];
-      let query = supabase.from("discipline_issues").select("*, discipline_categories(name), students!inner(name, grade)")
+      let query = supabase.from("discipline_issues").select("id, description, severity, issue_date, status, reported_by, student_id, center_id, category_id, discipline_categories(name), students!inner(name, grade)")
         .eq("center_id", centerId)
         .gte("issue_date", dateRange.from)
         .lte("issue_date", dateRange.to);
@@ -371,8 +364,7 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       if (!centerId || !user?.id) return [];
       const { data } = await supabase
-        .from('notifications')
-        .select('*')
+        .from("notifications").select("id, title, message, type, created_at, user_id, center_id")
         .eq('user_id', user.id)
         .eq('is_ai_insight', true)
         .order('created_at', { ascending: false })

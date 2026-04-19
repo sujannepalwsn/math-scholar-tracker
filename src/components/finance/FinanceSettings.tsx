@@ -20,7 +20,7 @@ export default function FinanceSettings({ centerId, canEdit }: { centerId: strin
     queryKey: ["center-automation-settings", centerId],
     queryFn: async () => {
       // Use raw SQL select via maybeSingle to avoid type errors if columns are newly added
-      const { data, error } = await supabase.from("centers").select("*").eq("id", centerId).maybeSingle();
+      const { data, error } = await supabase.from("centers").select("id, name, logo_url, address, phone, email").eq("id", centerId).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -30,7 +30,7 @@ export default function FinanceSettings({ centerId, canEdit }: { centerId: strin
   const { data: gatewaySettings } = useQuery({
     queryKey: ["payment-gateway-settings", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("payment_gateway_settings").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("payment_gateway_settings").select("id, provider, is_active").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },

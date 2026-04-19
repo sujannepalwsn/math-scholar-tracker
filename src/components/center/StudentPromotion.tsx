@@ -25,8 +25,7 @@ export default function StudentPromotion({ centerId, canEdit }: { centerId: stri
       if (!fromGrade) return { data: [], count: 0 };
       const { from, to } = getRange();
       const { data, error, count } = await supabase
-        .from("students")
-        .select("*", { count: 'exact' })
+        .from("students").select("id, name, grade, roll_number, status, center_id, photo_url", { count: 'exact' })
         .eq("center_id", centerId)
         .eq("grade", fromGrade)
         .eq("is_active", true)

@@ -17,8 +17,7 @@ export default function DigitalNoticeBoard({ centerId, role, grade }: { centerId
     queryKey: ["digital-board-notices", centerId, role, grade],
     queryFn: async () => {
       let query = supabase
-        .from("notices")
-        .select("*")
+        .from("notices").select("id")
         .eq("center_id", centerId);
 
       if (role === UserRole.TEACHER) {

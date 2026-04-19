@@ -38,8 +38,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
     queryKey: ["center-active-subscription", user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("center_subscriptions")
-        .select("*, subscription_plans(name)")
+        .from("center_subscriptions").select("id, center_id, plan_id, status, subscription_plans(name)")
         .eq("center_id", user?.center_id)
         .eq("status", "Active")
         .maybeSingle();

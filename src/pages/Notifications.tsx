@@ -23,8 +23,7 @@ export default function Notifications() {
       if (!user?.id) return [];
 
       let query = supabase
-        .from("notifications")
-        .select("*")
+        .from("notifications").select("id, title, message, type, created_at, user_id, center_id")
         .order("created_at", { ascending: false })
         .limit(100);
 

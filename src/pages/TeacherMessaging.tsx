@@ -41,7 +41,9 @@ export default function TeacherMessaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user.id && !!user.center_id });
+    enabled: !!user.id && !!user.center_id,
+    staleTime: 0
+  });
 
   // Fetch messages
   const { data: messages = [], isLoading: messagesLoading } = useQuery({
@@ -59,7 +61,9 @@ export default function TeacherMessaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!conversation?.id });
+    enabled: !!conversation?.id,
+    staleTime: 0
+  });
 
   // Scroll to bottom
   useEffect(() => {

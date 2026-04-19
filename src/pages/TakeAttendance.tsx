@@ -62,15 +62,15 @@ export default function TakeAttendance() {
     queryFn: async () => {
       if (!user?.center_id) return null;
       const { data, error } = await supabase
-        .from("academic_years")
-        .select("*")
+        .from("academic_years").select("id, name, is_current")
         .eq("center_id", user.center_id)
         .eq("is_current", true)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id
+    enabled: !!user?.center_id,
+    staleTime: 0
   });
 
   const { data: calendarEvents = [] } = useQuery({
@@ -78,14 +78,14 @@ export default function TakeAttendance() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("calendar_events")
-        .select("*")
+        .from("calendar_events").select("id, title, date, is_school_day")
         .eq("center_id", user.center_id)
         .eq("date", dateStr);
       if (error) throw error;
       return data || [];
     },
-    enabled: !!dateStr && !!user?.center_id
+    enabled: !!dateStr && !!user?.center_id,
+    staleTime: 0
   });
 
   const holidayEvent = calendarEvents.find(e => !e.is_school_day);
@@ -114,6 +114,9 @@ export default function TakeAttendance() {
   const isTeacher = user?.role === UserRole.TEACHER;
   const isCenter = user?.role === UserRole.CENTER || user?.role === UserRole.ADMIN;
 
+  const { currentPage, pageSize, setPage, getRange } = usePagination(50);
+  const { from, to } = getRange();
+
   // Restricted by default for teachers. ONLY explicitly 'full' scope OR 'edit' permission bypasses.
   const isRestricted = React.useMemo(() => {
     if (isCenter) return false;
@@ -140,10 +143,10 @@ export default function TakeAttendance() {
     }
   }, [user, isRestricted, classTeacherGrades]);
 
-  const { data: students } = useQuery({
-    queryKey: ["students", user?.center_id, isRestricted, classTeacherGrades],
+  const { data: studentsData } = useQuery({
+    queryKey: ["students", user?.center_id, isRestricted, classTeacherGrades, currentPage],
     queryFn: async () => {
-      let query = supabase.from("students").select("id, name, grade").eq("is_active", true).order("name");
+      let query = supabase.from("students").select("id, name, grade", { count: 'exact' }).eq("is_active", true).order("name");
       if (user?.role !== UserRole.ADMIN && user?.center_id) {
         query = query.eq("center_id", user.center_id);
       }
@@ -154,16 +157,19 @@ export default function TakeAttendance() {
           query = query.in('grade', classTeacherGrades);
         } else {
           // If restricted but no grades assigned, return empty list immediately
-          return [] as Student[];
+          return { data: [] as Student[], count: 0 };
         }
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query.range(from, to);
       if (error) throw error;
-      return data as Student[];
+      return { data: data as Student[], count: count || 0 };
     },
     enabled: !!user?.center_id && (!isRestricted || !!classTeacherGrades)
   });
+
+  const students = studentsData?.data || [];
+  const totalStudentsCount = studentsData?.count || 0;
 
   const { data: approvedLeaves = [] } = useQuery({
     queryKey: ["approved-leaves", dateStr, user?.center_id, isRestricted, classTeacherGrades],
@@ -185,7 +191,8 @@ export default function TakeAttendance() {
       if (error) throw error;
       return data;
     },
-    enabled: !!dateStr && !!user?.center_id && (!isRestricted || !!classTeacherGrades)
+    enabled: !!dateStr && !!user?.center_id && (!isRestricted || !!classTeacherGrades),
+    staleTime: 0
   });
 
   const { data: existingAttendance } = useQuery({
@@ -568,6 +575,19 @@ export default function TakeAttendance() {
         <CardContent>
           {filteredStudents && filteredStudents.length > 0 ? (
             <form onSubmit={handleSubmit} className="space-y-4 pt-6">
+              {totalStudentsCount > pageSize && (
+                <div className="flex justify-center mb-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setPage(currentPage + 1)}
+                    disabled={students.length < pageSize}
+                    className="rounded-xl font-bold"
+                  >
+                    Load More Students
+                  </Button>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredStudents.map((student) => (
                   <div

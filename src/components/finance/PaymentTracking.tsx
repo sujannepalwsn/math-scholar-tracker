@@ -32,8 +32,7 @@ const PaymentTracking = ({ canEdit }: { canEdit?: boolean }) => {
     queryKey: ['unpaid-invoices', user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('invoices')
-        .select('*, students(name)')
+        .from("invoices").select("id, total_amount, paid_amount, invoice_date, status, student_id, center_id, invoice_number, students(name)")
         .eq('center_id', user?.center_id!)
         .neq('status', 'paid')
         .order('due_date');
@@ -59,8 +58,7 @@ const PaymentTracking = ({ canEdit }: { canEdit?: boolean }) => {
       const invoiceIds = centerInvoices.map(i => i.id);
       
       const { data, error } = await supabase
-        .from('payments')
-        .select('*, invoices(invoice_number, center_id, students(name))')
+        .from("payments").select("id, amount, payment_date, payment_method, reference_number, invoice_id, invoices(invoice_number, center_id, students(name))")
         .in('invoice_id', invoiceIds)
         .order('payment_date', { ascending: false })
         .limit(50);

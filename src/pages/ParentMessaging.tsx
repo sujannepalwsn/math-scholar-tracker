@@ -47,7 +47,8 @@ export default function ParentMessaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    staleTime: 0
   });
 
   // Fetch messages
@@ -66,7 +67,8 @@ export default function ParentMessaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!conversation?.id
+    enabled: !!conversation?.id,
+    staleTime: 0
   });
 
   // Real-time subscription

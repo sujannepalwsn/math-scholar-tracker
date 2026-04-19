@@ -132,8 +132,7 @@ export default function LessonPlans() {
       if (!user?.center_id) return { data: [], count: 0 };
       const { from, to } = getRange();
       let query = supabase
-        .from("lesson_plans")
-        .select("*, teachers(name)", { count: 'exact' })
+        .from("lesson_plans").select("id, subject, chapter, topic, grade, lesson_date, status, teacher_id, center_id, teachers(name)", { count: 'exact' })
         .eq("center_id", user.center_id)
         .order("lesson_date", { ascending: false });
       if (subjectFilter !== "all") query = query.eq("subject", subjectFilter);

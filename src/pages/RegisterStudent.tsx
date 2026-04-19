@@ -115,8 +115,7 @@ export default function RegisterStudent() {
     queryFn: async () => {
       const { from, to } = getRange();
       let query = supabase
-        .from("students")
-        .select("*", { count: 'exact' })
+        .from("students").select("id, name, grade, roll_number, status, center_id, photo_url", { count: 'exact' })
         .order("created_at", { ascending: false });
 
       if (user?.role !== UserRole.ADMIN && user?.center_id) {

@@ -12,8 +12,7 @@ export default function CenterAnalytics() {
     queryKey: ["admin-center-analytics"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("center_analytics_view")
-        .select("*")
+        .from("center_analytics_view").select("id")
         .order("name");
 
       if (error) throw error;

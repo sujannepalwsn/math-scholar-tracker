@@ -72,8 +72,7 @@ export default function LessonPlanManagement() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase
-        .from("lesson_plans")
-        .select("*, teachers(name)")
+        .from("lesson_plans").select("id, subject, chapter, topic, grade, lesson_date, status, teacher_id, center_id, teachers(name)")
         .eq("center_id", user.center_id)
         .order("submitted_at", { ascending: false });
 

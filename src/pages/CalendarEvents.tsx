@@ -69,8 +69,7 @@ export default function CalendarEvents() {
     queryFn: async () => {
       if (!centerId) return [];
       let query = supabase
-        .from("calendar_events")
-        .select("*")
+        .from("calendar_events").select("id, title, date, is_school_day")
         .eq("center_id", centerId);
 
       if (typeFilter !== "all") {

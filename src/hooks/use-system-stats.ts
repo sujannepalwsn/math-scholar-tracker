@@ -15,18 +15,15 @@ export const useSystemStats = () => {
       // Fetch counts while ensuring we only count active records from active centers
       const [studentsCount, teachersCount, centersCount] = await Promise.all([
         supabase
-          .from('students')
-          .select('*, centers!inner(is_active)', { count: 'exact', head: true })
+          .from("students").select("id, name, grade, roll_number, status, center_id, photo_url, centers!inner(is_active)", { count: 'exact', head: true })
           .eq('is_active', true)
           .eq('centers.is_active', true),
         supabase
-          .from('teachers')
-          .select('*, centers!inner(is_active)', { count: 'exact', head: true })
+          .from("teachers").select("id, name, email, department, subject, grade, status, user_id, centers!inner(is_active)", { count: 'exact', head: true })
           .eq('is_active', true)
           .eq('centers.is_active', true),
         supabase
-          .from('centers')
-          .select('*', { count: 'exact', head: true })
+          .from("centers").select("id, name, logo_url, address, phone, email", { count: 'exact', head: true })
           .eq('is_active', true),
       ]);
 

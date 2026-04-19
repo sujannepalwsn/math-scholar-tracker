@@ -27,7 +27,7 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
   const { data: students } = useQuery({
     queryKey: ["students", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      const { data, error } = await supabase.from("students").select("id, name, grade, roll_number, status, center_id, photo_url").eq("center_id", centerId).eq("is_active", true);
       if (error) throw error;
       return data;
     },
@@ -36,7 +36,7 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
   const { data: routes } = useQuery({
     queryKey: ["transport-routes", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("bus_routes").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("bus_routes").select("id, route_name, status").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },
@@ -45,7 +45,7 @@ export default function TransportManagement({ centerId, canEdit }: { centerId: s
   const { data: vehicles } = useQuery({
     queryKey: ["transport-vehicles", centerId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("vehicles").select("*").eq("center_id", centerId);
+      const { data, error } = await supabase.from("vehicles").select("id, vehicle_number, status").eq("center_id", centerId);
       if (error) throw error;
       return data;
     },

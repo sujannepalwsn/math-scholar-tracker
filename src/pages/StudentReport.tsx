@@ -65,7 +65,7 @@ export default function StudentReport() {
   const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("name");
+      let query = supabase.from("students").select("id, name, grade, roll_number, status, center_id, photo_url, student_id_number").order("name");
       if (user?.role !== UserRole.ADMIN && user?.center_id) query = query.eq("center_id", user.center_id);
 
       if (isRestricted) {
@@ -93,14 +93,26 @@ export default function StudentReport() {
     return filteredStudents.map(s => s.id);
   }, [selectedStudentId, filteredStudents]);
 
+  const { data: studentSummaries = [] } = useQuery({
+    queryKey: ["student-report-summary", studentIds, user?.center_id],
+    queryFn: async () => {
+      if (studentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_report_summary").select("id, total_attendance_days, present_days, avg_percentage, discipline_count, last_test_date")
+        .in("id", studentIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: studentIds.length > 0
+  });
+
   // Fetch attendance
   const { data: attendanceData = [], isLoading: isAttendanceLoading } = useQuery({
     queryKey: ["student-attendance", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id, isRestricted],
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase
-        .from("attendance")
-        .select("*, students!inner(grade)")
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks, students!inner(grade)")
         .eq("center_id", user.center_id)
         .gte("date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
@@ -175,7 +187,7 @@ export default function StudentReport() {
   const { data: testResults = [], isLoading: isTestsLoading } = useQuery({
     queryKey: ["student-test-results", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.id],
     queryFn: async () => {
-      let query = supabase.from("test_results").select("*, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions, created_by)")
+      let query = supabase.from("test_results").select("id, marks_obtained, test_id, date_taken, tests!inner(id, name, subject, total_marks, lesson_plan_id, questions, created_by)")
         .gte("date_taken", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("date_taken", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -205,7 +217,7 @@ export default function StudentReport() {
   const { data: homeworkStatus = [], isLoading: isHomeworkLoading } = useQuery({
     queryKey: ["student-homework-status-report", selectedStudentId, gradeFilter, subjectFilter, dateRange, studentIds, user?.role, user?.teacher_id],
     queryFn: async () => {
-      let query = supabase.from("student_homework_records").select("*, homework!inner(id, title, subject, due_date, lesson_plan_id, teacher_id)")
+      let query = supabase.from("student_homework_records").select("id, status, created_at, homework!inner(id, title, subject, due_date, lesson_plan_id, teacher_id)")
         .gte("homework.due_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("homework.due_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -236,8 +248,7 @@ export default function StudentReport() {
     queryKey: ["center-activities", user?.center_id, gradeFilter, dateRange, isRestricted],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("activities")
-        .select("*")
+      let query = supabase.from("activities").select("id, title, description, activity_date, grade, center_id")
         .eq("center_id", user.center_id)
         .gte("activity_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("activity_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
@@ -260,7 +271,7 @@ export default function StudentReport() {
   const { data: preschoolActivities = [], isLoading: isActivitiesLoading } = useQuery({
     queryKey: ["student-preschool-activities-report", selectedStudentId, gradeFilter, dateRange, studentIds, user?.role, user?.id],
     queryFn: async () => {
-      let query = supabase.from("student_activities").select("*, activities!inner(title, description, activity_date, photo_url, video_url, activity_type_id, created_by, activity_types(name))")
+      let query = supabase.from("student_activities").select("id, involvement_score, created_at, activities!inner(id, title, description, activity_date, photo_url, video_url, activity_type_id, created_by, activity_types(name))")
         .gte("created_at", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("created_at", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
 
@@ -287,7 +298,7 @@ export default function StudentReport() {
     queryKey: ["student-discipline-issues-report", selectedStudentId, gradeFilter, dateRange, user?.center_id, user?.role, user?.id, isRestricted],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("discipline_issues").select("*, students!inner(grade), discipline_categories(name)")
+      let query = supabase.from("discipline_issues").select("id, description, severity, issue_date, reported_by, students!inner(id, name, grade), discipline_categories(name)")
         .eq("center_id", user.center_id)
         .gte("issue_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("issue_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
@@ -337,8 +348,7 @@ export default function StudentReport() {
       if (!student) return [];
 
       let query = supabase
-        .from("exams")
-        .select("*")
+        .from("exams").select("id, name, grade, academic_year, exam_date, status, center_id")
         .eq("center_id", user.center_id)
         .eq("grade", student.grade)
         .gte("exam_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
@@ -357,15 +367,13 @@ export default function StudentReport() {
       const examIds = exams.map(e => e.id);
 
       const { data: subjects, error: subjError } = await supabase
-        .from("exam_subjects")
-        .select("*")
+        .from("exam_subjects").select("id, exam_id, subject_name, full_marks, pass_marks")
         .in("exam_id", examIds);
 
       if (subjError) throw subjError;
 
       const { data: marks, error: marksError } = await supabase
-        .from("exam_marks")
-        .select("*")
+        .from("exam_marks").select("id, marks_obtained, student_id, exam_id, exam_subject_id")
         .eq("student_id", selectedStudentId)
         .in("exam_id", examIds);
 
@@ -426,7 +434,7 @@ export default function StudentReport() {
     queryKey: ["student-invoices-report", selectedStudentId, dateRange],
     queryFn: async () => {
       if (!selectedStudentId || selectedStudentId === "none") return [];
-      const { data, error } = await supabase.from("invoices").select("*").eq("student_id", selectedStudentId)
+      const { data, error } = await supabase.from("invoices").select("id, total_amount, paid_amount, invoice_date, status").eq("student_id", selectedStudentId)
         .gte("invoice_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("invoice_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
       if (error) throw error;
@@ -447,7 +455,7 @@ export default function StudentReport() {
       if (!invoices || invoices.length === 0) return [];
       
       const invoiceIds = invoices.map(inv => inv.id);
-      const { data, error } = await supabase.from("payments").select("*")
+      const { data, error } = await supabase.from("payments").select("id, amount, payment_date, payment_method, reference_number")
         .in("invoice_id", invoiceIds)
         .gte("payment_date", safeFormatDate(dateRange.from, "yyyy-MM-dd"))
         .lte("payment_date", safeFormatDate(dateRange.to, "yyyy-MM-dd"));
@@ -485,14 +493,16 @@ export default function StudentReport() {
     // 1. Total Students
     const totalStudents = reportLevel === "student" ? 1 : filteredStudents.length;
 
+    // Use aggregated data from the VIEW where possible
+    const aggregateAttendanceDays = studentSummaries.reduce((sum, s: any) => sum + (s.total_attendance_days || 0), 0);
+    const aggregatePresentDays = studentSummaries.reduce((sum, s: any) => sum + (s.present_days || 0), 0);
+
     // 2. Average Attendance %
-    const totalAttendanceDays = attendanceData.length;
-    const presentAttendanceDays = attendanceData.filter(a => a.status === "present").length;
-    const attendancePercentage = totalAttendanceDays > 0
-      ? Math.round((presentAttendanceDays / totalAttendanceDays) * 100)
+    const attendancePercentage = aggregateAttendanceDays > 0
+      ? Math.round((aggregatePresentDays / aggregateAttendanceDays) * 100)
       : 0;
 
-    // 3. Overall Homework Completion Rate
+    // 3. Overall Homework Completion Rate (still needs detail if we want it by date range specifically)
     const totalHomework = homeworkStatus.length;
     const completedHomework = homeworkStatus.filter(h => ["completed", "checked"].includes(h.status || "")).length;
     const homeworkCompletionRate = totalHomework > 0
@@ -507,29 +517,12 @@ export default function StudentReport() {
       : 0;
 
     // 5. Average Test & Exam Performance
-    const totalTestResults = testResults.length;
-    const totalMarksObtained = testResults.reduce((sum, r) => sum + (r.marks_obtained || 0), 0);
-    const totalMaxMarks = testResults.reduce((sum, r) => sum + (r.tests?.total_marks || 0), 0);
-
-    // Add Exam Marks
-    let examObtained = 0;
-    let examFull = 0;
-    studentExams.forEach(e => {
-      if (e.hasMarks) {
-        examObtained += e.totalObtained;
-        examFull += e.totalFull;
-      }
-    });
-
-    const combinedObtained = totalMarksObtained + examObtained;
-    const combinedFull = totalMaxMarks + examFull;
-
-    const testPerformance = combinedFull > 0
-      ? Math.round((combinedObtained / combinedFull) * 100)
+    const testPerformance = studentSummaries.length > 0
+      ? Math.round(studentSummaries.reduce((sum, s: any) => sum + (s.avg_percentage || 0), 0) / studentSummaries.length)
       : 0;
 
     // 6. Total Discipline Records
-    const totalDiscipline = disciplineIssues.length;
+    const totalDiscipline = studentSummaries.reduce((sum, s: any) => sum + (s.discipline_count || 0), 0);
 
     // 7. Total Activities Conducted
     // If student selected, show participations. Else show unique activities.

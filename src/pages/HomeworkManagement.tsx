@@ -70,8 +70,7 @@ export default function HomeworkManagement() {
       const { from, to } = getRange();
 
       let query = supabase
-        .from("homework")
-        .select("*, lesson_plans(*)", { count: 'exact' })
+        .from("homework").select("id, title, subject, due_date, grade, teacher_id, center_id, lesson_plans(*)", { count: 'exact' })
         .eq("center_id", user.center_id)
         .order("due_date", { ascending: false });
 
@@ -97,8 +96,7 @@ export default function HomeworkManagement() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase
-        .from("lesson_plans")
-        .select("*")
+        .from("lesson_plans").select("id, subject, chapter, topic, grade, lesson_date, status, teacher_id, center_id")
         .eq("center_id", user.center_id)
         .eq("status", "approved")
         .order("lesson_date", { ascending: false });
@@ -117,7 +115,7 @@ export default function HomeworkManagement() {
     queryKey: ["students-for-homework", user?.center_id, isRestricted, user?.teacher_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("students").select("*").eq("center_id", user.center_id).eq("is_active", true);
+      let query = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).eq("is_active", true);
 
       if (isRestricted && user?.teacher_id) {
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user.teacher_id);
@@ -141,7 +139,7 @@ export default function HomeworkManagement() {
     queryKey: ["student-homework-records", selectedHomeworkForStatus?.id],
     queryFn: async () => {
       if (!selectedHomeworkForStatus?.id) return [];
-      const { data, error } = await supabase.from("student_homework_records").select("*, students(*)").eq("homework_id", selectedHomeworkForStatus.id);
+      const { data, error } = await supabase.from("student_homework_records").select("id, status, created_at, student_id, students(id, name, grade)").eq("homework_id", selectedHomeworkForStatus.id);
       if (error) throw error;
       return data;
     },

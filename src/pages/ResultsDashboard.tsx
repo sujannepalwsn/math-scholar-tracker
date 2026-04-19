@@ -23,8 +23,7 @@ export default function ResultsDashboard() {
     queryFn: async () => {
       if (!centerId) return [];
       let query = supabase
-        .from("exams")
-        .select("*")
+        .from("exams").select("id, name, grade, academic_year, exam_date, status, center_id")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
 
@@ -59,7 +58,7 @@ export default function ResultsDashboard() {
     queryKey: ["result-subjects", selectedExamId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId);
+      const { data, error } = await supabase.from("exam_subjects").select("id, subject_name, full_marks").eq("exam_id", selectedExamId);
       if (error) throw error;
       return data;
     },
@@ -70,7 +69,7 @@ export default function ResultsDashboard() {
     queryKey: ["result-marks", selectedExamId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_marks").select("*, students(name)").eq("exam_id", selectedExamId);
+      const { data, error } = await supabase.from("exam_marks").select("id, marks_obtained, student_id, exam_id, students(id, name)").eq("exam_id", selectedExamId);
       if (error) throw error;
       return data;
     },

@@ -50,8 +50,7 @@ const InvoiceManagement = ({ canEdit }: { canEdit?: boolean }) => {
     queryKey: ['invoices', user?.center_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('invoices')
-        .select('*, students(name)')
+        .from("invoices").select("id, total_amount, paid_amount, invoice_date, status, student_id, center_id, invoice_number, students(name)")
         .eq('center_id', user?.center_id!)
         .order('created_at', { ascending: false });
       if (error) throw error;

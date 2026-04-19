@@ -28,8 +28,7 @@ export default function LeaveCategoryManager() {
     queryKey: ["leave-categories", user?.center_id],
     queryFn: async () => {
       let query = supabase
-        .from("leave_categories")
-        .select("*");
+        .from("leave_categories").select("id, name, center_id");
 
       if (user?.role === UserRole.ADMIN) {
         // Superadmin sees only global ones (or all if we want)

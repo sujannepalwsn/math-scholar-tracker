@@ -26,8 +26,7 @@ export function useParentInsights(studentId: string | null) {
     queryFn: async () => {
       if (!studentId) return [];
       const { data, error } = await supabase
-        .from('attendance')
-        .select('*')
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks")
         .eq('student_id', studentId)
         .gte('date', format(subDays(today, 60), 'yyyy-MM-dd'));
       if (error) throw error;
@@ -42,8 +41,7 @@ export function useParentInsights(studentId: string | null) {
     queryFn: async () => {
       if (!studentId) return [];
       const { data, error } = await supabase
-        .from('student_homework_records')
-        .select('*, homework(*)')
+        .from("student_homework_records").select("id, status, created_at, student_id, homework_id, homework(id, title, description, due_date, grade, subject)")
         .eq('student_id', studentId)
         .gte('created_at', subDays(today, 30).toISOString());
       if (error) throw error;
@@ -58,8 +56,7 @@ export function useParentInsights(studentId: string | null) {
     queryFn: async () => {
       if (!studentId) return [];
       const { data, error } = await supabase
-        .from('test_results')
-        .select('*, tests(*)')
+        .from("test_results").select("id, marks_obtained, test_id, student_id, date_taken, tests(id, name, total_marks, subject)")
         .eq('student_id', studentId)
         .order('date_taken', { ascending: false });
       if (error) throw error;
@@ -74,8 +71,7 @@ export function useParentInsights(studentId: string | null) {
     queryFn: async () => {
       if (!studentId) return [];
       const { data, error } = await supabase
-        .from('exam_marks')
-        .select('*, exam_subjects(*), exams(*)')
+        .from("exam_marks").select("id, marks_obtained, student_id, exam_id, exam_subject_id, exam_subjects(id, name, grade, center_id), exams(id, name, start_date, end_date, status)")
         .eq('student_id', studentId);
       if (error) throw error;
       return data;
@@ -89,8 +85,7 @@ export function useParentInsights(studentId: string | null) {
     queryFn: async () => {
       if (!studentId) return [];
       const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
+        .from("invoices").select("id, total_amount, paid_amount, invoice_date, status, student_id, center_id, invoice_number")
         .eq('student_id', studentId);
       if (error) throw error;
       return data;
@@ -105,7 +100,7 @@ export function useParentInsights(studentId: string | null) {
       if (!studentId) return [];
       const { data, error } = await supabase
         .from('student_chapters')
-        .select('*, lesson_plans(*)')
+        .select('id, student_id, completed, evaluation_rating, lesson_plans(id, subject, chapter, topic)')
         .eq('student_id', studentId);
       if (error) throw error;
       return data;

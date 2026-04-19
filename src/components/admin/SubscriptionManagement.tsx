@@ -36,7 +36,7 @@ export default function SubscriptionManagement() {
   const { data: plans } = useQuery({
     queryKey: ["subscription-plans"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("subscription_plans").select("*").order("price");
+      const { data, error } = await supabase.from("subscription_plans").select("id, name, price, interval").order("price");
       if (error) throw error;
       return data;
     },
@@ -45,7 +45,7 @@ export default function SubscriptionManagement() {
   const { data: centerSubs } = useQuery({
     queryKey: ["center-subscriptions"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("center_subscriptions").select("*, centers(name), subscription_plans(*)");
+      const { data, error } = await supabase.from("center_subscriptions").select("id, center_id, plan_id, status, centers(name), subscription_plans(id, name, price)");
       if (error) throw error;
       return data;
     },
@@ -54,7 +54,7 @@ export default function SubscriptionManagement() {
   const { data: allInvoices } = useQuery({
     queryKey: ["admin-saas-invoices"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("saas_invoices").select("*, centers(name), subscription_plans(name)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("saas_invoices").select("id, center_id, amount, status, created_at, centers(name), subscription_plans(name)").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -210,7 +210,7 @@ export default function SubscriptionManagement() {
       const planId = values.planId || values.plan_id;
       const packageType = values.packageType || values.package_type;
 
-      const { data: plans } = await supabase.from("subscription_plans").select("*");
+      const { data: plans } = await supabase.from("subscription_plans").select("id, name, price, interval");
       const targetPlan = plans?.find(p => p.id === planId);
 
       const { error } = await supabase

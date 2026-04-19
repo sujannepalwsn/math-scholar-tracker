@@ -38,8 +38,7 @@ const TuitionCenters = () => {
     queryKey: ['centers-with-users'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('centers')
-        .select('*, users(*)')
+        .from("centers").select("id, name, logo_url, address, phone, email, users(id, username, role, center_id, teacher_id, student_id, is_active, created_at)")
         .order('created_at', { ascending: false });
 
       if (error) throw error;

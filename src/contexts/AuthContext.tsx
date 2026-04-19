@@ -37,6 +37,13 @@ interface User {
   };
 }
 
+interface CachedProfile {
+  data: any;
+  fetchedAt: number;
+}
+
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -51,6 +58,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const buildUserObject = (profileData: any): User => {
+    if (!profileData || !profileData.user) {
+      logger.error("Invalid profileData passed to buildUserObject", profileData);
+      throw new Error("Invalid profile data");
+    }
+
+    return {
+      id: profileData.user.id,
+      username: profileData.user.username,
+      role: profileData.user.role,
+      center_id: profileData.user.center_id,
+      teacher_id: profileData.user.teacher_id,
+      student_id: profileData.user.student_id,
+      center_name: profileData.center?.name,
+      centerPermissions: profileData.centerPermissions,
+      teacherPermissions: profileData.teacherPermissions,
+      teacher_scope_mode: profileData.teacherPermissions?.teacher_scope_mode || 'restricted',
+      linked_students: profileData.linkedStudents || [],
+      untrusted_metadata: {
+        permissions_fetched_at: new Date().toISOString(),
+        is_ui_restricted: profileData.teacherPermissions?.teacher_scope_mode === 'restricted'
+      }
+    };
+  };
+
   useEffect(() => {
     const loadUser = async () => {
       setLoading(true);
@@ -60,70 +92,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsedUser: User = JSON.parse(storedUser);
           setUser(parsedUser);
 
-          // Fetch fresh permissions and metadata from DB to avoid stale localStorage data
-          if (parsedUser.center_id) {
-            // We use a helper function to avoid async in useEffect directly
-            const fetchFreshData = async (userToUpdate: User) => {
-              try {
-                const updatedUser = { ...userToUpdate };
-                let hasChanges = false;
+          // Hybrid caching logic
+          const now = Date.now();
+          const cachedProfile = localStorage.getItem('cached_user_profile');
 
-                // Fetch fresh center metadata
-                const { data: centerData } = await supabase
-                  .from('centers')
-                  .select('name')
-                  .eq('id', userToUpdate.center_id!)
-                  .maybeSingle();
+          if (cachedProfile) {
+            const parsed: CachedProfile = JSON.parse(cachedProfile);
+            if (now - parsed.fetchedAt < CACHE_DURATION) {
+              setUser(buildUserObject(parsed.data));
+              setLoading(false);
+              return;
+            }
+          }
 
-                if (centerData && centerData.name !== userToUpdate.center_name) {
-                  updatedUser.center_name = centerData.name;
-                  hasChanges = true;
-                }
+          // Consolidated RPC call
+          const { data: profileData, error } = await supabase.rpc('get_user_profile_with_permissions', {
+            p_user_id: parsedUser.id
+          });
 
-
-                // Always fetch center permissions
-                const { data: centerPerms } = await supabase
-                  .from('center_feature_permissions')
-                  .select('*')
-                  .eq('center_id', userToUpdate.center_id!)
-                  .maybeSingle();
-
-                if (centerPerms) {
-                  updatedUser.centerPermissions = centerPerms;
-                  hasChanges = true;
-                }
-
-                // Fetch teacher permissions if user is a teacher
-                if (userToUpdate.role === UserRole.TEACHER && userToUpdate.teacher_id) {
-                  const { data: teacherPerms } = await supabase
-                    .from('teacher_feature_permissions')
-                    .select('*')
-                    .eq('teacher_id', userToUpdate.teacher_id)
-                    .maybeSingle();
-
-                  if (teacherPerms) {
-                    updatedUser.teacherPermissions = teacherPerms;
-                    updatedUser.teacher_scope_mode = teacherPerms.teacher_scope_mode || 'restricted';
-                  } else {
-                    updatedUser.teacher_scope_mode = 'restricted';
-                  }
-                  hasChanges = true;
-                }
-
-                if (hasChanges) {
-                  updatedUser.untrusted_metadata = {
-                    permissions_fetched_at: new Date().toISOString(),
-                    is_ui_restricted: updatedUser.teacher_scope_mode === 'restricted'
-                  };
-                  setUser(updatedUser);
-                  localStorage.setItem('auth_user', JSON.stringify(updatedUser));
-                }
-              } catch (err) {
-                logger.error("Error fetching fresh permissions:", err);
-              }
-            };
-
-            fetchFreshData(parsedUser);
+          if (!error && profileData) {
+            localStorage.setItem('cached_user_profile', JSON.stringify({
+              data: profileData,
+              fetchedAt: now
+            }));
+            const updatedUser = buildUserObject(profileData);
+            setUser(updatedUser);
+            localStorage.setItem('auth_user', JSON.stringify(updatedUser));
           }
         } catch (e) {
           logger.error("Failed to parse auth_user", e);
@@ -221,45 +215,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logger.warn('AuthContext: No session returned from login. RLS may block data access.');
       }
 
-      // The role check is now handled by ProtectedRoute after successful authentication
-      // This allows any valid user to log in via the main login page and then be redirected
-      // to their specific dashboard by the router.
+      // Consolidated RPC call after successful login
+      const now = Date.now();
+      const { data: profileData, error: profileError } = await supabase.rpc('get_user_profile_with_permissions', {
+        p_user_id: loggedInUser.id
+      });
 
-      // SECURITY: Permissions were removed from auth-login response.
-      // Fetch them now after successful login.
-      let updatedUser = { ...loggedInUser };
-
-      if (loggedInUser.center_id) {
-        const { data: centerPerms } = await supabase
-          .from('center_feature_permissions')
-          .select('*')
-          .eq('center_id', loggedInUser.center_id)
-          .maybeSingle();
-
-        if (centerPerms) {
-          updatedUser.centerPermissions = centerPerms;
-        }
-
-        if (loggedInUser.role === UserRole.TEACHER && loggedInUser.teacher_id) {
-          const { data: teacherPerms } = await supabase
-            .from('teacher_feature_permissions')
-            .select('*')
-            .eq('teacher_id', loggedInUser.teacher_id)
-            .maybeSingle();
-
-          if (teacherPerms) {
-            updatedUser.teacherPermissions = teacherPerms;
-            updatedUser.teacher_scope_mode = teacherPerms.teacher_scope_mode || 'restricted';
-          }
-        }
+      if (profileError || !profileData) {
+        logger.error('AuthContext: Error fetching profile after login:', profileError);
+        setUser(loggedInUser);
+        localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
+      } else {
+        localStorage.setItem('cached_user_profile', JSON.stringify({
+          data: profileData,
+          fetchedAt: now
+        }));
+        const updatedUser = buildUserObject(profileData);
+        setUser(updatedUser);
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
       }
-
-      updatedUser.untrusted_metadata = {
-        permissions_fetched_at: new Date().toISOString(),
-        is_ui_restricted: updatedUser.teacher_scope_mode === 'restricted'
-      };
-      setUser(updatedUser);
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
       logger.debug('AuthContext: User state (with untrusted permissions) updated and stored in localStorage.');
       return { success: true };
     } catch (error) {
@@ -272,6 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem('auth_user');
+    localStorage.removeItem('cached_user_profile');
     localStorage.removeItem('is_sandbox');
   };
 

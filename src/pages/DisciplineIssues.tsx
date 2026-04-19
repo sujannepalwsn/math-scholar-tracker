@@ -91,8 +91,7 @@ export default function DisciplineIssues() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
-        .from("discipline_categories")
-        .select("*")
+        .from("discipline_categories").select("id, name, center_id")
         .eq("center_id", user.center_id)
         .eq("is_active", true) // Only active categories
         .order("name");
@@ -107,8 +106,7 @@ export default function DisciplineIssues() {
     queryFn: async () => {
       if (!user?.center_id) return [];
       let query = supabase
-        .from("discipline_issues")
-        .select("*, students!inner(name, grade), discipline_categories(name)")
+        .from("discipline_issues").select("id, description, severity, issue_date, status, reported_by, student_id, center_id, category_id, students!inner(name, grade), discipline_categories(name)")
         .eq("center_id", user.center_id)
         .order("issue_date", { ascending: false });
       

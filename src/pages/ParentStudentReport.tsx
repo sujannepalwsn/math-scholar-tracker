@@ -47,7 +47,7 @@ export default function ParentStudentReport() {
     queryKey: ["student-detail-report", selectedStudentId],
     queryFn: async () => {
       if (selectedStudentId === "none") return null;
-      const { data, error } = await supabase.from("students").select("*").eq("id", selectedStudentId).maybeSingle();
+      const { data, error } = await supabase.from("students").select("id, name, grade, roll_number, status, center_id, photo_url").eq("id", selectedStudentId).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -60,8 +60,7 @@ export default function ParentStudentReport() {
     queryFn: async () => {
       if (selectedStudentId === "none") return [];
       const { data, error } = await supabase
-        .from("attendance")
-        .select("*")
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks")
         .eq("student_id", selectedStudentId)
         .gte("date", format(dateRange.from, "yyyy-MM-dd"))
         .lte("date", format(dateRange.to, "yyyy-MM-dd"));
@@ -77,7 +76,7 @@ export default function ParentStudentReport() {
     queryFn: async () => {
       if (selectedStudentId === "none") return [];
       let query = supabase.from("test_results")
-        .select("*, tests!inner(*)")
+        .select("id, marks_obtained, test_id, student_id, date_taken, tests!inner(id, name, total_marks)")
         .eq("student_id", selectedStudentId)
         .gte("date_taken", format(dateRange.from, "yyyy-MM-dd"))
         .lte("date_taken", format(dateRange.to, "yyyy-MM-dd"));
@@ -100,8 +99,7 @@ export default function ParentStudentReport() {
       if (selectedStudentId === "none" || !student?.grade) return [];
 
       const { data: exams, error: examsError } = await supabase
-        .from("exams")
-        .select("*")
+        .from("exams").select("id, name, grade, academic_year, exam_date, status, center_id")
         .eq("center_id", student.center_id)
         .eq("grade", student.grade)
         .in("status", ["results_published"])
@@ -112,10 +110,10 @@ export default function ParentStudentReport() {
       if (!exams || exams.length === 0) return [];
 
       const examIds = exams.map(e => e.id);
-      const { data: subjects, error: subjError } = await supabase.from("exam_subjects").select("*").in("exam_id", examIds);
+      const { data: subjects, error: subjError } = await supabase.from("exam_subjects").select("id, exam_id, subject_name, full_marks, pass_marks").in("exam_id", examIds);
       if (subjError) throw subjError;
 
-      const { data: marks, error: marksError } = await supabase.from("exam_marks").select("*").eq("student_id", selectedStudentId).in("exam_id", examIds);
+      const { data: marks, error: marksError } = await supabase.from("exam_marks").select("id, marks_obtained, student_id, exam_id, exam_subject_id").eq("student_id", selectedStudentId).in("exam_id", examIds);
       if (marksError) throw marksError;
 
       return exams.map(exam => {
@@ -180,7 +178,7 @@ export default function ParentStudentReport() {
       if (selectedStudentId === "none") return [];
       const { data, error } = await supabase
         .from("discipline_issues")
-        .select("*, discipline_categories(name)")
+        .select("id, description, severity, issue_date, status, discipline_categories(name)")
         .eq("student_id", selectedStudentId)
         .gte("issue_date", format(dateRange.from, "yyyy-MM-dd"))
         .lte("issue_date", format(dateRange.to, "yyyy-MM-dd"));
@@ -209,7 +207,7 @@ export default function ParentStudentReport() {
       if (selectedStudentId === "none") return [];
       const { data, error } = await supabase
         .from('student_chapters')
-        .select('*, lesson_plans(*)')
+        .select('id, student_id, completed, evaluation_rating, lesson_plans(id, subject, chapter, topic)')
         .eq('student_id', selectedStudentId)
         .order('completed_at', { ascending: false });
       if (error) throw error;

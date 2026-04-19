@@ -25,8 +25,7 @@ export default function ParentAttendance() {
       const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
       const { data, error } = await supabase
-        .from('attendance')
-        .select('*')
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks")
         .eq('student_id', activeStudentId)
         .gte('date', start)
         .lte('date', end)

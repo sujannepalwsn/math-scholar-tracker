@@ -51,8 +51,7 @@ export default function PublishedResults() {
     queryKey: ["exams-list-results", centerId, user?.role, user?.teacher_id, dateRange],
     queryFn: async () => {
       if (!centerId) return [];
-      let query = supabase.from("exams")
-        .select("*")
+      let query = supabase.from("exams").select("id, name, grade, academic_year, exam_date, status, center_id")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
 
@@ -102,7 +101,7 @@ export default function PublishedResults() {
     queryKey: ["exam-subjects", selectedExamId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId).order("subject_name");
+      const { data, error } = await supabase.from("exam_subjects").select("id, subject_name, full_marks, pass_marks").eq("exam_id", selectedExamId).order("subject_name");
       if (error) throw error;
       return data;
     },
@@ -114,7 +113,7 @@ export default function PublishedResults() {
     queryKey: ["students-for-results", centerId, selectedExam?.grade, user?.role, user?.id, activeStudentId],
     queryFn: async () => {
       if (!centerId) return [];
-      let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      let query = supabase.from("students").select("id, name, grade").eq("center_id", centerId).eq("is_active", true);
 
       if (selectedExam?.grade) {
         query = query.eq("grade", selectedExam.grade);
@@ -154,7 +153,7 @@ export default function PublishedResults() {
     queryKey: ["exam-marks", selectedExamId, activeStudentId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      let query = supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId);
+      let query = supabase.from("exam_marks").select("id, marks_obtained, student_id, exam_subject_id").eq("exam_id", selectedExamId);
 
       if (user?.role === UserRole.PARENT && activeStudentId) {
         query = query.eq('student_id', activeStudentId);

@@ -46,13 +46,14 @@ export default function Messaging() {
       if (!user?.center_id) return [];
       const { data, error } = await supabase
         .from("chat_conversations")
-        .select(`*, students:students!student_id(id, name, grade), parent_user:users!parent_user_id(id, username)`)
+        .select(`id, center_id, student_id, parent_user_id, last_message_at, students:students!student_id(id, name, grade), parent_user:users!parent_user_id(id, username)`)
         .eq("center_id", user.center_id)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.center_id && (user?.role === UserRole.CENTER || user?.role === UserRole.TEACHER),
+    enabled: !!user?.center_id && (user.role === UserRole.CENTER || user.role === UserRole.ADMIN),
+    staleTime: 0
   });
 
   const { data: parentConversations = [] } = useQuery({
@@ -61,13 +62,14 @@ export default function Messaging() {
       if (!user?.id) return [];
       const { data, error } = await supabase
         .from("chat_conversations")
-        .select(`*, students:students!student_id(id, name, grade), centers:centers!center_id(id, name)`)
+        .select(`id, center_id, student_id, parent_user_id, last_message_at, students:students!student_id(id, name, grade), centers:centers!center_id(id, name)`)
         .eq("parent_user_id", user.id)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === UserRole.PARENT,
+    enabled: !!user?.id && user.role === UserRole.PARENT,
+    staleTime: 0
   });
 
   const activeConversations = user?.role === UserRole.PARENT ? parentConversations : conversations;
@@ -105,7 +107,8 @@ export default function Messaging() {
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedConversation?.id,
+    enabled: !!activeConversationId,
+    staleTime: 0
   });
 
   // Real-time subscription

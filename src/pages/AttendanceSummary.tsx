@@ -101,8 +101,7 @@ export default function AttendanceSummary() {
       if (studentIds.length === 0) return [];
 
       let query = supabase
-        .from('attendance')
-        .select('*, students!inner(name, grade)')
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks, students!inner(name, grade)")
         .in('student_id', studentIds)
         .gte('date', startDate)
         .lte('date', endDate);

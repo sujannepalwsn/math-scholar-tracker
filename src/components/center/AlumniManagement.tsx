@@ -30,8 +30,7 @@ export default function AlumniManagement({ centerId, canEdit }: { centerId: stri
     queryFn: async () => {
       const { from, to } = getRange();
       let query = supabase
-        .from("students")
-        .select("*", { count: 'exact' })
+        .from("students").select("id, name, grade, roll_number, status, center_id, photo_url", { count: 'exact' })
         .eq("center_id", centerId)
         .eq("status", statusFilter);
 

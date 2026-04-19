@@ -26,7 +26,7 @@ export default function MarksheetView() {
     queryKey: ["center-info", centerId],
     queryFn: async () => {
       if (!centerId) return null;
-      const { data } = await supabase.from("centers").select("*").eq("id", centerId).maybeSingle();
+      const { data } = await supabase.from("centers").select("id, name, logo_url").eq("id", centerId).maybeSingle();
       return data;
     },
     enabled: !!centerId,
@@ -36,8 +36,7 @@ export default function MarksheetView() {
     queryKey: ["exams-all-marksheet", centerId, user?.role, user?.teacher_id],
     queryFn: async () => {
       if (!centerId) return [];
-      let query = supabase.from("exams")
-        .select("*")
+      let query = supabase.from("exams").select("id, name, grade, academic_year, exam_date, status, center_id")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
 
@@ -72,7 +71,7 @@ export default function MarksheetView() {
     queryKey: ["students-marksheet", centerId, selectedExam?.grade],
     queryFn: async () => {
       if (!centerId || !selectedExam?.grade) return [];
-      const { data, error } = await supabase.from("students").select("*").eq("center_id", centerId).eq("grade", selectedExam.grade).eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("students").select("id, name, grade, roll_number").eq("center_id", centerId).eq("grade", selectedExam.grade).eq("is_active", true).order("name");
       if (error) throw error;
       return data;
     },
@@ -88,7 +87,7 @@ export default function MarksheetView() {
     queryKey: ["marksheet-subjects", selectedExamId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_subjects").select("*").eq("exam_id", selectedExamId).order("subject_name");
+      const { data, error } = await supabase.from("exam_subjects").select("id, subject_name, full_marks, pass_marks").eq("exam_id", selectedExamId).order("subject_name");
       if (error) throw error;
       return data;
     },
@@ -98,7 +97,7 @@ export default function MarksheetView() {
   const { data: gradingSystems } = useQuery({
     queryKey: ["grading-systems", centerId],
     queryFn: async () => {
-      const { data } = await supabase.from("grading_systems").select("*").eq("center_id", centerId);
+      const { data } = await supabase.from("grading_systems").select("id, name, grading_scale").eq("center_id", centerId);
       return data;
     },
     enabled: !!centerId,
@@ -108,7 +107,7 @@ export default function MarksheetView() {
     queryKey: ["marksheet-marks", selectedExamId],
     queryFn: async () => {
       if (!selectedExamId) return [];
-      const { data, error } = await supabase.from("exam_marks").select("*").eq("exam_id", selectedExamId);
+      const { data, error } = await supabase.from("exam_marks").select("id, marks_obtained, student_id, exam_subject_id").eq("exam_id", selectedExamId);
       if (error) throw error;
       return data;
     },

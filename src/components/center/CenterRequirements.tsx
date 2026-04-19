@@ -26,8 +26,7 @@ export default function CenterRequirements({ centerId }: { centerId: string }) {
     queryKey: ["center-requirements", centerId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("center_requirements")
-        .select("*")
+        .from("center_requirements").select("id")
         .eq("center_id", centerId)
         .order("created_at", { ascending: false });
       if (error) throw error;

@@ -36,7 +36,7 @@ export default function ParentActivities() {
     queryKey: ['student-activities-detail', activeStudentId],
     queryFn: async () => {
       if (!activeStudentId) return null;
-      const { data, error } = await supabase.from('students').select('*').eq('id', activeStudentId).maybeSingle();
+      const { data, error } = await supabase.from("students").select("id, name, grade").eq('id', activeStudentId).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -49,8 +49,7 @@ export default function ParentActivities() {
     queryFn: async () => {
       if (!activeStudentId) return [];
       const { data, error } = await supabase
-        .from('student_activities')
-        .select('*, activities(*)')
+        .from("student_activities").select("id, involvement_score, created_at, student_id, activity_id, activities(id, title, activity_date)")
         .eq('student_id', activeStudentId)
         .order('created_at', { ascending: false });
       if (error) throw error;

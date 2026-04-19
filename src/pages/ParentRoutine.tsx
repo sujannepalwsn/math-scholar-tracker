@@ -27,7 +27,7 @@ export default function ParentRoutine() {
     queryKey: ['student-routine-detail', activeStudentId],
     queryFn: async () => {
       if (!activeStudentId) return null;
-      const { data, error } = await supabase.from('students').select('*').eq('id', activeStudentId).maybeSingle();
+      const { data, error } = await supabase.from("students").select("id, name, grade").eq('id', activeStudentId).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -42,7 +42,7 @@ export default function ParentRoutine() {
         .from("period_schedules")
         .select(`
           *,
-          class_periods:class_periods(*)
+          class_periods:class_periods(id, name, start_time, end_time, period_number, is_published)
         `)
         .eq("center_id", student.center_id)
         .eq("grade", student.grade)

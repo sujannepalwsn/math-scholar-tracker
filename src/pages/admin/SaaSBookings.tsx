@@ -53,8 +53,7 @@ const SaaSBookings = () => {
     queryKey: ['saas_bookings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('saas_bookings')
-        .select('*')
+        .from('saas_bookings').select('id, customer_name, status')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

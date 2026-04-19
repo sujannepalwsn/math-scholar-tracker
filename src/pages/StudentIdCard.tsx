@@ -31,7 +31,7 @@ export default function StudentIdCard() {
     queryKey: ["center-idcard", centerId],
     queryFn: async () => {
       if (!centerId) return null;
-      const { data } = await supabase.from("centers").select("*").eq("id", centerId).maybeSingle();
+      const { data } = await supabase.from("centers").select("id, name, logo_url").eq("id", centerId).maybeSingle();
       return data;
     },
     enabled: !!centerId,
@@ -43,7 +43,7 @@ export default function StudentIdCard() {
     queryKey: ["students-idcard", centerId, isRestricted, user?.teacher_id],
     queryFn: async () => {
       if (!centerId) return [];
-      let query = supabase.from("students").select("*").eq("center_id", centerId).eq("is_active", true);
+      let query = supabase.from("students").select("id, name, grade, roll_number, photo_url").eq("center_id", centerId).eq("is_active", true);
 
       if (isRestricted) {
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);

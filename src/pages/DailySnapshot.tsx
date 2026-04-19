@@ -37,7 +37,7 @@ export default function DailySnapshot() {
     queryKey: ['student-snapshot', activeStudentId],
     queryFn: async () => {
       if (!activeStudentId) return null;
-      const { data } = await supabase.from('students').select('*').eq('id', activeStudentId).single();
+      const { data } = await supabase.from("students").select("id, name, grade, photo_url").eq('id', activeStudentId).single();
       return data;
     },
     enabled: !!activeStudentId
@@ -46,7 +46,7 @@ export default function DailySnapshot() {
   const { data: attendance } = useQuery({
     queryKey: ['attendance-today', activeStudentId],
     queryFn: async () => {
-      const { data } = await supabase.from('attendance').select('*').eq('student_id', activeStudentId).eq('date', today).maybeSingle();
+      const { data } = await supabase.from("attendance").select("id, status, date").eq('student_id', activeStudentId).eq('date', today).maybeSingle();
       return data;
     },
     enabled: !!activeStudentId
@@ -55,7 +55,7 @@ export default function DailySnapshot() {
   const { data: homework } = useQuery({
     queryKey: ['homework-today', activeStudentId],
     queryFn: async () => {
-      const { data } = await supabase.from('student_homework_records').select('*, homework(*)').eq('student_id', activeStudentId).limit(3);
+      const { data } = await supabase.from("student_homework_records").select("id, status, created_at, student_id, homework_id, homework(id, title, description, due_date, grade, subject)").eq('student_id', activeStudentId).limit(3);
       return data;
     }
   });
@@ -63,7 +63,7 @@ export default function DailySnapshot() {
   const { data: aiForecast } = useQuery({
     queryKey: ['ai-forecast-snapshot', activeStudentId],
     queryFn: async () => {
-      const { data } = await supabase.from('predictive_scores').select('*').eq('student_id', activeStudentId).maybeSingle();
+      const { data } = await supabase.from("predictive_scores").select("id, risk_level, risk_score").eq('student_id', activeStudentId).maybeSingle();
       return data;
     }
   });

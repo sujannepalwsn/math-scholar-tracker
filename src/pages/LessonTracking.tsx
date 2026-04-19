@@ -242,8 +242,7 @@ export default function LessonTracking() {
       const studentIds = students.map((s: any) => s.id);
       if (!studentIds.length) return [];
       const { data, error } = await supabase
-        .from("attendance")
-        .select("*")
+        .from("attendance").select("id, student_id, date, status, center_id, time_in, time_out, remarks")
         .in("student_id", studentIds)
         .eq("date", date);
       if (error) throw error;

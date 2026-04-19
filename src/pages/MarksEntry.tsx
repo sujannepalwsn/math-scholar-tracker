@@ -46,8 +46,7 @@ export default function MarksEntry() {
     queryFn: async () => {
       if (!centerId) return [];
       let query = supabase
-        .from("exams")
-        .select("*")
+        .from("exams").select("id, name, grade, academic_year, exam_date, status, center_id")
         .eq("center_id", centerId)
         .in("status", ["draft", "published", "results_published"])
         .order("created_at", { ascending: false });
@@ -99,8 +98,7 @@ export default function MarksEntry() {
     queryFn: async () => {
       if (!selectedExamId) return [];
       let query = supabase
-        .from("exam_subjects")
-        .select("*")
+        .from("exam_subjects").select("id, exam_id, subject_name, full_marks, pass_marks")
         .eq("exam_id", selectedExamId)
         .order("subject_name");
 
@@ -137,8 +135,7 @@ export default function MarksEntry() {
       if (!centerId || !selectedExamId || !selectedExam) return [];
 
       let query = supabase
-        .from("students")
-        .select("*")
+        .from("students").select("id, name, grade, roll_number, status, center_id, photo_url")
         .eq("center_id", centerId)
         .eq("is_active", true);
 
@@ -161,8 +158,7 @@ export default function MarksEntry() {
     queryFn: async () => {
       if (!selectedExamId) return [];
       const { data, error } = await supabase
-        .from("exam_marks")
-        .select("*")
+        .from("exam_marks").select("id, marks_obtained, student_id, exam_id, exam_subject_id")
         .eq("exam_id", selectedExamId);
       if (error) throw error;
       return data;
