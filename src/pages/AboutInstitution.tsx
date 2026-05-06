@@ -81,7 +81,8 @@ export default function AboutInstitution() {
     principal_name: "",
     website_url: "",
     short_code: "",
-    header_bg_url: ""
+    header_bg_url: "",
+    header_height: "400px"
   });
 
   const canEdit = !isPublicView && hasActionPermission(user, 'about_institution', 'edit');
@@ -96,7 +97,7 @@ export default function AboutInstitution() {
 
       if (isPublicView) {
         const { data, error } = await query
-          .select("id, name, about_description, mission, vision, principal_message, principal_name, established_date, academic_info, facilities, achievements, gallery, social_links, institution_type, phone, email, address, website_url, header_bg_url")
+          .select("id, name, about_description, mission, vision, principal_message, principal_name, established_date, academic_info, facilities, achievements, gallery, social_links, institution_type, phone, email, address, website_url, header_bg_url, header_height")
           .eq("id", centerId)
           .single();
         if (error) throw error;
@@ -165,7 +166,8 @@ export default function AboutInstitution() {
         principal_name: center.principal_name || "",
         website_url: center.website_url || "",
         short_code: center.short_code || "",
-        header_bg_url: center.header_bg_url || ""
+        header_bg_url: center.header_bg_url || "",
+        header_height: center.header_height || "400px"
       });
     }
   }, [center, isEditing, lastSaved]);
@@ -201,7 +203,8 @@ export default function AboutInstitution() {
           principal_name: formData.principal_name,
           website_url: formData.website_url,
           short_code: formData.short_code,
-          header_bg_url: formData.header_bg_url
+          header_bg_url: formData.header_bg_url,
+          header_height: formData.header_height
         })
         .eq("id", user.center_id)
         .select()
@@ -288,7 +291,7 @@ export default function AboutInstitution() {
     const toastId = toast.loading("Uploading image to gallery...");
 
     try {
-      const compressedFile = await compressImage(file, 100);
+      const compressedFile = await compressImage(file, 200);
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.center_id}/gallery-${Date.now()}.${fileExt}`;
 
@@ -311,6 +314,38 @@ export default function AboutInstitution() {
       setFormData(prev => ({ ...prev, gallery: [...(prev.gallery || []), newItem] }));
       toast.dismiss(toastId);
       toast.success("Image added to gallery!");
+    } catch (error) {
+      toast.dismiss(toastId);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+      toast.error("Upload failed: " + errorMessage);
+    }
+  };
+
+  const handleHeaderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const toastId = toast.loading("Uploading header image...");
+
+    try {
+      const compressedFile = await compressImage(file, 500, 1920);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.center_id}/header-${Date.now()}.${fileExt}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('center-backgrounds')
+        .upload(fileName, compressedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('center-backgrounds')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, header_bg_url: publicUrl }));
+      toast.dismiss(toastId);
+      toast.success("Header image updated!");
     } catch (error) {
       toast.dismiss(toastId);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
@@ -388,18 +423,59 @@ export default function AboutInstitution() {
         </div>
       )}
       {/* Hero Parallax Section */}
-      <div className="relative h-[400px] md:h-[600px] -mt-8 -mx-4 md:-mx-8 overflow-hidden rounded-b-[4rem] shadow-elevated">
+      <div
+        className="relative -mt-8 -mx-4 md:-mx-8 overflow-hidden rounded-b-[4rem] shadow-elevated transition-all duration-500"
+        style={{ height: isEditing ? formData.header_height : center?.header_height || "400px" }}
+      >
           <motion.div
             style={{ y: y1 }}
             className="absolute inset-0 z-0"
           >
               <img
-                src={center?.header_bg_url || "https://images.unsplash.com/photo-1523050853063-915894374ef7?q=80&w=2070&auto=format&fit=crop"}
+                src={isEditing ? formData.header_bg_url || "https://images.unsplash.com/photo-1523050853063-915894374ef7?q=80&w=2070&auto=format&fit=crop" : center?.header_bg_url || "https://images.unsplash.com/photo-1523050853063-915894374ef7?q=80&w=2070&auto=format&fit=crop"}
                 className="w-full h-full object-cover"
                 alt="Institution Hero"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
           </motion.div>
+
+          {isEditing && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px] transition-opacity duration-300">
+               <div className="flex flex-col items-center gap-4 p-8 rounded-[2.5rem] bg-white/10 border border-white/20 shadow-2xl">
+                  <div className="flex flex-col items-center gap-2 mb-4">
+                     <Label className="text-white text-xs font-black uppercase tracking-[0.2em]">Header Height</Label>
+                     <div className="flex items-center gap-4">
+                        <Input
+                          type="range"
+                          min="200"
+                          max="800"
+                          step="10"
+                          value={parseInt(formData.header_height)}
+                          onChange={(e) => setFormData({ ...formData, header_height: `${e.target.value}px` })}
+                          className="w-48 accent-primary h-2 p-0 bg-white/20 rounded-full"
+                        />
+                        <span className="text-white font-black text-sm w-12">{formData.header_height}</span>
+                     </div>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="header-upload"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleHeaderUpload}
+                    />
+                    <Label htmlFor="header-upload">
+                      <Button asChild className="rounded-2xl h-14 px-8 font-black uppercase text-xs tracking-widest bg-white text-primary hover:bg-white/90 shadow-elevated cursor-pointer">
+                        <span><Camera className="h-5 w-5 mr-2" /> Change Header Image</span>
+                      </Button>
+                    </Label>
+                  </div>
+                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mt-2">Recommended: 1920x600px (JPG/PNG)</p>
+               </div>
+            </div>
+          )}
 
           <motion.div
             style={{ opacity }}

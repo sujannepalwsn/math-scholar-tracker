@@ -596,6 +596,7 @@ export type Database = {
           gallery: Json | null
           header_config: Json | null
           header_bg_url: string | null
+          header_height: string | null
           header_overlay_color: string | null
           header_overlay_opacity: number | null
           header_font_family: string | null
@@ -632,6 +633,7 @@ export type Database = {
           gallery?: Json | null
           header_config?: Json | null
           header_bg_url?: string | null
+          header_height?: string | null
           header_overlay_color?: string | null
           header_overlay_opacity?: number | null
           header_font_family?: string | null
@@ -668,6 +670,7 @@ export type Database = {
           gallery?: Json | null
           header_config?: Json | null
           header_bg_url?: string | null
+          header_height?: string | null
           header_overlay_color?: string | null
           header_overlay_opacity?: number | null
           header_font_family?: string | null
