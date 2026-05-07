@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState , useEffect } from "react";
 import { UserRole } from "@/types/roles";
 import { Calendar, TrendingUp, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query"
+import { useQuery , useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +22,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import { usePagination } from "@/hooks/usePagination"
 import { ServerPagination } from "@/components/ui/ServerPagination"
+import { hasPermission } from "@/utils/permissions";
+import { useNavigate } from "react-router-dom";
 
 interface AttendanceStats {
   studentId: string;
@@ -34,6 +36,30 @@ interface AttendanceStats {
 
 export default function AttendanceSummary() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'attendance_summary', '/attendance-summary')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'attendance_summary', '/attendance-summary')) {
+    return null;
+  }
+
+
+
+
+
+
+
+
+
+
+
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState('all');
@@ -42,7 +68,7 @@ export default function AttendanceSummary() {
   const { currentPage, pageSize, setPage, getRange } = usePagination(24);
 
   // Reset to page 1 when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setPage(1);
   }, [selectedClass, selectedMonth, setPage]);
 

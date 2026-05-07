@@ -5,7 +5,8 @@ export const sandboxData = {
   users: [
     { id: 'demo-user-id', username: 'demo@eduflow.com', role: 'admin', center_id: null, is_active: true, first_name: 'Super', last_name: 'Admin' },
     { id: 'center-user-id', username: 'center@demo.com', role: 'center', center_id: 'demo-center-id', is_active: true, first_name: 'Center', last_name: 'Admin' },
-    { id: 'teacher-demo-id', username: 'teacher@demo.com', role: 'teacher', center_id: 'demo-center-id', teacher_id: 't1', is_active: true, first_name: 'Teacher', last_name: 'User', teacher_scope_mode: 'full' },
+    { id: 'teacher-demo-id', username: 'teacher@demo.com', role: 'teacher', center_id: 'demo-center-id', teacher_id: 't1', is_active: true, first_name: 'Teacher', last_name: 'User', teacher_scope_mode: 'restricted' },
+    { id: 'teacher-full-id', username: 'full@demo.com', role: 'teacher', center_id: 'demo-center-id', teacher_id: 't2', is_active: true, first_name: 'Full', last_name: 'Teacher', teacher_scope_mode: 'full' },
     { id: 'parent-demo-id', username: 'parent@demo.com', role: 'parent', center_id: 'demo-center-id', student_id: 's1', linked_students: [{ id: 's1', name: 'John Doe', grade: '10' }, { id: 's2', name: 'Jane Smith', grade: '10' }] }
   ],
   center_feature_permissions: [
@@ -37,7 +38,8 @@ export const sandboxData = {
     { id: 's2', name: 'Jane Smith', grade: '10', center_id: 'demo-center-id', is_active: true, gender: 'female', photo_url: 'https://broken-link.com/photo2.jpg' }
   ],
   teachers: [
-    { id: 't1', name: 'Prof. Xavier', center_id: 'demo-center-id' }
+    { id: 't1', name: 'Prof. Xavier', center_id: 'demo-center-id' },
+    { id: 't2', name: 'Magneto', center_id: 'demo-center-id' }
   ],
   notifications: [
     { id: 'n1', title: 'Welcome to EduFlow', message: 'Explore your new dashboard!', type: 'info', created_at: new Date().toISOString(), is_read: false, center_id: 'demo-center-id', user_id: 'demo-user-id' },
@@ -69,9 +71,34 @@ export const sandboxData = {
       teacher_id: 't1',
       teacher_scope_mode: 'restricted',
       permissions: {
-        take_attendance: { enabled: true, can_view: true, can_edit: true }
+        take_attendance: { enabled: true, can_view: true, can_edit: true },
+        class_routine: { enabled: true, can_view: true, can_edit: false },
+        finance: { enabled: false, can_view: false, can_edit: false },
+        messaging: { enabled: false, can_view: false, can_edit: false },
+        leave_management: { enabled: true, can_view: true, can_edit: false },
+        teacher_management: { enabled: false, can_view: false, can_edit: false },
+        teachers_attendance: { enabled: false, can_view: false, can_edit: false },
+        student_id_cards: { enabled: false, can_view: false, can_edit: false },
+        inventory_assets: { enabled: false, can_view: false, can_edit: false },
+        attendance_summary: { enabled: false, can_view: false, can_edit: false },
+        about_institution: { enabled: false, can_view: false, can_edit: false }
       },
-      take_attendance: true
+      take_attendance: true,
+      class_routine: true,
+      finance: false,
+      messaging: false,
+      leave_management: true,
+      teacher_management: false,
+      teachers_attendance: false,
+      student_id_cards: false,
+      inventory_assets: false,
+      attendance_summary: false,
+      about_institution: false
+    },
+    {
+      teacher_id: 't2',
+      teacher_scope_mode: 'full',
+      permissions: {}, // Inherits center perms
     }
   ],
   class_teacher_assignments: [

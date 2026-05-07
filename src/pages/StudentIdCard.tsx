@@ -1,7 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { UserRole } from "@/types/roles";
 import { Download, Printer, Search, User } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery , useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { cn, safeFormatDate } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
+import { hasPermission } from "@/utils/permissions";
+import { useNavigate } from "react-router-dom";
 
 export default function StudentIdCard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'student_id_cards', '/student-id-cards')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'student_id_cards', '/student-id-cards')) {
+    return null;
+  }
+
+
+
+
+
+
+
   const centerId = user?.center_id;
   const printRef = useRef<HTMLDivElement>(null);
 

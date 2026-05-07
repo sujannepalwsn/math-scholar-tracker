@@ -54,9 +54,24 @@ interface TeacherDetailAttendance {
 }
 
 export default function TeacherAttendancePage() {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Strict permission guard
+  // Note: 'my_attendance' is used for self-attendance check-in, 'teachers_attendance' for management
+  const hasManagementAccess = hasPermission(user, 'teachers_attendance', '/teacher-attendance');
+  const hasSelfAccess = hasPermission(user, 'my_attendance', '/teacher/my-attendance');
+
+  useEffect(() => {
+    if (user && !hasManagementAccess && !hasSelfAccess) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate, hasManagementAccess, hasSelfAccess]);
+
+  if (user && !hasManagementAccess && !hasSelfAccess) {
+    return null;
+  }
 
   const isTeacher = user?.role === UserRole.TEACHER;
   const isCenter = hasPermission(user, 'teachers_attendance');

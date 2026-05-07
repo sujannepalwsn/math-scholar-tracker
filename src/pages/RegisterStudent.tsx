@@ -4,6 +4,7 @@ import { AlertTriangle, Download, GraduationCap, Loader2, Pencil, Save, Search, 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
+import { useNavigate } from "react-router-dom";
 import { usePagination } from "@/hooks/usePagination"
 import { ServerPagination } from "@/components/ui/ServerPagination"
 import { Button } from "@/components/ui/button"
@@ -63,8 +64,27 @@ type StudentInput = {
 };
 
 export default function RegisterStudent() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'register_student', '/register')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'register_student', '/register')) {
+    return null;
+  }
+
+
+
+
+
+
+
   const hasFullAccess = hasActionPermission(user, 'register_student', 'edit');
   const [formData, setFormData] = useState({
     name: "",

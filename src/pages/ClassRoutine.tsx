@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { UserRole } from "@/types/roles";
 import {
   CalendarIcon, Calendar, Clock, Edit, Plus, Trash2, Download,
@@ -24,8 +24,9 @@ import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { hasActionPermission } from "@/utils/permissions";
+import { hasActionPermission, hasPermission } from "@/utils/permissions";
 import { logger } from "@/utils/logger";
+import { useNavigate } from "react-router-dom";
 
 // Sunday(0) to Friday(5) only
 const DAYS_OF_WEEK = [
@@ -41,8 +42,27 @@ const DEFAULT_GRADES = ["Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "
 
 export default function ClassRoutine() {
   const { user } = useAuth();
-  const canEdit = hasActionPermission(user, 'class_routine', 'edit');
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'class_routine', '/class-routine')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'class_routine', '/class-routine')) {
+    return null;
+  }
+
+
+
+
+
+
+
+  const canEdit = hasActionPermission(user, 'class_routine', 'edit');
   const today = new Date().toISOString().split("T")[0];
 
   const [showPeriodDialog, setShowPeriodDialog] = useState(false);
@@ -102,34 +122,41 @@ export default function ClassRoutine() {
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
 
   const { data: schedules = [], isLoading: schedulesLoading } = useQuery({
-    queryKey: ["period-schedules", user?.center_id, selectedGrade, user?.role, user?.teacher_id, isRestricted],
+    queryKey: ["period-schedules", user?.center_id, selectedGrade, isRestricted, user?.teacher_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("period_schedules").select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`).eq("center_id", user.center_id);
+      let query = supabase
+        .from("period_schedules")
+        .select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`)
+        .eq("center_id", user.center_id)
+        .eq("grade", selectedGrade);
 
-      if (user?.role === UserRole.TEACHER && user?.teacher_id) {
-        query = query.eq('teacher_id', user.teacher_id);
-      } else {
-        query = query.eq("grade", selectedGrade);
+      if (isRestricted) {
+        query = query.eq('teacher_id', user?.teacher_id);
       }
 
       const { data, error } = await query.order("day_of_week");
+
       if (error) throw error;
       return data;
     },
     enabled: !!user?.center_id });
 
   const { data: allSchedules = [] } = useQuery({
-    queryKey: ["all-period-schedules", user?.center_id, isRestricted],
+    queryKey: ["all-period-schedules", user?.center_id, isRestricted, user?.teacher_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      let query = supabase.from("period_schedules").select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`).eq("center_id", user.center_id);
+      let query = supabase
+        .from("period_schedules")
+        .select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`)
+        .eq("center_id", user.center_id);
 
       if (isRestricted) {
         query = query.eq('teacher_id', user?.teacher_id);
       }
 
       const { data, error } = await query;
+
       if (error) throw error;
       return data;
     },

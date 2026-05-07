@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Package, Book, Archive, Plus, Search, Filter, ArrowUpDown } from "lucide-react";
+import { UserRole } from "@/types/roles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,31 @@ import AssetTracking from "@/components/center/AssetTracking";
 import LibraryManagement from "@/components/center/LibraryManagement";
 import ConsumablesManagement from "@/components/center/ConsumablesManagement";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
+import { useNavigate } from "react-router-dom";
 
 export default function InventoryManagement() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'inventory_assets', '/inventory')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'inventory_assets', '/inventory')) {
+    return null;
+  }
+
+
+
+
+
+
+
   const centerId = user?.center_id || "";
   const canEdit = hasActionPermission(user, 'inventory_assets', 'edit');
 
