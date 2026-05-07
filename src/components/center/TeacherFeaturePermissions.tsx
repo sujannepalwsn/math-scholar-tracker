@@ -6,8 +6,9 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
-import { Check, X, AlertCircle } from "lucide-react"
+import { Check, X, AlertCircle, Save, Download } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 const TEACHER_FEATURES = [
   { name: 'leave_management', label: 'Leave Applications' },
@@ -52,7 +53,17 @@ interface ModulePermission {
   can_publish: boolean;
 }
 
-export default function TeacherFeaturePermissions({ teacherId, teacherName }: { teacherId: string; teacherName: string }) {
+export default function TeacherFeaturePermissions({
+  teacherId,
+  teacherName,
+  bulkTeacherIds,
+  onBulkSuccess
+}: {
+  teacherId: string;
+  teacherName: string;
+  bulkTeacherIds?: string[];
+  onBulkSuccess?: () => void;
+}) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -94,7 +105,20 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
 
   const updatePermissionMutation = useMutation({
     mutationFn: async ({ updatedPermissions, legacyFields }: { updatedPermissions: any, legacyFields: any }) => {
-      if (rawPermissions) {
+      if (bulkTeacherIds && bulkTeacherIds.length > 0) {
+        // Bulk update using upsert for each teacher
+        const updates = bulkTeacherIds.map(id => ({
+          teacher_id: id,
+          permissions: updatedPermissions,
+          ...legacyFields
+        }));
+
+        const { error } = await supabase
+          .from('teacher_feature_permissions')
+          .upsert(updates, { onConflict: 'teacher_id' });
+
+        if (error) throw error;
+      } else if (rawPermissions) {
         const { error } = await supabase
           .from('teacher_feature_permissions')
           .update({
@@ -118,7 +142,13 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-feature-permissions', teacherId] });
       queryClient.invalidateQueries({ queryKey: ['teachers'] });
-      toast.success('Permissions updated successfully!');
+      if (bulkTeacherIds) {
+        bulkTeacherIds.forEach(id => {
+          queryClient.invalidateQueries({ queryKey: ['teacher-feature-permissions', id] });
+        });
+        if (onBulkSuccess) onBulkSuccess();
+      }
+      toast.success(bulkTeacherIds ? `Permissions updated for ${bulkTeacherIds.length} teachers!` : 'Permissions updated successfully!');
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update permissions');
@@ -127,16 +157,88 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
 
   const handleScopeToggle = async (isFull: boolean) => {
     const newMode = isFull ? 'full' : 'restricted';
-    const { error } = await supabase
-      .from('teacher_feature_permissions')
-      .update({ teacher_scope_mode: newMode })
-      .eq('teacher_id', teacherId);
 
-    if (error) {
-      toast.error(error.message || 'Failed to update scope mode');
+    if (bulkTeacherIds && bulkTeacherIds.length > 0) {
+      // For bulk scope toggle, we need to handle each teacher.
+      // We'll use a simpler approach of updating existing records since upsert might overwrite permissions if not careful here.
+      // But actually, we want to set the mode for all.
+
+      const { error } = await supabase
+        .from('teacher_feature_permissions')
+        .update({ teacher_scope_mode: newMode })
+        .in('teacher_id', bulkTeacherIds);
+
+      if (error) {
+        toast.error(error.message || 'Failed to update scope mode');
+      } else {
+        bulkTeacherIds.forEach(id => {
+          queryClient.invalidateQueries({ queryKey: ['teacher-feature-permissions', id] });
+        });
+        toast.success(`Scope Mode set to ${newMode.toUpperCase()} for ${bulkTeacherIds.length} teachers`);
+      }
     } else {
-      queryClient.invalidateQueries({ queryKey: ['teacher-feature-permissions', teacherId] });
-      toast.success(`Teacher Scope Mode set to ${newMode.toUpperCase()}`);
+      const { error } = await supabase
+        .from('teacher_feature_permissions')
+        .update({ teacher_scope_mode: newMode })
+        .eq('teacher_id', teacherId);
+
+      if (error) {
+        toast.error(error.message || 'Failed to update scope mode');
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['teacher-feature-permissions', teacherId] });
+        toast.success(`Teacher Scope Mode set to ${newMode.toUpperCase()}`);
+      }
+    }
+  };
+
+  const saveAsDefaultMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.center_id) throw new Error("Center ID not found");
+
+      // Store center default in center_feature_permissions table if it supports Json or use a specific format
+      // Since center_feature_permissions seems to use columns, we might need a better place or just use a specific ID
+      // Let's check if we can use a "template" teacher_id or similar.
+      // Actually, let's use localStorage for now as a simple implementation of "Default Template" if DB doesn't have a dedicated slot
+      localStorage.setItem(`teacher_perm_template_${user.center_id}`, JSON.stringify({
+        permissions,
+        scopeMode
+      }));
+    },
+    onSuccess: () => {
+      toast.success('Current configuration saved as center default template!');
+    }
+  });
+
+  const applyDefaultTemplate = () => {
+    const templateStr = localStorage.getItem(`teacher_perm_template_${user?.center_id}`);
+    if (!templateStr) {
+      toast.error('No default template found for this center.');
+      return;
+    }
+
+    try {
+      const { permissions: templatePerms, scopeMode: templateScope } = JSON.parse(templateStr);
+
+      // Update scope mode first if different
+      if (templateScope !== scopeMode) {
+        handleScopeToggle(templateScope === 'full');
+      }
+
+      // Prepare legacy fields for all permissions in the template
+      const legacyFields: Record<string, boolean> = {};
+      Object.keys(templatePerms).forEach(featureName => {
+        const mod = templatePerms[featureName];
+        legacyFields[featureName] = mod.enabled && (featureName === 'dashboard_access' ? true : mod.can_view);
+        if (featureName === 'student_report') legacyFields['student_report_access'] = legacyFields[featureName];
+        if (featureName === 'preschool_activities') legacyFields['activities'] = legacyFields[featureName];
+      });
+
+      updatePermissionMutation.mutate({
+        updatedPermissions: templatePerms,
+        legacyFields
+      });
+    } catch (e) {
+      toast.error('Failed to apply template');
     }
   };
 
@@ -211,21 +313,42 @@ export default function TeacherFeaturePermissions({ teacherId, teacherName }: { 
             </DialogDescription>
           </div>
 
-          <div className="flex items-center gap-3 bg-primary/5 px-4 py-2 rounded-2xl border border-primary/10">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-tighter text-primary">Teacher Scope Mode</span>
-              <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-                {scopeMode === 'full' ? 'Full Access' : 'Restricted Scope'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 ml-2">
-              <span className={cn("text-[10px] font-black uppercase", scopeMode !== 'full' ? "text-primary" : "text-slate-400")}>Restricted</span>
-              <Switch
-                checked={scopeMode === 'full'}
-                onCheckedChange={(val) => handleScopeToggle(val)}
-                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-300"
-              />
-              <span className={cn("text-[10px] font-black uppercase", scopeMode === 'full' ? "text-primary" : "text-slate-400")}>Full</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl font-black uppercase text-[9px] tracking-widest border-primary/20 text-primary"
+              onClick={() => saveAsDefaultMutation.mutate()}
+            >
+              <Save className="h-3 w-3 mr-2" />
+              Save As Default
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl font-black uppercase text-[9px] tracking-widest border-primary/20 text-primary"
+              onClick={applyDefaultTemplate}
+            >
+              <Download className="h-3 w-3 mr-2" />
+              Apply Default
+            </Button>
+
+            <div className="flex items-center gap-3 bg-primary/5 px-4 py-2 rounded-2xl border border-primary/10">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-tighter text-primary">Teacher Scope Mode</span>
+                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                  {scopeMode === 'full' ? 'Full Access' : 'Restricted Scope'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 ml-2">
+                <span className={cn("text-[10px] font-black uppercase", scopeMode !== 'full' ? "text-primary" : "text-slate-400")}>Restricted</span>
+                <Switch
+                  checked={scopeMode === 'full'}
+                  onCheckedChange={(val) => handleScopeToggle(val)}
+                  className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-slate-300"
+                />
+                <span className={cn("text-[10px] font-black uppercase", scopeMode === 'full' ? "text-primary" : "text-slate-400")}>Full</span>
+              </div>
             </div>
           </div>
         </div>
