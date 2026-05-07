@@ -57,6 +57,9 @@ export default function TakeAttendance() {
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
+  const isTeacher = user?.role === UserRole.TEACHER;
+  const isCenter = user?.role === UserRole.CENTER || user?.role === UserRole.ADMIN;
+
   const { data: currentAcademicYear } = useQuery({
     queryKey: ["current-academic-year", user?.center_id],
     queryFn: async () => {
@@ -88,7 +91,9 @@ export default function TakeAttendance() {
     enabled: !!dateStr && !!user?.center_id
   });
 
-  const holidayEvent = calendarEvents.find(e => !e.is_school_day);
+  const holidayEvent = React.useMemo(() => {
+    return calendarEvents?.find(e => !e.is_school_day);
+  }, [calendarEvents]);
   const isOperationalDay = !holidayEvent;
 
   // Fetch class teacher assignments if teacher role (ONLY from official assignments)
@@ -109,10 +114,7 @@ export default function TakeAttendance() {
 
       return Array.from(grades).filter(Boolean);
     },
-    enabled: !!user?.teacher_id && user?.role === UserRole.TEACHER });
-
-  const isTeacher = user?.role === UserRole.TEACHER;
-  const isCenter = user?.role === UserRole.CENTER || user?.role === UserRole.ADMIN;
+    enabled: !!user?.teacher_id && isTeacher });
 
   // Restricted by default for teachers. ONLY explicitly 'full' scope OR 'edit' permission bypasses.
   const isRestricted = React.useMemo(() => {
@@ -236,6 +238,13 @@ export default function TakeAttendance() {
     return availableGrades;
   }, [isTeacher, isCenter, isRestricted, classTeacherGrades, availableGrades]);
 
+  // Auto-select first available grade for teachers since "All Grades" is removed for them
+  useEffect(() => {
+    if (isTeacher && gradeFilter === "all" && allowedGrades.length > 0) {
+      setGradeFilter(allowedGrades[0]);
+    }
+  }, [isTeacher, allowedGrades, gradeFilter]);
+
 
   useEffect(() => {
     if (students) {
@@ -254,9 +263,10 @@ export default function TakeAttendance() {
 
   // Filter students by grade - for restricted teachers, always enforce assigned grades
   const filteredStudents = React.useMemo(() => {
-    return students?.filter(s => {
+    if (!students) return [];
+    return students.filter(s => {
       if (isTeacher && isRestricted) {
-        const isAssigned = classTeacherGrades.includes(s.grade);
+        const isAssigned = (classTeacherGrades || []).includes(s.grade);
         if (!isAssigned) return false;
         return gradeFilter === "all" || s.grade === gradeFilter;
       }
@@ -549,8 +559,8 @@ export default function TakeAttendance() {
                   <SelectValue placeholder="Select Grade" />
                 </SelectTrigger>
                 <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
-                  <SelectItem value="all">All Grades</SelectItem>
-                  {allowedGrades.length === 0 && isRestricted && (
+                  {!isTeacher && <SelectItem value="all">All Grades</SelectItem>}
+                  {allowedGrades.length === 0 && isTeacher && (
                     <SelectItem value="none" disabled>No assigned grades</SelectItem>
                   )}
                   {allowedGrades.map((g) => (

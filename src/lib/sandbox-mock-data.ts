@@ -67,7 +67,7 @@ export const sandboxData = {
   teacher_feature_permissions: [
     {
       teacher_id: 't1',
-      teacher_scope_mode: 'full',
+      teacher_scope_mode: 'restricted',
       permissions: {
         take_attendance: { enabled: true, can_view: true, can_edit: true }
       },
