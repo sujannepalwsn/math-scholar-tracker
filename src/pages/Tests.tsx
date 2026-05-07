@@ -23,8 +23,9 @@ import QuestionPaperViewer from "@/components/QuestionPaperViewer";
 import { Tables } from "@/integrations/supabase/types"
 import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-utils";
-import { hasActionPermission } from "@/utils/permissions";
+import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import { logger } from "@/utils/logger";
+import { useNavigate } from "react-router-dom";
 "use client";
 
 
@@ -52,6 +53,19 @@ interface QuestionMark {
 export default function Tests() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'test_management', '/tests')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'test_management', '/tests')) {
+    return null;
+  }
+
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
   const { currentPage, pageSize, setPage, getRange } = usePagination(10);
   const canEdit = hasActionPermission(user, 'test_management', 'edit');

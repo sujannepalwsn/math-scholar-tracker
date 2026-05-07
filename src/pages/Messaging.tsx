@@ -19,10 +19,24 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NoticeBoard from "@/components/center/NoticeBoard";
-import { hasActionPermission } from "@/utils/permissions";
+import { hasActionPermission, hasPermission } from "@/utils/permissions";
+import { useNavigate } from "react-router-dom";
 
 export default function Messaging() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'messaging', '/messages')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'messaging', '/messages')) {
+    return null;
+  }
+
   const canEdit = hasActionPermission(user, 'messaging', 'edit');
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();

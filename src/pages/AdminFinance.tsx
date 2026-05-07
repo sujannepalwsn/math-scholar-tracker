@@ -24,6 +24,18 @@ import { KPICard } from "@/components/dashboard/KPICard";
 const AdminFinance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'finance', '/finance')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'finance', '/finance')) {
+    return null;
+  }
+
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "invoices";
 

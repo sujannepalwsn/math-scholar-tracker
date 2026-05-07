@@ -22,6 +22,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import { usePagination } from "@/hooks/usePagination"
 import { ServerPagination } from "@/components/ui/ServerPagination"
+import { hasPermission } from "@/utils/permissions";
+import { useNavigate } from "react-router-dom";
 
 interface AttendanceStats {
   studentId: string;
@@ -34,6 +36,19 @@ interface AttendanceStats {
 
 export default function AttendanceSummary() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Strict permission guard
+  React.useEffect(() => {
+    if (user && !hasPermission(user, 'attendance_summary', '/attendance-summary')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'attendance_summary', '/attendance-summary')) {
+    return null;
+  }
+
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState('all');

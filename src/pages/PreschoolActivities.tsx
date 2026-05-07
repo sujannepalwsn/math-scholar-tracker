@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { UserRole } from "@/types/roles";
 import { CalendarIcon, Camera, CheckSquare, Edit, Plus, Settings, Star, Trash2, Users, Video } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge"
 import { compressImage } from "@/lib/image-utils";
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import MediaPreviewModal from "@/components/ui/MediaPreviewModal";
+import { useNavigate } from "react-router-dom";
 
 
 type Activity = Tables<'activities'>;
@@ -33,6 +34,19 @@ type ActivityType = Tables<'activity_types'>;
 export default function PreschoolActivities() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Strict permission guard
+  useEffect(() => {
+    if (user && !hasPermission(user, 'preschool_activities', '/activities')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, 'preschool_activities', '/activities')) {
+    return null;
+  }
+
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<StudentActivity | null>(null);

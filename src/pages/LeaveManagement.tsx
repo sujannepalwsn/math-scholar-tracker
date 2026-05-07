@@ -213,14 +213,16 @@ export default function LeaveManagement() {
             </div>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setIsCategoryOpen(true)}
-          className="rounded-2xl h-12 px-6 font-bold shadow-soft gap-2 border-2"
-        >
-          <Settings className="h-5 w-5" />
-          LEAVE CATEGORIES
-        </Button>
+        {hasActionPermission(user, 'leave_management', 'edit') && (
+          <Button
+            variant="outline"
+            onClick={() => setIsCategoryOpen(true)}
+            className="rounded-2xl h-12 px-6 font-bold shadow-soft gap-2 border-2"
+          >
+            <Settings className="h-5 w-5" />
+            LEAVE CATEGORIES
+          </Button>
+        )}
         {(user?.role === UserRole.TEACHER || user?.role === UserRole.PARENT) && (
           <Button
             onClick={handleApplyClick}

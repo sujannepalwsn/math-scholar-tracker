@@ -21,6 +21,7 @@ import { compressImage } from "@/lib/image-utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
+import { UserRole } from "@/types/roles";
 import { Json, Tables } from "@/integrations/supabase/types";
 import { motion, useScroll, useTransform } from "framer-motion";
 
@@ -53,8 +54,20 @@ interface SocialLinks {
 
 export default function AboutInstitution() {
   const { user } = useAuth();
-  const { id: publicId } = useParams();
   const navigate = useNavigate();
+  const { id: publicId } = useParams();
+
+  // Strict permission guard (only for internal view, public view has its own check below)
+  useEffect(() => {
+    if (user && !publicId && !hasPermission(user, 'about_institution', '/about-institution')) {
+      navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+    }
+  }, [user, publicId, navigate]);
+
+  if (user && !publicId && !hasPermission(user, 'about_institution', '/about-institution')) {
+    return null;
+  }
+
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
