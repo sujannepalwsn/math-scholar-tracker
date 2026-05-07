@@ -392,14 +392,15 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
 
 /**
  * Helper to determine if a teacher should be restricted to their own assigned scope (e.g. assigned grades/students).
- * A teacher is restricted ONLY if they are in 'restricted' scope mode AND do not have explicit 'edit' permission for the feature.
+ * A teacher is restricted if they are in 'restricted' scope mode.
  */
 export const isTeacherRestricted = (user: any, featureKey: string): boolean => {
   if (!user || user.role !== UserRole.TEACHER) return false;
 
   const isFullScope = user.teacher_scope_mode === 'full';
-  const hasEditPermission = hasActionPermission(user, featureKey, 'edit');
 
-  // They are restricted if they are NOT in full scope AND don't have explicit edit permission
-  return !isFullScope && !hasEditPermission;
+  // They are restricted if they are NOT in full scope.
+  // This ensures that restricted teachers are always limited to their assigned scope (e.g. specific grades)
+  // even if they have been granted granular 'edit' permissions for the feature.
+  return !isFullScope;
 };

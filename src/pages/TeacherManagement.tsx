@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { CheckCircle2, ShieldCheck, Settings, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -93,9 +95,12 @@ export default function TeacherManagement() {
 
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
   const [selectedTeacherForPermissions, setSelectedTeacherForPermissions] = useState<Teacher | null>(null);
+  const [isBulkPermissions, setIsBulkPermissions] = useState(false);
 
   const [showHRDialog, setShowHRDialog] = useState(false);
   const [selectedTeacherForHR, setSelectedTeacherForHR] = useState<Teacher | null>(null);
+
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
 
   // Class teacher assignment states
   const [showClassTeacherDialog, setShowClassTeacherDialog] = useState(false);
@@ -468,6 +473,73 @@ export default function TeacherManagement() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["teachers"] }); toast.success("Status updated!"); },
     onError: (error: any) => toast.error(error.message) });
 
+  const bulkGrantFullAccessMutation = useMutation({
+    mutationFn: async () => {
+      if (selectedTeacherIds.length === 0) return;
+
+      const defaultModules = [
+        'take_attendance', 'lesson_tracking', 'homework_management', 'preschool_activities',
+        'discipline_issues', 'test_management', 'student_report', 'meetings_management',
+        'dashboard_access', 'class_routine', 'messaging', 'calendar_events', 'summary',
+        'lesson_plans', 'leave_management', 'exams_results', 'published_results'
+      ];
+
+      const permissionsObj: any = {};
+      const legacyObj: any = {};
+
+      defaultModules.forEach(mod => {
+        permissionsObj[mod] = {
+          enabled: true,
+          can_view: true,
+          can_edit: true,
+          can_approve: ['lesson_plans', 'leave_management'].includes(mod),
+          can_publish: ['exams_results', 'published_results'].includes(mod)
+        };
+        legacyObj[mod] = true;
+      });
+
+      // Special legacy fields
+      legacyObj['student_report_access'] = true;
+      legacyObj['activities'] = true;
+
+      const updates = selectedTeacherIds.map(id => ({
+        teacher_id: id,
+        teacher_scope_mode: 'full',
+        permissions: permissionsObj,
+        ...legacyObj
+      }));
+
+      const { error } = await supabase
+        .from('teacher_feature_permissions')
+        .upsert(updates, { onConflict: 'teacher_id' });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher-feature-permissions"] });
+      toast.success(`Full access granted to ${selectedTeacherIds.length} teachers!`);
+      setSelectedTeacherIds([]);
+    },
+    onError: (error: any) => toast.error(error.message)
+  });
+
+  const bulkDeleteTeachersMutation = useMutation({
+    mutationFn: async () => {
+      if (!hasActionPermission(user, 'teacher_management', 'edit')) {
+        throw new Error("Access Denied: You do not have permission to delete faculty records.");
+      }
+      const { error } = await supabase.from("teachers").delete().in("id", selectedTeacherIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      toast.success(`${selectedTeacherIds.length} teachers deleted!`);
+      setSelectedTeacherIds([]);
+    },
+    onError: (error: any) => toast.error(error.message)
+  });
+
   const deleteTeacherMutation = useMutation({
     mutationFn: async (id: string) => {
       if (!hasActionPermission(user, 'teacher_management', 'edit')) {
@@ -592,7 +664,11 @@ export default function TeacherManagement() {
 
   const handleSubmit = () => { editingTeacher ? updateTeacherMutation.mutate() : createTeacherMutation.mutate(); };
   const handleCreateLoginClick = (teacher: Teacher) => { setSelectedTeacherForLogin(teacher); setTeacherUsername(teacher.email || ''); setTeacherPassword(''); setIsCreatingTeacherLogin(true); };
-  const handleManagePermissionsClick = (teacher: Teacher) => { setSelectedTeacherForPermissions(teacher); setShowPermissionsDialog(true); };
+  const handleManagePermissionsClick = (teacher: Teacher) => {
+    setSelectedTeacherForPermissions(teacher);
+    setIsBulkPermissions(false);
+    setShowPermissionsDialog(true);
+  };
   const handleClassTeacherClick = (teacher: Teacher) => { setSelectedTeacherForClassAssign(teacher); setClassTeacherGrade("select-grade"); setShowClassTeacherDialog(true); };
   const handleHRClick = (teacher: Teacher) => { setSelectedTeacherForHR(teacher); setShowHRDialog(true); };
 
@@ -855,6 +931,67 @@ export default function TeacherManagement() {
       </div>
       </div>
 
+      {selectedTeacherIds.length > 0 && (
+        <div className="bg-primary/10 border border-primary/20 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary text-white p-2 rounded-xl">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-black text-sm text-primary uppercase tracking-tight">{selectedTeacherIds.length} Teachers Selected</p>
+              <button
+                onClick={() => setSelectedTeacherIds([])}
+                className="text-[10px] font-bold text-slate-500 uppercase hover:text-rose-500 transition-colors"
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl font-black uppercase text-[10px] tracking-widest h-10 border-primary/30 text-primary hover:bg-primary hover:text-white transition-all"
+              onClick={() => {
+                setIsBulkPermissions(true);
+                setShowPermissionsDialog(true);
+              }}
+            >
+              <Settings className="h-3.5 w-3.5 mr-2" />
+              Bulk Permissions
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="rounded-xl font-black uppercase text-[10px] tracking-widest h-10 bg-emerald-600 hover:bg-emerald-700 border-none shadow-md"
+              onClick={() => {
+                if (confirm(`Grant full access to all ${selectedTeacherIds.length} selected teachers?`)) {
+                  bulkGrantFullAccessMutation.mutate();
+                }
+              }}
+              disabled={bulkGrantFullAccessMutation.isPending}
+            >
+              <ShieldCheck className="h-3.5 w-3.5 mr-2" />
+              Grant Full Access
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-xl font-black uppercase text-[10px] tracking-widest h-10 shadow-md"
+              onClick={() => {
+                if (confirm(`Are you sure you want to delete ${selectedTeacherIds.length} faculty records permanently?`)) {
+                  bulkDeleteTeachersMutation.mutate();
+                }
+              }}
+              disabled={bulkDeleteTeachersMutation.isPending}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-2" />
+              Bulk Delete
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row gap-8 min-h-[600px]">
         <div className={cn("flex-1 transition-all duration-500", selectedTeacher ? "lg:w-1/2" : "w-full")}>
           <Card className="border-none shadow-strong overflow-hidden rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
@@ -880,6 +1017,18 @@ export default function TeacherManagement() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/5">
+                        <TableHead className="w-[50px] px-6 py-4">
+                          <Checkbox
+                            checked={teachers.length > 0 && selectedTeacherIds.length === teachers.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedTeacherIds(teachers.map(t => t.id));
+                              } else {
+                                setSelectedTeacherIds([]);
+                              }
+                            }}
+                          />
+                        </TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Faculty Member</TableHead>
                         {!selectedTeacher && <TableHead className="font-black uppercase text-[10px] tracking-widest px-6 py-4">Contact Protocol</TableHead>}
                         {!selectedTeacher && <TableHead className="hidden sm:table-cell font-black uppercase text-[10px] tracking-widest px-6 py-4">Payroll</TableHead>}
@@ -898,6 +1047,18 @@ export default function TeacherManagement() {
                             )}
                             onClick={() => setSelectedTeacher(teacher)}
                           >
+                            <TableCell className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedTeacherIds.includes(teacher.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedTeacherIds(prev => [...prev, teacher.id]);
+                                  } else {
+                                    setSelectedTeacherIds(prev => prev.filter(id => id !== teacher.id));
+                                  }
+                                }}
+                              />
+                            </TableCell>
                             <TableCell className="px-6 py-4">
                               <div className="space-y-1">
                                 <p className="font-black text-slate-700 group-hover/row:text-primary transition-colors leading-none">{teacher.name}</p>
@@ -1149,10 +1310,28 @@ export default function TeacherManagement() {
       <Dialog open={showPermissionsDialog} onOpenChange={setShowPermissionsDialog}>
         <DialogContent className="w-[95vw] sm:max-w-2xl" aria-labelledby="manage-permissions-title" aria-describedby="manage-permissions-description">
           <DialogHeader>
-            <DialogTitle id="manage-permissions-title">Manage Permissions</DialogTitle>
-            <DialogDescription id="manage-permissions-description">Toggle features for {selectedTeacherForPermissions?.name}.</DialogDescription>
+            <DialogTitle id="manage-permissions-title">
+              {isBulkPermissions ? "Bulk Manage Permissions" : "Manage Permissions"}
+            </DialogTitle>
+            <DialogDescription id="manage-permissions-description">
+              {isBulkPermissions
+                ? `Applying changes to ${selectedTeacherIds.length} selected teachers.`
+                : `Toggle features for ${selectedTeacherForPermissions?.name}.`}
+            </DialogDescription>
           </DialogHeader>
-          {selectedTeacherForPermissions && <TeacherFeaturePermissions teacherId={selectedTeacherForPermissions.id} teacherName={selectedTeacherForPermissions.name} />}
+          {isBulkPermissions ? (
+            <TeacherFeaturePermissions
+              teacherId={selectedTeacherIds[0]}
+              teacherName={`${selectedTeacherIds.length} Teachers`}
+              bulkTeacherIds={selectedTeacherIds}
+              onBulkSuccess={() => {
+                setSelectedTeacherIds([]);
+                setShowPermissionsDialog(false);
+              }}
+            />
+          ) : (
+            selectedTeacherForPermissions && <TeacherFeaturePermissions teacherId={selectedTeacherForPermissions.id} teacherName={selectedTeacherForPermissions.name} />
+          )}
         </DialogContent>
       </Dialog>
 
