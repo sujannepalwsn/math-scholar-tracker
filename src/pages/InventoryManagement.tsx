@@ -11,6 +11,7 @@ import AssetTracking from "@/components/center/AssetTracking";
 import LibraryManagement from "@/components/center/LibraryManagement";
 import ConsumablesManagement from "@/components/center/ConsumablesManagement";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import { useNavigate } from "react-router-dom";
 
@@ -28,6 +29,12 @@ export default function InventoryManagement() {
   if (user && !hasPermission(user, 'inventory_assets', '/inventory')) {
     return null;
   }
+
+
+
+
+
+
 
   const centerId = user?.center_id || "";
   const canEdit = hasActionPermission(user, 'inventory_assets', 'edit');

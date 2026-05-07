@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UserRole } from "@/types/roles";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,14 +65,21 @@ import { logger } from "@/utils/logger";
 export default function LeaveManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
-  if (user && !hasPermission(user, 'leave_management', '/leave-management')) {
-    navigate(user.role === UserRole.TEACHER ? '/teacher-dashboard' : '/dashboard');
+  useEffect(() => {
+    if (user && !hasPermission(user, "leave_management", "/leave-management")) {
+      navigate(user.role === UserRole.TEACHER ? "/teacher-dashboard" : "/dashboard");
+    }
+  }, [user, navigate]);
+
+  if (user && !hasPermission(user, "leave_management", "/leave-management")) {
     return null;
   }
 
-  const queryClient = useQueryClient();
+  // Strict permission guard
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedApp, setSelectedApp] = useState<any>(null);

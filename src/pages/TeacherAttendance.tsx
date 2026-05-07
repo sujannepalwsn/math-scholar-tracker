@@ -54,9 +54,9 @@ interface TeacherDetailAttendance {
 }
 
 export default function TeacherAttendancePage() {
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   // Note: 'my_attendance' is used for self-attendance check-in, 'teachers_attendance' for management

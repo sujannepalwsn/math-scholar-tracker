@@ -183,20 +183,7 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
     return false;
   }
 
-  // 4. Special case for Dashboard - usually always allowed if not explicitly disabled
-  if (dbColumnName === 'dashboard_access') {
-    const isCenterEnabled = centerPerms['dashboard_access'] !== false;
-    if (user.role === UserRole.TEACHER) {
-      // If it's a teacher, we must also check their specific toggle
-      if (teacherPerms.permissions && teacherPerms.permissions['dashboard_access']) {
-        return isCenterEnabled && teacherPerms.permissions['dashboard_access'].enabled !== false;
-      }
-      return isCenterEnabled && teacherPerms['dashboard_access'] !== false;
-    }
-    return isCenterEnabled;
-  }
-
-  // 5. Role-based logic
+  // 4. Role-based logic
   if (user.role === UserRole.CENTER || user.role === UserRole.ADMIN) {
     // Center Admin has access to everything unless globally disabled at center level
     return true;
@@ -230,14 +217,7 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
     if (teacherPerms[dbColumnName] === false) return false;
     if (teacherPerms[dbColumnName] === true) return centerPerms[dbColumnName] !== false;
 
-    // RESTRICTED SCOPE MODE: Apply strict restrictions
-
-    // In restricted scope, if it's explicitly disabled at center level, deny it immediately.
-    if (centerPerms[dbColumnName] === false) {
-      return false;
-    }
-
-    // 1. Administrative Features: Strictly blocked in restricted mode unless explicitly enabled
+    // 3. Administrative Features: Strictly blocked in restricted mode unless explicitly enabled
     const adminOnlyFeatures = [
       'register_student',
       'teacher_management',
@@ -252,34 +232,16 @@ export const hasPermission = (user: any, featureKey: string, route?: string): bo
       'chapter_performance'
     ];
 
-    // 2. Specific route-based blocks for restricted mode (legacy/explicit)
-    if (dbColumnName === 'lesson_plans' && (featureKey === 'lesson_plan_management' || route === '/lesson-plan-management')) {
-      return false;
-    }
-    if (dbColumnName === 'settings_access' && route === '/settings') {
-      return false;
-    }
-    if (dbColumnName === 'leave_management' && route === '/leave-management') {
-      return false;
-    }
-
-    // 3. Check granular JSONB permissions (new system)
-    if (teacherPerms.permissions && teacherPerms.permissions[dbColumnName]) {
-      const modulePerms = teacherPerms.permissions[dbColumnName];
-      return modulePerms.enabled === true && modulePerms.can_view === true;
-    }
-
-    // 4. Fallback to legacy boolean columns (check if teacher has specific toggle on)
-    if (teacherPerms[dbColumnName] === true) return true;
-    if (teacherPerms[dbColumnName] === false) return false;
-
-    // 5. Default Policy for Restricted Mode:
-    // If it's an admin feature, block it by default.
-    // Otherwise, allow it ONLY if it's globally enabled at the center level.
     if (adminOnlyFeatures.includes(dbColumnName)) {
       return false;
     }
 
+    // 4. Specific route-based blocks for restricted mode (legacy/explicit)
+    if (dbColumnName === 'lesson_plans' && (featureKey === 'lesson_plan_management' || route === '/lesson-plan-management')) {
+      return false;
+    }
+
+    // 5. Default for other modules in restricted mode: follow center-level
     return centerPerms[dbColumnName] !== false;
   }
 
@@ -359,9 +321,6 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
         // If it's explicitly DISABLED for the teacher, block it
         if (modulePerms.can_edit === false) return false;
 
-        // Special case: self-leave and self-attendance are usually allowed
-        if (dbColumnName === 'leave_management' || dbColumnName === 'teachers_attendance') return true;
-
         const readOnlyInRestricted = ['class_routine', 'published_results'];
         if (readOnlyInRestricted.includes(dbColumnName)) return false;
 
@@ -380,10 +339,17 @@ export const hasActionPermission = (user: any, featureKey: string, action: 'view
     }
   }
 
-  // RESTRICTED SCOPE MODE Fallbacks
+  // RESTRICTED SCOPE MODE Fallbacks (Legacy support)
   if (action === 'edit') {
-    if (dbColumnName === 'leave_management' || dbColumnName === 'teachers_attendance') return true;
-    return false; // Fail-closed for other actions in restricted mode if not explicitly enabled
+    // If teacher has the legacy boolean column set to true, allow edit (unless center override)
+    if (teacherPerms[dbColumnName] === true) {
+      const readOnlyInRestricted = ['class_routine', 'published_results'];
+      if (readOnlyInRestricted.includes(dbColumnName)) return false;
+      return centerPerms[dbColumnName] !== false;
+    }
+
+    // In restricted mode, if no granular or legacy permission is set for an edit action, block it.
+    return false;
   }
 
   return false;

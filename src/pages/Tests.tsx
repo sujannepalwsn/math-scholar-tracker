@@ -25,8 +25,8 @@ import { cn } from "@/lib/utils"
 import { compressImage } from "@/lib/image-utils";
 import { hasPermission, hasActionPermission } from "@/utils/permissions";
 import { logger } from "@/utils/logger";
-import { useNavigate } from "react-router-dom";
 "use client";
+import { useNavigate } from "react-router-dom";
 
 
 
@@ -51,9 +51,9 @@ interface QuestionMark {
 }
 
 export default function Tests() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   useEffect(() => {
@@ -65,6 +65,12 @@ export default function Tests() {
   if (user && !hasPermission(user, 'test_management', '/tests')) {
     return null;
   }
+
+
+
+
+
+
 
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
   const { currentPage, pageSize, setPage, getRange } = usePagination(10);

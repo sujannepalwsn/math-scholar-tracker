@@ -43,6 +43,7 @@ const DEFAULT_GRADES = ["Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "
 export default function ClassRoutine() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   useEffect(() => {
@@ -55,8 +56,13 @@ export default function ClassRoutine() {
     return null;
   }
 
+
+
+
+
+
+
   const canEdit = hasActionPermission(user, 'class_routine', 'edit');
-  const queryClient = useQueryClient();
   const today = new Date().toISOString().split("T")[0];
 
   const [showPeriodDialog, setShowPeriodDialog] = useState(false);
@@ -122,15 +128,15 @@ export default function ClassRoutine() {
       let query = supabase
         .from("period_schedules")
         .select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`)
-        .eq("center_id", user.center_id);
+        .eq("center_id", user.center_id)
+        .eq("grade", selectedGrade);
 
-      if (isRestricted && user?.teacher_id) {
-        query = query.eq('teacher_id', user.teacher_id);
-      } else {
-        query = query.eq("grade", selectedGrade);
+      if (isRestricted) {
+        query = query.eq('teacher_id', user?.teacher_id);
       }
 
       const { data, error } = await query.order("day_of_week");
+
       if (error) throw error;
       return data;
     },
@@ -145,11 +151,12 @@ export default function ClassRoutine() {
         .select(`*, class_periods:class_periods(*), teachers:teachers!period_schedules_teacher_id_fkey(id, name, expected_check_in, expected_check_out), substitute_teacher:teachers!period_schedules_substitute_teacher_id_fkey(id, name)`)
         .eq("center_id", user.center_id);
 
-      if (isRestricted && user?.teacher_id) {
-        query = query.eq('teacher_id', user.teacher_id);
+      if (isRestricted) {
+        query = query.eq('teacher_id', user?.teacher_id);
       }
 
       const { data, error } = await query;
+
       if (error) throw error;
       return data;
     },

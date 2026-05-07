@@ -32,9 +32,9 @@ type Student = Tables<'students'>;
 type ActivityType = Tables<'activity_types'>;
 
 export default function PreschoolActivities() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   useEffect(() => {
@@ -46,6 +46,12 @@ export default function PreschoolActivities() {
   if (user && !hasPermission(user, 'preschool_activities', '/activities')) {
     return null;
   }
+
+
+
+
+
+
 
   const isRestricted = user?.role === UserRole.TEACHER && user?.teacher_scope_mode !== 'full';
   const [isDialogOpen, setIsDialogOpen] = useState(false);

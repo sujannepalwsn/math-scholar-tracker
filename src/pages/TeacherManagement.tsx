@@ -55,9 +55,9 @@ interface BulkTeacherEntry {
 import { hasPermission, hasActionPermission, isTeacherRestricted as isTeacherRestrictedUtil } from "@/utils/permissions";
 
 export default function TeacherManagement() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   useEffect(() => {
@@ -69,6 +69,12 @@ export default function TeacherManagement() {
   if (user && !hasPermission(user, 'teacher_management', '/teachers')) {
     return null;
   }
+
+
+
+
+
+
 
   const hasFullAccess = hasActionPermission(user, 'teacher_management', 'edit');
   const [isDialogOpen, setIsDialogOpen] = useState(false);

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery , useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import FeeManagement from '@/components/finance/FeeManagement';
 import InvoiceManagement from '@/components/finance/InvoiceManagement';
@@ -24,6 +24,7 @@ import { KPICard } from "@/components/dashboard/KPICard";
 const AdminFinance = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   useEffect(() => {
@@ -35,6 +36,12 @@ const AdminFinance = () => {
   if (user && !hasPermission(user, 'finance', '/finance')) {
     return null;
   }
+
+
+
+
+
+
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "invoices";

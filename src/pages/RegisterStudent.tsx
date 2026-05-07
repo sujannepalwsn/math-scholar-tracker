@@ -64,9 +64,9 @@ type StudentInput = {
 };
 
 export default function RegisterStudent() {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   useEffect(() => {
@@ -78,6 +78,12 @@ export default function RegisterStudent() {
   if (user && !hasPermission(user, 'register_student', '/register')) {
     return null;
   }
+
+
+
+
+
+
 
   const hasFullAccess = hasActionPermission(user, 'register_student', 'edit');
   const [formData, setFormData] = useState({

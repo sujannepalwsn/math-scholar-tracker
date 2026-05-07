@@ -72,10 +72,28 @@ export const sandboxData = {
       teacher_scope_mode: 'restricted',
       permissions: {
         take_attendance: { enabled: true, can_view: true, can_edit: true },
-        class_routine: { enabled: true, can_view: true, can_edit: false }
+        class_routine: { enabled: true, can_view: true, can_edit: false },
+        finance: { enabled: false, can_view: false, can_edit: false },
+        messaging: { enabled: false, can_view: false, can_edit: false },
+        leave_management: { enabled: true, can_view: true, can_edit: false },
+        teacher_management: { enabled: false, can_view: false, can_edit: false },
+        teachers_attendance: { enabled: false, can_view: false, can_edit: false },
+        student_id_cards: { enabled: false, can_view: false, can_edit: false },
+        inventory_assets: { enabled: false, can_view: false, can_edit: false },
+        attendance_summary: { enabled: false, can_view: false, can_edit: false },
+        about_institution: { enabled: false, can_view: false, can_edit: false }
       },
       take_attendance: true,
-      class_routine: true
+      class_routine: true,
+      finance: false,
+      messaging: false,
+      leave_management: true,
+      teacher_management: false,
+      teachers_attendance: false,
+      student_id_cards: false,
+      inventory_assets: false,
+      attendance_summary: false,
+      about_institution: false
     },
     {
       teacher_id: 't2',

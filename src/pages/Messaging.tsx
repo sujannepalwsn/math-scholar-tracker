@@ -25,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 export default function Messaging() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Strict permission guard
   useEffect(() => {
@@ -37,8 +38,13 @@ export default function Messaging() {
     return null;
   }
 
+
+
+
+
+
+
   const canEdit = hasActionPermission(user, 'messaging', 'edit');
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [newMessage, setNewMessage] = useState("");
