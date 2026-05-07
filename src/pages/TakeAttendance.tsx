@@ -294,6 +294,10 @@ export default function TakeAttendance() {
 
   const isStudentLocked = (studentId: string) => {
     const record = existingAttendance?.find((a: any) => a.student_id === studentId);
+    // Hardening: Restricted teachers should not be able to edit attendance once it has been taken (exists in DB)
+    if (isTeacher && isRestricted && record) {
+      return true;
+    }
     return record?.is_locked || false;
   };
 
