@@ -5,6 +5,7 @@ export const sandboxData = {
   users: [
     { id: 'demo-user-id', username: 'demo@eduflow.com', role: 'admin', center_id: null, is_active: true, first_name: 'Super', last_name: 'Admin' },
     { id: 'center-user-id', username: 'center@demo.com', role: 'center', center_id: 'demo-center-id', is_active: true, first_name: 'Center', last_name: 'Admin' },
+    { id: 'teacher-demo-id', username: 'teacher@demo.com', role: 'teacher', center_id: 'demo-center-id', teacher_id: 't1', is_active: true, first_name: 'Teacher', last_name: 'User', teacher_scope_mode: 'full' },
     { id: 'parent-demo-id', username: 'parent@demo.com', role: 'parent', center_id: 'demo-center-id', student_id: 's1', linked_students: [{ id: 's1', name: 'John Doe', grade: '10' }, { id: 's2', name: 'Jane Smith', grade: '10' }] }
   ],
   center_feature_permissions: [
@@ -60,6 +61,22 @@ export const sandboxData = {
   class_substitutions: [],
   period_schedules: [],
   student_homework_records: [],
+  attendance: [
+    { student_id: 's1', center_id: 'demo-center-id', date: new Date().toISOString().split('T')[0], status: 'present', is_locked: true },
+  ],
+  teacher_feature_permissions: [
+    {
+      teacher_id: 't1',
+      teacher_scope_mode: 'restricted',
+      permissions: {
+        take_attendance: { enabled: true, can_view: true, can_edit: true }
+      },
+      take_attendance: true
+    }
+  ],
+  class_teacher_assignments: [
+    { teacher_id: 't1', grade: '10', center_id: 'demo-center-id' }
+  ],
   teacher_attendance: [],
   leave_applications: [],
   book_loans: [],

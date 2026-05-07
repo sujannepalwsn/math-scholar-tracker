@@ -52,10 +52,13 @@ export default function TakeAttendance() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord>>({});
-  const [gradeFilter, setGradeFilter] = useState<string>("");
+  const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [bulkAction, setBulkAction] = useState<{ type: 'present' | 'absent' | null, open: boolean }>({ type: null, open: false });
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+  const isTeacher = user?.role === UserRole.TEACHER;
+  const isCenter = user?.role === UserRole.CENTER || user?.role === UserRole.ADMIN;
 
   const { data: currentAcademicYear } = useQuery({
     queryKey: ["current-academic-year", user?.center_id],
@@ -88,7 +91,9 @@ export default function TakeAttendance() {
     enabled: !!dateStr && !!user?.center_id
   });
 
-  const holidayEvent = calendarEvents.find(e => !e.is_school_day);
+  const holidayEvent = React.useMemo(() => {
+    return calendarEvents?.find(e => !e.is_school_day);
+  }, [calendarEvents]);
   const isOperationalDay = !holidayEvent;
 
   // Fetch class teacher assignments if teacher role (ONLY from official assignments)
@@ -109,10 +114,7 @@ export default function TakeAttendance() {
 
       return Array.from(grades).filter(Boolean);
     },
-    enabled: !!user?.teacher_id && user?.role === UserRole.TEACHER });
-
-  const isTeacher = user?.role === UserRole.TEACHER;
-  const isCenter = user?.role === UserRole.CENTER || user?.role === UserRole.ADMIN;
+    enabled: !!user?.teacher_id && isTeacher });
 
   // Restricted by default for teachers. ONLY explicitly 'full' scope OR 'edit' permission bypasses.
   const isRestricted = React.useMemo(() => {
@@ -210,8 +212,7 @@ export default function TakeAttendance() {
     enabled: !!dateStr && !!user?.center_id && (!isRestricted || !!classTeacherGrades)
   });
 
-  // Check if attendance is locked for this date
-  const isLocked = existingAttendance?.some((a: any) => a.is_locked) || false;
+
   const canModifyLocked = isCenter; // Only center admin can edit locked attendance
   const canMarkAttendance = hasEditPermission;
 
@@ -237,6 +238,13 @@ export default function TakeAttendance() {
     return availableGrades;
   }, [isTeacher, isCenter, isRestricted, classTeacherGrades, availableGrades]);
 
+  // Auto-select first available grade for teachers since "All Grades" is removed for them
+  useEffect(() => {
+    if (isTeacher && gradeFilter === "all" && allowedGrades.length > 0) {
+      setGradeFilter(allowedGrades[0]);
+    }
+  }, [isTeacher, allowedGrades, gradeFilter]);
+
 
   useEffect(() => {
     if (students) {
@@ -254,14 +262,40 @@ export default function TakeAttendance() {
   }, [students, existingAttendance]);
 
   // Filter students by grade - for restricted teachers, always enforce assigned grades
-  const filteredStudents = students?.filter(s => {
-    if (isTeacher && isRestricted) {
-      const isAssigned = classTeacherGrades.includes(s.grade);
-      if (!isAssigned) return false;
+  const filteredStudents = React.useMemo(() => {
+    if (!students) return [];
+    return students.filter(s => {
+      if (isTeacher && isRestricted) {
+        const isAssigned = (classTeacherGrades || []).includes(s.grade);
+        if (!isAssigned) return false;
+        return gradeFilter === "all" || s.grade === gradeFilter;
+      }
       return gradeFilter === "all" || s.grade === gradeFilter;
-    }
-    return gradeFilter === "all" || s.grade === gradeFilter;
-  });
+    });
+  }, [students, isTeacher, isRestricted, classTeacherGrades, gradeFilter]);
+
+  // Check if attendance is locked for this date
+  // Hardening: isLocked should be scoped to the students currently being viewed
+  // to avoid center-wide lockouts for teachers with Full Access.
+  const isLocked = React.useMemo(() => {
+    if (!existingAttendance || !filteredStudents || filteredStudents.length === 0) return false;
+    const visibleStudentIds = new Set(filteredStudents.map(s => s.id));
+    return existingAttendance.some((a: any) => visibleStudentIds.has(a.student_id) && a.is_locked);
+  }, [existingAttendance, filteredStudents]);
+
+  // allLocked means every student in the current view is locked
+  const allLocked = React.useMemo(() => {
+    if (!filteredStudents || filteredStudents.length === 0) return false;
+    return filteredStudents.every(s => {
+      const record = existingAttendance?.find((a: any) => a.student_id === s.id);
+      return record?.is_locked || false;
+    });
+  }, [existingAttendance, filteredStudents]);
+
+  const isStudentLocked = (studentId: string) => {
+    const record = existingAttendance?.find((a: any) => a.student_id === studentId);
+    return record?.is_locked || false;
+  };
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendance((prev) => {
@@ -294,6 +328,9 @@ export default function TakeAttendance() {
     const currentTime = format(new Date(), "HH:mm");
 
     filteredStudents.forEach((student) => {
+      // Skip locked students unless user is admin
+      if (isStudentLocked(student.id) && !canModifyLocked) return;
+
       if (bulkAction.type === 'present') {
         updated[student.id] = { ...updated[student.id], status: "present", timeIn: updated[student.id]?.timeIn || currentTime };
       } else {
@@ -309,18 +346,24 @@ export default function TakeAttendance() {
     mutationFn: async () => {
       if (!filteredStudents || !user?.center_id) return;
       if (!hasEditPermission) throw new Error("Access Denied: You do not have permission to mark attendance.");
-      // 1. Security Guard for Restricted Teachers
-      const studentsToProcess = filteredStudents || [];
-      if (isRestricted) {
-        const unauthorizedStudents = studentsToProcess.filter(s => !classTeacherGrades.includes(s.grade));
-        if (unauthorizedStudents.length > 0) {
-          throw new Error("Access Denied: You are attempting to mark attendance for grades not assigned to you.");
-        }
+
+      // 1. Security Guard & Locking Logic
+      // Only process students that the user is authorized for and that aren't locked (unless admin)
+      const studentsToProcess = (filteredStudents || []).filter(s => {
+        // Restricted teachers check
+        if (isRestricted && !classTeacherGrades.includes(s.grade)) return false;
+        // Locking check
+        if (isStudentLocked(s.id) && !canModifyLocked) return false;
+        return true;
+      });
+
+      if (studentsToProcess.length === 0) {
+        throw new Error("No records can be updated. Either they are locked or you lack permissions.");
       }
 
       if (!user.center_id) throw new Error("Missing center context");
 
-      // 2. Delete existing records for these students on this date
+      // 2. Delete existing records for THESE students ONLY
       const { error: deleteError } = await supabase.from("attendance").delete().eq("date", dateStr).in("student_id", studentsToProcess.map((s) => s.id));
       if (deleteError) throw deleteError;
 
@@ -392,8 +435,9 @@ export default function TakeAttendance() {
       toast.error("Cannot mark attendance on a non-school day.");
       return;
     }
-    if (isLocked && !hasEditPermission) {
-      toast.error("Attendance is locked. Only center admin can edit.");
+    // Hardening: Teachers can save as long as the current view isn't fully locked
+    if (allLocked && !canModifyLocked) {
+      toast.error("Attendance for this view is locked. Only center admin can edit.");
       return;
     }
     saveMutation.mutate();
@@ -462,7 +506,7 @@ export default function TakeAttendance() {
           <ShieldAlert className="h-4 w-4" />
           <AlertTitle className="font-black uppercase text-xs tracking-widest">Attendance Disabled</AlertTitle>
           <AlertDescription className="text-sm font-bold">
-          Not a school day. Reason: {calendarEvent?.title || "Institutional Closure"}
+          Not a school day. Reason: {holidayEvent?.title || "Institutional Closure"}
           </AlertDescription>
         </Alert>
       )}
@@ -478,12 +522,14 @@ export default function TakeAttendance() {
         </Alert>
       )}
 
-      {isLocked && !hasEditPermission && isOperationalDay && (
+      {isLocked && isOperationalDay && (
         <div className="flex items-center gap-3 p-4 bg-orange-50/50 backdrop-blur-sm border border-orange-200 rounded-2xl text-orange-700 shadow-soft animate-in slide-in-from-top-2">
           <div className="p-2 rounded-xl bg-orange-100">
             <Lock className="h-4 w-4" />
           </div>
-          <span className="text-sm font-bold uppercase tracking-tight">Records Locked — Only Center Admin can modify.</span>
+          <span className="text-sm font-bold uppercase tracking-tight">
+            {isCenter ? "Records are Locked for this view, but as Admin you can still modify them." : "Records Locked — Only Center Admin can modify."}
+          </span>
         </div>
       )}
 
@@ -513,7 +559,8 @@ export default function TakeAttendance() {
                   <SelectValue placeholder="Select Grade" />
                 </SelectTrigger>
                 <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
-                  {allowedGrades.length === 0 && isRestricted && (
+                  {!isTeacher && <SelectItem value="all">All Grades</SelectItem>}
+                  {allowedGrades.length === 0 && isTeacher && (
                     <SelectItem value="none" disabled>No assigned grades</SelectItem>
                   )}
                   {allowedGrades.map((g) => (
@@ -556,10 +603,24 @@ export default function TakeAttendance() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" type="button" size="sm" onClick={() => setBulkAction({ type: 'present', open: true })} disabled={(isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance} className="rounded-xl border-2 hover:bg-green-50 hover:border-green-200 hover:text-green-600 h-10 px-4 font-bold">
+              <Button
+                variant="outline"
+                type="button"
+                size="sm"
+                onClick={() => setBulkAction({ type: 'present', open: true })}
+                disabled={!isOperationalDay || !canMarkAttendance}
+                className="rounded-xl border-2 hover:bg-green-50 hover:border-green-200 hover:text-green-600 h-10 px-4 font-bold"
+              >
                 Mark All Present
               </Button>
-              <Button variant="outline" type="button" size="sm" onClick={() => setBulkAction({ type: 'absent', open: true })} disabled={(isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance} className="rounded-xl border-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 h-10 px-4 font-bold">
+              <Button
+                variant="outline"
+                type="button"
+                size="sm"
+                onClick={() => setBulkAction({ type: 'absent', open: true })}
+                disabled={!isOperationalDay || !canMarkAttendance}
+                className="rounded-xl border-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 h-10 px-4 font-bold"
+              >
                 Mark All Absent
               </Button>
             </div>
@@ -612,7 +673,7 @@ export default function TakeAttendance() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleStatusChange(student.id, "present")}
-                          disabled={(isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
+                          disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                           className={cn(
                             "flex-1 h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all gap-2",
                             attendance[student.id]?.status === "present" ? "bg-green-500 border-green-500 text-white hover:bg-green-600 shadow-soft" : "hover:bg-green-50 text-muted-foreground"
@@ -625,7 +686,7 @@ export default function TakeAttendance() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleStatusChange(student.id, "late")}
-                          disabled={(isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
+                          disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                           className={cn(
                             "flex-1 h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all gap-2",
                             attendance[student.id]?.status === "late" ? "bg-yellow-500 border-yellow-500 text-white hover:bg-yellow-600 shadow-soft" : "hover:bg-yellow-50 text-muted-foreground"
@@ -638,7 +699,7 @@ export default function TakeAttendance() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleStatusChange(student.id, "absent")}
-                          disabled={(isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
+                          disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                           className={cn(
                             "flex-1 h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all gap-2",
                             attendance[student.id]?.status === "absent" ? "bg-red-500 border-red-500 text-white hover:bg-red-600 shadow-soft" : "hover:bg-red-50 text-muted-foreground"
@@ -656,7 +717,7 @@ export default function TakeAttendance() {
                               type="time"
                               value={attendance[student.id]?.timeIn || ""}
                               onChange={(e) => handleTimeChange(student.id, "timeIn", e.target.value)}
-                              disabled={(isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
+                              disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                               className="h-10 bg-card/40 rounded-xl text-xs font-bold border-none shadow-inner"
                             />
                           </div>
@@ -666,7 +727,7 @@ export default function TakeAttendance() {
                               type="time"
                               value={attendance[student.id]?.timeOut || ""}
                               onChange={(e) => handleTimeChange(student.id, "timeOut", e.target.value)}
-                              disabled={(isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
+                              disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                               className="h-10 bg-card/40 rounded-xl text-xs font-bold border-none shadow-inner"
                             />
                           </div>
@@ -679,7 +740,7 @@ export default function TakeAttendance() {
               <Button
                 type="submit"
                 className="w-full h-16 text-xl font-black shadow-strong rounded-[2rem] bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.01] transition-all duration-300 mt-8"
-                disabled={saveMutation.isPending || (isLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
+                disabled={saveMutation.isPending || (allLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
               >
                 {saveMutation.isPending ? (
                   <div className="flex items-center gap-3">

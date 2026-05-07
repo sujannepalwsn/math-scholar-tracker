@@ -152,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           center_id: sandboxUser.center_id,
           center_name: sandboxUser.center_id ? (sandboxData.centers.find(c => c.id === sandboxUser.center_id)?.name || 'Demo Center') : undefined,
           student_id: (sandboxUser as any).student_id,
+          teacher_id: (sandboxUser as any).teacher_id,
           linked_students: (sandboxUser as any).linked_students,
           untrusted_metadata: {
             permissions_fetched_at: new Date().toISOString(),
