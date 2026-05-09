@@ -15,11 +15,11 @@ const navItems: Array<{
   label: string;
   icon: React.ElementType;
   role: 'admin' | 'center' | 'parent' | 'teacher';
-  category?: 'Academics' | 'Administration' | 'Reports and Communication';
+  category?: string;
 }> = [
   { to: "/admin-dashboard", label: "Dashboard", icon: Home, role: 'admin' as const },
   { to: "/admin/centers", label: "Tuition Centers", icon: Building2, role: 'admin' as const, category: 'Administration' },
-  { to: "/admin/analytics", label: "Center Analytics", icon: BarChart3, role: 'admin' as const, category: 'Reports and Communication' },
+  { to: "/admin/analytics", label: "Center Analytics", icon: BarChart3, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/billing", label: "Billing System", icon: Receipt, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/usage", label: "Data Usage", icon: Database, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/landing-page", label: "Page Editor", icon: LayoutTemplate, role: 'admin' as const, category: 'Administration' },
@@ -27,8 +27,8 @@ const navItems: Array<{
   { to: "/admin/system-pages", label: "System Pages", icon: FileText, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/subscriptions", label: "SaaS Subscriptions", icon: Zap, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/finance", label: "Finance", icon: DollarSign, role: 'admin' as const, category: 'Administration' },
-  { to: "/admin/visitor-logs", label: "Visitor Logs", icon: MousePointer2, role: 'admin' as const, category: 'Reports and Communication' },
-  { to: "/admin/errors", label: "Error Tracking", icon: Activity, role: 'admin' as const, category: 'Reports and Communication' },
+  { to: "/admin/visitor-logs", label: "Visitor Logs", icon: MousePointer2, role: 'admin' as const, category: 'Administration' },
+  { to: "/admin/errors", label: "Error Tracking", icon: Activity, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/settings", label: "Settings", icon: Settings, role: 'admin' as const, category: 'Administration' },
 ];
 
@@ -95,20 +95,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main className={cn(
         "flex-1 overflow-y-auto bg-background transition-all duration-200",
         "md:h-screen",
-        isMobile ? "pt-[60px]" : "pt-0",
-        isMobile ? "px-2 pb-6" : "px-4 pb-20 md:p-6 lg:p-8",
+        isMobile ? "pt-[70px]" : "pt-0",
+        isMobile ? "px-0 pb-[80px]" : "px-4 pb-20 md:p-6 lg:p-8",
         !isMobile && (sidebarCollapsed ? "md:ml-20" : "md:ml-64")
       )}>
         <div className="page-enter max-w-7xl mx-auto">
           {isMobile && isLauncherPath ? (
             <MobileModuleLauncher navItems={navItems.map(it => ({ ...it, icon: it.icon as any }))} />
           ) : (
-            children
+             <div className={cn(isMobile ? "px-4 py-4" : "")}>
+              {children}
+            </div>
           )}
         </div>
       </main>
 
-      {!isMobile && <BottomNav navItems={navItems} />}
+      <BottomNav navItems={navItems} />
     </div>
   );
 }

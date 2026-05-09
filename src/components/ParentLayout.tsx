@@ -191,8 +191,8 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       <main className={cn(
         "flex-1 overflow-y-auto transition-all duration-300 bg-white",
         "md:h-screen",
-        isMobile ? "pt-[60px]" : "pt-0",
-        isMobile ? "px-2 pb-6" : "px-4 pb-20 md:p-6 lg:p-8",
+        isMobile ? "pt-[70px]" : "pt-0",
+        isMobile ? "px-0 pb-[80px]" : "px-4 pb-20 md:p-6 lg:p-8",
         !isMobile && (sidebarCollapsed ? "md:ml-24" : "md:ml-72")
       )}>
         {/* Navigation spacer for mobile fixed header */}
@@ -214,12 +214,14 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
           {isMobile && isLauncherPath ? (
             <MobileModuleLauncher navItems={updatedNavItems} />
           ) : (
-            children
+            <div className={cn(isMobile ? "px-4 py-4" : "")}>
+              {children}
+            </div>
           )}
         </div>
       </main>
 
-      {!isMobile && <BottomNav navItems={updatedNavItems} />}
+      <BottomNav navItems={updatedNavItems} />
     </div>
   );
 }
