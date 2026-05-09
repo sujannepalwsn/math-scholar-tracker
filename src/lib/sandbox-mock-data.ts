@@ -59,7 +59,15 @@ export const sandboxData = {
   activities: [],
   invoices: [],
   class_substitutions: [],
-  period_schedules: [],
+  period_schedules: [
+    { id: 'ps1', center_id: 'demo-center-id', class_period_id: 'cp1', grade: '8', day_of_week: 1, subject: 'Mathematics', teacher_id: 't1' }
+  ],
+  class_periods: [
+    { id: 'cp1', center_id: 'demo-center-id', period_number: 1, start_time: '09:00', end_time: '09:45', is_active: true, is_published: true }
+  ],
+  subjects: [
+    { id: 'sub1', center_id: 'demo-center-id', name: 'Mathematics' }
+  ],
   student_homework_records: [],
   attendance: [
     { student_id: 's1', center_id: 'demo-center-id', date: new Date().toISOString().split('T')[0], status: 'present', is_locked: true },
