@@ -1,18 +1,17 @@
 import React, { useState } from "react";
 import { UserRole } from "@/types/roles";
-import { AlertTriangle, Archive, Award, BarChart3, Book, BookOpen, Sparkles, Bus, Calendar, CalendarDays, CheckSquare, ClipboardCheck, Clock, DollarSign, FileText, GraduationCap, Home, IdCard, KeyRound, LayoutList, LogOut, Menu, MessageSquare, Paintbrush, PenTool, Plane, Settings, Star, TrendingUp, User, UserCheck, UserPlus, Users, Video, ChevronLeft } from "lucide-react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
+import { LogOut, User } from "lucide-react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileModuleLauncher from "./MobileModuleLauncher";
+import MobileHeader from "./MobileHeader";
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
-import CenterLogo from "./CenterLogo";
-import NotificationBell from "./NotificationBell";
 import SchoolBranding from "./dashboard/SchoolBranding";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useDynamicNavigation } from "@/hooks/useDynamicNavigation";
 import { DEFAULT_NAV_ITEMS } from "@/lib/navigation-defaults";
@@ -89,7 +88,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const teacherDynamicItems = dynamicItems.filter(it => it.role === UserRole.TEACHER || it.route === '/teacher/leave');
   const teacherStaticItems = DEFAULT_NAV_ITEMS.filter(it => it.role === UserRole.TEACHER || it.route === '/teacher/leave');
 
-  // Auto-sync defaults if no teacher items exist for this center
   React.useEffect(() => {
     if (user?.center_id && dynamicItems.length > 0 && dynamicItems.filter(it => it.role === UserRole.TEACHER).length === 0) {
       logger.debug("TeacherLayout: No teacher nav items found, synchronizing defaults...");
@@ -97,7 +95,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     }
   }, [user?.center_id, dynamicItems.length]);
 
-  // Combine dynamic items and missing static items
   const combinedItems = React.useMemo(() => {
     const items = [...teacherDynamicItems];
 
@@ -112,7 +109,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           feature_name: staticItem.feature_name,
           is_active: true,
           category_id: null,
-          category_name: staticItem.category // Temporary for mapping
+          category_name: staticItem.category
         } as any);
       }
     });
@@ -125,13 +122,11 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       const cat = dynamicCategories.find(c => c.id === it.category_id) ||
                   ((it as any).category_name ? { name: (it as any).category_name } : null);
 
-      // Force specific routes for teachers to prevent navigating to center-admin pages
       let route = it.route;
       if (it.feature_name === 'leave_management') {
         route = '/teacher/leave';
       }
 
-      // Ensure dashboard links point to the role-specific dashboard instead of root
       if (it.name === "Dashboard" || route === "/" || route?.includes('dashboard') || route?.includes('center-dashboard')) {
         route = getDashboardPath(UserRole.TEACHER);
       }
@@ -149,7 +144,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       };
     });
 
-    // Deduplicate by route to prevent triple Dashboard items
     const uniqueItemsMap = new Map();
     processedItems.forEach(item => {
       if (!uniqueItemsMap.has(item.to)) {
@@ -160,7 +154,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     return Array.from(uniqueItemsMap.values());
   }, [combinedItems, dynamicCategories, getIcon, unreadMessageCount]);
 
-  // Ensure mandatory items from defaults are always present (fixing issue for existing customized navigation)
   React.useEffect(() => {
     if (teacherDynamicItems.length > 0) {
       const hasMissing = teacherStaticItems.some(
@@ -190,6 +183,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   );
 
   const isLauncherPath = location.pathname === "/teacher-dashboard" && !searchParams.get("show_stats");
+  const currentPageItem = updatedNavItems.find(item => item.to === location.pathname);
 
   return (
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
@@ -204,43 +198,34 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         />
       )}
 
-      {/* Mobile Header - Optimized for narrow screens */}
+      {/* Mobile Header */}
       {isMobile && (
-        <header className="fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
-          <div className="flex items-center shrink-0">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/5 text-primary">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </div>
-
-          <div className="flex-1 min-w-0 px-2 flex justify-center overflow-hidden">
-            <SchoolBranding className="max-w-full" isMobileCompact={true} />
-          </div>
-
-          <div className="flex items-center shrink-0">
-            <NotificationBell />
-          </div>
-        </header>
+        <MobileHeader
+          showBackButton={true}
+          onLogout={handleLogout}
+          isLauncher={isLauncherPath}
+          title={currentPageItem?.label}
+        />
       )}
 
       {/* Main Content */}
       <main className={cn(
         "flex-1 overflow-y-auto mesh-gradient transition-all duration-300",
         "md:h-screen",
-        isMobile ? "pt-[50px]" : "pt-0",
+        isMobile ? "pt-[60px]" : "pt-0",
         isMobile ? "px-2 pb-6" : "px-4 pb-20 md:p-6 lg:p-8",
         !isMobile && (sidebarCollapsed ? "md:ml-24" : "md:ml-72")
       )}>
         {/* Navigation spacer for mobile fixed header */}
         <div className="md:hidden h-4" />
 
-        {/* Desktop Header Overlay with Branding - Premium Glass Design */}
+        {/* Desktop Header Overlay */}
         <div className="hidden md:flex sticky top-4 left-0 right-0 h-[76px] glass-surface z-30 items-center justify-between px-8 mb-8 rounded-[2.5rem] shadow-glass mx-auto max-w-7xl border border-white/40">
           <SchoolBranding />
           <div className="flex items-center gap-6 pr-4">
              <div className="h-10 w-[1px] bg-black/5" />
-             <NotificationBell />
-             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-white shadow-soft">
+             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-white shadow-soft overflow-hidden">
+                <img src={user?.photo_url || ""} alt="" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
                 <User className="h-5 w-5 text-primary" />
              </div>
           </div>
