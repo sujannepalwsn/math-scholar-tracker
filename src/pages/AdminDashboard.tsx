@@ -2,7 +2,7 @@ import React from "react";
 import { UserRole } from "@/types/roles";
 import { Users, Building2, Activity, ShieldCheck, TrendingUp, BarChart3, Globe } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { KPICard } from "@/components/dashboard/KPICard";
 const AdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   if (user?.role !== UserRole.ADMIN) {
     navigate('/');

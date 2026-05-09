@@ -1,12 +1,14 @@
 import React, { useState } from "react";
-import { Activity, DollarSign, Home, KeyRound, LogOut, Settings, Shield, User, Building2, BarChart3, Receipt, Database, Zap, LayoutTemplate, Users, Menu, FileText, MousePointer2 } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Activity, DollarSign, Home, KeyRound, LogOut, Settings, Shield, User, Building2, BarChart3, Receipt, Database, Zap, LayoutTemplate, Users, Menu, FileText, MousePointer2, ChevronLeft } from "lucide-react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import NotificationBell from "./NotificationBell";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileModuleLauncher from "./MobileModuleLauncher";
 
 const navItems: Array<{
   to: string;
@@ -32,8 +34,10 @@ const navItems: Array<{
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -63,53 +67,63 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 
+  const isLauncherPath = location.pathname === "/admin-dashboard" && !searchParams.get("show_stats");
+
   return (
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
-      <Sidebar
-        navItems={navItems}
-        headerContent={headerContent}
-        footerContent={footerContent}
-        onCollapseChange={setSidebarCollapsed}
-        isMobileOpen={mobileMenuOpen}
-        onMobileOpenChange={setMobileMenuOpen}
-      />
+      {!isMobile && (
+        <Sidebar
+          navItems={navItems}
+          headerContent={headerContent}
+          footerContent={footerContent}
+          onCollapseChange={setSidebarCollapsed}
+          isMobileOpen={mobileMenuOpen}
+          onMobileOpenChange={setMobileMenuOpen}
+        />
+      )}
 
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(true)}
-            className="h-9 w-9 bg-primary/5 text-primary rounded-xl"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Shield className="h-4 w-4 text-primary" />
+      {isMobile && (
+        <header className="fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="h-9 w-9 bg-primary/5 text-primary rounded-xl"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Shield className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-foreground text-sm">Admin</span>
           </div>
-          <span className="font-semibold text-foreground text-sm">Admin</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 text-muted-foreground">
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 text-muted-foreground">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </header>
+      )}
 
       <main className={cn(
         "flex-1 overflow-y-auto bg-background transition-all duration-200",
         "md:h-screen",
-        "pt-14 md:pt-0",
-        "px-4 pb-20 md:p-6 lg:p-8",
-        sidebarCollapsed ? "md:ml-20" : "md:ml-64"
+        isMobile ? "pt-[50px]" : "pt-0",
+        isMobile ? "px-2 pb-6" : "px-4 pb-20 md:p-6 lg:p-8",
+        !isMobile && (sidebarCollapsed ? "md:ml-20" : "md:ml-64")
       )}>
         <div className="page-enter max-w-7xl mx-auto">
-          {children}
+          {isMobile && isLauncherPath ? (
+            <MobileModuleLauncher navItems={navItems.map(it => ({ ...it, icon: it.icon as any }))} />
+          ) : (
+            children
+          )}
         </div>
       </main>
 
-      <BottomNav navItems={navItems} />
+      {!isMobile && <BottomNav navItems={navItems} />}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { eachDayOfInterval, format, isFuture, isToday, startOfDay, subDays, subMonths, startOfYear } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { KPICard } from "@/components/dashboard/KPICard";
@@ -42,6 +42,7 @@ export default function Dashboard() {
   const { user, loading } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const today = new Date().toISOString().split("T")[0];
   const centerId = user?.center_id;
   const role = user?.role;

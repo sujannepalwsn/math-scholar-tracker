@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { UserRole } from "@/types/roles";
-import { AlertTriangle, Archive, Award, BarChart3, Book, BookOpen, Sparkles, Bus, Calendar, CalendarDays, CheckSquare, ClipboardCheck, Clock, DollarSign, FileText, GraduationCap, Home, IdCard, KeyRound, LayoutList, LogOut, Menu, MessageSquare, Paintbrush, PenTool, Plane, Settings, Star, TrendingUp, User, UserCheck, UserPlus, Users, Video } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { AlertTriangle, Archive, Award, BarChart3, Book, BookOpen, Sparkles, Bus, Calendar, CalendarDays, CheckSquare, ClipboardCheck, Clock, DollarSign, FileText, GraduationCap, Home, IdCard, KeyRound, LayoutList, LogOut, Menu, MessageSquare, Paintbrush, PenTool, Plane, Settings, Star, TrendingUp, User, UserCheck, UserPlus, Users, Video, ChevronLeft } from "lucide-react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileModuleLauncher from "./MobileModuleLauncher";
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
@@ -19,8 +21,10 @@ const staticNavItems = DEFAULT_NAV_ITEMS.filter(it => it.role === UserRole.PAREN
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -162,41 +166,47 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     </div>
   );
 
+  const isLauncherPath = location.pathname === "/parent-dashboard" && !searchParams.get("show_stats");
+
   return (
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
-      <Sidebar
-        navItems={updatedNavItems}
-        headerContent={headerContent}
-        footerContent={footerContent}
-        onCollapseChange={setSidebarCollapsed}
-        isMobileOpen={mobileMenuOpen}
-        onMobileOpenChange={setMobileMenuOpen}
-      />
+      {!isMobile && (
+        <Sidebar
+          navItems={updatedNavItems}
+          headerContent={headerContent}
+          footerContent={footerContent}
+          onCollapseChange={setSidebarCollapsed}
+          isMobileOpen={mobileMenuOpen}
+          onMobileOpenChange={setMobileMenuOpen}
+        />
+      )}
 
       {/* Mobile Header - Optimized for narrow screens */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
-        <div className="flex items-center shrink-0">
-          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/5 text-primary">
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
+      {isMobile && (
+        <header className="fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
+          <div className="flex items-center shrink-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/5 text-primary">
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          </div>
 
-        <div className="flex-1 min-w-0 px-2 flex justify-center overflow-hidden">
-          <SchoolBranding className="max-w-full" isMobileCompact={true} />
-        </div>
+          <div className="flex-1 min-w-0 px-2 flex justify-center overflow-hidden">
+            <SchoolBranding className="max-w-full" isMobileCompact={true} />
+          </div>
 
-        <div className="flex items-center shrink-0">
-          <NotificationBell />
-        </div>
-      </header>
+          <div className="flex items-center shrink-0">
+            <NotificationBell />
+          </div>
+        </header>
+      )}
 
       {/* Main Content */}
       <main className={cn(
         "flex-1 overflow-y-auto transition-all duration-300 bg-white",
         "md:h-screen",
-        "pt-14 md:pt-0",
-        "px-4 pb-20 md:p-6 lg:p-8",
-        sidebarCollapsed ? "md:ml-24" : "md:ml-72"
+        isMobile ? "pt-[50px]" : "pt-0",
+        isMobile ? "px-2 pb-6" : "px-4 pb-20 md:p-6 lg:p-8",
+        !isMobile && (sidebarCollapsed ? "md:ml-24" : "md:ml-72")
       )}>
         {/* Navigation spacer for mobile fixed header */}
         <div className="md:hidden h-4" />
@@ -214,11 +224,15 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         </div>
 
         <div className="page-enter max-w-7xl mx-auto">
-          {children}
+          {isMobile && isLauncherPath ? (
+            <MobileModuleLauncher navItems={updatedNavItems} />
+          ) : (
+            children
+          )}
         </div>
       </main>
 
-      <BottomNav navItems={updatedNavItems} />
+      {!isMobile && <BottomNav navItems={updatedNavItems} />}
     </div>
   );
 }
