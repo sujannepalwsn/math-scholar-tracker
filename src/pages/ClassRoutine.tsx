@@ -803,7 +803,7 @@ export default function ClassRoutine() {
                             <TableCell
                               key={g}
                               className={cn(
-                                "border border-slate-200 text-center p-2 min-h-[80px] transition-colors relative",
+                                "border border-slate-200 text-center p-2 min-h-[80px] transition-colors relative group",
                                 canEdit ? "cursor-pointer hover:bg-slate-50" : ""
                               )}
                               onClick={() => {
@@ -819,6 +819,21 @@ export default function ClassRoutine() {
                                 }
                               }}
                             >
+                              {entry && canEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 rounded-full bg-white/90 shadow-sm hover:bg-destructive hover:text-white absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm("Are you sure you want to delete this routine entry?")) {
+                                      deleteScheduleMutation.mutate(entry.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
                               {entry ? (
                                 <div className="space-y-1">
                                   <div className="font-black text-xs text-slate-800 uppercase tracking-tight leading-tight">{entry.subject}</div>

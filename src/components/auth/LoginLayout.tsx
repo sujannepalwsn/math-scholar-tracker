@@ -40,10 +40,10 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const primaryColor = settings?.primary_color || '#4f46e5';
-  const bgColor = settings?.background_color || '#020617';
+  const bgColor = settings?.background_color || '#f8fafc';
 
   const hexToRGB = (hex: string) => {
-    if (!hex || !hex.startsWith('#')) return '2, 6, 23';
+    if (!hex || !hex.startsWith('#')) return '248, 250, 252';
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
@@ -143,32 +143,32 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
       `}} />
       {/* Dynamic Background */}
       <div className="fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-slate-950">
-          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] bg-primary/10 animate-pulse" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] bg-blue-600/10 animate-pulse delay-1000" />
-          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-slate-50">
+          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] bg-primary/5 animate-pulse" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] bg-blue-600/5 animate-pulse delay-1000" />
+          <div className="absolute inset-0 bg-slate-50/40 backdrop-blur-[1px]" />
         </div>
 
         {/* Animated Grid Lines */}
-        <div className="absolute inset-0 z-10 pointer-events-none bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        <div className="absolute inset-0 z-10 pointer-events-none bg-[linear-gradient(to_right,#00000005_1px,transparent_1px),linear-gradient(to_bottom,#00000005_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
       </div>
 
       {/* Navigation Bar */}
-      <header className="relative z-50 w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-white/5 bg-slate-950/20 backdrop-blur-md">
+      <header className="relative z-50 w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-slate-200 bg-white/80 backdrop-blur-md">
         <Link to="/" className="flex items-center gap-3">
-          <div className="p-1.5 md:p-2 rounded-xl bg-primary/20 border border-primary/20">
+          <div className="p-1.5 md:p-2 rounded-xl bg-primary/10 border border-primary/10">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt="Logo" className="h-6 w-6 md:h-8 md:w-8 object-contain" />
             ) : (
               <Shield className="h-5 w-5 md:h-6 md:w-6 text-primary" />
             )}
           </div>
-          <span className="text-lg md:text-2xl font-black text-white tracking-tighter uppercase">EDU<span className="text-primary">FLOW</span></span>
+          <span className="text-lg md:text-2xl font-black text-slate-900 tracking-tighter uppercase">EDU<span className="text-primary">FLOW</span></span>
         </Link>
 
         <div className="flex items-center gap-2 md:gap-4">
            <Link to="/contact-sales">
-             <Button variant="ghost" className="text-white font-bold hover:bg-white/5 rounded-full px-2 md:px-6 text-[10px] md:text-sm">
+             <Button variant="ghost" className="text-slate-600 font-bold hover:bg-slate-100 rounded-full px-2 md:px-6 text-[10px] md:text-sm">
                Contact
              </Button>
            </Link>
@@ -188,7 +188,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <Card className="border-none shadow-[0_32px_64px_-16px_rgba(0,0,0,0.7)] bg-slate-900/40 backdrop-blur-[40px] border border-white/10 rounded-[2.5rem] overflow-hidden text-white">
+            <Card className="border-none shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] bg-white/95 backdrop-blur-[40px] border border-white/20 rounded-[2.5rem] overflow-hidden text-slate-900">
               <CardHeader className="space-y-6 pt-10 pb-6 px-8">
                 <div className="flex justify-between items-center">
                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 py-1 px-4 rounded-full font-black tracking-widest text-[10px] uppercase">
@@ -196,7 +196,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
                    </Badge>
                    <a
                     href={helpInfo.link}
-                    className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors bg-white/5 px-4 py-2 rounded-full border border-white/5"
+                    className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors bg-slate-100 px-4 py-2 rounded-full border border-slate-200"
                   >
                     <HelpCircle className="h-4 w-4" />
                     {helpInfo.text || 'Need help?'}
@@ -204,10 +204,10 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <CardTitle className="text-4xl font-black tracking-tighter">
+                  <CardTitle className="text-4xl font-black tracking-tighter text-slate-900">
                     {settings?.title || 'Sign In'}
                   </CardTitle>
-                  <p className="text-slate-400 font-medium text-sm">
+                  <p className="text-slate-500 font-medium text-sm">
                     Access your institution's digital ecosystem
                   </p>
                 </div>
@@ -216,35 +216,35 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
               <CardContent className="pb-10 px-8">
                 <form onSubmit={onSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-xs font-black text-slate-400 ml-1 uppercase tracking-widest">
+                    <Label className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">
                       Login Role
                     </Label>
                     <Select value={currentRole} onValueChange={handleRoleChange}>
-                      <SelectTrigger className="h-14 rounded-2xl border-white/5 bg-white/5 font-bold text-white transition-all focus:bg-white/10 focus:ring-primary/50">
+                      <SelectTrigger className="h-14 rounded-2xl border-slate-200 bg-slate-50 font-bold text-slate-900 transition-all focus:bg-white focus:ring-primary/50">
                         <SelectValue placeholder="Select Role" />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
-                        <SelectItem value="center" className="focus:bg-primary/20 focus:text-white cursor-pointer py-3 rounded-xl">
+                      <SelectContent className="bg-white border-slate-200 text-slate-900 rounded-2xl">
+                        <SelectItem value="center" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
                            <div className="flex items-center gap-3">
-                             <div className="p-2 rounded-lg bg-blue-500/20"><Shield className="h-4 w-4 text-blue-400" /></div>
+                             <div className="p-2 rounded-lg bg-blue-500/10"><Shield className="h-4 w-4 text-blue-600" /></div>
                              <span className="font-bold">Tuition Center</span>
                            </div>
                         </SelectItem>
-                        <SelectItem value="teacher" className="focus:bg-primary/20 focus:text-white cursor-pointer py-3 rounded-xl">
+                        <SelectItem value="teacher" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
                            <div className="flex items-center gap-3">
-                             <div className="p-2 rounded-lg bg-emerald-500/20"><Briefcase className="h-4 w-4 text-emerald-400" /></div>
+                             <div className="p-2 rounded-lg bg-emerald-500/10"><Briefcase className="h-4 w-4 text-emerald-600" /></div>
                              <span className="font-bold">Teacher Portal</span>
                            </div>
                         </SelectItem>
-                        <SelectItem value="parent" className="focus:bg-primary/20 focus:text-white cursor-pointer py-3 rounded-xl">
+                        <SelectItem value="parent" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
                            <div className="flex items-center gap-3">
-                             <div className="p-2 rounded-lg bg-purple-500/20"><Users className="h-4 w-4 text-purple-400" /></div>
+                             <div className="p-2 rounded-lg bg-purple-500/10"><Users className="h-4 w-4 text-purple-600" /></div>
                              <span className="font-bold">Parent Portal</span>
                            </div>
                         </SelectItem>
-                        <SelectItem value="admin" className="focus:bg-primary/20 focus:text-white cursor-pointer py-3 rounded-xl">
+                        <SelectItem value="admin" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 rounded-xl">
                            <div className="flex items-center gap-3">
-                             <div className="p-2 rounded-lg bg-amber-500/20"><Shield className="h-4 w-4 text-amber-400" /></div>
+                             <div className="p-2 rounded-lg bg-amber-500/10"><Shield className="h-4 w-4 text-amber-600" /></div>
                              <span className="font-bold">System Admin</span>
                            </div>
                         </SelectItem>
@@ -253,18 +253,18 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="username" className="text-xs font-black text-slate-400 ml-1 uppercase tracking-widest">
+                    <Label htmlFor="username" className="text-xs font-black text-slate-500 ml-1 uppercase tracking-widest">
                       {settings?.username_label || 'Username'}
                     </Label>
                     <div className="relative group">
-                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-primary">
+                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-primary">
                          <User className="h-5 w-5" />
                        </div>
                        <Input
                          id="username"
                          type="text"
                          placeholder={settings?.username_placeholder || 'Enter username'}
-                         className="h-14 rounded-2xl border-white/5 bg-white/5 pl-12 pr-6 font-bold text-white placeholder:text-slate-600 focus-visible:ring-offset-0 transition-all focus:bg-white/10 focus:border-primary/50"
+                         className="h-14 rounded-2xl border-slate-200 bg-slate-50 pl-12 pr-6 font-bold text-slate-900 placeholder:text-slate-400 focus-visible:ring-offset-0 transition-all focus:bg-white focus:border-primary/50"
                          value={username}
                          onChange={(e) => setUsername(e.target.value)}
                          required
@@ -275,19 +275,19 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
 
                   <div className="space-y-2">
                     <div className="flex justify-between items-center ml-1">
-                      <Label htmlFor="password" className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                      <Label htmlFor="password" className="text-xs font-black text-slate-500 uppercase tracking-widest">
                         {settings?.password_label || 'Password'}
                       </Label>
                     </div>
                     <div className="relative group">
-                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-primary">
+                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-primary">
                          <Lock className="h-5 w-5" />
                        </div>
                        <Input
                          id="password"
                          type="password"
                          placeholder={settings?.password_placeholder || '••••••••'}
-                         className="h-14 rounded-2xl border-white/5 bg-white/5 pl-12 pr-6 font-bold text-white placeholder:text-slate-600 focus-visible:ring-offset-0 transition-all focus:bg-white/10 focus:border-primary/50"
+                         className="h-14 rounded-2xl border-slate-200 bg-slate-50 pl-12 pr-6 font-bold text-slate-900 placeholder:text-slate-400 focus-visible:ring-offset-0 transition-all focus:bg-white focus:border-primary/50"
                          value={password}
                          onChange={(e) => setPassword(e.target.value)}
                          required
@@ -313,10 +313,10 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
 
                   <div className="relative py-4">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-white/5" />
+                      <span className="w-full border-t border-slate-100" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-slate-900/40 px-4 text-slate-500 font-bold tracking-widest">Quick Actions</span>
+                      <span className="bg-white px-4 text-slate-400 font-bold tracking-widest">Quick Actions</span>
                     </div>
                   </div>
 
@@ -331,30 +331,30 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
 
       {/* Modern Footer */}
       {toggles.show_footer && (
-        <footer className="relative z-10 bg-slate-950 border-t border-white/5 pt-20 pb-12">
+        <footer className="relative z-10 bg-white border-t border-slate-200 pt-20 pb-12">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
               <div className="space-y-6 col-span-1 md:col-span-1">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/20 border border-primary/20">
+                  <div className="p-2 rounded-xl bg-primary/10 border border-primary/10">
                     <Shield className="h-6 w-6 text-primary" />
                   </div>
-                  <span className="text-2xl font-black text-white tracking-tighter">EDUFLOW</span>
+                  <span className="text-2xl font-black text-slate-900 tracking-tighter">EDUFLOW</span>
                 </div>
-                <p className="text-slate-400 font-medium leading-relaxed">
+                <p className="text-slate-500 font-medium leading-relaxed">
                   Revolutionizing education through innovative digital solutions and seamless institution management.
                 </p>
                 <div className="flex items-center gap-4">
-                  <a href="#" className="p-2 rounded-full bg-white/5 hover:bg-primary transition-colors text-slate-400 hover:text-white">
+                  <a href="#" className="p-2 rounded-full bg-slate-100 hover:bg-primary transition-colors text-slate-500 hover:text-white">
                     <Twitter className="h-5 w-5" />
                   </a>
-                  <a href="#" className="p-2 rounded-full bg-white/5 hover:bg-primary transition-colors text-slate-400 hover:text-white">
+                  <a href="#" className="p-2 rounded-full bg-slate-100 hover:bg-primary transition-colors text-slate-500 hover:text-white">
                     <Linkedin className="h-5 w-5" />
                   </a>
-                  <a href="#" className="p-2 rounded-full bg-white/5 hover:bg-primary transition-colors text-slate-400 hover:text-white">
+                  <a href="#" className="p-2 rounded-full bg-slate-100 hover:bg-primary transition-colors text-slate-500 hover:text-white">
                     <Github className="h-5 w-5" />
                   </a>
-                  <a href="#" className="p-2 rounded-full bg-white/5 hover:bg-primary transition-colors text-slate-400 hover:text-white">
+                  <a href="#" className="p-2 rounded-full bg-slate-100 hover:bg-primary transition-colors text-slate-500 hover:text-white">
                     <Facebook className="h-5 w-5" />
                   </a>
                 </div>
@@ -362,14 +362,14 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
 
               {footerLinks.map((column: any, i: number) => (
                 <div key={i} className="space-y-6">
-                  <h4 className="text-lg font-black text-white tracking-tight uppercase">{column.title}</h4>
+                  <h4 className="text-lg font-black text-slate-900 tracking-tight uppercase">{column.title}</h4>
                   <ul className="space-y-4">
                     {column.links.map((link: any, j: number) => (
                       <li key={j}>
                         {link.href.startsWith('/') ? (
                           <Link
                             to={link.href}
-                            className="text-slate-400 font-medium hover:text-white transition-colors flex items-center gap-2 group"
+                            className="text-slate-500 font-medium hover:text-slate-900 transition-colors flex items-center gap-2 group"
                           >
                             <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0" />
                             {link.label}
@@ -383,7 +383,7 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
                                 document.getElementById(link.href.substring(1))?.scrollIntoView({ behavior: 'smooth' });
                               }
                             }}
-                            className="text-slate-400 font-medium hover:text-white transition-colors flex items-center gap-2 group"
+                            className="text-slate-500 font-medium hover:text-slate-900 transition-colors flex items-center gap-2 group"
                           >
                             <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-all -ml-6 group-hover:ml-0" />
                             {link.label}
@@ -396,20 +396,20 @@ const LoginLayout: React.FC<LoginLayoutProps> = ({
               ))}
             </div>
 
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="pt-12 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
              <div className="flex items-center gap-4">
-                <span className="flex items-center gap-2 text-emerald-400 text-sm font-bold">
-                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> All Systems Operational
+                <span className="flex items-center gap-2 text-emerald-600 text-sm font-bold">
+                   <div className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" /> All Systems Operational
                 </span>
-                <span className="text-slate-600">|</span>
-                <span className="text-slate-400 text-sm font-bold flex items-center gap-2">
+                <span className="text-slate-300">|</span>
+                <span className="text-slate-500 text-sm font-bold flex items-center gap-2">
                    <CheckCircle2 className="h-4 w-4" /> ISO 27001 Certified
                 </span>
              </div>
 
-             <div className="text-slate-500 text-sm font-medium flex items-center gap-4">
+             <div className="text-slate-400 text-sm font-medium flex items-center gap-4">
                 <span>{devInfo.copyright}</span>
-                <a href={devInfo.website} target="_blank" rel="noopener noreferrer" className="text-white hover:text-primary transition-colors font-bold flex items-center gap-1">
+                <a href={devInfo.website} target="_blank" rel="noopener noreferrer" className="text-slate-900 hover:text-primary transition-colors font-bold flex items-center gap-1">
                   {devInfo.name} <ExternalLink className="h-3 w-3" />
                 </a>
              </div>
