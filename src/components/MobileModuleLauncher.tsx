@@ -154,9 +154,10 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
   const groupedItems = React.useMemo(() => {
     const groups: Record<string, NavItem[]> = {
-      "Quick Actions": [],
-      "Academic": [],
-      "Administration": []
+      "Academics": [],
+      "Administration": [],
+      "Reports": [],
+      "Communications": []
     };
 
     navItems.forEach(item => {
@@ -165,16 +166,29 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
       if (!hasPermission(user, featureKey || 'unknown', item.to)) return;
 
       const label = item.label.toLowerCase();
+      const category = item.category;
 
-      const quickActionNames = ["take attendance", "attendance", "class routine", "homework", "lesson tracking", "tuition centers", "billing system"];
-      const academicNames = ["exams & results", "exams", "tests", "published results", "student report", "center analytics"];
-      const adminNames = ["lesson plans", "discipline", "pre school activities", "data usage", "saas subscriptions", "finance"];
+      // Group by Category (strictly following user request)
+      if (category === 'Academics') {
+        groups["Academics"].push(item);
+      } else if (category === 'Administration') {
+        groups["Administration"].push(item);
+      } else if (category === 'Reports and Communication' || category === 'Reports' || category === 'Communication') {
+        const reportNames = ["report", "summary", "analytics", "performance", "records", "finance"];
+        const commNames = ["message", "meeting", "calendar", "event", "notice"];
 
-      if (quickActionNames.some(name => label === name || label.includes(name))) {
-        groups["Quick Actions"].push(item);
-      } else if (academicNames.some(name => label === name || label.includes(name))) {
-        groups["Academic"].push(item);
+        if (reportNames.some(name => label.includes(name))) {
+          groups["Reports"].push(item);
+        } else if (commNames.some(name => label.includes(name))) {
+          groups["Communications"].push(item);
+        } else {
+          groups["Reports"].push(item);
+        }
+      } else if (item.label === "Dashboard" || item.to.includes('dashboard')) {
+        // Dashboard goes to Academics for prominence if requested grid only
+        groups["Academics"].unshift(item);
       } else {
+        // Fallback for uncategorized items (like About Institution)
         groups["Administration"].push(item);
       }
     });
@@ -182,61 +196,47 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
     return groups;
   }, [navItems, user]);
 
-  const ModuleCard = ({ item, variant = "grid" }: { item: NavItem, variant?: "list" | "grid" }) => {
+  const ModuleCard = ({ item }: { item: NavItem }) => {
     const Icon = item.icon;
 
-    if (variant === "grid") {
-      return (
-        <button
-          onClick={() => navigate(item.to)}
-          className="flex flex-col items-start gap-3 p-3.5 rounded-3xl bg-white border border-slate-100/80 shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group min-h-[135px]"
-        >
-          <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center transition-transform group-active:scale-90",
-            item.label.includes("Exams") || item.label.includes("Center") ? "bg-orange-50 text-orange-600" :
-            item.label.includes("Tests") || item.label.includes("Billing") ? "bg-emerald-50 text-emerald-600" :
-            item.label.includes("Results") || item.label.includes("Usage") ? "bg-rose-50 text-rose-600" :
-            "bg-blue-50 text-blue-600"
-          )}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div className="flex flex-col gap-0.5 pr-2">
-            <span className="text-[12px] font-bold text-slate-800 leading-tight line-clamp-2">{item.label}</span>
-            <span className="text-[9px] text-muted-foreground leading-tight">
-              {item.label === "Exams & Results" ? "View exams and results" :
-               item.label === "Tests" ? "Create & manage tests" :
-               item.label === "Published Results" ? "View published results" :
-               "View " + item.label.toLowerCase()}
-            </span>
-          </div>
-          <ChevronRight className={cn("h-3 w-3 absolute right-3 bottom-3 opacity-30")} />
-        </button>
-      );
-    }
+    const getIconColor = () => {
+      const label = item.label.toLowerCase();
+      if (label.includes("exams") || label.includes("center") || label.includes("marks")) return "bg-orange-50 text-orange-600";
+      if (label.includes("tests") || label.includes("billing") || label.includes("attendance")) return "bg-emerald-50 text-emerald-600";
+      if (label.includes("results") || label.includes("usage") || label.includes("discipline")) return "bg-rose-50 text-rose-600";
+      if (label.includes("messages") || label.includes("meetings") || label.includes("notice")) return "bg-indigo-50 text-indigo-600";
+      if (label.includes("report") || label.includes("summary") || label.includes("tracking")) return "bg-purple-50 text-purple-600";
+      return "bg-blue-50 text-blue-600";
+    };
+
+    const handleNavigation = () => {
+      // If clicking Dashboard from the launcher, we want to show the actual stats/charts
+      if (item.label === "Dashboard") {
+        const separator = item.to.includes('?') ? '&' : '?';
+        navigate(`${item.to}${separator}show_stats=true`);
+      } else {
+        navigate(item.to);
+      }
+    };
 
     return (
       <button
-        onClick={() => navigate(item.to)}
-        className="flex items-center gap-3 p-3.5 rounded-3xl bg-white border border-slate-100/80 shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all w-full text-left relative group overflow-hidden"
+        onClick={handleNavigation}
+        className="flex flex-col items-start gap-3 p-3.5 rounded-3xl bg-white border border-slate-100/80 shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group min-h-[135px]"
       >
-        <div className={cn("h-11 w-11 rounded-2xl flex items-center justify-center group-active:scale-90 transition-transform flex-shrink-0",
-           item.label.toLowerCase().includes("attendance") ? "bg-emerald-50 text-emerald-600" :
-           item.label.toLowerCase().includes("routine") || item.label.toLowerCase().includes("center") ? "bg-blue-50 text-blue-600" :
-           item.label.toLowerCase().includes("homework") || item.label.toLowerCase().includes("billing") ? "bg-indigo-50 text-indigo-600" :
-           "bg-orange-50 text-orange-600"
-        )}>
-          <Icon className="h-5.5 w-5.5" />
+        <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center transition-transform group-active:scale-90", getIconColor())}>
+          <Icon className="h-5 w-5" />
         </div>
-        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-          <span className="text-[13px] font-bold text-slate-800 leading-tight">{item.label}</span>
-          <span className="text-[10px] text-muted-foreground leading-tight truncate">
-             {item.label.toLowerCase().includes("attendance") ? "Mark student attendance" :
-              item.label.toLowerCase().includes("routine") ? "View today's schedule" :
-              item.label.toLowerCase().includes("homework") ? "3 pending tasks" :
-              item.label.toLowerCase().includes("tracking") ? "Track today's lessons" :
-              "Manage " + item.label}
+        <div className="flex flex-col gap-0.5 pr-2">
+          <span className="text-[12px] font-bold text-slate-800 leading-tight line-clamp-2">{item.label}</span>
+          <span className="text-[9px] text-muted-foreground leading-tight">
+            {item.label === "Exams & Results" ? "View exams and results" :
+              item.label === "Tests" ? "Create & manage tests" :
+              item.label === "Published Results" ? "View published results" :
+              "Open " + item.label}
           </span>
         </div>
-        <ChevronRight className="h-4 w-4 text-primary mr-0.5 flex-shrink-0 opacity-60" />
+        <ChevronRight className={cn("h-3 w-3 absolute right-3 bottom-3 opacity-30")} />
       </button>
     );
   };
@@ -270,30 +270,13 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
         ))}
       </div>
 
-      {/* Quick Actions */}
+      {/* Academics Group */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between px-1">
-          <h2 className="font-bold text-slate-800 text-[15px]">Quick Actions</h2>
-          <Button variant="link" className="text-[12px] font-bold h-auto p-0 text-primary">View All <ChevronRight className="h-3 w-3 ml-0.5" /></Button>
-        </div>
-        <div className="grid grid-cols-1 gap-3">
-          {groupedItems["Quick Actions"].length > 0 ? (
-            groupedItems["Quick Actions"].slice(0, 4).map((item, idx) => (
-              <ModuleCard key={idx} item={item} variant="list" />
-            ))
-          ) : (
-             <div className="text-[10px] text-muted-foreground italic px-2">No quick actions assigned.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Academic Group */}
-      <div className="flex flex-col gap-4">
-        <h2 className="font-bold text-slate-800 text-[15px] px-1">Academic</h2>
+        <h2 className="font-bold text-slate-800 text-[15px] px-1">Academics</h2>
         <div className="grid grid-cols-2 gap-3">
-          {groupedItems["Academic"].length > 0 ? (
-            groupedItems["Academic"].map((item, idx) => (
-              <ModuleCard key={idx} item={item} variant="grid" />
+          {groupedItems["Academics"].length > 0 ? (
+            groupedItems["Academics"].map((item, idx) => (
+              <ModuleCard key={idx} item={item} />
             ))
           ) : (
             <div className="col-span-2 text-[10px] text-muted-foreground italic px-2">No academic modules.</div>
@@ -307,10 +290,38 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
         <div className="grid grid-cols-2 gap-3">
           {groupedItems["Administration"].length > 0 ? (
             groupedItems["Administration"].map((item, idx) => (
-              <ModuleCard key={idx} item={item} variant="grid" />
+              <ModuleCard key={idx} item={item} />
             ))
           ) : (
              <div className="col-span-2 text-[10px] text-muted-foreground italic px-2">No administration modules.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Reports Group */}
+      <div className="flex flex-col gap-4">
+        <h2 className="font-bold text-slate-800 text-[15px] px-1">Reports</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {groupedItems["Reports"].length > 0 ? (
+            groupedItems["Reports"].map((item, idx) => (
+              <ModuleCard key={idx} item={item} />
+            ))
+          ) : (
+            <div className="col-span-2 text-[10px] text-muted-foreground italic px-2">No report modules.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Communications Group */}
+      <div className="flex flex-col gap-4">
+        <h2 className="font-bold text-slate-800 text-[15px] px-1">Communications</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {groupedItems["Communications"].length > 0 ? (
+            groupedItems["Communications"].map((item, idx) => (
+              <ModuleCard key={idx} item={item} />
+            ))
+          ) : (
+            <div className="col-span-2 text-[10px] text-muted-foreground italic px-2">No communication modules.</div>
           )}
         </div>
       </div>
