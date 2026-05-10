@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Calendar, ChevronRight, Users, BookOpen, Bell, Plus, Clock, ClipboardCheck, GraduationCap, ShieldCheck, FileText, BarChart3, Receipt, Database, Zap, LayoutTemplate, MousePointer2, Activity, Settings, TrendingUp } from 'lucide-react';
+import { Home, Calendar, ChevronRight, Users, BookOpen, Bell, Plus, Clock, ClipboardCheck, GraduationCap, ShieldCheck, FileText, BarChart3, Receipt, Database, Zap, LayoutTemplate, MousePointer2, Activity, Settings, TrendingUp, Star, X, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/utils/permissions';
 import { UserRole } from '@/types/roles';
@@ -10,6 +10,8 @@ import { format, startOfMonth } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useParentInsights } from '@/hooks/useParentInsights';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface NavItem {
   to: string;
@@ -28,6 +30,28 @@ interface MobileModuleLauncherProps {
 export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // --- Favorites Logic ---
+  const [favorites, setFavorites] = React.useState<string[]>(() => {
+    if (!user?.id) return [];
+    const saved = localStorage.getItem(`mobile-favorites-${user.id}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [isFavoritesDialogOpen, setIsFavoritesDialogOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`mobile-favorites-${user.id}`, JSON.stringify(favorites));
+    }
+  }, [favorites, user?.id]);
+
+  const toggleFavorite = (to: string) => {
+    setFavorites(prev =>
+      prev.includes(to) ? prev.filter(f => f !== to) : [...prev, to]
+    );
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -152,6 +176,15 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
   const kpis = getKPIs();
 
+  const favoriteItems = React.useMemo(() => {
+    return navItems.filter(item => {
+      if (item.is_active === false) return false;
+      if (!favorites.includes(item.to)) return false;
+      const featureKey = item.featureName || (item as any).feature_name;
+      return hasPermission(user, featureKey || 'unknown', item.to);
+    });
+  }, [navItems, favorites, user]);
+
   const groupedItems = React.useMemo(() => {
     const groups: Record<string, NavItem[]> = {
       "Academics": [],
@@ -196,7 +229,7 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
     return groups;
   }, [navItems, user]);
 
-  const ModuleCard = ({ item }: { item: NavItem }) => {
+  const ModuleCard = ({ item, isFavorite }: { item: NavItem, isFavorite?: boolean }) => {
     const Icon = item.icon;
 
     const getIconColor = () => {
@@ -220,10 +253,21 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
     };
 
     return (
-      <button
+      <div
         onClick={handleNavigation}
-        className="flex flex-col items-start gap-3 p-3.5 rounded-3xl bg-white border border-slate-100/80 shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group min-h-[135px]"
+        className="flex flex-col items-start gap-3 p-3.5 rounded-3xl bg-white border border-slate-100/80 shadow-[0_4px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group min-h-[135px] cursor-pointer"
       >
+        {isFavorite && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(item.to);
+            }}
+            className="absolute top-3 right-3 h-7 w-7 rounded-full bg-slate-50 flex items-center justify-center text-rose-500 hover:bg-rose-50 transition-colors z-10"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
         <div className={cn("h-10 w-10 rounded-2xl flex items-center justify-center transition-transform group-active:scale-90", getIconColor())}>
           <Icon className="h-5 w-5" />
         </div>
@@ -236,8 +280,8 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
               "Open " + item.label}
           </span>
         </div>
-        <ChevronRight className={cn("h-3 w-3 absolute right-3 bottom-3 opacity-30")} />
-      </button>
+        {!isFavorite && <ChevronRight className={cn("h-3 w-3 absolute right-3 bottom-3 opacity-30")} />}
+      </div>
     );
   };
 
@@ -269,6 +313,22 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
           </div>
         ))}
       </div>
+
+      {/* Favorites Section */}
+      {favoriteItems.length > 0 && (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-bold text-slate-800 text-[15px] flex items-center gap-2">
+              <Star className="h-4 w-4 text-amber-500 fill-amber-500" /> Favorites
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {favoriteItems.map((item, idx) => (
+              <ModuleCard key={idx} item={item} isFavorite={true} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Academics Group */}
       <div className="flex flex-col gap-4">
@@ -329,15 +389,99 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
       {/* Floating Action Button */}
       <div className="fixed bottom-24 right-6 flex flex-col items-center gap-1 z-50">
         <button
+          id="quick-add-btn"
           className="h-14 w-14 rounded-[1.25rem] bg-primary shadow-[0_8px_20px_rgba(79,70,229,0.3)] flex items-center justify-center text-white active:scale-90 transition-transform"
           onClick={() => {
-            alert("Quick Add Actions");
+            console.log("FAB Clicked");
+            setIsFavoritesDialogOpen(true);
           }}
         >
           <Plus className="h-7 w-7" />
         </button>
         <span className="text-[10px] font-bold text-primary tracking-tight">Quick Add</span>
       </div>
+      {isFavoritesDialogOpen && <div className="sr-only" id="dialog-state-open">Open</div>}
+
+      {/* Add Favorites Dialog */}
+      <Dialog open={isFavoritesDialogOpen} onOpenChange={setIsFavoritesDialogOpen}>
+        <DialogContent
+          aria-labelledby="fav-title"
+          aria-describedby="fav-description"
+          className="max-w-[90vw] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl"
+        >
+          <DialogHeader className="p-6 bg-slate-900 text-white">
+            <DialogTitle id="fav-title" className="text-xl font-bold flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-400 fill-amber-400" /> Quick Add Favorites
+            </DialogTitle>
+            <DialogDescription id="fav-description" className="text-slate-400 font-medium">
+              Select modules to pin them at the top for faster access.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search modules..."
+                className="pl-10 h-11 rounded-2xl bg-slate-50 border-slate-100"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {navItems
+                .filter(item => {
+                  const labelMatch = item.label.toLowerCase().includes(searchQuery.toLowerCase());
+                  const isPermitted = hasPermission(user, item.featureName || (item as any).feature_name || 'unknown', item.to);
+                  const isNotFavorite = !favorites.includes(item.to);
+                  const isActive = item.is_active !== false;
+                  return labelMatch && isPermitted && isNotFavorite && isActive;
+                })
+                .map((item, idx) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        toggleFavorite(item.to);
+                        setIsFavoritesDialogOpen(false);
+                        setSearchQuery("");
+                      }}
+                      className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 active:bg-slate-100 transition-colors text-left border border-transparent active:border-slate-200"
+                    >
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900">{item.label}</span>
+                        <span className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">{item.category || "Administration"}</span>
+                      </div>
+                      <Plus className="h-4 w-4 ml-auto text-slate-300" />
+                    </button>
+                  );
+                })}
+
+              {navItems.filter(item => {
+                  const labelMatch = item.label.toLowerCase().includes(searchQuery.toLowerCase());
+                  const isPermitted = hasPermission(user, item.featureName || (item as any).feature_name || 'unknown', item.to);
+                  const isNotFavorite = !favorites.includes(item.to);
+                  const isActive = item.is_active !== false;
+                  return labelMatch && isPermitted && isNotFavorite && isActive;
+              }).length === 0 && (
+                <div className="py-8 text-center text-slate-400 italic text-sm">
+                  No more modules to add.
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <Button variant="ghost" onClick={() => setIsFavoritesDialogOpen(false)} className="font-bold rounded-xl">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
