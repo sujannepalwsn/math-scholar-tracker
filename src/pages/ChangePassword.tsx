@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { UserRole } from "@/types/roles";
-import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
@@ -11,8 +11,10 @@ import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import * as bcrypt from 'bcryptjs';
 import { logger } from "@/utils/logger";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ChangePassword() {
+  const isMobile = useIsMobile();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -89,12 +91,24 @@ export default function ChangePassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative">
+      {isMobile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="absolute top-4 left-4 h-10 w-10 rounded-xl bg-white/50 backdrop-blur-md border shadow-sm z-50"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </Button>
+      )}
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-3 pt-6">
-          <Button variant="ghost" size="sm" className="w-fit -ml-2" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
-          </Button>
+          {!isMobile && (
+            <Button variant="ghost" size="sm" className="w-fit -ml-2" onClick={handleBack}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back
+            </Button>
+          )}
           <div className="mx-auto bg-primary/10 p-3 rounded-xl w-fit">
             <KeyRound className="h-6 w-6 text-primary" />
           </div>

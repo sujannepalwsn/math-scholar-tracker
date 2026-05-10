@@ -4,7 +4,7 @@ import { Activity, AlertTriangle, BarChart3, Bell, Book, BookOpen, Calendar, Cal
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { eachDayOfInterval, format, isFuture, isPast, isToday, startOfDay, subDays } from "date-fns"
 import { cn, safeFormatDate } from "@/lib/utils"
 import { KPICard } from "@/components/dashboard/KPICard"
@@ -45,6 +45,7 @@ interface ChapterPerformanceGroup {
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const today = new Date().toISOString().split("T")[0];
   const teacherId = user?.teacher_id;
   const centerId = user?.center_id;

@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { UserRole } from "@/types/roles";
-import { AlertTriangle, Archive, Award, BarChart3, Book, BookOpen, Sparkles, Bus, Calendar, CalendarDays, CheckSquare, ClipboardCheck, Clock, DollarSign, FileText, GraduationCap, Home, IdCard, KeyRound, LayoutList, LogOut, Menu, MessageSquare, Paintbrush, PenTool, Plane, Settings, Star, TrendingUp, User, UserCheck, UserPlus, Users, Video } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { LogOut, User } from "lucide-react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileModuleLauncher from "./MobileModuleLauncher";
+import MobileHeader from "./MobileHeader";
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
-import CenterLogo from "./CenterLogo";
-import NotificationBell from "./NotificationBell";
 import SchoolBranding from "./dashboard/SchoolBranding";
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
@@ -19,8 +20,10 @@ const staticNavItems = DEFAULT_NAV_ITEMS.filter(it => it.role === UserRole.PAREN
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -82,7 +85,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
   const parentDynamicItems = dynamicItems.filter(it => it.role === UserRole.PARENT);
 
-  // Combine dynamic items and missing static items
   const combinedItems = React.useMemo(() => {
     const items = parentDynamicItems.length > 0 ? [...parentDynamicItems] : [...staticNavItems];
 
@@ -95,12 +97,11 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             feature_name: staticItem.feature_name,
             is_active: true,
             category_id: null,
-            category_name: staticItem.category // Temporary for mapping
+            category_name: staticItem.category
           } as any);
         }
       });
     } else {
-       // Map static items to expected structure
        return staticNavItems.map(si => ({
           ...si,
           category_name: si.category
@@ -116,7 +117,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
                   ((it as any).category_name ? { name: (it as any).category_name } : null);
 
       let route = it.route;
-      // Fix incorrect dashboard links leading to landing page
       if (it.name === "Dashboard" || route === "/" || route?.includes('dashboard')) {
         route = "/parent-dashboard";
       }
@@ -134,7 +134,6 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       };
     });
 
-    // Deduplicate by route to prevent triple Dashboard items
     const uniqueItemsMap = new Map();
     processedItems.forEach(item => {
       if (!uniqueItemsMap.has(item.to)) {
@@ -147,7 +146,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
 
   const headerContent = (
-    <CenterLogo size="md" showName={true} />
+    <SchoolBranding />
   );
 
   const footerContent = (
@@ -162,59 +161,63 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     </div>
   );
 
+  const isLauncherPath = location.pathname === "/parent-dashboard" && !searchParams.get("show_stats");
+  const currentPageItem = updatedNavItems.find(item => item.to === location.pathname);
+
   return (
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
-      <Sidebar
-        navItems={updatedNavItems}
-        headerContent={headerContent}
-        footerContent={footerContent}
-        onCollapseChange={setSidebarCollapsed}
-        isMobileOpen={mobileMenuOpen}
-        onMobileOpenChange={setMobileMenuOpen}
-      />
+      {!isMobile && (
+        <Sidebar
+          navItems={updatedNavItems}
+          headerContent={headerContent}
+          footerContent={footerContent}
+          onCollapseChange={setSidebarCollapsed}
+          isMobileOpen={mobileMenuOpen}
+          onMobileOpenChange={setMobileMenuOpen}
+        />
+      )}
 
-      {/* Mobile Header - Optimized for narrow screens */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 sm:px-4 shadow-sm">
-        <div className="flex items-center shrink-0">
-          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)} className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/5 text-primary">
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <div className="flex-1 min-w-0 px-2 flex justify-center overflow-hidden">
-          <SchoolBranding className="max-w-full" isMobileCompact={true} />
-        </div>
-
-        <div className="flex items-center shrink-0">
-          <NotificationBell />
-        </div>
-      </header>
+      {/* Mobile Header */}
+      {isMobile && (
+        <MobileHeader
+          showBackButton={true}
+          onLogout={handleLogout}
+          isLauncher={isLauncherPath}
+          title={currentPageItem?.label}
+        />
+      )}
 
       {/* Main Content */}
       <main className={cn(
         "flex-1 overflow-y-auto transition-all duration-300 bg-white",
         "md:h-screen",
-        "pt-14 md:pt-0",
-        "px-4 pb-20 md:p-6 lg:p-8",
-        sidebarCollapsed ? "md:ml-24" : "md:ml-72"
+        isMobile ? "pt-[70px]" : "pt-0",
+        isMobile ? "px-0 pb-[80px]" : "px-4 pb-20 md:p-6 lg:p-8",
+        !isMobile && (sidebarCollapsed ? "md:ml-24" : "md:ml-72")
       )}>
         {/* Navigation spacer for mobile fixed header */}
         <div className="md:hidden h-4" />
 
-        {/* Desktop Header Overlay with Branding - Premium Glass Design */}
+        {/* Desktop Header Overlay */}
         <div className="hidden md:flex sticky top-4 left-0 right-0 h-[76px] glass-surface z-30 items-center justify-between px-8 mb-8 rounded-[2.5rem] shadow-glass mx-auto max-w-7xl border border-white/40">
           <SchoolBranding />
           <div className="flex items-center gap-6 pr-4">
              <div className="h-10 w-[1px] bg-black/5" />
-             <NotificationBell />
-             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-white shadow-soft">
+             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border-2 border-white shadow-soft overflow-hidden">
+                <img src={user?.photo_url || ""} alt="" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
                 <User className="h-5 w-5 text-primary" />
              </div>
           </div>
         </div>
 
         <div className="page-enter max-w-7xl mx-auto">
-          {children}
+          {isMobile && isLauncherPath ? (
+            <MobileModuleLauncher navItems={updatedNavItems} />
+          ) : (
+            <div className={cn(isMobile ? "px-4 py-4" : "")}>
+              {children}
+            </div>
+          )}
         </div>
       </main>
 

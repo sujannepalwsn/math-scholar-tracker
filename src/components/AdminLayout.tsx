@@ -1,23 +1,25 @@
 import React, { useState } from "react";
 import { Activity, DollarSign, Home, KeyRound, LogOut, Settings, Shield, User, Building2, BarChart3, Receipt, Database, Zap, LayoutTemplate, Users, Menu, FileText, MousePointer2 } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
-import NotificationBell from "./NotificationBell";
+import MobileHeader from "./MobileHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileModuleLauncher from "./MobileModuleLauncher";
 
 const navItems: Array<{
   to: string;
   label: string;
   icon: React.ElementType;
   role: 'admin' | 'center' | 'parent' | 'teacher';
-  category?: 'Academics' | 'Administration' | 'Reports and Communication';
+  category?: string;
 }> = [
   { to: "/admin-dashboard", label: "Dashboard", icon: Home, role: 'admin' as const },
   { to: "/admin/centers", label: "Tuition Centers", icon: Building2, role: 'admin' as const, category: 'Administration' },
-  { to: "/admin/analytics", label: "Center Analytics", icon: BarChart3, role: 'admin' as const, category: 'Reports and Communication' },
+  { to: "/admin/analytics", label: "Center Analytics", icon: BarChart3, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/billing", label: "Billing System", icon: Receipt, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/usage", label: "Data Usage", icon: Database, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/landing-page", label: "Page Editor", icon: LayoutTemplate, role: 'admin' as const, category: 'Administration' },
@@ -25,15 +27,17 @@ const navItems: Array<{
   { to: "/admin/system-pages", label: "System Pages", icon: FileText, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/subscriptions", label: "SaaS Subscriptions", icon: Zap, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/finance", label: "Finance", icon: DollarSign, role: 'admin' as const, category: 'Administration' },
-  { to: "/admin/visitor-logs", label: "Visitor Logs", icon: MousePointer2, role: 'admin' as const, category: 'Reports and Communication' },
-  { to: "/admin/errors", label: "Error Tracking", icon: Activity, role: 'admin' as const, category: 'Reports and Communication' },
+  { to: "/admin/visitor-logs", label: "Visitor Logs", icon: MousePointer2, role: 'admin' as const, category: 'Administration' },
+  { to: "/admin/errors", label: "Error Tracking", icon: Activity, role: 'admin' as const, category: 'Administration' },
   { to: "/admin/settings", label: "Settings", icon: Settings, role: 'admin' as const, category: 'Administration' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -63,49 +67,46 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 
+  const isLauncherPath = location.pathname === "/admin-dashboard" && !searchParams.get("show_stats");
+  const currentPageItem = navItems.find(item => item.to === location.pathname);
+
   return (
     <div className="flex min-h-screen bg-background flex-col md:flex-row">
-      <Sidebar
-        navItems={navItems}
-        headerContent={headerContent}
-        footerContent={footerContent}
-        onCollapseChange={setSidebarCollapsed}
-        isMobileOpen={mobileMenuOpen}
-        onMobileOpenChange={setMobileMenuOpen}
-      />
+      {!isMobile && (
+        <Sidebar
+          navItems={navItems}
+          headerContent={headerContent}
+          footerContent={footerContent}
+          onCollapseChange={setSidebarCollapsed}
+          isMobileOpen={mobileMenuOpen}
+          onMobileOpenChange={setMobileMenuOpen}
+        />
+      )}
 
-      <header className="md:hidden fixed top-0 left-0 right-0 h-[50px] bg-white/90 backdrop-blur-xl border-b z-40 flex items-center justify-between px-2 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(true)}
-            className="h-9 w-9 bg-primary/5 text-primary rounded-xl"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Shield className="h-4 w-4 text-primary" />
-          </div>
-          <span className="font-semibold text-foreground text-sm">Admin</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <Button variant="ghost" size="icon" onClick={handleLogout} className="h-9 w-9 text-muted-foreground">
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+      {isMobile && (
+        <MobileHeader
+          showBackButton={true}
+          onLogout={handleLogout}
+          isLauncher={isLauncherPath}
+          title={currentPageItem?.label}
+        />
+      )}
 
       <main className={cn(
         "flex-1 overflow-y-auto bg-background transition-all duration-200",
         "md:h-screen",
-        "pt-14 md:pt-0",
-        "px-4 pb-20 md:p-6 lg:p-8",
-        sidebarCollapsed ? "md:ml-20" : "md:ml-64"
+        isMobile ? "pt-[70px]" : "pt-0",
+        isMobile ? "px-0 pb-[80px]" : "px-4 pb-20 md:p-6 lg:p-8",
+        !isMobile && (sidebarCollapsed ? "md:ml-20" : "md:ml-64")
       )}>
         <div className="page-enter max-w-7xl mx-auto">
-          {children}
+          {isMobile && isLauncherPath ? (
+            <MobileModuleLauncher navItems={navItems.map(it => ({ ...it, icon: it.icon as any }))} />
+          ) : (
+             <div className={cn(isMobile ? "px-4 py-4" : "")}>
+              {children}
+            </div>
+          )}
         </div>
       </main>
 
