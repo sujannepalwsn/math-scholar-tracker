@@ -12,7 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-export default function NotificationBell() {
+export default function NotificationBell({ className }: { className?: string }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -128,10 +128,10 @@ export default function NotificationBell() {
       <Button
         variant="ghost"
         size="icon"
-        className="relative bg-card shadow-soft rounded-xl hover:bg-card/80"
+        className={cn("relative bg-card shadow-soft rounded-xl hover:bg-card/80", className)}
         onClick={() => setOpen(!open)}
       >
-        <Bell className="h-5 w-5 text-muted-foreground" />
+        <Bell className={cn("h-5 w-5 text-muted-foreground", className && "text-inherit")} />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive text-destructive-foreground rounded-full text-[10px] font-bold flex items-center justify-center">
             {unreadCount > 9 ? "9+" : unreadCount}

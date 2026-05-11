@@ -23,7 +23,7 @@ import { useNavigate } from "react-router-dom";
 export default function DailySnapshot() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), "yyyy-MM-dd");
   const activeStudentId = useMemo(() => {
     if (user?.student_id) return user.student_id;
     const linked = user?.linked_students;
