@@ -4,11 +4,13 @@ import { Home, Users, BarChart3, Receipt, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
+import { useTheme } from "@/contexts/ThemeContext";
 import { getDashboardPath, hasPermission } from "@/utils/permissions"
 import { UserRole } from "@/types/roles";
 
 export default function BottomNav({ navItems }: { navItems?: any[] }) {
   const { user } = useAuth();
+  const { userPreferences } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -49,8 +51,44 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
     });
   }, [dashboardPath, user]);
 
+  if (userPreferences.modernMobileUI) {
+    return (
+      <div className="fixed bottom-6 inset-x-6 h-[72px] bg-white/90 backdrop-blur-lg border border-white/20 flex items-center justify-between px-6 z-40 md:hidden rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.08)]">
+        {mobileNavItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.to || (item.label === 'Home' && location.pathname.includes('dashboard'));
+
+          return (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.to)}
+              className={cn(
+                "flex flex-col items-center gap-1 transition-all active:scale-90 relative",
+                isActive ? "text-blue-600" : "text-slate-400"
+              )}
+            >
+              <div className={cn(
+                "p-2 rounded-2xl transition-all",
+                isActive ? "bg-blue-50" : ""
+              )}>
+                <Icon className={cn("h-5 w-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
+              </div>
+              <span className={cn(
+                "text-[9px] font-bold tracking-tight uppercase",
+                isActive ? "text-blue-600" : "text-slate-400"
+              )}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Legacy Classic UI
   return (
-    <div className="fixed bottom-6 inset-x-6 h-[72px] bg-white/90 backdrop-blur-lg border border-white/20 flex items-center justify-between px-6 z-40 md:hidden rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.08)]">
+    <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t flex items-center justify-around z-40 md:hidden">
       {mobileNavItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.to || (item.label === 'Home' && location.pathname.includes('dashboard'));
@@ -60,22 +98,12 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
             key={item.label}
             onClick={() => navigate(item.to)}
             className={cn(
-              "flex flex-col items-center gap-1 transition-all active:scale-90 relative",
-              isActive ? "text-blue-600" : "text-slate-400"
+              "flex flex-col items-center gap-1",
+              isActive ? "text-primary" : "text-muted-foreground"
             )}
           >
-            <div className={cn(
-              "p-2 rounded-2xl transition-all",
-              isActive ? "bg-blue-50" : ""
-            )}>
-              <Icon className={cn("h-5 w-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
-            </div>
-            <span className={cn(
-              "text-[9px] font-bold tracking-tight uppercase",
-              isActive ? "text-blue-600" : "text-slate-400"
-            )}>
-              {item.label}
-            </span>
+            <Icon className="h-5 w-5" />
+            <span className="text-[10px]">{item.label}</span>
           </button>
         );
       })}
