@@ -7,6 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import MobileModuleLauncher from "./MobileModuleLauncher";
 import MobileHeader from "./MobileHeader";
 import { useAuth } from "@/contexts/AuthContext"
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button"
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
@@ -24,6 +25,7 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
+  const { userPreferences } = useTheme();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -198,8 +200,9 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
       {/* Mobile Header */}
       {isMobile && (
         <MobileHeader
-          showBackButton={true}
+          showBackButton={!isLauncherPath}
           onLogout={handleLogout}
+          onMenuToggle={() => setMobileMenuOpen(true)}
           isLauncher={isLauncherPath}
           title={currentPageItem?.label}
         />
@@ -209,8 +212,8 @@ export default function CenterLayout({ children }: { children: React.ReactNode }
       <main className={cn(
         "flex-1 overflow-y-auto mesh-gradient transition-all duration-300",
         "md:h-screen",
-        isMobile ? "pt-[70px]" : "pt-0",
-        isMobile ? "px-0 pb-[80px]" : "px-4 pb-20 md:p-6 lg:p-8",
+        isMobile ? (userPreferences.modernMobileUI ? "pt-[70px]" : "pt-16") : "pt-0",
+        isMobile ? (userPreferences.modernMobileUI ? "px-0 pb-[80px]" : "px-4 pb-20") : "px-4 pb-20 md:p-6 lg:p-8",
         !isMobile && (sidebarCollapsed ? "md:ml-24" : "md:ml-72")
       )}>
         {/* Subscription Alert */}

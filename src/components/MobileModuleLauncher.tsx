@@ -260,8 +260,6 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
   return (
     <div className="flex flex-col gap-8 p-5 pb-40 animate-in fade-in duration-700 bg-gray-50 min-h-screen font-inter">
-      <DashboardHeader />
-
       {/* Welcome Card */}
       <div className="bg-white rounded-[2rem] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-6">
         <div className="flex items-center justify-between">
@@ -331,6 +329,8 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
           </div>
         );
       })}
+
+      <DashboardHeader />
 
       {/* Floating Action Button */}
       <div className="fixed bottom-32 right-6 z-50">

@@ -19,11 +19,12 @@ import { cn } from '@/lib/utils';
 interface MobileHeaderProps {
   showBackButton?: boolean;
   onLogout: () => void;
+  onMenuToggle?: () => void;
   title?: string;
   isLauncher?: boolean;
 }
 
-export default function MobileHeader({ showBackButton, onLogout, title, isLauncher }: MobileHeaderProps) {
+export default function MobileHeader({ showBackButton, onLogout, onMenuToggle, title, isLauncher }: MobileHeaderProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { userPreferences } = useTheme();
@@ -122,7 +123,7 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
           </Button>
         )}
         {!showBackButton && isLauncher && (
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMenuToggle}>
             <Menu className="h-5 w-5" />
           </Button>
         )}
