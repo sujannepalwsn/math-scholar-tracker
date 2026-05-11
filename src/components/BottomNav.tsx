@@ -1,6 +1,6 @@
 "use client";
 import React, { useMemo } from "react";
-import { Home, Users, BarChart3, Receipt, User } from "lucide-react";
+import { Home, Check, TrendingUp, DollarSign, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/AuthContext"
@@ -22,19 +22,19 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
       {
         to: user?.role === UserRole.PARENT ? "/parent/attendance" : "/attendance",
         label: "Attendance",
-        icon: Users,
+        icon: Check,
         feature: 'take_attendance'
       },
       {
         to: user?.role === UserRole.PARENT ? "/parent/performance" : "/student-report",
         label: "Reports",
-        icon: BarChart3,
+        icon: TrendingUp,
         feature: 'student_report'
       },
       {
         to: user?.role === UserRole.PARENT ? "/parent/finance" : "/finance",
         label: "Finance",
-        icon: Receipt,
+        icon: DollarSign,
         feature: 'finance_management'
       },
       {
@@ -53,7 +53,7 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
 
   if (userPreferences.modernMobileUI) {
     return (
-      <div className="fixed bottom-6 inset-x-6 h-[72px] bg-white/90 backdrop-blur-lg border border-white/20 flex items-center justify-between px-6 z-40 md:hidden rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.08)]">
+      <div className="fixed bottom-0 left-0 right-0 h-[80px] bg-slate-100/95 backdrop-blur-lg border-t border-slate-200 flex items-center justify-between px-6 z-40 md:hidden pb-4">
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.to || (item.label === 'Home' && location.pathname.includes('dashboard'));
@@ -63,19 +63,14 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
               key={item.label}
               onClick={() => navigate(item.to)}
               className={cn(
-                "flex flex-col items-center gap-1 transition-all active:scale-90 relative",
-                isActive ? "text-blue-600" : "text-slate-400"
+                "flex flex-col items-center gap-1 transition-all active:scale-90 relative px-2",
+                isActive ? "text-slate-900" : "text-slate-500"
               )}
             >
-              <div className={cn(
-                "p-2 rounded-2xl transition-all",
-                isActive ? "bg-blue-50" : ""
-              )}>
-                <Icon className={cn("h-5 w-5", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
-              </div>
+              <Icon className={cn("h-6 w-6", isActive ? "stroke-[2.5px]" : "stroke-[2px]")} />
               <span className={cn(
-                "text-[9px] font-bold tracking-tight uppercase",
-                isActive ? "text-blue-600" : "text-slate-400"
+                "text-[10px] font-bold tracking-tight",
+                isActive ? "text-slate-900" : "text-slate-500"
               )}>
                 {item.label}
               </span>

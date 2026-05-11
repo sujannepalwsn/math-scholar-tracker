@@ -149,83 +149,65 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
       }
     };
 
-    const getGradient = () => {
+    const getIconColors = () => {
       const label = item.label.toLowerCase();
       const category = item.category;
 
-      // Academic-themed: blue, cyan, emerald, violet, orange
       if (category === 'Academics' || groups["Dashboard"].includes(item)) {
-        if (label.includes("attendance")) return "from-blue-600 to-blue-400";
-        if (label.includes("routine")) return "from-cyan-600 to-cyan-400";
-        if (label.includes("lesson")) return "from-emerald-600 to-emerald-400";
-        if (label.includes("homework")) return "from-violet-600 to-violet-400";
-        if (label.includes("test") || label.includes("exam") || label.includes("marks") || label.includes("results")) return "from-orange-600 to-orange-400";
-        if (label.includes("pre school") || label.includes("activities")) return "from-cyan-600 to-blue-400";
-        if (label.includes("discipline")) return "from-blue-700 to-indigo-500";
-        return "from-blue-600 to-blue-400";
+        if (label.includes("attendance")) return { bg: "bg-blue-500", text: "text-blue-600", glow: "shadow-blue-500/20" };
+        if (label.includes("routine")) return { bg: "bg-cyan-500", text: "text-cyan-600", glow: "shadow-cyan-500/20" };
+        if (label.includes("lesson")) return { bg: "bg-emerald-500", text: "text-emerald-600", glow: "shadow-emerald-500/20" };
+        if (label.includes("homework")) return { bg: "bg-violet-500", text: "text-violet-600", glow: "shadow-violet-500/20" };
+        if (label.includes("test") || label.includes("exam") || label.includes("marks") || label.includes("results")) return { bg: "bg-orange-500", text: "text-orange-600", glow: "shadow-orange-500/20" };
+        if (label.includes("pre school") || label.includes("activities")) return { bg: "bg-cyan-500", text: "text-cyan-600", glow: "shadow-cyan-500/20" };
+        if (label.includes("discipline")) return { bg: "bg-indigo-500", text: "text-indigo-600", glow: "shadow-indigo-500/20" };
+        return { bg: "bg-blue-500", text: "text-blue-600", glow: "shadow-blue-500/20" };
       }
 
-      // Management-themed: indigo, purple, green, teal, red
       if (category === 'Administration') {
-        if (label.includes("registration") || label.includes("student")) return "from-indigo-600 to-indigo-400";
-        if (label.includes("teacher") || label.includes("hr") || label.includes("leave")) return "from-purple-600 to-purple-400";
-        if (label.includes("attendance")) return "from-green-600 to-green-400";
-        if (label.includes("inventory") || label.includes("asset") || label.includes("id card")) return "from-teal-600 to-teal-400";
-        if (label.includes("transport") || label.includes("settings")) return "from-red-600 to-red-400";
-        return "from-indigo-600 to-purple-400";
+        if (label.includes("registration") || label.includes("student")) return { bg: "bg-indigo-500", text: "text-indigo-600", glow: "shadow-indigo-500/20" };
+        if (label.includes("teacher") || label.includes("hr") || label.includes("leave")) return { bg: "bg-purple-500", text: "text-purple-600", glow: "shadow-purple-500/20" };
+        if (label.includes("attendance")) return { bg: "bg-green-500", text: "text-green-600", glow: "shadow-green-500/20" };
+        if (label.includes("inventory") || label.includes("asset") || label.includes("id card")) return { bg: "bg-teal-500", text: "text-teal-600", glow: "shadow-teal-500/20" };
+        if (label.includes("transport") || label.includes("settings")) return { bg: "bg-red-500", text: "text-red-600", glow: "shadow-red-500/20" };
+        return { bg: "bg-indigo-500", text: "text-indigo-600", glow: "shadow-indigo-500/20" };
       }
 
-      // Analytics and communication: pink, yellow, orange, blue, purple
       if (category === 'Reports and Communication' || category === 'Reports' || category === 'Communication') {
-        if (label.includes("message") || label.includes("meeting")) return "from-pink-600 to-pink-400";
-        if (label.includes("report") || label.includes("summary")) return "from-yellow-600 to-yellow-400";
-        if (label.includes("performance") || label.includes("record") || label.includes("calendar")) return "from-orange-600 to-orange-400";
-        if (label.includes("finance")) return "from-blue-600 to-blue-400";
-        return "from-purple-600 to-purple-400";
+        if (label.includes("message") || label.includes("meeting")) return { bg: "bg-pink-500", text: "text-pink-600", glow: "shadow-pink-500/20" };
+        if (label.includes("report") || label.includes("summary")) return { bg: "bg-yellow-500", text: "text-yellow-600", glow: "shadow-yellow-500/20" };
+        if (label.includes("performance") || label.includes("record") || label.includes("calendar")) return { bg: "bg-orange-500", text: "text-orange-600", glow: "shadow-orange-500/20" };
+        if (label.includes("finance")) return { bg: "bg-sky-500", text: "text-sky-600", glow: "shadow-sky-500/20" };
+        return { bg: "bg-purple-500", text: "text-purple-600", glow: "shadow-purple-500/20" };
       }
 
-      return "from-slate-600 to-slate-400";
+      return { bg: "bg-slate-500", text: "text-slate-600", glow: "shadow-slate-500/20" };
     };
 
-    const getDescription = () => {
-      const label = item.label;
-      if (label === "Take Attendance") return "Mark daily presence";
-      if (label === "Class Routine") return "Class schedules";
-      if (label === "Lesson Plans") return "Curriculum planning";
-      if (label === "Lesson Tracking") return "Track progress";
-      if (label === "Homework") return "Assign & track";
-      if (label === "Tests") return "Manage class tests";
-      if (label === "Exams & Results") return "Grade management";
-      if (label === "Pre School Activities") return "Early years tracking";
-      if (label === "Discipline") return "Conduct records";
-
-      if (label === "Students Registration") return "Enrol new students";
-      if (label === "Teachers Registration") return "Manage faculty";
-      if (label === "HR Management") return "Staff & payroll";
-      if (label === "Leave Management") return "Time off requests";
-      if (label === "Inventory & Assets") return "School resources";
-      if (label === "Transport & Tracking") return "Bus routes & GPS";
-
-      if (label === "Messages") return "Internal chat";
-      if (label === "Meetings") return "Staff & parents";
-      if (label === "Finance") return "Fees & accounts";
-      if (label === "Student Report") return "Academic summary";
-
-      return "Manage " + label.toLowerCase();
-    };
+    const colors = getIconColors();
 
     return (
       <button
         onClick={handleNavigate}
-        className="flex flex-col items-start gap-3 p-4 rounded-2xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group w-full border border-slate-100/50"
+        className="flex flex-col items-center gap-2 active:scale-95 transition-all text-center group w-full"
       >
-        <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br transition-transform group-hover:scale-110", getGradient())}>
-          <Icon className="h-6 w-6" />
+        <div className="relative flex items-center justify-center h-16 w-full">
+          {/* Glow Effect */}
+          <div className={cn(
+            "absolute inset-3 rounded-full blur-xl opacity-50 transition-opacity group-hover:opacity-70",
+            colors.bg
+          )} />
+
+          <div className={cn(
+            "h-14 w-14 rounded-2xl flex items-center justify-center bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] relative z-10 transition-transform group-hover:scale-110",
+            colors.glow
+          )}>
+            <Icon className={cn("h-7 w-7", colors.text)} />
+          </div>
         </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[14px] font-bold text-slate-900 leading-tight line-clamp-1 tracking-tight">{item.label}</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider line-clamp-1">{getDescription()}</span>
-        </div>
+        <span className="text-[10px] font-bold text-slate-800 leading-tight line-clamp-2 px-1 h-8 flex items-start justify-center">
+          {item.label}
+        </span>
       </button>
     );
   };
@@ -297,19 +279,19 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
       {/* Favorites */}
       {favorites.length > 0 && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between px-1">
-             <h2 className="font-black text-slate-900 text-sm flex items-center gap-2 uppercase tracking-[0.15em]">
-              <Star className="h-4 w-4 text-amber-500 fill-amber-500" /> Favorites
+             <h2 className="font-black text-slate-900 text-xs flex items-center gap-2 uppercase tracking-[0.2em] opacity-80">
+              <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> Favorites
             </h2>
             <button
               onClick={() => setIsFavoritesDialogOpen(true)}
-              className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-full"
+              className="text-[9px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-full"
             >
               Edit
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-y-8 gap-x-2">
             {navItems.filter(i => favorites.includes(i.to)).map((item, idx) => (
               <ModuleCard key={idx} item={item} />
             ))}
@@ -321,9 +303,12 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
       {Object.entries(groups).map(([category, items]) => {
         if (items.length === 0) return null;
         return (
-          <div key={category} className="flex flex-col gap-5">
-            <h2 className="font-black text-slate-900 text-sm px-1 tracking-[0.15em] uppercase border-l-4 border-primary pl-3">{category}</h2>
-            <div className="grid grid-cols-2 gap-4">
+          <div key={category} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
+              <div className="h-px bg-slate-200 w-full" />
+              <h2 className="font-black text-slate-900 text-[12px] px-1 tracking-[0.2em] uppercase text-center opacity-90">{category}</h2>
+            </div>
+            <div className="grid grid-cols-4 gap-y-6 gap-x-1">
               {items.map((item, idx) => (
                 <ModuleCard key={idx} item={item} />
               ))}
