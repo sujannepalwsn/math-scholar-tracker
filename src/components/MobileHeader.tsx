@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import NotificationBell from './NotificationBell';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
 
 interface MobileHeaderProps {
   showBackButton?: boolean;
@@ -27,9 +28,14 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
   const { user } = useAuth();
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-[70px] bg-white/95 backdrop-blur-md z-40 flex items-center justify-between px-4 border-b border-slate-100">
-      <div className="flex items-center gap-3">
-        {showBackButton && !isLauncher ? (
+    <header className={cn(
+      "fixed top-0 left-0 right-0 h-[70px] z-40 flex items-center justify-between px-4 transition-all",
+      isLauncher
+        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+        : "bg-white/95 backdrop-blur-md border-b border-slate-100 text-slate-900"
+    )}>
+      <div className="flex items-center gap-3 min-w-[40px]">
+        {showBackButton && !isLauncher && (
           <Button
             variant="ghost"
             size="icon"
@@ -38,44 +44,52 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
           >
             <ChevronLeft className="h-6 w-6" />
           </Button>
-        ) : isLauncher ? (
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border shadow-sm">
+        )}
+      </div>
+
+      <div className="flex-1 flex items-center justify-center overflow-hidden px-2">
+        {isLauncher ? (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-9 w-9 border-2 border-white/20 shadow-sm">
               <AvatarImage src={user?.center_logo_url || ""} />
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+              <AvatarFallback className="bg-white/10 text-white text-xs font-bold">
                 {user?.center_name?.substring(0, 2).toUpperCase() || 'GA'}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <span className="font-bold text-slate-900 text-sm leading-tight">
-                {user?.center_name || "Global Academy"}
-              </span>
-              <span className="text-[10px] text-muted-foreground font-medium">
-                {user?.role === 'parent' ? "Parent Portal" : "English School"}
-              </span>
-            </div>
+            <span className="font-bold text-white text-base leading-tight truncate">
+              {user?.center_name || "Global Academy"}
+            </span>
           </div>
-        ) : null}
+        ) : (
+          title && (
+            <span className="font-bold text-slate-800 truncate text-sm uppercase tracking-wider block text-center">
+              {title}
+            </span>
+          )
+        )}
       </div>
 
-      {!isLauncher && title && (
-        <div className="absolute left-1/2 -translate-x-1/2 overflow-hidden px-2 max-w-[50%]">
-          <span className="font-bold text-slate-800 truncate text-sm uppercase tracking-wider block text-center">
-            {title}
-          </span>
-        </div>
-      )}
+      <div className="flex items-center gap-1 min-w-[80px] justify-end">
+        {isLauncher && (
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-white/10 rounded-full">
+            <Search className="h-5 w-5" />
+          </Button>
+        )}
 
-      <div className="flex items-center gap-2">
-        <NotificationBell />
+        <div className={cn(isLauncher && "text-white [&_button]:bg-transparent [&_button]:shadow-none [&_button]:text-white [&_svg]:text-white")}>
+          <NotificationBell />
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full p-0 hover:bg-slate-100 border border-slate-200">
-              <Avatar className="h-8 w-8">
+            <Button variant="ghost" size="icon" className={cn(
+              "h-9 w-9 rounded-full p-0 transition-all active:scale-95",
+              isLauncher ? "border border-white/20" : "hover:bg-slate-100 border border-slate-200"
+            )}>
+              <Avatar className="h-7 w-7">
                 <AvatarImage src={user?.photo_url} />
-                <AvatarFallback className="bg-slate-100 text-slate-600">
-                  <User className="h-4 w-4" />
+                <AvatarFallback className={cn(isLauncher ? "bg-white/10 text-white" : "bg-slate-100 text-slate-600")}>
+                  <User className="h-3.5 w-3.5" />
                 </AvatarFallback>
               </Avatar>
             </Button>
