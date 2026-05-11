@@ -43,7 +43,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const today = new Date().toISOString().split("T")[0];
+  const today = format(new Date(), "yyyy-MM-dd");
   const centerId = user?.center_id;
   const role = user?.role;
 
@@ -122,10 +122,12 @@ export default function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance', filter: `center_id=eq.${centerId}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["attendance-dashboard"] });
         queryClient.invalidateQueries({ queryKey: ["attendance-historical"] });
+        queryClient.invalidateQueries({ queryKey: ["pending-attendance-by-grade"] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teacher_attendance', filter: `center_id=eq.${centerId}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["teacher-attendance-dashboard"] });
         queryClient.invalidateQueries({ queryKey: ["teacher-attendance-historical"] });
+        queryClient.invalidateQueries({ queryKey: ["pending-teacher-attendance"] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_applications', filter: `center_id=eq.${centerId}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["pending-leaves-count"] });

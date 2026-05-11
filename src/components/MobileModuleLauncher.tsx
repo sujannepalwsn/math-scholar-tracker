@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
 
 interface NavItem {
   to: string;
@@ -227,6 +228,8 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
   return (
     <div className="flex flex-col gap-8 p-5 pb-40 animate-in fade-in duration-700 bg-gray-50 min-h-screen font-inter">
+      <DashboardHeader />
+
       {/* Welcome Card */}
       <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-purple-600 p-8 text-white shadow-2xl shadow-blue-600/20 mt-4">
         <div className="relative z-10 flex flex-col gap-6">
