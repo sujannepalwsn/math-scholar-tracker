@@ -31,13 +31,10 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
   if (userPreferences.modernMobileUI) {
     return (
       <header className={cn(
-        "fixed top-0 left-0 right-0 h-[70px] z-40 flex items-center justify-between px-4 transition-all",
-        isLauncher
-          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-          : "bg-white/95 backdrop-blur-md border-b border-slate-100 text-slate-900"
+        "fixed top-0 left-0 right-0 h-[70px] z-40 flex items-center justify-between px-4 transition-all bg-white/95 backdrop-blur-md border-b border-slate-100 text-slate-900"
       )}>
         <div className="flex items-center gap-3 min-w-[40px]">
-          {showBackButton && !isLauncher && (
+          {!isLauncher && showBackButton && (
             <Button
               variant="ghost"
               size="icon"
@@ -50,43 +47,32 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
         </div>
 
         <div className="flex-1 flex items-center justify-center overflow-hidden px-2">
-          {isLauncher ? (
-            <div className="flex items-center gap-2">
-              <Avatar className="h-9 w-9 border-2 border-white/20 shadow-sm">
-                <AvatarImage src={user?.center_logo_url || ""} />
-                <AvatarFallback className="bg-white/10 text-white text-xs font-bold">
-                  {user?.center_name?.substring(0, 2).toUpperCase() || 'GA'}
+          <div className="flex items-center gap-2">
+            {isLauncher && user?.center_logo_url && (
+              <Avatar className="h-8 w-8 border-2 border-slate-100 shadow-sm">
+                <AvatarImage src={user?.center_logo_url} />
+                <AvatarFallback className="bg-slate-100 text-slate-600 text-[10px] font-bold">
+                  {user?.center_name?.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <span className="font-bold text-white text-base leading-tight truncate">
-                {user?.center_name || "Global Academy"}
-              </span>
-            </div>
-          ) : (
-            title && (
-              <span className="font-bold text-slate-800 truncate text-sm uppercase tracking-wider block text-center">
-                {title}
-              </span>
-            )
-          )}
+            )}
+            <span className="font-black text-slate-900 text-base leading-tight truncate tracking-tighter uppercase">
+              {isLauncher ? (user?.center_name || "EduFlow SMS") : title}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-1 min-w-[80px] justify-end">
-          {isLauncher && (
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-white hover:bg-white/10 rounded-full">
-              <Search className="h-5 w-5" />
-            </Button>
-          )}
+          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-600 hover:bg-slate-100 rounded-full">
+            <Search className="h-5 w-5" />
+          </Button>
 
-          <div className={cn(isLauncher && "text-white [&_button]:bg-transparent [&_button]:shadow-none [&_button]:text-white [&_svg]:text-white")}>
-            <NotificationBell />
-          </div>
+          <NotificationBell className="bg-transparent shadow-none hover:bg-slate-100 text-slate-600" />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className={cn(
-                "h-9 w-9 rounded-full p-0 transition-all active:scale-95",
-                isLauncher ? "border border-white/20" : "hover:bg-slate-100 border border-slate-200"
+                "h-9 w-9 rounded-full p-0 transition-all active:scale-95 hover:bg-slate-100 border border-slate-200"
               )}>
                 <Avatar className="h-7 w-7">
                   <AvatarImage src={user?.photo_url} />

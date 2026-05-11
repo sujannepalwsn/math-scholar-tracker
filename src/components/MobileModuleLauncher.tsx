@@ -14,9 +14,11 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useParentInsights } from '@/hooks/useParentInsights';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
 
 interface NavItem {
   to: string;
@@ -89,11 +91,24 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
     enabled: !!user?.center_id
   });
 
-  const stats = [
-    { label: "Students", value: totalStudentsCount.toString() },
-    { label: "Teachers", value: teachersCount.toString() },
-    { label: "Attendance", value: attendanceToday.toString() },
-  ];
+  const { stats: parentStats } = useParentInsights(
+    user?.role === UserRole.PARENT ? (user.student_id || (user.linked_students?.[0] as any)?.id || null) : null
+  );
+
+  const kpis = React.useMemo(() => {
+    if (user?.role === UserRole.PARENT) {
+      return [
+        { label: "Attendance", value: `${Math.round(parentStats.attendanceRate)}%` },
+        { label: "Avg Score", value: `${Math.round(parentStats.averageTestScore)}%` },
+        { label: "Homework", value: `${Math.round(parentStats.homeworkCompletionRate)}%` },
+      ];
+    }
+    return [
+      { label: "Students", value: totalStudentsCount.toString() },
+      { label: "Teachers", value: teachersCount.toString() },
+      { label: "Attendance", value: attendanceToday.toString() },
+    ];
+  }, [user?.role, parentStats, totalStudentsCount, teachersCount, attendanceToday]);
 
   const groupedItems = React.useMemo(() => {
     const groups: Record<string, NavItem[]> = {
@@ -140,44 +155,62 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
       // Academic-themed: blue, cyan, emerald, violet, orange
       if (category === 'Academics' || groups["Dashboard"].includes(item)) {
-        if (label.includes("attendance")) return "from-blue-500 to-blue-600";
-        if (label.includes("routine")) return "from-cyan-500 to-cyan-600";
-        if (label.includes("lesson")) return "from-emerald-500 to-emerald-600";
-        if (label.includes("homework")) return "from-violet-500 to-violet-600";
-        if (label.includes("test") || label.includes("exam") || label.includes("marks")) return "from-orange-500 to-orange-600";
-        return "from-blue-500 to-indigo-600";
+        if (label.includes("attendance")) return "from-blue-600 to-blue-400";
+        if (label.includes("routine")) return "from-cyan-600 to-cyan-400";
+        if (label.includes("lesson")) return "from-emerald-600 to-emerald-400";
+        if (label.includes("homework")) return "from-violet-600 to-violet-400";
+        if (label.includes("test") || label.includes("exam") || label.includes("marks") || label.includes("results")) return "from-orange-600 to-orange-400";
+        if (label.includes("pre school") || label.includes("activities")) return "from-cyan-600 to-blue-400";
+        if (label.includes("discipline")) return "from-blue-700 to-indigo-500";
+        return "from-blue-600 to-blue-400";
       }
 
       // Management-themed: indigo, purple, green, teal, red
       if (category === 'Administration') {
-        if (label.includes("registration") || label.includes("student")) return "from-indigo-500 to-indigo-600";
-        if (label.includes("teacher") || label.includes("hr") || label.includes("leave")) return "from-purple-500 to-purple-600";
-        if (label.includes("attendance")) return "from-green-500 to-green-600";
-        if (label.includes("inventory") || label.includes("asset")) return "from-teal-500 to-teal-600";
-        if (label.includes("transport")) return "from-red-500 to-red-600";
-        return "from-indigo-500 to-purple-600";
+        if (label.includes("registration") || label.includes("student")) return "from-indigo-600 to-indigo-400";
+        if (label.includes("teacher") || label.includes("hr") || label.includes("leave")) return "from-purple-600 to-purple-400";
+        if (label.includes("attendance")) return "from-green-600 to-green-400";
+        if (label.includes("inventory") || label.includes("asset") || label.includes("id card")) return "from-teal-600 to-teal-400";
+        if (label.includes("transport") || label.includes("settings")) return "from-red-600 to-red-400";
+        return "from-indigo-600 to-purple-400";
       }
 
       // Analytics and communication: pink, yellow, orange, blue, purple
       if (category === 'Reports and Communication' || category === 'Reports' || category === 'Communication') {
-        if (label.includes("message") || label.includes("meeting")) return "from-pink-500 to-pink-600";
-        if (label.includes("report") || label.includes("summary")) return "from-yellow-500 to-yellow-600";
-        if (label.includes("performance") || label.includes("record")) return "from-orange-500 to-orange-600";
-        if (label.includes("finance")) return "from-purple-500 to-purple-600";
-        return "from-blue-500 to-blue-600";
+        if (label.includes("message") || label.includes("meeting")) return "from-pink-600 to-pink-400";
+        if (label.includes("report") || label.includes("summary")) return "from-yellow-600 to-yellow-400";
+        if (label.includes("performance") || label.includes("record") || label.includes("calendar")) return "from-orange-600 to-orange-400";
+        if (label.includes("finance")) return "from-blue-600 to-blue-400";
+        return "from-purple-600 to-purple-400";
       }
 
-      return "from-slate-500 to-slate-600";
+      return "from-slate-600 to-slate-400";
     };
 
     const getDescription = () => {
       const label = item.label;
       if (label === "Take Attendance") return "Mark daily presence";
       if (label === "Class Routine") return "Class schedules";
+      if (label === "Lesson Plans") return "Curriculum planning";
+      if (label === "Lesson Tracking") return "Track progress";
       if (label === "Homework") return "Assign & track";
-      if (label === "Finance") return "Fees & accounts";
-      if (label === "Messages") return "Internal chat";
       if (label === "Tests") return "Manage class tests";
+      if (label === "Exams & Results") return "Grade management";
+      if (label === "Pre School Activities") return "Early years tracking";
+      if (label === "Discipline") return "Conduct records";
+
+      if (label === "Students Registration") return "Enrol new students";
+      if (label === "Teachers Registration") return "Manage faculty";
+      if (label === "HR Management") return "Staff & payroll";
+      if (label === "Leave Management") return "Time off requests";
+      if (label === "Inventory & Assets") return "School resources";
+      if (label === "Transport & Tracking") return "Bus routes & GPS";
+
+      if (label === "Messages") return "Internal chat";
+      if (label === "Meetings") return "Staff & parents";
+      if (label === "Finance") return "Fees & accounts";
+      if (label === "Student Report") return "Academic summary";
+
       return "Manage " + label.toLowerCase();
     };
 
@@ -227,42 +260,39 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
   return (
     <div className="flex flex-col gap-8 p-5 pb-40 animate-in fade-in duration-700 bg-gray-50 min-h-screen font-inter">
+      <DashboardHeader />
+
       {/* Welcome Card */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-purple-600 p-8 text-white shadow-2xl shadow-blue-600/20 mt-4">
-        <div className="relative z-10 flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <span className="text-white/70 text-xs font-black uppercase tracking-[0.2em]">Active Session</span>
-              <h1 className="text-3xl font-black tracking-tighter">
-                {user?.username ? user.username.split('@')[0] : 'User'} 👋
-              </h1>
-              <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest">{format(new Date(), "EEEE, MMMM do")}</p>
-            </div>
-            <div className="relative">
-              <Avatar className="h-16 w-16 border-4 border-white/20 shadow-2xl">
-                <AvatarImage src={user?.photo_url} />
-                <AvatarFallback className="bg-white/20 text-white font-black text-xl">
-                  {user?.username?.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-emerald-500 border-2 border-white rounded-full" />
-            </div>
+      <div className="bg-white rounded-[2rem] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tighter">Welcome Back!</h1>
+            <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">
+              {format(new Date(), 'EEEE, MMMM do')}
+            </p>
           </div>
-
-          <div className="h-px bg-white/10 w-full" />
-
-          <div className="grid grid-cols-3 gap-4">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-1">
-                <span className="text-2xl font-black tracking-tighter">{stat.value}</span>
-                <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.15em] text-center">{stat.label}</span>
-              </div>
-            ))}
+          <div className="flex flex-col items-end gap-2">
+            <Avatar className="h-12 w-12 border-2 border-slate-50 shadow-sm">
+              <AvatarImage src={user?.photo_url || ""} />
+              <AvatarFallback className="bg-blue-50 text-blue-600 font-black">
+                {user?.username?.substring(0, 2).toUpperCase() || 'US'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-full">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tight">System Online</span>
+            </div>
           </div>
         </div>
 
-        <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-blue-400/10 blur-3xl" />
+        <div className="grid grid-cols-3 gap-3">
+          {kpis.map((stat, idx) => (
+            <div key={idx} className="bg-slate-50/80 rounded-2xl p-3 flex flex-col items-center gap-1 border border-slate-100/50">
+              <span className="text-lg font-black text-slate-900 tracking-tight">{stat.value}</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">{stat.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Favorites */}
