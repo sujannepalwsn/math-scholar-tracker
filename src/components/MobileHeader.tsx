@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, LogOut, User, Search, Menu } from 'lucide-react';
+import { ChevronLeft, LogOut, User, Search, Menu, Building } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,6 +17,7 @@ import NotificationBell from './NotificationBell';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
+import SchoolBranding from './dashboard/SchoolBranding';
 
 interface MobileHeaderProps {
   showBackButton?: boolean;
@@ -28,12 +31,40 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
   const { user } = useAuth();
   const { userPreferences } = useTheme();
 
+  const { data: center } = useQuery({
+    queryKey: ["center-branding", user?.center_id],
+    queryFn: async () => {
+      if (!user?.center_id) return null;
+      const { data, error } = await supabase
+        .from("centers")
+        .select("*")
+        .eq("id", user.center_id)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user?.center_id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const handleSearchClick = () => {
+    window.dispatchEvent(new CustomEvent('open-command-center'));
+  };
+
   if (userPreferences.modernMobileUI) {
     return (
       <header className={cn(
-        "fixed top-0 left-0 right-0 h-[70px] z-40 flex items-center justify-between px-4 transition-all bg-white/95 backdrop-blur-md border-b border-slate-100 text-slate-900"
+        "fixed top-0 left-0 right-0 h-[70px] z-40 flex items-center justify-between px-4 transition-all bg-white/95 backdrop-blur-md border-b border-slate-100 text-slate-900 overflow-hidden"
       )}>
-        <div className="flex items-center gap-3 min-w-[40px]">
+        {/* Background Image Overlay like desktop */}
+        {isLauncher && center?.header_bg_url && (
+          <div
+            className="absolute inset-0 z-0 opacity-[0.15] pointer-events-none bg-cover bg-center"
+            style={{ backgroundImage: `url(${center.header_bg_url})` }}
+          />
+        )}
+
+        <div className="flex items-center gap-3 min-w-[40px] relative z-10">
           {!isLauncher && showBackButton && (
             <Button
               variant="ghost"
@@ -46,24 +77,23 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
           )}
         </div>
 
-        <div className="flex-1 flex items-center justify-center overflow-hidden px-2">
-          <div className="flex items-center gap-2">
-            {isLauncher && user?.center_logo_url && (
-              <Avatar className="h-8 w-8 border-2 border-slate-100 shadow-sm">
-                <AvatarImage src={user?.center_logo_url} />
-                <AvatarFallback className="bg-slate-100 text-slate-600 text-[10px] font-bold">
-                  {user?.center_name?.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            )}
+        <div className="flex-1 flex items-center justify-center overflow-hidden px-2 relative z-10">
+          {isLauncher ? (
+             <SchoolBranding fullTitle={true} />
+          ) : (
             <span className="font-black text-slate-900 text-base leading-tight truncate tracking-tighter uppercase">
-              {isLauncher ? (user?.center_name || "EduFlow SMS") : title}
+              {title}
             </span>
-          </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-1 min-w-[80px] justify-end">
-          <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-600 hover:bg-slate-100 rounded-full">
+        <div className="flex items-center gap-1 min-w-[80px] justify-end relative z-10">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 text-slate-600 hover:bg-slate-100 rounded-full"
+            onClick={handleSearchClick}
+          >
             <Search className="h-5 w-5" />
           </Button>
 
@@ -114,8 +144,16 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
 
   // Classic UI Header
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 flex items-center justify-between px-4 border-b">
-      <div className="flex items-center gap-2">
+    <header className="fixed top-0 left-0 right-0 h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 flex items-center justify-between px-4 border-b overflow-hidden">
+      {/* Background Image Overlay like desktop */}
+      {isLauncher && center?.header_bg_url && (
+        <div
+          className="absolute inset-0 z-0 opacity-10 pointer-events-none bg-cover bg-center"
+          style={{ backgroundImage: `url(${center.header_bg_url})` }}
+        />
+      )}
+
+      <div className="flex items-center gap-2 relative z-10">
         {showBackButton && (
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-8 w-8">
             <ChevronLeft className="h-5 w-5" />
@@ -126,12 +164,19 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
             <Menu className="h-5 w-5" />
           </Button>
         )}
-        <span className="font-semibold text-foreground truncate max-w-[150px]">
-          {isLauncher ? (user?.center_name || "Global Academy") : title}
-        </span>
+        {isLauncher ? (
+           <SchoolBranding fullTitle={true} />
+        ) : (
+          <span className="font-semibold text-foreground truncate max-w-[150px]">
+            {title}
+          </span>
+        )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 relative z-10">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSearchClick}>
+          <Search className="h-5 w-5" />
+        </Button>
         <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
