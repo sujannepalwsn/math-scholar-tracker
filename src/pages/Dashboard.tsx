@@ -17,7 +17,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { CommandCenter } from "@/components/dashboard/CommandCenter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1356,7 +1355,6 @@ export default function Dashboard() {
       </Dialog>
       {/* Top Header - School Details */}
       <DashboardHeader />
-      <CommandCenter />
 
       <div className="flex justify-end items-center gap-4">
         {/* Command Center Search Trigger - Relocated and Enhanced */}

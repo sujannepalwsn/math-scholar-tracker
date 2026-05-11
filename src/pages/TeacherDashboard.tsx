@@ -15,7 +15,6 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DigitalNoticeBoard from "@/components/center/NoticeBoard";
 import SuggestionForm from "@/components/center/SuggestionForm";
-import { CommandCenter } from "@/components/dashboard/CommandCenter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -441,7 +440,6 @@ export default function TeacherDashboard() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 space-y-8 pb-24 md:pb-8 page-enter animate-in fade-in duration-1000">
       <DashboardHeader />
-      <CommandCenter />
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="relative group/search flex-1 max-w-md hidden md:block">
