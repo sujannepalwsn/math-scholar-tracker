@@ -23,6 +23,7 @@ export interface UserPreferences {
   theme: string;
   darkMode: boolean;
   compactMode: boolean;
+  modernMobileUI: boolean;
 }
 
 interface ThemeContextType {
@@ -51,7 +52,8 @@ export const themePresets: ThemePreset[] = [
 const defaultPreferences: UserPreferences = {
   theme: "Indigo Pro",
   darkMode: false,
-  compactMode: false
+  compactMode: false,
+  modernMobileUI: true
 };
 
 const defaultTheme: CenterTheme = {
@@ -119,14 +121,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const localTheme = localStorage.getItem("app-theme-name");
       const localDark = localStorage.getItem("app-dark-mode") === "true";
       const localCompact = localStorage.getItem("app-compact-mode") === "true";
+      const localModern = localStorage.getItem("app-modern-mobile-ui") !== "false"; // Default to true
 
-      if (localTheme) {
-        setUserPreferences({
-          theme: localTheme,
-          darkMode: localDark,
-          compactMode: localCompact
-        });
-      }
+      setUserPreferences({
+        theme: localTheme || defaultPreferences.theme,
+        darkMode: localDark,
+        compactMode: localCompact,
+        modernMobileUI: localModern
+      });
 
       if (centerResult.data) {
         const centerTheme = (centerResult.data as any).theme;
@@ -163,6 +165,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem("app-theme-name", updated.theme);
     localStorage.setItem("app-dark-mode", String(updated.darkMode));
     localStorage.setItem("app-compact-mode", String(updated.compactMode));
+    localStorage.setItem("app-modern-mobile-ui", String(updated.modernMobileUI));
   };
 
   useEffect(() => {

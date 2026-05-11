@@ -30,6 +30,11 @@ export default function ThemeSelector({ onThemeChange }: ThemeSelectorProps) {
     toast.success(enabled ? "Compact mode enabled" : "Compact mode disabled");
   };
 
+  const handleModernUI = (enabled: boolean) => {
+    updateUserPreferences({ modernMobileUI: enabled });
+    toast.success(enabled ? "Modern Mobile UI enabled" : "Classic Mobile UI enabled");
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Theme Presets */}
@@ -109,6 +114,28 @@ export default function ThemeSelector({ onThemeChange }: ThemeSelectorProps) {
             <Switch
               checked={userPreferences.compactMode}
               onCheckedChange={handleCompactMode}
+              className="data-[state=checked]:bg-primary"
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-soft rounded-3xl bg-card/60 backdrop-blur-md border border-border/20 overflow-hidden group hover:shadow-medium transition-all sm:col-span-2">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-3 rounded-2xl transition-colors duration-300",
+                userPreferences.modernMobileUI ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-400"
+              )}>
+                <Smartphone className="h-6 w-6" />
+              </div>
+              <div>
+                <Label className="font-black text-foreground/90 uppercase tracking-widest text-xs">Modern Mobile Interface</Label>
+                <p className="text-xs font-medium text-muted-foreground">Premium gradient-rich UI for mobile devices</p>
+              </div>
+            </div>
+            <Switch
+              checked={userPreferences.modernMobileUI}
+              onCheckedChange={handleModernUI}
               className="data-[state=checked]:bg-primary"
             />
           </CardContent>

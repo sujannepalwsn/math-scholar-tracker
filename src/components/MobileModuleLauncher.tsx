@@ -6,6 +6,7 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { hasPermission } from '@/utils/permissions';
 import { UserRole } from '@/types/roles';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,7 @@ interface MobileModuleLauncherProps {
 
 export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherProps) {
   const { user } = useAuth();
+  const { userPreferences } = useTheme();
   const navigate = useNavigate();
 
   // --- Favorites Logic ---
@@ -124,6 +126,14 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
   const ModuleCard = ({ item }: { item: NavItem }) => {
     const Icon = item.icon;
 
+    const handleNavigate = () => {
+      if (item.to.includes('dashboard')) {
+        navigate(`${item.to}${item.to.includes('?') ? '&' : '?'}show_stats=true`);
+      } else {
+        navigate(item.to);
+      }
+    };
+
     const getGradient = () => {
       const label = item.label.toLowerCase();
       const category = item.category;
@@ -173,7 +183,7 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
     return (
       <button
-        onClick={() => navigate(item.to)}
+        onClick={handleNavigate}
         className="flex flex-col items-start gap-3 p-4 rounded-2xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group w-full border border-slate-100/50"
       >
         <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br transition-transform group-hover:scale-110", getGradient())}>
@@ -188,6 +198,32 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
   };
 
   const groups = groupedItems;
+
+  if (!userPreferences.modernMobileUI) {
+    return (
+      <div className="grid grid-cols-2 gap-4 p-4 pb-24">
+        {navItems.map((item, idx) => {
+          if (item.is_active === false) return null;
+          const featureKey = item.featureName || (item as any).feature_name;
+          if (!hasPermission(user, featureKey || 'unknown', item.to)) return null;
+
+          const Icon = item.icon;
+          return (
+            <button
+              key={idx}
+              onClick={() => navigate(item.to)}
+              className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl bg-card border shadow-sm active:bg-accent transition-colors"
+            >
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <Icon className="h-6 w-6" />
+              </div>
+              <span className="text-xs font-medium text-center">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8 p-5 pb-40 animate-in fade-in duration-700 bg-gray-50 min-h-screen font-inter">
