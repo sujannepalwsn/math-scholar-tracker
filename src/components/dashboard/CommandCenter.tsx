@@ -111,7 +111,7 @@ export function CommandCenter() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <div className="relative">
+      <div className="relative z-[9999]">
         <AnimatePresence>
           {isMigrating && (
             <motion.div

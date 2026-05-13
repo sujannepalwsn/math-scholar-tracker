@@ -221,6 +221,7 @@ const App = () => {
           <BrowserRouter>
             <VisitorTracker />
             <BackButtonHandler />
+            <CommandCenter />
 
             <Routes>
 

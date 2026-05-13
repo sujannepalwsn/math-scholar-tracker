@@ -11,9 +11,10 @@ import { getDashboardPath } from "@/utils/permissions";
 interface SchoolBrandingProps {
   className?: string;
   isMobileCompact?: boolean;
+  fullTitle?: boolean;
 }
 
-export default function SchoolBranding({ className, isMobileCompact }: SchoolBrandingProps) {
+export default function SchoolBranding({ className, isMobileCompact, fullTitle }: SchoolBrandingProps) {
   const { user } = useAuth();
 
   const { data: center } = useQuery({
@@ -66,8 +67,10 @@ export default function SchoolBranding({ className, isMobileCompact }: SchoolBra
         {header_title_visible && (
           <h2
             className={cn(
-              "font-black truncate leading-none whitespace-nowrap",
-              isMobileCompact ? "max-w-[140px] text-[10px]" : "max-w-[220px] md:max-w-[350px] text-xs md:text-sm"
+              "font-black leading-tight",
+              !fullTitle && "truncate whitespace-nowrap",
+              isMobileCompact ? "text-[10px]" : "text-xs md:text-sm",
+              !fullTitle && (isMobileCompact ? "max-w-[140px]" : "max-w-[220px] md:max-w-[350px]")
             )}
             style={{
               fontFamily: center?.header_font_family || 'inherit',

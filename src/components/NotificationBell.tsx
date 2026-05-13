@@ -141,8 +141,8 @@ export default function NotificationBell({ className }: { className?: string }) 
 
       {open && (
         <>
-          <div className="fixed inset-0 z-[999998]" onClick={() => setOpen(false)} />
-          <div className="fixed inset-x-4 top-[50px] md:top-[90px] sm:absolute sm:inset-auto sm:right-0 sm:top-14 sm:w-96 bg-card border rounded-2xl shadow-elevated z-[999999] overflow-hidden">
+          <div className="fixed inset-0 z-[1000]" onClick={() => setOpen(false)} />
+          <div className="fixed inset-x-4 top-[75px] md:top-[90px] sm:absolute sm:inset-auto sm:right-0 sm:top-14 sm:w-96 bg-card border rounded-2xl shadow-elevated z-[1001] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-bold text-sm">Notifications</h3>
               {unreadCount > 0 && (
