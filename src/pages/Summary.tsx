@@ -43,7 +43,7 @@ export default function Summary() {
     queryKey: ["students-summary", user?.center_id, gradeFilter, isRestricted, user?.teacher_id, currentPage, pageSize],
     queryFn: async () => {
       const { from, to } = getRange();
-      let query = supabase.from("students").select("*", { count: 'exact' }).order("name");
+      let query = supabase.from("students").select("*", { count: 'exact' }).eq("is_active", true).order("name");
 
       if (user?.role !== UserRole.ADMIN && user?.center_id) query = query.eq("center_id", user.center_id);
       if (gradeFilter !== "all") query = query.eq("grade", gradeFilter);

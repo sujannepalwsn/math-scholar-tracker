@@ -145,7 +145,7 @@ export default function TeacherManagement() {
     queryKey: ["students-grades", user?.center_id],
     queryFn: async () => {
       if (!user?.center_id) return [];
-      const { data, error } = await supabase.from("students").select("grade").eq("center_id", user.center_id);
+      const { data, error } = await supabase.from("students").select("grade").eq("center_id", user.center_id).eq("is_active", true);
       if (error) throw error;
       return data;
     },

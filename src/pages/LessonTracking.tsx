@@ -75,7 +75,7 @@ export default function LessonTracking() {
   const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("id, name, grade").order("name");
+      let query = supabase.from("students").select("id, name, grade").eq("is_active", true).order("name");
       if (user?.role !== UserRole.ADMIN && user?.center_id) {
         query = query.eq("center_id", user.center_id);
       }
