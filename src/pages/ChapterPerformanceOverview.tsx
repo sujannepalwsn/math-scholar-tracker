@@ -53,7 +53,8 @@ export default function ChapterPerformanceOverview() {
       let query = supabase
         .from("students")
         .select("id, name, grade")
-        .eq("center_id", user.center_id);
+        .eq("center_id", user.center_id)
+        .eq("is_active", true);
 
       if (isRestricted) {
         const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);

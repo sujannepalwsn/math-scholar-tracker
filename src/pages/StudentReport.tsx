@@ -65,7 +65,7 @@ export default function StudentReport() {
   const { data: students = [] } = useQuery({
     queryKey: ["students", user?.center_id, isRestricted, user?.teacher_id],
     queryFn: async () => {
-      let query = supabase.from("students").select("*").order("name");
+      let query = supabase.from("students").select("*").eq("is_active", true).order("name");
       if (user?.role !== UserRole.ADMIN && user?.center_id) query = query.eq("center_id", user.center_id);
 
       if (isRestricted) {

@@ -231,7 +231,7 @@ export default function Messaging() {
       let students: any[] = [];
 
       if (allParentStudentIds.length > 0) {
-        let studentQuery = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).in("id", allParentStudentIds);
+        let studentQuery = supabase.from("students").select("id, name, grade").eq("center_id", user.center_id).eq("is_active", true).in("id", allParentStudentIds);
 
         if (isRestricted) {
           const { data: assignments } = await supabase.from('class_teacher_assignments').select('grade').eq('teacher_id', user?.teacher_id);

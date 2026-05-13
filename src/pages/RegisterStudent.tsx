@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { UserRole } from "@/types/roles";
-import { AlertTriangle, Download, GraduationCap, Loader2, Pencil, Save, Search, Trash2, Upload, User, User as UserIcon, UserPlus, Users, X, ChevronRight, ChevronLeft, Check, Camera } from "lucide-react";
+import { AlertTriangle, Download, GraduationCap, Loader2, Pencil, Save, Search, Trash2, Upload, User, User as UserIcon, UserPlus, Users, X, ChevronRight, ChevronLeft, Check, Camera, UserX } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -100,6 +100,7 @@ export default function RegisterStudent() {
   const [searchFilter, setSearchFilter] = useState<string>("");
   const [showLinkChildDialog, setShowLinkChildDialog] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [studentToDeactivate, setStudentToDeactivate] = useState<Student | null>(null);
 
   const isRestricted = isTeacherRestrictedUtil(user, 'register_student');
   const { currentPage, pageSize, setPage, getRange } = usePagination(10, 1, 'st');
@@ -358,12 +359,77 @@ export default function RegisterStudent() {
       toast.error(error.message || "Failed to update student");
     } });
 
+  // Deactivate
+  const deactivateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!hasActionPermission(user, 'register_student', 'edit')) {
+        throw new Error("Access Denied: You do not have permission to deactivate student records.");
+      }
+      const { error } = await supabase
+        .from("students")
+        .update({ is_active: false, status: 'Left School' } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Student marked as Left School");
+    },
+    onError: (error: any) => {
+      logger.error("Deactivation error:", error);
+      toast.error(error.message || "Failed to deactivate student");
+    }
+  });
+
   // Delete
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       if (!hasActionPermission(user, 'register_student', 'edit')) {
         throw new Error("Access Denied: You do not have permission to delete student records.");
       }
+
+      // Step 1: Handle invoices and their dependent items
+      const { data: studentInvoices } = await supabase.from('invoices').select('id').eq('student_id', id);
+      if (studentInvoices && studentInvoices.length > 0) {
+        const invoiceIds = studentInvoices.map(i => i.id);
+        await supabase.from('payments').delete().in('invoice_id', invoiceIds);
+        await supabase.from('invoice_items').delete().in('invoice_id', invoiceIds);
+        await supabase.from('invoices').delete().eq('student_id', id);
+      }
+
+      // Step 2: Handle chat conversations and messages
+      const { data: convs } = await supabase.from('chat_conversations').select('id').eq('student_id', id);
+      if (convs && convs.length > 0) {
+        const convIds = convs.map(c => c.id);
+        await supabase.from('chat_messages').delete().in('conversation_id', convIds);
+        await supabase.from('chat_conversations').delete().eq('student_id', id);
+      }
+
+      // Step 3: Delete from all other direct child tables
+      const dependentTables = [
+        'attendance',
+        'discipline_issues',
+        'exam_marks',
+        'leave_applications',
+        'meeting_attendees',
+        'parent_students',
+        'preschool_activities',
+        'student_activities',
+        'student_chapters',
+        'student_homework_records',
+        'student_results',
+        'test_marks',
+        'test_results'
+      ];
+
+      for (const table of dependentTables) {
+        await supabase.from(table as any).delete().eq('student_id', id);
+      }
+
+      // Step 4: Handle users table (parent/student logins)
+      await supabase.from('users').delete().eq('student_id', id);
+
+      // Final Step: Delete student record
       const { error } = await supabase.from("students").delete().eq("id", id);
       if (error) throw error;
     },
@@ -1064,6 +1130,16 @@ export default function RegisterStudent() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                title="Mark as Left"
+                                className="h-8 w-8 rounded-xl bg-white shadow-soft text-amber-500 hover:bg-amber-50"
+                                onClick={() => setStudentToDeactivate(student)}
+                              >
+                                <UserX className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Permanent Purge"
                                 className="h-8 w-8 rounded-xl bg-white shadow-soft text-rose-500 hover:bg-rose-50"
                                 onClick={() => setStudentToDelete(student)}
                               >
@@ -1368,6 +1444,33 @@ export default function RegisterStudent() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Deactivation Confirmation */}
+      <AlertDialog open={!!studentToDeactivate} onOpenChange={(open) => !open && setStudentToDeactivate(null)}>
+        <AlertDialogContent className="rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight">Student Status Change</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 font-medium">
+              You are about to mark <span className="font-black text-amber-600 underline decoration-2 underline-offset-4">{studentToDeactivate?.name}</span> as <span className="font-black">Left School</span>.
+              They will no longer appear in active lists like attendance or marks entry, but their historical data will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-6">
+            <AlertDialogCancel className="rounded-xl font-bold uppercase text-[10px] tracking-widest h-12 border-2">CANCEL</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (studentToDeactivate) {
+                  deactivateMutation.mutate(studentToDeactivate.id);
+                  setStudentToDeactivate(null);
+                }
+              }}
+              className="rounded-xl font-black uppercase text-[10px] tracking-widest h-12 bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-600/20"
+            >
+              MARK AS LEFT
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Deletion Confirmation */}
       <AlertDialog open={!!studentToDelete} onOpenChange={(open) => !open && setStudentToDelete(null)}>
