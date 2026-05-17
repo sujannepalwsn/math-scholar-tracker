@@ -224,14 +224,14 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
           hapticFeedback.light();
           handleNavigate();
         }}
-        className="flex flex-col items-start gap-3 p-4 rounded-2xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group w-full border border-slate-100/50"
+        className="flex flex-col items-start gap-2 md:gap-3 p-3.5 md:p-4 rounded-2xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.02)] active:scale-95 transition-all text-left relative group w-full border border-slate-100/50"
       >
-        <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br transition-transform group-hover:scale-110", getGradient())}>
-          <Icon className="h-6 w-6" />
+        <div className={cn("h-9 w-9 md:h-12 md:w-12 rounded-xl md:rounded-2xl flex items-center justify-center text-white shadow-md bg-gradient-to-br transition-transform group-hover:scale-110", getGradient())}>
+          <Icon className="h-4.5 w-4.5 md:h-6 md:w-6" />
         </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[14px] font-bold text-slate-900 leading-tight line-clamp-1 tracking-tight">{item.label}</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider line-clamp-1">{getDescription()}</span>
+        <div className="flex flex-col gap-0.5 w-full">
+          <span className="text-[13px] md:text-[14px] font-bold text-slate-900 leading-tight line-clamp-1 tracking-tight">{item.label}</span>
+          <span className="text-[10px] md:text-[10px] text-slate-400 font-bold uppercase tracking-wider line-clamp-1">{getDescription()}</span>
         </div>
       </button>
     );
@@ -266,15 +266,15 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
   }
 
   return (
-    <div className="flex flex-col gap-8 p-5 pb-40 animate-in fade-in duration-700 bg-gray-50 min-h-screen font-inter">
+    <div className="flex flex-col gap-5 md:gap-8 p-4 md:p-5 pb-40 animate-in fade-in duration-700 bg-gray-50 min-h-screen font-inter">
       <DashboardHeader />
 
       {/* Welcome Card */}
-      <div className="bg-white rounded-[2rem] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-6">
+      <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col gap-4 md:gap-6">
         <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tighter">Welcome Back!</h1>
-            <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">
+          <div className="flex flex-col gap-0.5">
+            <h1 className="text-xl font-black text-slate-900 tracking-tighter">Welcome Back!</h1>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
               {format(new Date(), 'EEEE, MMMM do')}
             </p>
           </div>
@@ -292,11 +292,11 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
           {kpis.map((stat, idx) => (
-            <div key={idx} className="bg-slate-50/80 rounded-2xl p-3 flex flex-col items-center gap-1 border border-slate-100/50">
-              <span className="text-lg font-black text-slate-900 tracking-tight">{stat.value}</span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">{stat.label}</span>
+            <div key={idx} className="bg-slate-50/80 rounded-xl md:rounded-2xl p-2 md:p-3 flex flex-col items-center gap-1 border border-slate-100/50">
+              <span className="text-base md:text-lg font-black text-slate-900 tracking-tight">{stat.value}</span>
+              <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">{stat.label}</span>
             </div>
           ))}
         </div>
@@ -340,15 +340,15 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
       })}
 
       {/* Floating Action Button */}
-      <div className="fixed bottom-32 right-6 z-50">
+      <div className="fixed bottom-[calc(5rem+var(--safe-area-inset-bottom))] right-4 z-50">
         <button
-          className="h-16 w-16 rounded-[2rem] bg-gradient-to-br from-blue-600 to-purple-600 shadow-2xl shadow-blue-600/40 flex items-center justify-center text-white active:scale-90 transition-all border-4 border-white"
+          className="h-11 w-11 md:h-16 md:w-16 rounded-xl md:rounded-[2rem] bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg shadow-blue-600/20 flex items-center justify-center text-white active:scale-90 transition-all border-2 border-white"
           onClick={() => {
             hapticFeedback.medium();
             setIsFavoritesDialogOpen(true);
           }}
         >
-          <Plus className="h-9 w-9" />
+          <Plus className="h-6 w-6 md:h-9 md:w-9" />
         </button>
       </div>
 

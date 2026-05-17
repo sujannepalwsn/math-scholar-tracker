@@ -744,7 +744,7 @@ export default function RegisterStudent() {
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
             Faculty Nexus: Enrolment
           </h1>
           <div className="flex items-center gap-2">
@@ -790,9 +790,9 @@ export default function RegisterStudent() {
       {/* Single Student Form Wizard */}
       <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 group hover:shadow-xl transition-all duration-500">
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-          <CardTitle className="text-xl font-black flex items-center gap-3">
+              <CardTitle className="text-lg md:text-xl font-black flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 group-hover:scale-110 transition-transform">
-              <UserPlus className="h-6 w-6 text-primary" />
+                  <UserPlus className="h-5 w-5 md:h-6 md:w-6 text-primary" />
             </div>
             Student Registry Profile
           </CardTitle>
@@ -1026,9 +1026,9 @@ export default function RegisterStudent() {
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-8 px-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
             <div className="space-y-1">
-              <CardTitle className="text-2xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10">
-                  <Users className="h-7 w-7 text-primary" />
+              <CardTitle className="text-xl md:text-2xl font-black flex items-center gap-3">
+                <div className="p-2 md:p-2.5 rounded-xl md:rounded-2xl bg-primary/10">
+                  <Users className="h-6 w-6 md:h-7 md:w-7 text-primary" />
                 </div>
                 Academic Roster
               </CardTitle>

@@ -685,7 +685,7 @@ export default function TeacherManagement() {
               <Users className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Faculty Hub
               </h1>
               <div className="flex items-center gap-2 mt-1">
@@ -998,9 +998,9 @@ export default function TeacherManagement() {
         <div className={cn("flex-1 transition-all duration-500", selectedTeacher ? "lg:w-1/2" : "w-full")}>
           <Card className="border-none shadow-strong overflow-hidden rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
             <CardHeader className="border-b border-border/10 bg-primary/5 py-6">
-              <CardTitle className="text-xl font-black flex items-center gap-3">
+              <CardTitle className="text-lg md:text-xl font-black flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
+                  <Users className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                 </div>
                 Staff Roster
               </CardTitle>
@@ -1192,8 +1192,8 @@ export default function TeacherManagement() {
                       </Badge>
                     )}
                   </div>
-                  <CardTitle className="text-3xl font-black tracking-tight text-slate-800">{selectedTeacher.name}</CardTitle>
-                  <p className="text-slate-400 font-bold uppercase text-xs tracking-widest mt-1">{selectedTeacher.email}</p>
+                  <CardTitle className="text-2xl md:text-3xl font-black tracking-tight text-slate-800">{selectedTeacher.name}</CardTitle>
+                  <p className="text-slate-400 font-bold uppercase text-[10px] md:text-xs tracking-widest mt-1">{selectedTeacher.email}</p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedTeacher(null)} className="rounded-full hover:bg-rose-50 text-rose-500">
                   <X className="h-5 w-5" />

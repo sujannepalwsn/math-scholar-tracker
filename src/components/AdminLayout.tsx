@@ -93,7 +93,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-200",
+        "flex-1 overflow-y-auto bg-background transition-all duration-200 overflow-x-hidden",
         "md:h-screen",
         isMobile ? "pt-[calc(70px+var(--safe-area-inset-top))]" : "pt-0",
         isMobile ? "px-0 pb-[calc(80px+var(--safe-area-inset-bottom))]" : "px-4 pb-20 md:p-6 lg:p-8",

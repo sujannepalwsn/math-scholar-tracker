@@ -189,7 +189,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto transition-all duration-300 bg-white",
+        "flex-1 overflow-y-auto transition-all duration-300 bg-white overflow-x-hidden",
         "md:h-screen",
         isMobile ? "pt-[calc(70px+var(--safe-area-inset-top))]" : "pt-0",
         isMobile ? "px-0 pb-[calc(80px+var(--safe-area-inset-bottom))]" : "px-4 pb-20 md:p-6 lg:p-8",

@@ -277,7 +277,7 @@ export default function MarksEntry() {
               <SquarePen className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Score Entry
               </h1>
               <div className="flex items-center gap-2 mt-1">
@@ -347,7 +347,7 @@ export default function MarksEntry() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-muted/10 bg-muted/5">
-                  <TableHead className="sticky left-0 bg-card/90 backdrop-blur-md z-10 min-w-[200px] pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Student Identity</TableHead>
+                  <TableHead className="sticky left-0 bg-card/90 backdrop-blur-md z-10 min-w-[150px] md:min-w-[200px] pl-4 md:pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Student Identity</TableHead>
                   {subjects.map((s: any) => (
                     <TableHead key={s.id} className="min-w-[100px] text-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       {s.subject_name}
@@ -363,17 +363,17 @@ export default function MarksEntry() {
               <TableBody>
                 {studentResults.map(({ student, totalObtained, totalFull, percentage, grade, passed, hasMarks }) => (
                   <TableRow key={student.id} className="group border-muted/5 hover:bg-primary/5 transition-colors">
-                    <TableCell className="sticky left-0 bg-card/90 backdrop-blur-md z-10 pl-6 py-4">
-                      <p className="font-black text-slate-700 leading-none group-hover:text-primary transition-colors">{student.name}</p>
-                      <div className="text-[9px] font-bold text-muted-foreground uppercase mt-1 tracking-tight">Grade {student.grade} • Roll: {student.roll_number || "-"}</div>
+                    <TableCell className="sticky left-0 bg-card/90 backdrop-blur-md z-10 pl-4 md:pl-6 py-3 md:py-4">
+                      <p className="font-black text-slate-700 text-xs md:text-sm leading-none group-hover:text-primary transition-colors">{student.name}</p>
+                      <div className="text-[8px] md:text-[9px] font-bold text-muted-foreground uppercase mt-1 tracking-tight">Grade {student.grade} • Roll: {student.roll_number || "-"}</div>
                     </TableCell>
                     {subjects.map((subj: any) => (
-                      <TableCell key={subj.id} className="text-center">
+                      <TableCell key={subj.id} className="text-center px-2">
                         <Input
                           type="number"
                           min="0"
                           max={subj.full_marks}
-                          className="w-20 mx-auto text-center h-9 font-bold bg-white/50 border-none shadow-soft rounded-xl focus:ring-primary/20"
+                          className="w-16 md:w-20 mx-auto text-center h-8 md:h-9 font-bold bg-white/50 border-none shadow-soft rounded-lg md:rounded-xl focus:ring-primary/20 text-xs md:text-sm"
                           value={marksData[student.id]?.[subj.id] || ""}
                           onChange={(e) => handleMarkChange(student.id, subj.id, e.target.value)}
                           disabled={!canEdit}
