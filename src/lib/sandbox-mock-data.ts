@@ -98,5 +98,16 @@ export const sandboxData = {
     { page_type: 'center', title: 'Center Login', primary_color: '#4f46e5', background_color: '#020617' },
     { page_type: 'parent', title: 'Parent Login', primary_color: '#4f46e5', background_color: '#020617' },
     { page_type: 'teacher', title: 'Teacher Login', primary_color: '#4f46e5', background_color: '#020617' }
+  ],
+  system_notifications: [
+    {
+      id: 'sn1',
+      title: 'System Maintenance',
+      description: 'We will be undergoing maintenance this Sunday at 2 AM UTC.',
+      link: '/maintenance-info',
+      expiry_date: new Date(Date.now() + 86400000 * 7).toISOString(),
+      created_at: new Date().toISOString(),
+      created_by: 'demo-user-id'
+    }
   ]
 };
