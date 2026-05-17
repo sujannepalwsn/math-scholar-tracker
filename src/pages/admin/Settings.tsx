@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import ThemeSelector from "@/components/ThemeSelector";
 import LoginSettingsManager from "@/components/admin/LoginSettingsManager";
+import SystemNotificationManager from "@/components/admin/SystemNotificationManager";
 
 const Settings = () => (
   <div className="space-y-8 animate-in fade-in duration-1000">
@@ -35,6 +36,10 @@ const Settings = () => (
             <ThemeSelector />
           </CardContent>
        </Card>
+
+       <div className="md:col-span-2">
+          <SystemNotificationManager />
+       </div>
 
        <div className="md:col-span-2">
           <LoginSettingsManager />

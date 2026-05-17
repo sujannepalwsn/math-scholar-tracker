@@ -21,6 +21,7 @@ import ParentLayout from "./components/ParentLayout";
 import TeacherLayout from "./components/TeacherLayout";
 import BackButtonHandler from "./components/BackButtonHandler";
 import { CommandCenter } from "./components/dashboard/CommandCenter";
+import GlobalPopup from "./components/notifications/GlobalPopup";
 
 import Dashboard from "./pages/Dashboard";
 import RegisterStudent from "./pages/RegisterStudent";
@@ -222,6 +223,7 @@ const App = () => {
             <VisitorTracker />
             <BackButtonHandler />
             <CommandCenter />
+            <GlobalPopup />
 
             <Routes>
 
