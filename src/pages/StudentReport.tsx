@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { UserRole } from "@/types/roles";
 import { AlertTriangle, BarChart3, Book, BookOpen, Calendar, CheckCircle, ClipboardCheck, Clock, DollarSign, Download, Eye, FileText, GraduationCap, Paintbrush, Printer, Star, User, Users, XCircle, TrendingUp, PieChart as PieChartIcon } from "lucide-react";
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
@@ -42,6 +43,7 @@ interface ChapterPerformance {
 
 export default function StudentReport() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlStudentId = searchParams.get("student_id");
 
@@ -1037,9 +1039,9 @@ export default function StudentReport() {
           Updated just now
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard
-          title={reportLevel === "student" ? "Financial Status" : "Total Students"}
+          title={reportLevel === "student" ? "Financial" : "Total Students"}
           value={reportLevel === "student" ? formatCurrency(outstandingDues) : dashboardStats.totalStudents}
           icon={reportLevel === "student" ? DollarSign : Users}
           colorClass="bg-primary/10"
@@ -1571,9 +1573,9 @@ export default function StudentReport() {
                 </div>
               </div>
 
-              <div className="h-64 w-full bg-white/30 rounded-3xl p-6 border border-border/40 shadow-inner">
+              <div className="h-48 md:h-64 w-full bg-white/30 rounded-3xl p-2 md:p-6 border border-border/40 shadow-inner overflow-hidden">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={attendanceData.map(d => ({ date: format(new Date(d.date), 'MMM d'), status: d.status === 'present' ? 1 : 0 }))}>
+                  <AreaChart data={attendanceData.slice(isMobile ? -14 : 0).map(d => ({ date: format(new Date(d.date), isMobile ? 'd/M' : 'MMM d'), status: d.status === 'present' ? 1 : 0 }))}>
                     <defs>
                       <linearGradient id="colorAtt" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
@@ -1581,7 +1583,13 @@ export default function StudentReport() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
+                    <XAxis
+                      dataKey="date"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{fontSize: isMobile ? 8 : 10, fontWeight: 700}}
+                      interval={isMobile ? 1 : 0}
+                    />
                     <YAxis hide domain={[0, 1.2]} />
                     <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                     <Area type="step" dataKey="status" name="Presence" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorAtt)" animationDuration={1500} />
@@ -1904,12 +1912,12 @@ export default function StudentReport() {
                 <p className="text-muted-foreground italic text-center py-12">No test results found for the selected filters.</p>
               ) : (
                 <>
-                  <div className="h-72 w-full bg-white/30 rounded-3xl p-6 border border-border/40 shadow-inner">
+                  <div className="h-64 md:h-72 w-full bg-white/30 rounded-3xl p-2 md:p-6 border border-border/40 shadow-inner overflow-hidden">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={testResults.slice().reverse().map(r => ({ name: r.tests?.name?.substring(0, 10), score: Math.round((r.marks_obtained / (r.tests?.total_marks || 1)) * 100) }))}>
+                      <BarChart data={testResults.slice(0, isMobile ? 8 : 20).reverse().map(r => ({ name: r.tests?.name?.substring(0, isMobile ? 5 : 10), score: Math.round((r.marks_obtained / (r.tests?.total_marks || 1)) * 100) }))}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700}} domain={[0, 100]} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: isMobile ? 8 : 10, fontWeight: 700}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: isMobile ? 8 : 10, fontWeight: 700}} domain={[0, 100]} />
                         <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                         <Bar dataKey="score" name="Performance %" fill="#8b5cf6" radius={[6, 6, 0, 0]} animationDuration={1500} />
                       </BarChart>

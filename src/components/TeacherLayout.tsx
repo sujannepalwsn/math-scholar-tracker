@@ -212,8 +212,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       <main className={cn(
         "flex-1 overflow-y-auto mesh-gradient transition-all duration-300",
         "md:h-screen",
-        isMobile ? "pt-[70px]" : "pt-0",
-        isMobile ? "px-0 pb-[80px]" : "px-4 pb-20 md:p-6 lg:p-8",
+        isMobile ? "pt-[calc(70px+var(--safe-area-inset-top))]" : "pt-0",
+        isMobile ? "px-0 pb-[calc(80px+var(--safe-area-inset-bottom))]" : "px-4 pb-20 md:p-6 lg:p-8",
         !isMobile && (sidebarCollapsed ? "md:ml-24" : "md:ml-72")
       )}>
         {/* Navigation spacer for mobile fixed header */}

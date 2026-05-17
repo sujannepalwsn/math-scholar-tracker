@@ -54,7 +54,7 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
   if (userPreferences.modernMobileUI) {
     return (
       <header className={cn(
-        "fixed top-0 left-0 right-0 h-[70px] z-40 flex items-center justify-between px-4 transition-all bg-white/95 backdrop-blur-md border-b border-slate-100 text-slate-900"
+        "fixed top-0 left-0 right-0 h-[calc(70px+var(--safe-area-inset-top))] z-40 flex items-center justify-between px-4 pt-safe transition-all bg-white/95 backdrop-blur-md border-b border-slate-100 text-slate-900"
       )}>
         {/* Background Image Overlay like desktop */}
         {isLauncher && center?.header_bg_url && (
@@ -144,7 +144,7 @@ export default function MobileHeader({ showBackButton, onLogout, title, isLaunch
 
   // Classic UI Header
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 flex items-center justify-between px-4 border-b">
+    <header className="fixed top-0 left-0 right-0 h-[calc(4rem+var(--safe-area-inset-top))] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 flex items-center justify-between px-4 pt-safe border-b">
       {/* Background Image Overlay like desktop */}
       {isLauncher && center?.header_bg_url && (
         <div

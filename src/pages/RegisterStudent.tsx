@@ -28,6 +28,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import LinkChildToParent from "@/components/center/LinkChildToParent";
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Drawer } from "vaul";
 import { compressImage } from "@/lib/image-utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AdmissionWorkflow from "@/components/center/AdmissionWorkflow"
@@ -102,6 +104,7 @@ export default function RegisterStudent() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [studentToDeactivate, setStudentToDeactivate] = useState<Student | null>(null);
 
+  const isMobile = useIsMobile();
   const isRestricted = isTeacherRestrictedUtil(user, 'register_student');
   const { currentPage, pageSize, setPage, getRange } = usePagination(10, 1, 'st');
 
@@ -1064,107 +1067,159 @@ export default function RegisterStudent() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/5 border-b border-slate-100">
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Student Identity</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academic Level</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academy</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Guardian</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Telecom Link</TableHead>
-                  <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4 text-right">Operations</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-20"><div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell>
+          {isMobile ? (
+            <div className="p-4 space-y-4">
+              {isLoading ? (
+                [...Array(3)].map((_, i) => <div key={i} className="h-24 w-full bg-slate-100 animate-pulse rounded-2xl" />)
+              ) : students.length > 0 ? (
+                students.map((student) => (
+                  <div key={student.id} className="p-4 rounded-[1.5rem] bg-white border border-slate-100 shadow-soft space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
+                            {(student as any).photo_url ? (
+                              <img src={(student as any).photo_url.startsWith('http') ? (student as any).photo_url : supabase.storage.from('activity-photos').getPublicUrl((student as any).photo_url).data.publicUrl} alt="" className="h-10 w-10 object-cover" />
+                            ) : (
+                              <UserIcon className="h-5 w-5 text-primary" />
+                            )}
+                         </div>
+                         <div>
+                            <p className="font-black text-slate-900 text-sm leading-tight">{student.name}</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Grade {student.grade} • Roll: {(student as any).roll_number || "-"}</p>
+                         </div>
+                      </div>
+                      <div className="flex gap-1">
+                        {hasFullAccess && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-50 text-primary" onClick={() => handleEdit(student)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-50 text-rose-500" onClick={() => setStudentToDelete(student)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50">
+                       <div>
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Guardian</p>
+                          <p className="text-xs font-bold text-slate-700">{student.parent_name}</p>
+                       </div>
+                       <div>
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Telecom</p>
+                          <p className="text-xs font-bold text-primary">{student.contact_number}</p>
+                       </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center py-10 text-sm text-slate-400 italic">No records found</p>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/5 border-b border-slate-100">
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Student Identity</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academic Level</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Academy</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Guardian</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4">Telecom Link</TableHead>
+                    <TableHead className="font-black uppercase text-[10px] tracking-widest px-8 py-4 text-right">Operations</TableHead>
                   </TableRow>
-                ) : students.length > 0 ? (
-                  students.map((student) => (
-                    <TableRow key={student.id} className="group transition-all duration-300 hover:bg-card/60">
-                      <TableCell className="px-8 py-5">
-                        <div className="flex items-center gap-3">
-                           <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-primary/10 transition-colors overflow-hidden">
-                              {(student as any).photo_url ? (
-                                <img src={(student as any).photo_url.startsWith('http') ? (student as any).photo_url : supabase.storage.from('activity-photos').getPublicUrl((student as any).photo_url).data.publicUrl} alt="" className="h-8 w-8 object-cover" />
-                              ) : (
-                                <UserIcon className="h-4 w-4 text-slate-400 group-hover:text-primary" />
-                              )}
-                           </div>
-                           <p className="font-black text-slate-700 text-sm group-hover:text-primary transition-colors leading-none">{student.name}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <div className="space-y-1">
-                           <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[10px] font-black uppercase tracking-tighter">Grade {student.grade}</Badge>
-                           {(student as any).roll_number && <span className="ml-2 text-[10px] font-bold text-slate-400">Roll: {(student as any).roll_number}</span>}
-                           {(student as any).blood_group && <p className="text-[9px] font-bold text-rose-500">{(student as any).blood_group}</p>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-slate-500">{student.school_name}</p>
-                          {(student as any).address && <p className="text-[10px] text-slate-400 truncate max-w-[100px]">{(student as any).address}</p>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <p className="text-xs font-black text-slate-600 uppercase tracking-tight">{student.parent_name}</p>
-                      </TableCell>
-                      <TableCell className="px-8 py-5">
-                        <p className="text-xs font-black text-primary">{student.contact_number}</p>
-                      </TableCell>
-                      <TableCell className="px-8 py-5 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {hasFullAccess && (
-                            <>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleEdit(student)}>
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              {hasPermission(user, 'parent_portal') && (
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleCreateParentAccount(student)}>
-                                  <UserPlus className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Mark as Left"
-                                className="h-8 w-8 rounded-xl bg-white shadow-soft text-amber-500 hover:bg-amber-50"
-                                onClick={() => setStudentToDeactivate(student)}
-                              >
-                                <UserX className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Permanent Purge"
-                                className="h-8 w-8 rounded-xl bg-white shadow-soft text-rose-500 hover:bg-rose-50"
-                                onClick={() => setStudentToDelete(student)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-20"><div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-20 italic text-slate-400 font-medium">No enrolment records discovered for the current parameters.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            <ServerPagination
-              currentPage={currentPage}
-              pageSize={pageSize}
-              totalCount={totalCount}
-              onPageChange={setPage}
-            />
-          </div>
+                  ) : students.length > 0 ? (
+                    students.map((student) => (
+                      <TableRow key={student.id} className="group transition-all duration-300 hover:bg-card/60">
+                        <TableCell className="px-8 py-5">
+                          <div className="flex items-center gap-3">
+                             <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-primary/10 transition-colors overflow-hidden">
+                                {(student as any).photo_url ? (
+                                  <img src={(student as any).photo_url.startsWith('http') ? (student as any).photo_url : supabase.storage.from('activity-photos').getPublicUrl((student as any).photo_url).data.publicUrl} alt="" className="h-8 w-8 object-cover" />
+                                ) : (
+                                  <UserIcon className="h-4 w-4 text-slate-400 group-hover:text-primary" />
+                                )}
+                             </div>
+                             <p className="font-black text-slate-700 text-sm group-hover:text-primary transition-colors leading-none">{student.name}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <div className="space-y-1">
+                             <Badge variant="secondary" className="bg-primary/5 text-primary/70 border-none rounded-lg text-[10px] font-black uppercase tracking-tighter">Grade {student.grade}</Badge>
+                             {(student as any).roll_number && <span className="ml-2 text-[10px] font-bold text-slate-400">Roll: {(student as any).roll_number}</span>}
+                             {(student as any).blood_group && <p className="text-[9px] font-bold text-rose-500">{(student as any).blood_group}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-500">{student.school_name}</p>
+                            {(student as any).address && <p className="text-[10px] text-slate-400 truncate max-w-[100px]">{(student as any).address}</p>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <p className="text-xs font-black text-slate-600 uppercase tracking-tight">{student.parent_name}</p>
+                        </TableCell>
+                        <TableCell className="px-8 py-5">
+                          <p className="text-xs font-black text-primary">{student.contact_number}</p>
+                        </TableCell>
+                        <TableCell className="px-8 py-5 text-right">
+                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {hasFullAccess && (
+                              <>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleEdit(student)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                {hasPermission(user, 'parent_portal') && (
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-white shadow-soft text-primary hover:bg-primary/5" onClick={() => handleCreateParentAccount(student)}>
+                                    <UserPlus className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Mark as Left"
+                                  className="h-8 w-8 rounded-xl bg-white shadow-soft text-amber-500 hover:bg-amber-50"
+                                  onClick={() => setStudentToDeactivate(student)}
+                                >
+                                  <UserX className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Permanent Purge"
+                                  className="h-8 w-8 rounded-xl bg-white shadow-soft text-rose-500 hover:bg-rose-50"
+                                  onClick={() => setStudentToDelete(student)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-20 italic text-slate-400 font-medium">No enrolment records discovered for the current parameters.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <ServerPagination
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 
@@ -1234,46 +1289,90 @@ export default function RegisterStudent() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Parent Dialog */}
-      <Dialog open={isCreatingParent} onOpenChange={setIsCreatingParent}>
-        <DialogContent className="w-[95vw] sm:max-w-md rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl" aria-labelledby="create-parent-title" aria-describedby="create-parent-description">
-          <DialogHeader>
-            <DialogTitle id="create-parent-title" className="text-2xl font-black tracking-tight">Access Protocol Setup</DialogTitle>
-            <DialogDescription id="create-parent-description" className="text-[10px] font-black uppercase tracking-widest text-primary">
-              Generating secure guardian link for {selectedStudentForParent?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 mt-6">
-            <div className="space-y-4">
-               <div className="space-y-2">
-                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Identity (Username)</Label>
-                 <Input
-                   value={parentUsername}
-                   onChange={(e) => setParentUsername(e.target.value)}
-                   className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
-                 />
-               </div>
-               <div className="space-y-2">
-                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Secure Vector (Password)</Label>
-                 <Input
-                   value={parentPassword}
-                   type="password"
-                   onChange={(e) => setParentPassword(e.target.value)}
-                   className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
-                 />
-               </div>
+      {/* Create Parent Dialog/Drawer */}
+      {isMobile ? (
+        <Drawer.Root open={isCreatingParent} onOpenChange={setIsCreatingParent}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
+            <Drawer.Content className="bg-white flex flex-col rounded-t-[2rem] h-auto mt-24 fixed bottom-0 left-0 right-0 z-50 p-6 pt-2">
+              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-slate-200 mb-6" />
+              <div className="space-y-2 mb-6">
+                <h2 className="text-2xl font-black tracking-tight">Access Protocol Setup</h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Generating secure guardian link for {selectedStudentForParent?.name}</p>
+              </div>
+              <div className="space-y-6">
+                <div className="space-y-4">
+                   <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Identity (Username)</Label>
+                     <Input
+                       value={parentUsername}
+                       onChange={(e) => setParentUsername(e.target.value)}
+                       className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Secure Vector (Password)</Label>
+                     <Input
+                       value={parentPassword}
+                       type="password"
+                       onChange={(e) => setParentPassword(e.target.value)}
+                       className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                     />
+                   </div>
+                </div>
+                <div className="flex flex-col gap-3 pb-8">
+                  <Button onClick={() => createParentMutation.mutate()} className="h-12 rounded-2xl font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 text-white shadow-lg">
+                     ESTABLISH SECURE LINK
+                  </Button>
+                  <Button variant="ghost" onClick={() => setIsCreatingParent(false)} className="h-10 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    CANCEL OPERATION
+                  </Button>
+                </div>
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      ) : (
+        <Dialog open={isCreatingParent} onOpenChange={setIsCreatingParent}>
+          <DialogContent className="w-[95vw] sm:max-w-md rounded-[2.5rem] border-none shadow-strong bg-card/95 backdrop-blur-xl" aria-labelledby="create-parent-title" aria-describedby="create-parent-description">
+            <DialogHeader>
+              <DialogTitle id="create-parent-title" className="text-2xl font-black tracking-tight">Access Protocol Setup</DialogTitle>
+              <DialogDescription id="create-parent-description" className="text-[10px] font-black uppercase tracking-widest text-primary">
+                Generating secure guardian link for {selectedStudentForParent?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 mt-6">
+              <div className="space-y-4">
+                 <div className="space-y-2">
+                   <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Identity (Username)</Label>
+                   <Input
+                     value={parentUsername}
+                     onChange={(e) => setParentUsername(e.target.value)}
+                     className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                   />
+                 </div>
+                 <div className="space-y-2">
+                   <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Secure Vector (Password)</Label>
+                   <Input
+                     value={parentPassword}
+                     type="password"
+                     onChange={(e) => setParentPassword(e.target.value)}
+                     className="h-12 rounded-2xl border-none bg-slate-50 shadow-inner focus-visible:ring-primary/20 font-bold"
+                   />
+                 </div>
+              </div>
+              <div className="flex flex-col gap-3 pt-4">
+                <Button onClick={() => createParentMutation.mutate()} className="h-12 rounded-2xl font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 text-white shadow-lg">
+                   ESTABLISH SECURE LINK
+                </Button>
+                <Button variant="ghost" onClick={() => setIsCreatingParent(false)} className="h-10 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  CANCEL OPERATION
+                </Button>
+              </div>
             </div>
-            <div className="flex flex-col gap-3 pt-4">
-              <Button onClick={() => createParentMutation.mutate()} className="h-12 rounded-2xl font-black uppercase text-xs tracking-widest bg-slate-900 hover:bg-slate-800 text-white shadow-lg">
-                 ESTABLISH SECURE LINK
-              </Button>
-              <Button variant="ghost" onClick={() => setIsCreatingParent(false)} className="h-10 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                CANCEL OPERATION
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit Student Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

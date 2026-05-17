@@ -13,11 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { CheckCircle2, ShieldCheck, Settings, Trash2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { useAuth } from "@/contexts/AuthContext"
 import { usePagination } from "@/hooks/usePagination";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ServerPagination } from "@/components/ui/ServerPagination";
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -108,6 +109,7 @@ export default function TeacherManagement() {
   const [classTeacherGrade, setClassTeacherGrade] = useState("select-grade");
 
   const isRestricted = isTeacherRestrictedUtil(user, 'teacher_management');
+  const isMobile = useIsMobile();
   const { currentPage, pageSize, setPage, getRange } = usePagination(10, 1, 'tr');
 
   const { data: teachersData, isLoading } = useQuery({
@@ -1012,6 +1014,48 @@ export default function TeacherManagement() {
                 <div className="text-center py-12">
                   <p className="text-muted-foreground font-medium italic">No active faculty profiles identified.</p>
                 </div>
+              ) : isMobile ? (
+                <div className="p-4 space-y-4">
+                  {teachers.map((teacher: any) => (
+                    <div
+                      key={teacher.id}
+                      onClick={() => setSelectedTeacher(teacher)}
+                      className={cn(
+                        "p-4 rounded-2xl bg-white border border-slate-100 shadow-soft space-y-3",
+                        selectedTeacher?.id === teacher.id && "ring-2 ring-primary"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                               <Users className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                               <p className="font-black text-slate-900 text-sm leading-tight">{teacher.name}</p>
+                               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{teacher.email || "No email"}</p>
+                            </div>
+                         </div>
+                         <Badge variant={teacher.is_active ? "pulse" : "destructive"}>
+                           {teacher.is_active ? 'Active' : 'Suspended'}
+                         </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50">
+                        <div>
+                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Contact</p>
+                          <p className="text-xs font-bold text-primary">{teacher.contact_number || "-"}</p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-50" onClick={(e) => { e.stopPropagation(); handleEditClick(teacher); }}>
+                              <Edit className="h-3.5 w-3.5 text-primary" />
+                           </Button>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-slate-50" onClick={(e) => { e.stopPropagation(); toggleTeacherStatusMutation.mutate(teacher); }}>
+                              {teacher.is_active ? <ShieldOff className="h-3.5 w-3.5 text-rose-500" /> : <Shield className="h-3.5 w-3.5 text-emerald-500" />}
+                           </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
@@ -1119,14 +1163,14 @@ export default function TeacherManagement() {
                       })}
                     </TableBody>
                   </Table>
-                  <ServerPagination
-                    currentPage={currentPage}
-                    pageSize={pageSize}
-                    totalCount={totalCount}
-                    onPageChange={setPage}
-                  />
                 </div>
               )}
+              <ServerPagination
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+              />
             </CardContent>
           </Card>
         </div>

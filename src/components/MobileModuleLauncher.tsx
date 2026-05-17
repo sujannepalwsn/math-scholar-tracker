@@ -16,6 +16,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useParentInsights } from '@/hooks/useParentInsights';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer } from "vaul";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { hapticFeedback } from "@/utils/haptic-feedback";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
@@ -38,6 +41,7 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
   const { user } = useAuth();
   const { userPreferences } = useTheme();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // --- Favorites Logic ---
   const [favorites, setFavorites] = React.useState<string[]>(() => {
@@ -216,7 +220,10 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
 
     return (
       <button
-        onClick={handleNavigate}
+        onClick={() => {
+          hapticFeedback.light();
+          handleNavigate();
+        }}
         className="flex flex-col items-start gap-3 p-4 rounded-2xl bg-white shadow-[0_8px_20px_rgba(0,0,0,0.03)] active:scale-95 transition-all text-left relative group w-full border border-slate-100/50"
       >
         <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br transition-transform group-hover:scale-110", getGradient())}>
@@ -336,82 +343,158 @@ export default function MobileModuleLauncher({ navItems }: MobileModuleLauncherP
       <div className="fixed bottom-32 right-6 z-50">
         <button
           className="h-16 w-16 rounded-[2rem] bg-gradient-to-br from-blue-600 to-purple-600 shadow-2xl shadow-blue-600/40 flex items-center justify-center text-white active:scale-90 transition-all border-4 border-white"
-          onClick={() => setIsFavoritesDialogOpen(true)}
+          onClick={() => {
+            hapticFeedback.medium();
+            setIsFavoritesDialogOpen(true);
+          }}
         >
           <Plus className="h-9 w-9" />
         </button>
       </div>
 
-      <Dialog open={isFavoritesDialogOpen} onOpenChange={setIsFavoritesDialogOpen}>
-        <DialogContent className="max-w-[94vw] rounded-[3rem] p-0 overflow-hidden border-none shadow-2xl font-inter">
-          <DialogHeader className="p-8 bg-slate-950 text-white relative">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <Star className="h-24 w-24" />
-            </div>
-            <DialogTitle className="text-2xl font-black flex items-center gap-3 uppercase tracking-tighter">
-              <Star className="h-6 w-6 text-amber-400 fill-amber-400" /> Quick Access
-            </DialogTitle>
-            <DialogDescription className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-wider">
-              Pin your most used modules
-            </DialogDescription>
-          </DialogHeader>
+      {isMobile ? (
+        <Drawer.Root open={isFavoritesDialogOpen} onOpenChange={setIsFavoritesDialogOpen}>
+          <Drawer.Portal>
+            <Drawer.Overlay className="fixed inset-0 bg-black/40 z-[100]" />
+            <Drawer.Content className="bg-white flex flex-col rounded-t-[3rem] h-[85vh] mt-24 fixed bottom-0 left-0 right-0 z-[101] outline-none">
+              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-slate-200 mt-4 mb-4" />
 
-          <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar bg-white">
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 transition-colors group-focus-within:text-primary" />
-              <Input
-                placeholder="Search modules..."
-                className="pl-12 h-14 rounded-[1.5rem] bg-slate-50 border-slate-100 font-bold text-slate-900 focus:bg-white transition-all shadow-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+              <div className="p-8 pb-4">
+                <h2 className="text-2xl font-black flex items-center gap-3 uppercase tracking-tighter">
+                  <Star className="h-6 w-6 text-amber-400 fill-amber-400" /> Quick Access
+                </h2>
+                <p className="text-slate-400 font-bold text-xs mt-1 uppercase tracking-wider">
+                  Pin your most used modules
+                </p>
+              </div>
 
-            <div className="flex flex-col gap-3">
-              {navItems
-                .filter(item => {
-                  const labelMatch = item.label.toLowerCase().includes(searchQuery.toLowerCase());
-                  const isPermitted = hasPermission(user, item.featureName || (item as any).feature_name || 'unknown', item.to);
-                  const isActive = item.is_active !== false;
-                  return labelMatch && isPermitted && isActive;
-                })
-                .map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      toggleFavorite(item.to);
-                      setIsFavoritesDialogOpen(false);
-                      setSearchQuery("");
-                    }}
-                    className="flex items-center gap-5 p-5 rounded-[1.5rem] bg-slate-50/50 hover:bg-slate-100 active:bg-slate-200 transition-all text-left border border-transparent active:border-slate-200 group"
-                  >
-                    <div className="h-12 w-12 rounded-2xl bg-white shadow-sm text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <item.icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-black text-slate-900 tracking-tight">{item.label}</p>
-                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">{item.category || 'System'}</p>
-                    </div>
-                    {favorites.includes(item.to) ? (
-                      <div className="h-8 w-8 rounded-full bg-rose-100 flex items-center justify-center shadow-sm">
-                        <X className="h-4 w-4 text-rose-600 stroke-[3px]" />
+              <div className="px-6 mb-4">
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 transition-colors group-focus-within:text-primary" />
+                  <Input
+                    placeholder="Search modules..."
+                    className="pl-12 h-14 rounded-[1.5rem] bg-slate-50 border-slate-100 font-bold text-slate-900 focus:bg-white transition-all shadow-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 pb-20">
+                <div className="flex flex-col gap-3">
+                  {navItems
+                    .filter(item => {
+                      const labelMatch = item.label.toLowerCase().includes(searchQuery.toLowerCase());
+                      const isPermitted = hasPermission(user, item.featureName || (item as any).feature_name || 'unknown', item.to);
+                      const isActive = item.is_active !== false;
+                      return labelMatch && isPermitted && isActive;
+                    })
+                    .map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          hapticFeedback.light();
+                          toggleFavorite(item.to);
+                          setIsFavoritesDialogOpen(false);
+                          setSearchQuery("");
+                        }}
+                        className="flex items-center gap-5 p-5 rounded-[1.5rem] bg-slate-50/50 hover:bg-slate-100 active:bg-slate-200 transition-all text-left border border-transparent active:border-slate-200 group"
+                      >
+                        <div className="h-12 w-12 rounded-2xl bg-white shadow-sm text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <item.icon className="h-6 w-6" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-black text-slate-900 tracking-tight">{item.label}</p>
+                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">{item.category || 'System'}</p>
+                        </div>
+                        {favorites.includes(item.to) ? (
+                          <div className="h-8 w-8 rounded-full bg-rose-100 flex items-center justify-center shadow-sm">
+                            <X className="h-4 w-4 text-rose-600 stroke-[3px]" />
+                          </div>
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shadow-sm">
+                            <Plus className="h-4 w-4 text-blue-600 stroke-[3px]" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      ) : (
+        <Dialog open={isFavoritesDialogOpen} onOpenChange={setIsFavoritesDialogOpen}>
+          <DialogContent className="max-w-[94vw] rounded-[3rem] p-0 overflow-hidden border-none shadow-2xl font-inter">
+            <DialogHeader className="p-8 bg-slate-950 text-white relative">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <Star className="h-24 w-24" />
+              </div>
+              <DialogTitle className="text-2xl font-black flex items-center gap-3 uppercase tracking-tighter">
+                <Star className="h-6 w-6 text-amber-400 fill-amber-400" /> Quick Access
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 font-bold text-sm mt-1 uppercase tracking-wider">
+                Pin your most used modules
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-6 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar bg-white">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 transition-colors group-focus-within:text-primary" />
+                <Input
+                  placeholder="Search modules..."
+                  className="pl-12 h-14 rounded-[1.5rem] bg-slate-50 border-slate-100 font-bold text-slate-900 focus:bg-white transition-all shadow-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {navItems
+                  .filter(item => {
+                    const labelMatch = item.label.toLowerCase().includes(searchQuery.toLowerCase());
+                    const isPermitted = hasPermission(user, item.featureName || (item as any).feature_name || 'unknown', item.to);
+                    const isActive = item.is_active !== false;
+                    return labelMatch && isPermitted && isActive;
+                  })
+                  .map((item, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        toggleFavorite(item.to);
+                        setIsFavoritesDialogOpen(false);
+                        setSearchQuery("");
+                      }}
+                      className="flex items-center gap-5 p-5 rounded-[1.5rem] bg-slate-50/50 hover:bg-slate-100 active:bg-slate-200 transition-all text-left border border-transparent active:border-slate-200 group"
+                    >
+                      <div className="h-12 w-12 rounded-2xl bg-white shadow-sm text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <item.icon className="h-6 w-6" />
                       </div>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shadow-sm">
-                        <Plus className="h-4 w-4 text-blue-600 stroke-[3px]" />
+                      <div className="flex-1">
+                        <p className="font-black text-slate-900 tracking-tight">{item.label}</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">{item.category || 'System'}</p>
                       </div>
-                    )}
-                  </button>
-                ))}
+                      {favorites.includes(item.to) ? (
+                        <div className="h-8 w-8 rounded-full bg-rose-100 flex items-center justify-center shadow-sm">
+                          <X className="h-4 w-4 text-rose-600 stroke-[3px]" />
+                        </div>
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center shadow-sm">
+                          <Plus className="h-4 w-4 text-blue-600 stroke-[3px]" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+              </div>
             </div>
-          </div>
-          <div className="p-6 bg-slate-50 border-t flex justify-end">
-            <Button variant="outline" onClick={() => setIsFavoritesDialogOpen(false)} className="font-black rounded-2xl text-slate-600 h-12 px-8 uppercase tracking-widest text-xs border-slate-200">
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="p-6 bg-slate-50 border-t flex justify-end">
+              <Button variant="outline" onClick={() => setIsFavoritesDialogOpen(false)} className="font-black rounded-2xl text-slate-600 h-12 px-8 uppercase tracking-widest text-xs border-slate-200">
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import { cn } from "@/lib/utils"
 import { hasPermission, hasActionPermission, isTeacherRestricted as isTeacherRestrictedUtil } from "@/utils/permissions";
 import { tracking } from "@/utils/tracking";
+import { hapticFeedback } from "@/utils/haptic-feedback";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -328,6 +329,7 @@ export default function TakeAttendance() {
 
   const executeBulkAction = () => {
     if (!filteredStudents || !bulkAction.type) return;
+    hapticFeedback.medium();
     const updated: Record<string, AttendanceRecord> = { ...attendance };
     const currentTime = format(new Date(), "HH:mm");
 
@@ -423,6 +425,7 @@ export default function TakeAttendance() {
       }
     },
     onSuccess: () => {
+      hapticFeedback.double();
       tracking.trackEvent('feature_action', 'take_attendance', {
         grade: gradeFilter,
         present: presentCount,
@@ -630,9 +633,9 @@ export default function TakeAttendance() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {filteredStudents && filteredStudents.length > 0 ? (
-            <form onSubmit={handleSubmit} className="space-y-4 pt-6">
+            <form onSubmit={handleSubmit} className="space-y-4 pt-6 px-4 sm:px-0 pb-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredStudents.map((student) => (
                   <div

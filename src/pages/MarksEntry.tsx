@@ -343,7 +343,7 @@ export default function MarksEntry() {
           )}
 
           <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto table-scroll-shadow">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-muted/10 bg-muted/5">
