@@ -274,6 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     localStorage.removeItem('auth_user');
     localStorage.removeItem('is_sandbox');
+    sessionStorage.removeItem('dismissed_system_notifications');
   };
 
   return (

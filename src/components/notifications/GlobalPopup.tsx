@@ -32,32 +32,48 @@ const GlobalPopup = () => {
     }
   }, []);
 
-  const { data: notifications = [] } = useQuery({
+  const { data: notifications = [], refetch } = useQuery({
     queryKey: ['system_notifications_active'],
     queryFn: async () => {
+      // Fetch all recently created notifications to be safe
       const { data, error } = await supabase
         .from('system_notifications')
         .select('*')
-        .gt('expiry_date', new Date().toISOString())
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+
+      // Filter by expiry date in JS to avoid any DB/format issues
+      const now = new Date();
+      return (data || []).filter(n => new Date(n.expiry_date) > now);
     },
     enabled: !!user,
+    staleTime: 0, // Always get fresh notifications on mount/login
   });
 
   // Filter out notifications already dismissed in this session
   const activeNotifications = notifications.filter(n => !dismissedIds.includes(n.id));
 
   useEffect(() => {
+    // Add a small delay to ensure the dashboard/layout has settled
+    let timeout: any;
     if (activeNotifications.length > 0 && !isOpen) {
-      setIsOpen(true);
-      setCurrentIndex(0);
+      timeout = setTimeout(() => {
+        setIsOpen(true);
+        setCurrentIndex(0);
+      }, 1000);
     } else if (activeNotifications.length === 0 && isOpen) {
       setIsOpen(false);
     }
+    return () => clearTimeout(timeout);
   }, [activeNotifications.length, isOpen]);
+
+  // Refetch when user changes (login event)
+  useEffect(() => {
+    if (user) {
+      refetch();
+    }
+  }, [user, refetch]);
 
   const handleDismiss = () => {
     if (activeNotifications.length === 0) return;
