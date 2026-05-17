@@ -163,6 +163,9 @@ export default function Messaging() {
 
   // Send message
   const sendMessageMutation = useMutation({
+    onMutate: () => {
+      hapticFeedback.light();
+    },
     mutationFn: async () => {
       if (!selectedConversation?.id || !user?.id || !newMessage.trim()) throw new Error("Missing data");
       if (!canEdit && user.role !== UserRole.PARENT) throw new Error("Access Denied: You do not have permission to send messages.");
@@ -174,6 +177,8 @@ export default function Messaging() {
       if (error) throw error;
       const { error: convUpdateError } = await supabase.from("chat_conversations").update({ updated_at: new Date().toISOString() }).eq("id", selectedConversation.id);
       if (convUpdateError) throw convUpdateError;
+
+      hapticFeedback.medium();
 
       // Notify recipient
       const recipientId = user.role === UserRole.PARENT ? null : selectedConversation.parent_user_id;
@@ -535,13 +540,18 @@ export default function Messaging() {
 
       {/* Input */}
       {selectedConversation && (
-        <form onSubmit={handleSendMessage} className="p-3 border-t flex gap-2 items-end bg-card">
+        <form onSubmit={handleSendMessage} className="p-3 border-t flex gap-2 items-end bg-card pb-[max(0.75rem,var(--safe-area-inset-bottom))]">
           <Textarea
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+              // Auto-resize textarea
+              e.target.style.height = 'inherit';
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+            }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (newMessage.trim()) sendMessageMutation.mutate(); } }}
-            placeholder="Type a message... (Shift+Enter for new line)"
-            className="flex-1 min-h-[40px] max-h-[120px] resize-none"
+            placeholder="Type a message..."
+            className="flex-1 min-h-[40px] max-h-[120px] resize-none overflow-y-auto py-2 px-4 rounded-3xl bg-slate-50 border-none focus-visible:ring-primary/20"
             rows={1}
           />
           <Button type="submit" size="icon" disabled={!newMessage.trim() || sendMessageMutation.isPending} className="shrink-0">

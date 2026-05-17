@@ -93,10 +93,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       <main className={cn(
-        "flex-1 overflow-y-auto bg-background transition-all duration-200",
+        "flex-1 overflow-y-auto bg-background transition-all duration-200 overflow-x-hidden",
         "md:h-screen",
-        isMobile ? "pt-[70px]" : "pt-0",
-        isMobile ? "px-0 pb-[80px]" : "px-4 pb-20 md:p-6 lg:p-8",
+        isMobile ? "pt-[calc(70px+var(--safe-area-inset-top))]" : "pt-0",
+        isMobile ? "px-0 pb-[calc(80px+var(--safe-area-inset-bottom))]" : "px-4 pb-20 md:p-6 lg:p-8",
         !isMobile && (sidebarCollapsed ? "md:ml-20" : "md:ml-64")
       )}>
         <div className="page-enter max-w-7xl mx-auto">

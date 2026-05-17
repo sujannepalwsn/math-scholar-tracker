@@ -19,6 +19,7 @@ import { eachDayOfInterval, endOfMonth, format, startOfMonth } from "date-fns"
 import { cn } from "@/lib/utils"
 import { hasPermission, hasActionPermission, isTeacherRestricted as isTeacherRestrictedUtil } from "@/utils/permissions";
 import { tracking } from "@/utils/tracking";
+import { hapticFeedback } from "@/utils/haptic-feedback";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -328,6 +329,7 @@ export default function TakeAttendance() {
 
   const executeBulkAction = () => {
     if (!filteredStudents || !bulkAction.type) return;
+    hapticFeedback.medium();
     const updated: Record<string, AttendanceRecord> = { ...attendance };
     const currentTime = format(new Date(), "HH:mm");
 
@@ -423,6 +425,7 @@ export default function TakeAttendance() {
       }
     },
     onSuccess: () => {
+      hapticFeedback.double();
       tracking.trackEvent('feature_action', 'take_attendance', {
         grade: gradeFilter,
         present: presentCount,
@@ -469,19 +472,19 @@ export default function TakeAttendance() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <CheckCircle2 className="h-8 w-8 text-primary animate-pulse" />
+            <div className="p-2 md:p-2.5 rounded-xl md:rounded-2xl bg-primary/10 border border-primary/20">
+              <CheckCircle2 className="h-6 w-6 md:h-8 md:w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Attendance Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Daily Roll Call Portal</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Daily Roll Call Portal</p>
                  {isTeacher && (
                    <Badge
                      variant={isRestricted ? "outline" : "destructive"}
@@ -540,9 +543,9 @@ export default function TakeAttendance() {
       {/* Filters/Settings */}
       <div className="relative group">
         <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-violet-500/20 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-        <Card className="relative border-none shadow-medium p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-3xl">
-          <div className="flex flex-wrap gap-6 items-end">
-            <div className="flex-1 min-w-[200px] space-y-2">
+        <Card className="relative border-none shadow-medium p-4 md:p-6 overflow-hidden bg-card/60 backdrop-blur-2xl border border-white/30 rounded-2xl md:rounded-3xl">
+          <div className="flex flex-wrap gap-4 md:gap-6 items-end">
+            <div className="flex-1 min-w-[140px] md:min-w-[200px] space-y-1.5 md:space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Select Date</label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -556,10 +559,10 @@ export default function TakeAttendance() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="w-[160px] space-y-2">
+            <div className="w-[140px] md:w-[160px] space-y-1.5 md:space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Filter Grade</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger className="h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+                <SelectTrigger className="h-10 md:h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
                   <SelectValue placeholder="Select Grade" />
                 </SelectTrigger>
                 <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
@@ -581,9 +584,9 @@ export default function TakeAttendance() {
         <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
-              <CardTitle className="text-xl font-black flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
+              <CardTitle className="text-base md:text-xl font-bold flex items-center gap-3">
+                <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10">
+                  <Users className="h-4 w-4 md:h-6 md:w-6 text-primary" />
                 </div>
                 Daily Attendance Roll
               </CardTitle>
@@ -606,16 +609,16 @@ export default function TakeAttendance() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 md:gap-3">
               <Button
                 variant="outline"
                 type="button"
                 size="sm"
                 onClick={() => setBulkAction({ type: 'present', open: true })}
                 disabled={!isOperationalDay || !canMarkAttendance}
-                className="rounded-xl border-2 hover:bg-green-50 hover:border-green-200 hover:text-green-600 h-10 px-4 font-bold"
+                className="flex-1 md:flex-none rounded-lg md:rounded-xl border-2 hover:bg-green-50 hover:border-green-200 hover:text-green-600 h-9 md:h-10 px-3 md:px-4 font-bold text-[10px] md:text-sm"
               >
-                Mark All Present
+                Mark Present
               </Button>
               <Button
                 variant="outline"
@@ -623,22 +626,22 @@ export default function TakeAttendance() {
                 size="sm"
                 onClick={() => setBulkAction({ type: 'absent', open: true })}
                 disabled={!isOperationalDay || !canMarkAttendance}
-                className="rounded-xl border-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 h-10 px-4 font-bold"
+                className="flex-1 md:flex-none rounded-lg md:rounded-xl border-2 hover:bg-red-50 hover:border-red-200 hover:text-red-600 h-9 md:h-10 px-3 md:px-4 font-bold text-[10px] md:text-sm"
               >
-                Mark All Absent
+                Mark Absent
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {filteredStudents && filteredStudents.length > 0 ? (
-            <form onSubmit={handleSubmit} className="space-y-4 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-4 pt-6 px-4 sm:px-0 pb-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 {filteredStudents.map((student) => (
                   <div
                     key={student.id}
                     className={cn(
-                      "rounded-3xl border transition-all duration-500 p-6 flex flex-col gap-6",
+                      "rounded-2xl md:rounded-3xl border transition-all duration-500 p-4 md:p-6 flex flex-col gap-4 md:gap-6",
                       attendance[student.id]?.status === "present" ? "border-green-500/20 bg-green-500/5 shadow-medium" :
                       attendance[student.id]?.status === "late" ? "border-yellow-500/20 bg-yellow-500/5 shadow-medium" :
                       attendance[student.id]?.status === "absent" ? "border-red-500/20 bg-red-500/5 shadow-medium" :
@@ -646,9 +649,9 @@ export default function TakeAttendance() {
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3 md:gap-4">
                         <div className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500",
+                          "w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-500",
                           attendance[student.id]?.status === "present" ? "bg-green-500 text-white shadow-soft" :
                           attendance[student.id]?.status === "late" ? "bg-yellow-500 text-white shadow-soft" :
                           attendance[student.id]?.status === "absent" ? "bg-red-500 text-white shadow-soft" :
@@ -657,8 +660,8 @@ export default function TakeAttendance() {
                           <Users className="h-5 w-5" />
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-lg font-black text-foreground/90">{student.name}</p>
-                          <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-lg px-2 py-0.5 text-[10px] font-bold">
+                          <p className="text-sm md:text-lg font-bold text-foreground/90">{student.name}</p>
+                          <Badge variant="secondary" className="bg-primary/10 text-primary border-none rounded-md px-1.5 py-0 text-[8px] md:text-[10px] font-bold">
                             Grade {student.grade}
                           </Badge>
                           {approvedLeaves.find(l => l.student_id === student.id) && (
@@ -679,11 +682,11 @@ export default function TakeAttendance() {
                           onClick={() => handleStatusChange(student.id, "present")}
                           disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                           className={cn(
-                            "flex-1 h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all gap-2",
+                            "flex-1 h-8 md:h-10 rounded-md md:rounded-xl border-2 font-bold text-[8px] md:text-[10px] uppercase tracking-widest transition-all gap-1 md:gap-2",
                             attendance[student.id]?.status === "present" ? "bg-green-500 border-green-500 text-white hover:bg-green-600 shadow-soft" : "hover:bg-green-50 text-muted-foreground"
                           )}
                         >
-                          <Check className="h-3 w-3" /> Present
+                          <Check className="h-2.5 w-2.5 md:h-3 md:w-3" /> Present
                         </Button>
                         <Button
                           type="button"
@@ -692,11 +695,11 @@ export default function TakeAttendance() {
                           onClick={() => handleStatusChange(student.id, "late")}
                           disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                           className={cn(
-                            "flex-1 h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all gap-2",
+                            "flex-1 h-8 md:h-10 rounded-md md:rounded-xl border-2 font-bold text-[8px] md:text-[10px] uppercase tracking-widest transition-all gap-1 md:gap-2",
                             attendance[student.id]?.status === "late" ? "bg-yellow-500 border-yellow-500 text-white hover:bg-yellow-600 shadow-soft" : "hover:bg-yellow-50 text-muted-foreground"
                           )}
                         >
-                          <Clock className="h-3 w-3" /> Late
+                          <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" /> Late
                         </Button>
                         <Button
                           type="button"
@@ -705,34 +708,34 @@ export default function TakeAttendance() {
                           onClick={() => handleStatusChange(student.id, "absent")}
                           disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
                           className={cn(
-                            "flex-1 h-10 rounded-xl border-2 font-black text-[10px] uppercase tracking-widest transition-all gap-2",
+                            "flex-1 h-8 md:h-10 rounded-md md:rounded-xl border-2 font-bold text-[8px] md:text-[10px] uppercase tracking-widest transition-all gap-1 md:gap-2",
                             attendance[student.id]?.status === "absent" ? "bg-red-500 border-red-500 text-white hover:bg-red-600 shadow-soft" : "hover:bg-red-50 text-muted-foreground"
                           )}
                         >
-                          <X className="h-3 w-3" /> Absent
+                          <X className="h-2.5 w-2.5 md:h-3 md:w-3" /> Absent
                         </Button>
                       </div>
 
                       {attendance[student.id]?.status !== "absent" && (
-                        <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Arrival Time</Label>
+                        <div className="grid grid-cols-2 gap-3 md:gap-4 animate-in slide-in-from-top-2 duration-300">
+                          <div className="space-y-1">
+                            <Label className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Arrival</Label>
                             <Input
                               type="time"
                               value={attendance[student.id]?.timeIn || ""}
                               onChange={(e) => handleTimeChange(student.id, "timeIn", e.target.value)}
                               disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
-                              className="h-10 bg-card/40 rounded-xl text-xs font-bold border-none shadow-inner"
+                              className="h-9 md:h-10 bg-card/40 rounded-lg md:rounded-xl text-xs font-bold border-none shadow-inner"
                             />
                           </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Departure Time</Label>
+                          <div className="space-y-1">
+                            <Label className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Departure</Label>
                             <Input
                               type="time"
                               value={attendance[student.id]?.timeOut || ""}
                               onChange={(e) => handleTimeChange(student.id, "timeOut", e.target.value)}
                               disabled={(isStudentLocked(student.id) && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
-                              className="h-10 bg-card/40 rounded-xl text-xs font-bold border-none shadow-inner"
+                              className="h-9 md:h-10 bg-card/40 rounded-lg md:rounded-xl text-xs font-bold border-none shadow-inner"
                             />
                           </div>
                         </div>
@@ -743,7 +746,7 @@ export default function TakeAttendance() {
               </div>
               <Button
                 type="submit"
-                className="w-full h-16 text-xl font-black shadow-strong rounded-[2rem] bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.01] transition-all duration-300 mt-8"
+                className="w-full h-11 md:h-16 text-xs md:text-xl font-bold shadow-strong rounded-lg md:rounded-[2rem] bg-gradient-to-r from-primary to-violet-600 hover:scale-[1.01] transition-all duration-300 mt-6 md:mt-8"
                 disabled={saveMutation.isPending || (allLocked && !canModifyLocked) || !isOperationalDay || !canMarkAttendance}
               >
                 {saveMutation.isPending ? (

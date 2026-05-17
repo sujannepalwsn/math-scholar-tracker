@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { useTheme } from "@/contexts/ThemeContext";
 import { getDashboardPath, hasPermission } from "@/utils/permissions"
 import { UserRole } from "@/types/roles";
+import { hapticFeedback } from "@/utils/haptic-feedback";
 
 export default function BottomNav({ navItems }: { navItems?: any[] }) {
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
 
   if (userPreferences.modernMobileUI) {
     return (
-      <div className="fixed bottom-6 inset-x-6 h-[72px] bg-white/90 backdrop-blur-lg border border-white/20 flex items-center justify-between px-6 z-40 md:hidden rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.08)]">
+      <div className="fixed bottom-[max(1.5rem,var(--safe-area-inset-bottom))] inset-x-6 h-[72px] bg-white/90 backdrop-blur-lg border border-white/20 flex items-center justify-between px-6 z-40 md:hidden rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all">
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.to || (item.label === 'Home' && location.pathname.includes('dashboard'));
@@ -61,7 +62,10 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
           return (
             <button
               key={item.label}
-              onClick={() => navigate(item.to)}
+              onClick={() => {
+                hapticFeedback.light();
+                navigate(item.to);
+              }}
               className={cn(
                 "flex flex-col items-center gap-1 transition-all active:scale-90 relative",
                 isActive ? "text-blue-600" : "text-slate-400"
@@ -88,7 +92,7 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
 
   // Legacy Classic UI
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t flex items-center justify-around z-40 md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 h-[calc(4rem+var(--safe-area-inset-bottom))] bg-background border-t flex items-center justify-around z-40 md:hidden pb-safe">
       {mobileNavItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.to || (item.label === 'Home' && location.pathname.includes('dashboard'));
@@ -96,7 +100,10 @@ export default function BottomNav({ navItems }: { navItems?: any[] }) {
         return (
           <button
             key={item.label}
-            onClick={() => navigate(item.to)}
+            onClick={() => {
+              hapticFeedback.light();
+              navigate(item.to);
+            }}
             className={cn(
               "flex flex-col items-center gap-1",
               isActive ? "text-primary" : "text-muted-foreground"
