@@ -60,6 +60,31 @@ const LandingPage = () => {
   const [showExitIntent, setShowExitIntent] = useState(false);
 
   useEffect(() => {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isDismissed = localStorage.getItem('apk_install_dismissed');
+
+    if (isAndroid && !isDismissed) {
+      setTimeout(() => {
+        toast("Install Android Version", {
+          description: "Get our app for a better experience on your mobile device.",
+          action: {
+            label: "Download",
+            onClick: () => {
+              localStorage.setItem('apk_install_dismissed', 'true');
+              window.location.href = "https://qrtvxzdlfurpipvtwian.supabase.co/storage/v1/object/public/apk/ssms%20pro.apk";
+            },
+          },
+          cancel: {
+            label: "Dismiss",
+            onClick: () => {
+              localStorage.setItem('apk_install_dismissed', 'true');
+            }
+          },
+          duration: 15000,
+        });
+      }, 2000);
+    }
+
     const handleMouseLeave = (e: MouseEvent) => {
       if (e.clientY <= 0 && !localStorage.getItem('exit_intent_dismissed')) {
         setShowExitIntent(true);
