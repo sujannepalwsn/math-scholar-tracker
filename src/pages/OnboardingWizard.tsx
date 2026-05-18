@@ -249,9 +249,9 @@ const OnboardingWizard = () => {
                          exit={{ opacity: 0, x: -20 }}
                          className="space-y-8 flex-1"
                       >
-                         <div className="space-y-2">
-                            <h2 className="text-4xl font-black tracking-tighter uppercase">Tell us about your school</h2>
-                            <p className="text-slate-400 font-medium">This information will be used to customize your dashboard.</p>
+                         <div className="space-y-2 text-center md:text-left">
+                            <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">Tell us about your school</h2>
+                            <p className="text-sm md:text-base text-slate-400 font-medium">This information will be used to customize your dashboard.</p>
                          </div>
 
                          <div className="grid md:grid-cols-2 gap-8">
@@ -328,9 +328,9 @@ const OnboardingWizard = () => {
                          exit={{ opacity: 0, x: -20 }}
                          className="space-y-8 flex-1"
                       >
-                         <div className="space-y-2">
-                            <h2 className="text-4xl font-black tracking-tighter uppercase">Setup Administrator Account</h2>
-                            <p className="text-slate-400 font-medium">You will use these credentials to access your dashboard.</p>
+                         <div className="space-y-2 text-center md:text-left">
+                            <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">Setup Administrator Account</h2>
+                            <p className="text-sm md:text-base text-slate-400 font-medium">You will use these credentials to access your dashboard.</p>
                          </div>
 
                          <div className="grid md:grid-cols-2 gap-8">
@@ -409,9 +409,9 @@ const OnboardingWizard = () => {
                          exit={{ opacity: 0, x: -20 }}
                          className="space-y-8 flex-1"
                       >
-                         <div className="space-y-2">
-                            <h2 className="text-4xl font-black tracking-tighter uppercase">Configure Your Suite</h2>
-                            <p className="text-slate-400 font-medium">Select the initial modules you want to enable.</p>
+                         <div className="space-y-2 text-center md:text-left">
+                            <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">Configure Your Suite</h2>
+                            <p className="text-sm md:text-base text-slate-400 font-medium">Select the initial modules you want to enable.</p>
                          </div>
 
                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -458,12 +458,12 @@ const OnboardingWizard = () => {
                          exit={{ opacity: 0, x: -20 }}
                          className="space-y-8 flex-1 flex flex-col items-center justify-center text-center"
                       >
-                         <div className="w-24 h-24 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 mb-6">
-                            <CheckCircle2 className="h-12 w-12" />
+                         <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 mb-6">
+                            <CheckCircle2 className="h-8 w-8 md:h-12 md:w-12" />
                          </div>
-                         <div className="space-y-2">
-                            <h2 className="text-4xl font-black tracking-tighter uppercase">Ready for launch</h2>
-                            <p className="text-slate-400 font-medium max-w-sm mx-auto">Review your details and start your journey with EduFlow. Your dashboard will be ready in seconds.</p>
+                         <div className="space-y-2 px-4">
+                            <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">Ready for launch</h2>
+                            <p className="text-sm md:text-base text-slate-400 font-medium max-w-sm mx-auto">Review your details and start your journey with EduFlow. Your dashboard will be ready in seconds.</p>
                          </div>
 
                          <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-3xl p-6 text-left space-y-4">

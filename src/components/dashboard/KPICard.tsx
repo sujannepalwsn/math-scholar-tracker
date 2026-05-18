@@ -82,21 +82,21 @@ export const KPICard = ({
         </div>
 
         <div className="space-y-1">
-          <p className="label-caps mb-2">{title}</p>
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="display-metric">{value}</h3>
+          <p className="label-caps mb-1 md:mb-2">{title}</p>
+          <div className="flex flex-wrap items-baseline justify-between gap-1 md:gap-2">
+            <h3 className="display-metric leading-none">{value}</h3>
             {delta !== undefined && (
               <div className={cn(
-                "flex items-center gap-1 text-[11px] font-black px-2 py-1 rounded-full",
+                "flex items-center gap-0.5 md:gap-1 text-[9px] md:text-[11px] font-black px-1.5 md:px-2 py-0.5 md:py-1 rounded-full",
                 delta >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
               )}>
-                {delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {delta >= 0 ? <TrendingUp className="h-2.5 w-2.5 md:h-3 md:w-3" /> : <TrendingDown className="h-2.5 w-2.5 md:h-3 md:w-3" />}
                 {Math.abs(delta)}%
               </div>
             )}
           </div>
           {description && (
-            <p className="text-[10px] font-bold text-muted-foreground/60">{description}</p>
+            <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground/60 truncate">{description}</p>
           )}
         </div>
 

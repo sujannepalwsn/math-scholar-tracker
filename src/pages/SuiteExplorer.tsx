@@ -128,7 +128,7 @@ const SuiteExplorer = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
+            <h1 className="text-4xl md:text-4xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
               {info.title}
             </h1>
             <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">

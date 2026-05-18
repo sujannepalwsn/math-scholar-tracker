@@ -652,7 +652,7 @@ export default function TeacherAttendancePage() {
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
               <Clock className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-4xl font-black">{format(today, "hh:mm a")}</CardTitle>
+            <CardTitle className="text-2xl md:text-4xl font-black">{format(today, "hh:mm a")}</CardTitle>
             <CardDescription className="font-bold uppercase tracking-widest text-[10px]">
               {format(today, "EEEE, MMMM do")}
             </CardDescription>
@@ -715,7 +715,7 @@ export default function TeacherAttendancePage() {
               <CheckCircle2 className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Staff Nexus
               </h1>
               <div className="flex items-center gap-2 mt-1">

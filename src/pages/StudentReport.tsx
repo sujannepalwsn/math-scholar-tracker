@@ -1039,7 +1039,7 @@ export default function StudentReport() {
           Updated just now
         </div>
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <StatCard
           title={reportLevel === "student" ? "Financial" : "Total Students"}
           value={reportLevel === "student" ? formatCurrency(outstandingDues) : dashboardStats.totalStudents}
@@ -1300,7 +1300,7 @@ export default function StudentReport() {
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Grade</label>
           <Select value={gradeFilter} onValueChange={(val) => { setGradeFilter(val); setSelectedStudentId("none"); }}>
-            <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-full md:w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
@@ -1316,7 +1316,7 @@ export default function StudentReport() {
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">From Date</label>
           <Input
             type="date"
-            className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
+            className="w-full md:w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
             value={safeFormatDate(dateRange.from, "yyyy-MM-dd")}
             onChange={(e) => setDateRange(prev => ({ ...prev, from: new Date(e.target.value) }))}
           />
@@ -1326,7 +1326,7 @@ export default function StudentReport() {
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">To Date</label>
           <Input
             type="date"
-            className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
+            className="w-full md:w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl"
             value={safeFormatDate(dateRange.to, "yyyy-MM-dd")}
             onChange={(e) => setDateRange(prev => ({ ...prev, to: new Date(e.target.value) }))}
           />
@@ -1335,7 +1335,7 @@ export default function StudentReport() {
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Subject</label>
           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-full md:w-[160px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
@@ -1350,7 +1350,7 @@ export default function StudentReport() {
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Student</label>
           <Select value={selectedStudentId} onValueChange={(val) => { setSelectedStudentId(val); setSelectedPublishedExamId("none"); }}>
-            <SelectTrigger className="w-[220px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-full md:w-[220px] h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Select Student" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
@@ -1517,8 +1517,8 @@ export default function StudentReport() {
               {payments.length === 0 ? (
                 <p className="text-muted-foreground italic text-sm">No recent payments discovered.</p>
               ) : (
-                <div className="overflow-hidden border border-border/40 rounded-3xl shadow-soft bg-white/20">
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto table-scroll-shadow border border-border/40 rounded-3xl shadow-soft bg-white/20">
+                  <table className="w-full text-sm min-w-[600px]">
                     <thead className="bg-gray-100">
                       <tr>
                         <th className="border px-2 py-1">Date</th>
@@ -1597,8 +1597,8 @@ export default function StudentReport() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="overflow-hidden border border-border/40 rounded-3xl shadow-soft bg-white/20">
-                <table className="w-full border text-sm">
+              <div className="overflow-x-auto table-scroll-shadow border border-border/40 rounded-3xl shadow-soft bg-white/20">
+                <table className="w-full border text-sm min-w-[600px]">
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="border px-2 py-1">Date</th>
@@ -1645,7 +1645,7 @@ export default function StudentReport() {
               {chapterPerformanceData.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground italic">No chapter performance data available for the selected filters.</div>
               ) : (
-                <div className="overflow-x-auto">
+            <div className="overflow-x-auto table-scroll-shadow">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-muted/50 border-b">
                       <tr>
@@ -1746,7 +1746,7 @@ export default function StudentReport() {
             </CardHeader>
             <CardContent className="p-0">
               {selectedPublishedExamId !== "none" ? (
-                <div className="p-8 space-y-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="p-4 md:p-8 space-y-6 md:space-y-8 animate-in fade-in slide-in-from-top-2 duration-300">
                   {(() => {
                     const exam = studentExams.find(e => e.id === selectedPublishedExamId);
                     if (!exam) return <div className="p-8 text-center text-muted-foreground">Result not found.</div>;
@@ -1775,7 +1775,7 @@ export default function StudentReport() {
                           </div>
                         </div>
 
-                        <div className="rounded-3xl border border-border/40 overflow-hidden bg-white/20 backdrop-blur-sm">
+                        <div className="rounded-2xl md:rounded-3xl border border-border/40 overflow-hidden bg-white/20 backdrop-blur-sm table-scroll-shadow">
                           <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50/50 border-b">
                               <tr>
@@ -1818,7 +1818,7 @@ export default function StudentReport() {
                   })()}
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto table-scroll-shadow">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-muted/50 border-b">
                       <tr>
@@ -1912,7 +1912,7 @@ export default function StudentReport() {
                 <p className="text-muted-foreground italic text-center py-12">No test results found for the selected filters.</p>
               ) : (
                 <>
-                  <div className="h-64 md:h-72 w-full bg-white/30 rounded-3xl p-2 md:p-6 border border-border/40 shadow-inner overflow-hidden">
+                  <div className="h-48 md:h-72 w-full bg-white/30 rounded-3xl p-2 md:p-6 border border-border/40 shadow-inner overflow-hidden">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={testResults.slice(0, isMobile ? 8 : 20).reverse().map(r => ({ name: r.tests?.name?.substring(0, isMobile ? 5 : 10), score: Math.round((r.marks_obtained / (r.tests?.total_marks || 1)) * 100) }))}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -1924,8 +1924,8 @@ export default function StudentReport() {
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="overflow-hidden border border-border/40 rounded-3xl shadow-soft bg-white/20">
-                    <table className="w-full text-sm">
+                  <div className="overflow-x-auto border border-border/40 rounded-3xl shadow-soft bg-white/20 table-scroll-shadow">
+                    <table className="w-full text-sm min-w-[800px]">
                       <thead className="bg-gray-100">
                         <tr>
                           <th className="border px-2 py-1">Test Name</th>
@@ -2013,7 +2013,7 @@ export default function StudentReport() {
                 {missedChapters.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground font-medium italic">No pending chapters identified for this period.</div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto table-scroll-shadow">
                     <table className="w-full text-sm text-left">
                       <thead className="bg-muted/30 border-b">
                         <tr>
@@ -2051,7 +2051,7 @@ export default function StudentReport() {
                 {overdueHomeworks.length === 0 ? (
                   <div className="p-8 text-center text-muted-foreground font-medium italic">All assignments are currently up to date.</div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto table-scroll-shadow">
                     <table className="w-full text-sm text-left">
                       <thead className="bg-muted/30 border-b">
                         <tr>
@@ -2150,7 +2150,7 @@ export default function StudentReport() {
               {disciplineIssues.length === 0 ? (
                 <div className="p-12 text-center text-muted-foreground font-medium italic">No behavioral incidents reported. Clear record maintained.</div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto table-scroll-shadow">
                   <table className="w-full text-sm text-left">
                     <thead className="bg-muted/30 border-b">
                       <tr>

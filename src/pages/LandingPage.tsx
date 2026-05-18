@@ -203,7 +203,7 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-6xl md:text-8xl font-black text-white leading-[0.9] tracking-tighter mb-8 uppercase max-w-5xl mx-auto"
+            className="text-4xl sm:text-4xl md:text-6xl md:text-8xl font-black text-white leading-[1] md:leading-[0.9] tracking-tighter mb-6 md:mb-8 uppercase max-w-5xl mx-auto"
           >
             The Last School Management <span className="text-primary">System You'll Ever Need.</span>
           </motion.h1>
@@ -212,25 +212,25 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl md:text-2xl text-slate-400 font-medium max-w-3xl mx-auto mb-12"
+            className="text-lg md:text-2xl text-slate-400 font-medium max-w-3xl mx-auto mb-8 md:mb-12 px-2"
           >
-            Automate 80% of administrative tasks, from fee collection to attendance. Built for modern institutions that value time and transparency.
+            Automate 80% of administrative tasks, from fee collection to attendance. Built for modern institutions.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-wrap gap-6 justify-center"
+            className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center px-4"
           >
-            <Button asChild size="lg" className="h-16 px-10 rounded-2xl text-lg font-black bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20">
-              <Link to="/onboarding">Start Your 14-Day Free Trial</Link>
+            <Button asChild size="lg" className="h-14 md:h-16 px-8 md:px-10 rounded-2xl text-base md:text-lg font-black bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20">
+              <Link to="/onboarding">Start Free Trial</Link>
             </Button>
 
             <Button
                size="lg"
                variant="outline"
-               className="h-16 px-10 rounded-2xl text-lg font-black border-white/10 bg-white/5 hover:bg-white/10 text-white"
+               className="h-14 md:h-16 px-8 md:px-10 rounded-2xl text-base md:text-lg font-black border-white/10 bg-white/5 hover:bg-white/10 text-white"
                onClick={async () => {
                   const loadingToast = toast.loading("Entering Sandbox Mode...");
                   localStorage.setItem('is_sandbox', 'true');
@@ -356,14 +356,14 @@ const LandingPage = () => {
       </section>
 
       {/* Lead Magnet: School Efficiency Calculator */}
-      <section className="py-32 bg-slate-900/40 relative overflow-hidden">
+      <section className="py-20 md:py-32 bg-slate-900/40 relative overflow-hidden">
          <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary/20 rounded-full blur-[120px] -translate-x-1/2" />
          <div className="container mx-auto px-4 relative z-10">
-            <div className="grid lg:grid-cols-2 gap-20 items-center">
-               <div className="space-y-8">
+            <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
+               <div className="space-y-6 md:space-y-8">
                   <Badge className="bg-primary/10 text-primary px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">ROI Calculator</Badge>
-                  <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase leading-[0.9]">How much time is your school <span className="text-primary">losing?</span></h2>
-                  <p className="text-xl text-slate-400 font-medium">The cost of manual administration is higher than you think. Use our interactive tool to calculate your potential savings with EduFlow.</p>
+                  <h2 className="text-3xl md:text-4xl md:text-6xl font-black tracking-tighter uppercase leading-[1] md:leading-[0.9]">How much time is your school <span className="text-primary">losing?</span></h2>
+                  <p className="text-lg md:text-xl text-slate-400 font-medium">The cost of manual administration is higher than you think. Calculate your potential savings.</p>
 
                   <div className="space-y-6 pt-8">
                      <div className="flex items-center gap-4">
@@ -387,11 +387,11 @@ const LandingPage = () => {
                   </div>
                </div>
 
-               <div className="glass-surface rounded-[3rem] p-10 border border-white/10 bg-slate-900/60 backdrop-blur-3xl shadow-2xl">
-                  <div className="space-y-8">
+               <div className="glass-surface rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 border border-white/10 bg-slate-900/60 backdrop-blur-3xl shadow-2xl">
+                  <div className="space-y-6 md:space-y-8">
                      <div className="space-y-4">
                         <label className="text-xs font-black uppercase tracking-widest text-slate-400">Number of Students</label>
-                        <div className="flex gap-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
                            <input
                               type="range"
                               min="50" max="2000" step="50"
@@ -411,24 +411,24 @@ const LandingPage = () => {
                         </div>
                      </div>
 
-                     <div className="grid grid-cols-2 gap-6 pt-10 border-t border-white/5">
-                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 pt-8 md:pt-10 border-t border-white/5">
+                        <div className="p-4 md:p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-2">Monthly Savings</p>
-                           <p className="text-3xl font-black text-emerald-400 tracking-tighter">NPR <span id="calc-savings">3,600</span></p>
+                           <p className="text-2xl md:text-3xl font-black text-emerald-400 tracking-tighter">NPR <span id="calc-savings">3,600</span></p>
                         </div>
-                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
+                        <div className="p-4 md:p-6 rounded-2xl bg-white/5 border border-white/5 text-center">
                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-2">Hours Saved/mo</p>
-                           <p className="text-3xl font-black text-primary tracking-tighter"><span id="calc-hours">60</span> hrs</p>
+                           <p className="text-2xl md:text-3xl font-black text-primary tracking-tighter"><span id="calc-hours">60</span> hrs</p>
                         </div>
                      </div>
 
                      <div className="space-y-4">
                         <Input
-                           placeholder="Enter school email to get full report"
-                           className="h-16 rounded-2xl bg-white/5 border-white/10 text-white font-bold"
+                           placeholder="School email"
+                           className="h-14 md:h-16 rounded-2xl bg-white/5 border-white/10 text-white font-bold"
                         />
-                        <Button className="w-full h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-lg uppercase tracking-widest shadow-xl shadow-primary/20">
-                           Email Me This Report
+                        <Button className="w-full h-14 md:h-16 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-base md:text-lg uppercase tracking-widest shadow-xl shadow-primary/20">
+                           Get Full Report
                         </Button>
                      </div>
                   </div>
@@ -440,17 +440,17 @@ const LandingPage = () => {
       {/* Chaos to Clarity (Old Way vs New Way) */}
       <section id="solutions" className="py-32 relative overflow-hidden">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center mb-24">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-8 uppercase leading-[0.9]">Stop managing spreadsheets. <br /><span className="text-slate-500">Start managing your school.</span></h2>
-            <p className="text-xl text-slate-400 font-medium">Traditional school management is fragmented, manual, and slow. EduFlow brings everything together in one unified, high-performance platform.</p>
+          <div className="max-w-4xl mx-auto text-center mb-16 md:mb-24">
+            <h2 className="text-3xl md:text-4xl md:text-6xl font-black tracking-tighter mb-6 md:mb-8 uppercase leading-[1] md:leading-[0.9]">Stop managing spreadsheets. <br /><span className="text-slate-500">Start managing your school.</span></h2>
+            <p className="text-lg md:text-xl text-slate-400 font-medium px-4">Traditional school management is fragmented, manual, and slow. EduFlow brings everything together in one unified platform.</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="p-10 rounded-[3rem] bg-rose-500/5 border border-rose-500/10">
-               <div className="w-16 h-16 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-8">
-                  <X className="h-8 w-8" />
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+            <div className="p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] bg-rose-500/5 border border-rose-500/10">
+               <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-6 md:mb-8">
+                  <X className="h-6 w-6 md:h-8 md:w-8" />
                </div>
-               <h3 className="text-3xl font-black mb-6 uppercase tracking-tight text-rose-500">The Old Way</h3>
+               <h3 className="text-2xl md:text-3xl font-black mb-4 md:mb-6 uppercase tracking-tight text-rose-500">The Old Way</h3>
                <ul className="space-y-4">
                   {[
                     "Fragmented Spreadsheets",
@@ -466,14 +466,14 @@ const LandingPage = () => {
                </ul>
             </div>
 
-            <div className="p-10 rounded-[3rem] bg-emerald-500/5 border border-emerald-500/10 relative overflow-hidden group">
+            <div className="p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] bg-emerald-500/5 border border-emerald-500/10 relative overflow-hidden group">
                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Zap className="h-32 w-32 text-emerald-500" />
                </div>
-               <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-8">
-                  <CheckCircle2 className="h-8 w-8" />
+               <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6 md:mb-8">
+                  <CheckCircle2 className="h-6 w-6 md:h-8 md:w-8" />
                </div>
-               <h3 className="text-3xl font-black mb-6 uppercase tracking-tight text-emerald-500">The EduFlow Way</h3>
+               <h3 className="text-2xl md:text-3xl font-black mb-4 md:mb-6 uppercase tracking-tight text-emerald-500">The EduFlow Way</h3>
                <ul className="space-y-4">
                   {[
                     "Unified Cloud Database",
@@ -493,14 +493,14 @@ const LandingPage = () => {
       </section>
 
       {/* Feature Suites (Explorer) */}
-      <section id="features" className="py-32 bg-slate-900/30">
+      <section id="features" className="py-20 md:py-32 bg-slate-900/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-24">
-             <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">Everything you need to run <br />a modern school.</h2>
-             <p className="text-xl text-slate-400 max-w-2xl mx-auto font-medium">EduFlow is built on a modular architecture, organized into powerful suites designed for every aspect of your institution.</p>
+          <div className="text-center mb-16 md:mb-24">
+             <h2 className="text-3xl md:text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase leading-[1]">Everything you need <br />for your school.</h2>
+             <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto font-medium px-4">EduFlow is built on a modular architecture designed for every aspect of your institution.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {featureSuites.map((suite) => (
               <div key={suite.id} className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 hover:bg-white/10 transition-all group flex flex-col">
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
@@ -617,12 +617,12 @@ const LandingPage = () => {
       </section>
 
       {/* Calendly / Strategy Call */}
-      <section className="py-32 bg-primary">
+      <section className="py-20 md:py-32 bg-primary">
          <div className="container mx-auto px-4">
-            <div className="grid lg:grid-cols-2 gap-20 items-center">
-               <div className="text-white space-y-8">
-                  <h2 className="text-5xl md:text-8xl font-black tracking-tighter uppercase leading-[0.9]">Book a 15-Min Strategy Call.</h2>
-                  <p className="text-2xl text-white/80 font-medium">Let's discuss how EduFlow can be tailored to your school's specific needs. Pick a time that works for you.</p>
+            <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
+               <div className="text-white space-y-6 md:space-y-8">
+                  <h2 className="text-4xl md:text-8xl font-black tracking-tighter uppercase leading-[1] md:leading-[0.9]">Book a 15-Min Strategy Call.</h2>
+                  <p className="text-xl md:text-2xl text-white/80 font-medium">Tailor EduFlow to your school's needs. Pick a time that works for you.</p>
                   <div className="flex items-center gap-6">
                      <div className="h-16 w-16 rounded-2xl bg-white/20 flex items-center justify-center">
                         <CheckCircle2 className="h-8 w-8 text-white" />
@@ -636,10 +636,10 @@ const LandingPage = () => {
                      <span className="text-xl font-bold">Custom pricing for enterprise needs</span>
                   </div>
                </div>
-               <div className="rounded-[3rem] bg-white p-6 shadow-2xl h-[600px] overflow-hidden flex flex-col">
-                  <div className="flex items-center justify-between mb-8">
+               <div className="rounded-[2rem] md:rounded-[3rem] bg-white p-6 shadow-2xl min-h-[500px] md:h-[600px] overflow-hidden flex flex-col">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                      <div>
-                        <h4 className="text-slate-900 font-black text-xl">Select a Date & Time</h4>
+                        <h4 className="text-slate-900 font-black text-lg md:text-xl">Select a Date & Time</h4>
                         <p className="text-slate-500 font-medium text-sm">15 Min Strategy Call • May 2024</p>
                      </div>
                      <div className="flex gap-1">
@@ -732,7 +732,7 @@ const LandingPage = () => {
       <section className="py-40 bg-slate-950 text-center relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[150px]" />
         <div className="container mx-auto px-4 relative z-10">
-           <h2 className="text-6xl md:text-9xl font-black tracking-tighter mb-12 uppercase leading-[0.8]">Ready to transform <br />your school?</h2>
+           <h2 className="text-4xl md:text-6xl md:text-9xl font-black tracking-tighter mb-12 uppercase leading-[0.8]">Ready to transform <br />your school?</h2>
            <Button asChild size="lg" className="h-20 px-16 rounded-[2rem] text-2xl font-black bg-primary hover:bg-primary/90 text-white shadow-2xl shadow-primary/40 transition-transform hover:scale-105 active:scale-95">
              <Link to="/onboarding">Start Your Free Trial Now</Link>
            </Button>

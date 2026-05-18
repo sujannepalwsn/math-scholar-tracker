@@ -146,11 +146,11 @@ export default function ErrorTracking() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <ShieldAlert className="w-8 h-8 text-primary" />
-            Error Tracking & Observability
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <ShieldAlert className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+            System Errors
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Production-ready logs for autonomous AI debugging.
           </p>
         </div>
@@ -300,7 +300,7 @@ export default function ErrorTracking() {
       </Card>
 
       <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto table-scroll-shadow">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>

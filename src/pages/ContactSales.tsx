@@ -121,7 +121,7 @@ const ContactSales = () => {
                 <MessageSquare className="w-3 h-3" />
                 <span>Contact Sales</span>
               </div>
-              <h1 className="text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
+              <h1 className="text-4xl md:text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
                 {settings?.title || "Book a Personalized Demo"}
               </h1>
               <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-lg">

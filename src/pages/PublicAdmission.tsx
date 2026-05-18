@@ -71,7 +71,7 @@ export default function PublicAdmission() {
          <div className="h-16 w-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="h-8 w-8" />
          </div>
-         <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900">Nexis Admission Portal</h1>
+         <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter text-slate-900">Nexis Admission Portal</h1>
          <p className="text-slate-500 font-medium tracking-wide">Begin your child's academic journey with our network.</p>
       </div>
 

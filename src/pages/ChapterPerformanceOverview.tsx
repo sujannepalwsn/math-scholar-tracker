@@ -256,7 +256,7 @@ export default function ChapterPerformanceOverview() {
               <TrendingUp className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Progress Matrix
               </h1>
               <div className="flex items-center gap-2 mt-1">

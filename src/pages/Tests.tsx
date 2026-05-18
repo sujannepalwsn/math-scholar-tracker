@@ -554,12 +554,12 @@ export default function Tests() {
               <ClipboardCheck className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Assessment Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Cognitive Evaluation & Marks Registry</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Cognitive Evaluation & Marks Registry</p>
               </div>
             </div>
           </div>
@@ -754,17 +754,17 @@ export default function Tests() {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 h-fit">
-          <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-            <CardTitle className="text-xl font-black flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <ClipboardCheck className="h-6 w-6 text-primary" />
+        <Card className="border-none shadow-strong overflow-hidden rounded-[1.5rem] md:rounded-3xl bg-card/40 backdrop-blur-md border border-border/20 h-fit">
+          <CardHeader className="border-b border-muted/20 bg-primary/5 py-4 md:py-6">
+            <CardTitle className="text-base md:text-xl font-black flex items-center gap-3">
+              <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10">
+                <ClipboardCheck className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
               Evaluation Catalog
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto table-scroll-shadow">
   <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-muted/10">
@@ -852,12 +852,12 @@ export default function Tests() {
         </Card>
 
         {selectedTest && selectedTestData && (
-          <Card className="border-none shadow-strong overflow-hidden rounded-3xl animate-in slide-in-from-right-4 duration-500">
-            <CardHeader className="bg-gradient-to-r from-primary to-violet-600 text-primary-foreground pb-6">
+          <Card className="border-none shadow-strong overflow-hidden rounded-[1.5rem] md:rounded-3xl animate-in slide-in-from-right-4 duration-500">
+            <CardHeader className="bg-gradient-to-r from-primary to-violet-600 text-primary-foreground py-5 md:py-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-2xl font-black">Performance Entry</CardTitle>
-                  <CardDescription className="text-primary-foreground/80 font-medium">Recording results for {selectedTestData.name}</CardDescription>
+                  <CardTitle className="text-xl md:text-2xl font-black">Performance Entry</CardTitle>
+                  <CardDescription className="text-primary-foreground/80 text-xs md:text-sm font-medium">Recording results for {selectedTestData.name}</CardDescription>
                 </div>
                 {canEdit && (
                   <Button
@@ -1011,13 +1011,13 @@ export default function Tests() {
 
               {/* Display Entered Marks Table */}
               <div className="mt-8">
-                <h3 className="font-semibold text-lg mb-4">Entered Marks for {selectedTestData.name}</h3>
+                <h3 className="font-black text-base md:text-lg mb-4 uppercase tracking-tight">Entered Marks for {selectedTestData.name}</h3>
                 {testResultsLoading ? (
                   <p>Loading results...</p>
                 ) : testResults.length === 0 ? (
                   <p className="text-muted-foreground text-center py-4">No marks entered for this test yet.</p>
                 ) : (
-                  <div className="overflow-x-auto border rounded-lg">
+                  <div className="overflow-x-auto border rounded-xl table-scroll-shadow">
                     <Table>
                       <TableHeader>
                         <TableRow>

@@ -156,7 +156,7 @@ export default function StudentPromotion({ centerId, canEdit }: { centerId: stri
 
           {fromGrade && (
             <div className="border rounded-2xl overflow-hidden shadow-soft bg-white">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto table-scroll-shadow">
   <Table>
                 <TableHeader className="bg-slate-50">
                   <TableRow>

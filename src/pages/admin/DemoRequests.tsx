@@ -133,7 +133,7 @@ const DemoRequests = () => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-foreground">Revenue & Growth</h1>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight text-foreground">Revenue & Growth</h1>
           <p className="text-muted-foreground mt-2 font-medium">Manage demo requests and institutional plan bookings.</p>
         </div>
         <div className="flex items-center gap-4">
@@ -158,7 +158,7 @@ const DemoRequests = () => {
                <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-600/60">Total Leads</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-4xl font-black text-indigo-600">{requests?.length || 0}</div>
+               <div className="text-2xl md:text-4xl font-black text-indigo-600">{requests?.length || 0}</div>
             </CardContent>
          </Card>
          <Card className="border-none shadow-sm rounded-3xl bg-amber-50/50">
@@ -166,7 +166,7 @@ const DemoRequests = () => {
                <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-600/60">New Requests</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-4xl font-black text-amber-600">
+               <div className="text-2xl md:text-4xl font-black text-amber-600">
                   {requests?.filter(r => r.status === 'pending').length || 0}
                </div>
             </CardContent>
@@ -176,7 +176,7 @@ const DemoRequests = () => {
                <CardTitle className="text-sm font-black uppercase tracking-widest text-emerald-600/60">Scheduled</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-4xl font-black text-emerald-600">
+               <div className="text-2xl md:text-4xl font-black text-emerald-600">
                   {requests?.filter(r => r.status === 'scheduled').length || 0}
                </div>
             </CardContent>

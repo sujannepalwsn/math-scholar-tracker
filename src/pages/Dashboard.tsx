@@ -1439,9 +1439,9 @@ export default function Dashboard() {
                           </div>
                         </div>
                       )}
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg font-bold">Attendance Overview</CardTitle>
-                        <div className="flex gap-1 pr-12">
+                      <CardHeader className="flex flex-row items-center justify-between p-5 md:p-6">
+                        <CardTitle className="text-base md:text-lg font-bold">Attendance Overview</CardTitle>
+                        <div className="flex gap-1 pr-10 md:pr-12">
                           {(["weekly", "monthly", "yearly", "overall"] as AttendanceRange[]).map((range) => (
                             <Button
                               key={range}
@@ -1501,10 +1501,10 @@ export default function Dashboard() {
                           </div>
                         </div>
                       )}
-                      <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
-                        <CardHeader className="bg-success/5 border-b border-success/10 p-6">
-                          <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-success flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5" /> Top Performers
+                      <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
+                        <CardHeader className="bg-success/5 border-b border-success/10 p-5 md:p-6">
+                          <CardTitle className="text-[10px] md:text-sm font-black uppercase tracking-[0.2em] text-success flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 md:h-5 md:w-5" /> Top Performers
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -1526,10 +1526,10 @@ export default function Dashboard() {
                         </CardContent>
                       </Card>
 
-                      <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
-                        <CardHeader className="bg-destructive/5 border-b border-destructive/10 p-6">
-                          <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-destructive flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5" /> Critical Attention
+                      <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
+                        <CardHeader className="bg-destructive/5 border-b border-destructive/10 p-5 md:p-6">
+                          <CardTitle className="text-[10px] md:text-sm font-black uppercase tracking-[0.2em] text-destructive flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 md:h-5 md:w-5" /> Critical Attention
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -1571,13 +1571,13 @@ export default function Dashboard() {
                           </div>
                         </div>
                       )}
-                      <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
-                        <CardHeader className="p-6">
-                          <CardTitle className="text-lg font-black flex items-center gap-3">
-                            <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                              <Users className="h-5 w-5" />
+                      <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
+                        <CardHeader className="p-5 md:p-6">
+                          <CardTitle className="text-base md:text-lg font-black flex items-center gap-3">
+                            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10 text-primary">
+                              <Users className="h-4 w-4 md:h-5 md:w-5" />
                             </div>
-                            Teacher Attendance
+                            Teacher Status
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -1630,23 +1630,23 @@ export default function Dashboard() {
                         )}
                         onClick={() => hasPermission(user, 'finance') && navigate("/finance")}
                       >
-                        <CardHeader className="p-8">
-                          <CardTitle className="text-lg font-black flex items-center gap-3">
-                            <div className="p-2 rounded-xl bg-success/10 text-success">
-                              <Wallet className="h-5 w-5" />
+                        <CardHeader className="p-6 md:p-8">
+                          <CardTitle className="text-base md:text-lg font-black flex items-center gap-3">
+                            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-success/10 text-success">
+                              <Wallet className="h-4 w-4 md:h-5 md:w-5" />
                             </div>
                             Financial Health
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-8 p-8 pt-0">
+                        <CardContent className="space-y-6 md:space-y-8 p-6 md:p-8 pt-0">
                           <div className="flex justify-between items-end">
                             <div>
-                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Collection Ratio</p>
-                              <p className="text-5xl font-black tracking-tighter text-slate-900">{collectionRate}%</p>
+                              <p className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 md:mb-2">Collection Ratio</p>
+                              <p className="text-3xl md:text-5xl font-black tracking-tighter text-slate-900">{collectionRate}%</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-2">Total Invoiced</p>
-                              <p className="text-xl font-black text-slate-700">{formatCurrency(totalInvoiced)}</p>
+                              <p className="text-[9px] md:text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1 md:mb-2">Total Invoiced</p>
+                              <p className="text-lg md:text-xl font-black text-slate-700">{formatCurrency(totalInvoiced)}</p>
                             </div>
                           </div>
                           <div className="space-y-3">
@@ -1666,7 +1666,7 @@ export default function Dashboard() {
 
                 case "leave-applications":
                   content = hasPermission(user, 'leave_management') ? (
-                    <Card className="border shadow-soft bg-card rounded-2xl overflow-hidden relative group/widget">
+                    <Card className="border shadow-soft bg-card rounded-[1.5rem] md:rounded-2xl overflow-hidden relative group/widget">
                       {isCustomizeMode && (
                         <div className="absolute top-2 right-2 z-10 flex gap-1">
                           <Button
@@ -1682,10 +1682,10 @@ export default function Dashboard() {
                           </div>
                         </div>
                       )}
-                      <CardHeader className="flex flex-row items-center justify-between p-6 pb-2">
-                        <CardTitle className="text-lg font-black flex items-center gap-3">
-                          <div className="p-2 rounded-xl bg-warning/10 text-warning">
-                            <Calendar className="h-5 w-5" />
+                      <CardHeader className="flex flex-row items-center justify-between p-5 md:p-6 md:pb-2">
+                        <CardTitle className="text-base md:text-lg font-black flex items-center gap-3">
+                          <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-warning/10 text-warning">
+                            <Calendar className="h-4 w-4 md:h-5 md:w-5" />
                           </div>
                           Leave Applications
                         </CardTitle>
@@ -1825,10 +1825,10 @@ export default function Dashboard() {
                   const isVisibleForUser = role === UserRole.ADMIN || role === UserRole.CENTER || (role === UserRole.TEACHER && pendingAttendanceByGrade.length > 0);
 
                   content = isVisibleForUser ? (
-                    <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")} key={id}>
-                      <CardHeader className="bg-amber-50 border-b border-amber-100 p-6 flex flex-row items-center justify-between">
-                        <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-600 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4" /> Pending Roll Call
+                    <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")} key={id}>
+                      <CardHeader className="bg-amber-50 border-b border-amber-100 p-4 md:p-6 flex flex-row items-center justify-between">
+                        <CardTitle className="text-[10px] md:text-sm font-black uppercase tracking-widest text-amber-600 flex items-center gap-2">
+                          <AlertTriangle className="h-3 w-3 md:h-4 md:w-4" /> Pending Roll Call
                         </CardTitle>
                         {totalPendingStudents > 0 && <Badge variant="warning" className="bg-amber-500 text-white">{totalPendingStudents} Students</Badge>}
                       </CardHeader>
@@ -1869,7 +1869,7 @@ export default function Dashboard() {
 
                 case "activities-discipline":
                   content = (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative group/widget">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 relative group/widget">
                       {isCustomizeMode && (
                         <div className="absolute top-2 right-2 z-10 flex gap-1">
                           <Button
@@ -1886,13 +1886,13 @@ export default function Dashboard() {
                         </div>
                       )}
                       {hasPermission(user, 'preschool_activities') ? (
-                        <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
-                          <CardHeader className="flex flex-row items-center justify-between p-6 pb-2">
-                            <CardTitle className="text-lg font-black flex items-center gap-3">
-                              <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                                <BookOpen className="h-5 w-5" />
+                        <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
+                          <CardHeader className="flex flex-row items-center justify-between p-5 md:p-6 md:pb-2">
+                            <CardTitle className="text-base md:text-lg font-black flex items-center gap-3">
+                              <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10 text-primary">
+                                <BookOpen className="h-4 w-4 md:h-5 md:w-5" />
                               </div>
-                              Pre School Activities
+                              Activities
                             </CardTitle>
                             <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase tracking-widest text-primary h-7" onClick={() => navigate("/activities")}>
                               View All <ArrowRight className="h-3 w-3 ml-1" />
@@ -1928,11 +1928,11 @@ export default function Dashboard() {
                       ) : <div />}
 
                       {hasPermission(user, 'discipline_issues') ? (
-                        <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
-                          <CardHeader className="flex flex-row items-center justify-between p-6 pb-2">
-                            <CardTitle className="text-lg font-black flex items-center gap-3">
-                              <div className="p-2 rounded-xl bg-destructive/10 text-destructive">
-                                <AlertTriangle className="h-5 w-5" />
+                        <Card className={cn("border-none shadow-strong bg-card/60 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border border-white/20", !visibleWidgets[id] && "opacity-40 grayscale")}>
+                          <CardHeader className="flex flex-row items-center justify-between p-5 md:p-6 md:pb-2">
+                            <CardTitle className="text-base md:text-lg font-black flex items-center gap-3">
+                              <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-destructive/10 text-destructive">
+                                <AlertTriangle className="h-4 w-4 md:h-5 md:w-5" />
                               </div>
                               Discipline
                             </CardTitle>

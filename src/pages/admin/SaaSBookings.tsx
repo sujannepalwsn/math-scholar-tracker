@@ -144,7 +144,7 @@ const SaaSBookings = () => {
                <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-600/60">Total Bookings</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-4xl font-black text-indigo-600">{bookings?.length || 0}</div>
+               <div className="text-2xl md:text-4xl font-black text-indigo-600">{bookings?.length || 0}</div>
             </CardContent>
          </Card>
          <Card className="border-none shadow-sm rounded-3xl bg-amber-50/50">
@@ -152,7 +152,7 @@ const SaaSBookings = () => {
                <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-600/60">New Payments</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-4xl font-black text-amber-600">
+               <div className="text-2xl md:text-4xl font-black text-amber-600">
                   {bookings?.filter(r => r.status === 'pending').length || 0}
                </div>
             </CardContent>
@@ -162,7 +162,7 @@ const SaaSBookings = () => {
                <CardTitle className="text-sm font-black uppercase tracking-widest text-emerald-600/60">Verified</CardTitle>
             </CardHeader>
             <CardContent>
-               <div className="text-4xl font-black text-emerald-600">
+               <div className="text-2xl md:text-4xl font-black text-emerald-600">
                   {bookings?.filter(r => r.status === 'verified').length || 0}
                </div>
             </CardContent>

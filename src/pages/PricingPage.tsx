@@ -91,17 +91,17 @@ const PricingPage = () => {
       </header>
 
       <main className="pt-40 pb-20 container mx-auto px-4">
-        <div className="max-w-4xl mx-auto text-center mb-16">
+        <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-6xl md:text-8xl font-black tracking-tighter mb-8 uppercase leading-[0.9]"
+            className="text-4xl sm:text-4xl md:text-6xl md:text-8xl font-black tracking-tighter mb-6 md:mb-8 uppercase leading-[1] md:leading-[0.9] px-4"
           >
             Scalable Plans for <span className="text-primary">Every Stage.</span>
           </motion.h1>
 
-          <div className="flex items-center justify-center gap-6 mb-12">
-            <span className={cn("text-lg font-black uppercase tracking-widest transition-colors", !isYearly ? "text-white" : "text-slate-500")}>Monthly</span>
+          <div className="flex items-center justify-center gap-4 md:gap-6 mb-8 md:mb-12">
+            <span className={cn("text-base md:text-lg font-black uppercase tracking-widest transition-colors", !isYearly ? "text-white" : "text-slate-500")}>Monthly</span>
             <div className="relative flex items-center">
                <Switch checked={isYearly} onCheckedChange={setIsYearly} className="data-[state=checked]:bg-primary" />
                <AnimatePresence>
@@ -147,13 +147,13 @@ const PricingPage = () => {
                 <p className="text-slate-400 font-medium text-sm leading-relaxed">{tier.description}</p>
               </div>
 
-              <div className="mb-10">
+              <div className="mb-8 md:mb-10">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-6xl font-black tracking-tighter">
+                  <span className="text-4xl md:text-4xl md:text-6xl font-black tracking-tighter">
                     {tier.price === "Custom" ? "" : "NPR "}
                     {tier.price}
                   </span>
-                  {tier.price !== "Custom" && <span className="text-slate-500 font-bold text-lg uppercase tracking-widest">/month</span>}
+                  {tier.price !== "Custom" && <span className="text-slate-500 font-bold text-base md:text-lg uppercase tracking-widest">/month</span>}
                 </div>
                 {tier.price !== "Custom" && tier.price !== "0" && (
                    <p className="text-slate-500 text-xs font-bold mt-2 uppercase tracking-widest">
@@ -187,10 +187,10 @@ const PricingPage = () => {
         </div>
 
         {/* Feature Comparison Table */}
-        <section className="max-w-5xl mx-auto py-24 border-t border-white/5">
-           <div className="text-center mb-16">
-              <h2 className="text-4xl font-black uppercase tracking-tight mb-4">Compare Every Feature</h2>
-              <p className="text-slate-400 font-medium">Deep dive into what each plan offers to your institution.</p>
+        <section className="max-w-5xl mx-auto py-16 md:py-24 border-t border-white/5 px-4">
+           <div className="text-center mb-12 md:mb-16">
+              <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight mb-4">Compare Every Feature</h2>
+              <p className="text-sm md:text-base text-slate-400 font-medium">Deep dive into what each plan offers.</p>
            </div>
 
            <div className="overflow-x-auto">
@@ -229,10 +229,10 @@ const PricingPage = () => {
         </section>
 
         {/* FAQ Preview */}
-        <section className="max-w-3xl mx-auto mt-20 text-center">
-           <HelpCircle className="h-12 w-12 text-primary mx-auto mb-6" />
-           <h3 className="text-3xl font-black uppercase mb-4">Have Questions?</h3>
-           <p className="text-slate-400 mb-8 font-medium">Need help picking the right plan? Our experts are ready to help you optimize your school.</p>
+        <section className="max-w-3xl mx-auto mt-16 md:mt-20 text-center px-4">
+           <HelpCircle className="h-10 w-10 md:h-12 md:w-12 text-primary mx-auto mb-6" />
+           <h3 className="text-2xl md:text-3xl font-black uppercase mb-4">Have Questions?</h3>
+           <p className="text-sm md:text-base text-slate-400 mb-8 font-medium">Need help picking the right plan? Our experts are ready to help you optimize your school.</p>
            <Button asChild variant="outline" className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest border-white/10 hover:bg-white/5">
               <Link to="/contact-sales">Talk to an Expert</Link>
            </Button>

@@ -7,13 +7,13 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const FeatureSuite = ({ icon: Icon, title, description, features, color, reverse = false, mockup }: any) => (
-  <section className={cn("py-24 grid md:grid-cols-2 gap-20 items-center", reverse && "md:flex-row-reverse")}>
-    <div className={cn(reverse && "md:order-2")}>
-      <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-8", color.bg)}>
-        <Icon className={cn("h-8 w-8", color.text)} />
+  <section className={cn("py-16 md:py-24 grid md:grid-cols-2 gap-12 md:gap-20 items-center", reverse && "md:flex-row-reverse")}>
+    <div className={cn(reverse && "md:order-2", "text-center md:text-left px-4")}>
+      <div className={cn("w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mb-6 md:mb-8 mx-auto md:mx-0", color.bg)}>
+        <Icon className={cn("h-6 w-6 md:h-8 md:w-8", color.text)} />
       </div>
-      <h2 className="text-4xl md:text-5xl font-black mb-6 uppercase tracking-tight leading-none">{title}</h2>
-      <p className="text-xl text-slate-400 font-medium mb-10 leading-relaxed">{description}</p>
+      <h2 className="text-3xl md:text-3xl md:text-5xl font-black mb-4 md:mb-6 uppercase tracking-tight leading-tight md:leading-none">{title}</h2>
+      <p className="text-lg md:text-xl text-slate-400 font-medium mb-8 md:mb-10 leading-relaxed">{description}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {features.map((f: string) => (
           <div key={f} className="flex items-center gap-3 text-white font-bold">
@@ -72,11 +72,11 @@ const FeaturesPage = () => {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-6xl md:text-8xl font-black tracking-tighter mb-8 uppercase leading-[0.9]"
+            className="text-4xl sm:text-4xl md:text-6xl md:text-8xl font-black tracking-tighter mb-6 md:mb-8 uppercase leading-[1] md:leading-[0.9] px-4"
           >
             A Modular Ecosystem for <span className="text-primary">Every Department.</span>
           </motion.h1>
-          <p className="text-xl md:text-2xl text-slate-400 font-medium max-w-3xl mx-auto">
+          <p className="text-lg md:text-2xl text-slate-400 font-medium max-w-3xl mx-auto px-6">
             EduFlow isn't just a database. It's a collection of high-performance tools designed to automate every aspect of your school.
           </p>
         </div>
@@ -235,13 +235,13 @@ const FeaturesPage = () => {
         />
 
         {/* Final CTA */}
-        <section className="mt-40 text-center">
-           <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-12 uppercase leading-[0.9]">Ready to see it <br />in action?</h2>
-           <div className="flex flex-wrap gap-6 justify-center">
-             <Button asChild size="lg" className="h-20 px-16 rounded-[2rem] text-2xl font-black bg-primary hover:bg-primary/90 text-white shadow-2xl shadow-primary/40">
+        <section className="mt-20 md:mt-40 text-center px-4">
+           <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-8 md:mb-12 uppercase leading-[1] md:leading-[0.9]">Ready to see it <br />in action?</h2>
+           <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center">
+             <Button asChild size="lg" className="h-16 md:h-20 px-10 md:px-16 rounded-2xl md:rounded-[2rem] text-lg md:text-2xl font-black bg-primary hover:bg-primary/90 text-white shadow-2xl shadow-primary/40">
                <Link to="/onboarding">Start Free Trial</Link>
              </Button>
-             <Button asChild variant="outline" size="lg" className="h-20 px-16 rounded-[2rem] text-2xl font-black border-white/10 bg-white/5 hover:bg-white/10 text-white">
+             <Button asChild variant="outline" size="lg" className="h-16 md:h-20 px-10 md:px-16 rounded-2xl md:rounded-[2rem] text-lg md:text-2xl font-black border-white/10 bg-white/5 hover:bg-white/10 text-white">
                <Link to="/contact-sales">Contact Sales</Link>
              </Button>
            </div>

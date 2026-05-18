@@ -140,7 +140,7 @@ export default function MeetingManagement() {
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20"><CalendarDays className="h-8 w-8 text-primary animate-pulse" /></div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">Assembly Hub</h1>
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">Assembly Hub</h1>
               <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Stakeholder Consultation Nexus</p>
             </div>
           </div>

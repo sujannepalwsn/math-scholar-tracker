@@ -309,12 +309,12 @@ export default function HomeworkManagement() {
               <Book className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Homework Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Assignment Management Portal</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Assignment Portal</p>
               </div>
             </div>
           </div>
@@ -408,16 +408,16 @@ export default function HomeworkManagement() {
             </div></DialogContent></Dialog>
         </div>
       </div>
-      <Card className="border-none shadow-strong overflow-hidden rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
-        <CardHeader className="border-b border-border/10 bg-primary/5 py-6">
-          <CardTitle className="text-xl font-black flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Book className="h-6 w-6 text-primary" />
+      <Card className="border-none shadow-strong overflow-hidden rounded-[1.5rem] md:rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
+        <CardHeader className="border-b border-border/10 bg-primary/5 py-4 md:py-6">
+          <CardTitle className="text-base md:text-xl font-black flex items-center gap-3">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10">
+              <Book className="h-5 w-5 md:h-6 md:w-6 text-primary" />
             </div>
             Active Assignments
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-0 md:p-6">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -430,7 +430,7 @@ export default function HomeworkManagement() {
               <p className="text-muted-foreground font-medium">No homework found for selected filters.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto space-y-4">
+            <div className="overflow-x-auto space-y-4 table-scroll-shadow">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-muted/10">

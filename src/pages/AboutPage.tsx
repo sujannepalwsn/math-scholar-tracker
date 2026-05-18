@@ -48,7 +48,7 @@ const AboutPage = () => {
                    <Heart className="h-4 w-4" />
                    <span>Our Story</span>
                  </motion.div>
-                 <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 uppercase leading-[0.9]">Why we built <span className="text-primary">EduFlow.</span></h1>
+                 <h1 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-8 uppercase leading-[0.9]">Why we built <span className="text-primary">EduFlow.</span></h1>
                  <div className="space-y-6 text-xl text-slate-400 font-medium leading-relaxed">
                     <p>
                        We believe that technology should be an invisible force that empowers educators, not a hurdle that consumes their time.
@@ -79,7 +79,7 @@ const AboutPage = () => {
            <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 rounded-full blur-[120px] transition-all group-hover:bg-primary/20" />
            <div className="max-w-4xl mx-auto text-center mb-24">
               <Shield className="h-20 w-20 text-primary mx-auto mb-10" />
-              <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-8 uppercase leading-[0.9]">Security by Design.</h2>
+              <h2 className="text-4xl md:text-4xl md:text-6xl font-black tracking-tighter mb-8 uppercase leading-[0.9]">Security by Design.</h2>
               <p className="text-xl text-slate-400 font-medium leading-relaxed">
                  We understand that school data is sacred. That's why we've built EduFlow with enterprise-grade security at every layer, ensuring your institution's information is safe, private, and always available.
               </p>
@@ -112,7 +112,7 @@ const AboutPage = () => {
                 { value: "1M+", label: "Students Empowered" }
               ].map((stat, i) => (
                 <div key={i} className="p-12 rounded-[3rem] bg-white/5 border border-white/5 text-center transition-all hover:border-primary/20 hover:bg-white/10 group">
-                   <p className="text-5xl font-black text-white tracking-tighter mb-4 group-hover:text-primary transition-colors">{stat.value}</p>
+                   <p className="text-3xl md:text-5xl font-black text-white tracking-tighter mb-4 group-hover:text-primary transition-colors">{stat.value}</p>
                    <p className="text-xs font-black text-slate-500 uppercase tracking-[0.3em]">{stat.label}</p>
                 </div>
               ))}
@@ -122,7 +122,7 @@ const AboutPage = () => {
         {/* Final Vision CTA */}
         <section className="text-center pb-40">
            <div className="max-w-4xl mx-auto">
-              <h2 className="text-5xl md:text-8xl font-black tracking-tighter mb-12 uppercase leading-[0.9]">Join our mission to <span className="text-primary">transform the future.</span></h2>
+              <h2 className="text-3xl md:text-5xl md:text-8xl font-black tracking-tighter mb-12 uppercase leading-[0.9]">Join our mission to <span className="text-primary">transform the future.</span></h2>
               <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
                  <Button asChild size="lg" className="h-20 px-16 rounded-[2rem] text-2xl font-black bg-primary hover:bg-primary/90 text-white shadow-2xl shadow-primary/40 transition-transform hover:scale-105 active:scale-95">
                    <Link to="/onboarding">Join the Revolution</Link>

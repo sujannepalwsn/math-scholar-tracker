@@ -205,7 +205,7 @@ export default function ParentLeave() {
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter p-4 md:p-8 bg-white min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-4">
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight text-slate-900">
             Leave Applications
           </h1>
           <p className="text-slate-500 font-medium text-lg max-w-2xl">

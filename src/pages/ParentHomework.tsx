@@ -198,7 +198,7 @@ export default function ParentHomework() {
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter bg-white min-h-screen p-4 md:p-8">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
         <div className="space-y-4">
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight text-slate-900">
             Homework Monitor
           </h1>
           <p className="text-slate-500 font-medium text-lg">
