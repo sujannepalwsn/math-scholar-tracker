@@ -1389,7 +1389,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left/Main Column */}
-        <div className="space-y-6 md:space-y-8">
+        <div className="lg:col-span-8 space-y-6 md:space-y-8">
           {/* KPI Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             {kpiOrder.map(id => renderKPICard(id))}
