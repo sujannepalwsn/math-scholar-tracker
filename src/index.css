@@ -182,7 +182,7 @@
   }
 
   .display-metric {
-    @apply font-display text-3xl font-bold tracking-tight;
+    @apply font-display text-2xl md:text-3xl font-bold tracking-tight;
   }
 
   /* Custom Scrollbar */

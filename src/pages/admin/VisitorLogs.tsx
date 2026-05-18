@@ -192,7 +192,7 @@ const VisitorLogs = () => {
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter uppercase">Visitor Logs & Analytics</h1>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">Visitor Logs & Analytics</h1>
           <p className="text-slate-500 font-medium">Track real-time user sessions and behavioral insights.</p>
         </div>
         <div className="flex items-center gap-2">

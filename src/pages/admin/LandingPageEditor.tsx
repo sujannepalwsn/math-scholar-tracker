@@ -150,7 +150,7 @@ const LandingPageEditor = () => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center justify-between">
         <div className="space-y-4">
-          <h1 className="text-4xl font-black tracking-tight text-foreground">Page Editor</h1>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight text-foreground">Page Editor</h1>
           <div className="flex bg-muted/50 p-1 rounded-xl w-fit">
             <Button
               variant={activeTab === 'center' ? 'default' : 'ghost'}

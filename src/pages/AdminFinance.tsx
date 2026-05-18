@@ -169,12 +169,12 @@ const AdminFinance = () => {
                 <Wallet className="h-8 w-8 text-primary animate-pulse" />
               </div>
               <div>
-                <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+                <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                   Treasury Hub
                 </h1>
-                <div className="flex items-center gap-2 mt-1">
-                   <div className="h-2 w-2 rounded-full bg-primary" />
-                   <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Fiscal Management Matrix</p>
+                <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                   <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                   <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Fiscal Management</p>
                 </div>
               </div>
             </div>
@@ -185,12 +185,12 @@ const AdminFinance = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {[
-            { title: "Revenue Flow", value: totalInvoiced, icon: FileText, color: "blue", desc: "Total Invoiced Assets", delta: 12, tab: "invoices" },
+            { title: "Revenue Flow", value: totalInvoiced, icon: FileText, color: "blue", desc: "Total Invoiced", delta: 12, tab: "invoices" },
             { title: "Capital Collected", value: totalCollected, icon: TrendingUp, color: "green", desc: "Realized Liquidity", delta: 8, tab: "payments" },
-            { title: "Risk Exposure", value: outstanding, icon: AlertCircle, color: "orange", desc: `${unpaidCount} Pending Receivables`, delta: -5, tab: "invoices" },
-            { title: "Net Liquidity", value: netBalance, icon: Wallet, color: "purple", desc: "Post-Expenditure Balance", delta: 15, tab: "reports" },
+            { title: "Risk Exposure", value: outstanding, icon: AlertCircle, color: "orange", desc: `${unpaidCount} Pending`, delta: -5, tab: "invoices" },
+            { title: "Net Liquidity", value: netBalance, icon: Wallet, color: "purple", desc: "Post-Expenditure", delta: 15, tab: "reports" },
           ].map((stat) => (
             <KPICard
               key={stat.title}
@@ -207,15 +207,15 @@ const AdminFinance = () => {
         </div>
 
         {/* Collection Velocity & Monthly Revenue Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-           <Card className="lg:col-span-2 border-none shadow-soft rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 p-8">
-              <div className="flex items-center justify-between mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
+           <Card className="lg:col-span-2 border-none shadow-soft rounded-[1.5rem] md:rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 p-5 md:p-8">
+              <div className="flex items-center justify-between mb-6 md:mb-8">
                 <div className="space-y-1">
-                  <h3 className="text-xl font-black flex items-center gap-2 uppercase tracking-tight">
+                  <h3 className="text-lg md:text-xl font-black flex items-center gap-2 uppercase tracking-tight">
                     <BarChart3 className="h-5 w-5 text-primary" />
-                    Monthly Revenue Analytics
+                    Revenue Analytics
                   </h3>
-                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">Trailing 6-month capital inflow & outflow</p>
+                  <p className="text-[9px] md:text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">Trailing 6-month cycles</p>
                 </div>
               </div>
               <div className="h-64 w-full">
@@ -236,13 +236,13 @@ const AdminFinance = () => {
               </div>
            </Card>
 
-           <Card className="border-none shadow-soft rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 p-8 flex flex-col justify-between">
-              <div className="space-y-1 mb-8">
-                <h3 className="text-xl font-black flex items-center gap-2 uppercase tracking-tight">
+           <Card className="border-none shadow-soft rounded-[1.5rem] md:rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 p-5 md:p-8 flex flex-col justify-between">
+              <div className="space-y-1 mb-6 md:mb-8">
+                <h3 className="text-lg md:text-xl font-black flex items-center gap-2 uppercase tracking-tight">
                   <Target className="h-5 w-5 text-emerald-500" />
                   Collection Velocity
                 </h3>
-                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">Realized Liquidity index</p>
+                <p className="text-[9px] md:text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">Realized Liquidity index</p>
               </div>
 
               <div className="relative h-48 flex items-center justify-center">
@@ -350,8 +350,8 @@ const AdminFinance = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={(val) => setSearchParams({ tab: val })} className="space-y-8">
-          <TabsList className="flex flex-nowrap w-full overflow-x-auto h-14 bg-card/40 backdrop-blur-md rounded-[2rem] p-1.5 border border-border/40 shadow-soft custom-scrollbar">
-            <TabsTrigger value="invoices" className="rounded-[1.5rem] flex-1 min-w-[100px] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Invoices</TabsTrigger>
+          <TabsList className="flex flex-nowrap w-full overflow-x-auto h-14 bg-card/40 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] p-1 border border-border/40 shadow-soft custom-scrollbar">
+            <TabsTrigger value="invoices" className="rounded-[1.25rem] md:rounded-[1.5rem] flex-1 min-w-[90px] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[9px] md:text-[10px] tracking-widest">Invoices</TabsTrigger>
             <TabsTrigger value="fees" className="rounded-[1.5rem] flex-1 min-w-[100px] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Fees</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-[1.5rem] flex-1 min-w-[100px] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Payments</TabsTrigger>
             <TabsTrigger value="expenses" className="rounded-[1.5rem] flex-1 min-w-[100px] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-medium font-black uppercase text-[10px] tracking-widest">Expenses</TabsTrigger>

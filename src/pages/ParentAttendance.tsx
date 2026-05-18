@@ -91,7 +91,7 @@ export default function ParentAttendance() {
     <div className="space-y-8 animate-in fade-in duration-1000">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">Attendance Insights</h1>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight text-slate-900 mb-2">Attendance Insights</h1>
           <p className="text-slate-500 font-medium">Detailed presence monitoring and participation patterns.</p>
           <div className="mt-4">
             <ChildSwitcher selectedId={activeStudentId} onSelect={setSelectedStudentId} />
@@ -120,7 +120,7 @@ export default function ParentAttendance() {
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="text-center py-4">
-                <p className="text-4xl font-black text-slate-900">{Math.round(stats.rate)}%</p>
+                <p className="text-2xl md:text-4xl font-black text-slate-900">{Math.round(stats.rate)}%</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Attendance Rate</p>
               </div>
               <div className="grid grid-cols-2 gap-4">

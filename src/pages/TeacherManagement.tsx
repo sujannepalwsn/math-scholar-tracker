@@ -685,12 +685,12 @@ export default function TeacherManagement() {
               <Users className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Faculty Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Institutional Personnel & Faculty Registry</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Faculty Registry</p>
               </div>
             </div>
           </div>
@@ -996,10 +996,10 @@ export default function TeacherManagement() {
 
       <div className="flex flex-col lg:flex-row gap-8 min-h-[600px]">
         <div className={cn("flex-1 transition-all duration-500", selectedTeacher ? "lg:w-1/2" : "w-full")}>
-          <Card className="border-none shadow-strong overflow-hidden rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="border-b border-border/10 bg-primary/5 py-6">
-              <CardTitle className="text-lg md:text-xl font-black flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/10">
+          <Card className="border-none shadow-strong overflow-hidden rounded-[1.5rem] md:rounded-[2rem] bg-card/40 backdrop-blur-md border border-white/20">
+            <CardHeader className="border-b border-border/10 bg-primary/5 py-4 md:py-6">
+              <CardTitle className="text-base md:text-xl font-black flex items-center gap-3">
+                <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10">
                   <Users className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                 </div>
                 Staff Roster

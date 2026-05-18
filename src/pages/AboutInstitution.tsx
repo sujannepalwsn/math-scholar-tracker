@@ -484,10 +484,10 @@ export default function AboutInstitution() {
              <Badge className="mb-6 bg-white/20 backdrop-blur-md text-white border-white/40 px-6 py-2 rounded-full font-black uppercase tracking-[0.3em] text-xs">
                 Premier Academic Hub
              </Badge>
-             <h1 className="text-5xl md:text-8xl font-black text-white tracking-tighter mb-4 drop-shadow-2xl">
+             <h1 className="text-3xl sm:text-5xl md:text-8xl font-black text-white tracking-tighter mb-4 drop-shadow-2xl px-4">
                 {center?.name}
              </h1>
-             <p className="text-white/80 max-w-2xl text-lg md:text-xl font-medium drop-shadow-lg">
+             <p className="text-white/80 max-w-2xl text-base md:text-xl font-medium drop-shadow-lg px-6">
                 Pioneering the future of education through innovation, character, and excellence.
              </p>
           </motion.div>
@@ -496,12 +496,12 @@ export default function AboutInstitution() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-8">
         <div className="space-y-1">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
             About Institution
           </h1>
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <p className="text-muted-foreground text-sm font-medium">Institutional profile and pedagogical philosophy.</p>
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <p className="text-muted-foreground text-[10px] md:text-sm font-medium uppercase tracking-widest">Institutional profile & philosophy</p>
           </div>
         </div>
 
@@ -528,64 +528,64 @@ export default function AboutInstitution() {
       {/* Stats Section with Impact Counters */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative -mt-20 z-20 px-4 md:px-0">
         <motion.div whileHover={{ y: -5 }} className="h-full">
-        <Card className="border-none shadow-strong rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
-          <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-4">
-            <div className="p-4 rounded-[1.5rem] bg-primary text-white shadow-lg shadow-primary/30">
-              <Users className="h-8 w-8" />
+        <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
+          <CardContent className="p-4 md:p-8 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4">
+            <div className="p-2.5 md:p-4 rounded-xl md:rounded-[1.5rem] bg-primary text-white shadow-lg shadow-primary/30">
+              <Users className="h-5 w-5 md:h-8 md:w-8" />
             </div>
             <div className="space-y-1">
-              <p className="text-4xl font-black text-slate-900 tracking-tighter">
+              <p className="text-xl md:text-4xl font-black text-slate-900 tracking-tighter">
                   {isStatsLoading ? "..." : `${stats?.totalStudents}+`}
               </p>
-              <p className="label-caps">Scholars Enrolled</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400">Scholars</p>
             </div>
           </CardContent>
         </Card>
         </motion.div>
 
         <motion.div whileHover={{ y: -5 }} className="h-full">
-        <Card className="border-none shadow-strong rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
-          <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-4">
-            <div className="p-4 rounded-[1.5rem] bg-violet-600 text-white shadow-lg shadow-violet-500/30">
-              <User className="h-8 w-8" />
+        <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
+          <CardContent className="p-4 md:p-8 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4">
+            <div className="p-2.5 md:p-4 rounded-xl md:rounded-[1.5rem] bg-violet-600 text-white shadow-lg shadow-violet-500/30">
+              <User className="h-5 w-5 md:h-8 md:w-8" />
             </div>
             <div className="space-y-1">
-              <p className="text-4xl font-black text-slate-900 tracking-tighter">
+              <p className="text-xl md:text-4xl font-black text-slate-900 tracking-tighter">
                   {isStatsLoading ? "..." : `${stats?.totalTeachers}+`}
               </p>
-              <p className="label-caps">Expert Educators</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400">Educators</p>
             </div>
           </CardContent>
         </Card>
         </motion.div>
 
         <motion.div whileHover={{ y: -5 }} className="h-full">
-        <Card className="border-none shadow-strong rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
-          <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-4">
-            <div className="p-4 rounded-[1.5rem] bg-amber-500 text-white shadow-lg shadow-amber-500/30">
-              <School className="h-8 w-8" />
+        <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
+          <CardContent className="p-4 md:p-8 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4">
+            <div className="p-2.5 md:p-4 rounded-xl md:rounded-[1.5rem] bg-amber-500 text-white shadow-lg shadow-amber-500/30">
+              <School className="h-5 w-5 md:h-8 md:w-8" />
             </div>
             <div className="space-y-1">
-              <p className="text-4xl font-black text-slate-900 tracking-tighter">
+              <p className="text-xl md:text-4xl font-black text-slate-900 tracking-tighter">
                   {isStatsLoading ? "..." : stats?.totalClasses}
               </p>
-              <p className="label-caps">Learning Classes</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400">Classes</p>
             </div>
           </CardContent>
         </Card>
         </motion.div>
 
         <motion.div whileHover={{ y: -5 }} className="h-full">
-        <Card className="border-none shadow-strong rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
-          <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-4">
-            <div className="p-4 rounded-[1.5rem] bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-              <Trophy className="h-8 w-8" />
+        <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-white/90 backdrop-blur-xl border border-white/40 h-full">
+          <CardContent className="p-4 md:p-8 flex flex-col items-center justify-center text-center space-y-2 md:space-y-4">
+            <div className="p-2.5 md:p-4 rounded-xl md:rounded-[1.5rem] bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+              <Trophy className="h-5 w-5 md:h-8 md:w-8" />
             </div>
             <div className="space-y-1">
-              <p className="text-4xl font-black text-slate-900 tracking-tighter">
+              <p className="text-xl md:text-4xl font-black text-slate-900 tracking-tighter">
                   100%
               </p>
-              <p className="label-caps">Excellence Ratio</p>
+              <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400">Excellence</p>
             </div>
           </CardContent>
         </Card>

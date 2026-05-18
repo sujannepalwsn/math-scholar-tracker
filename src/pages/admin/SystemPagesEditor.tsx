@@ -132,7 +132,7 @@ export default function SystemPagesEditor() {
   return (
     <div className="space-y-8 animate-in fade-in duration-1000">
       <div className="space-y-1">
-        <h1 className="text-4xl font-black tracking-tight text-foreground uppercase">System Pages Editor</h1>
+        <h1 className="text-2xl md:text-4xl font-black tracking-tight text-foreground uppercase">System Pages Editor</h1>
         <p className="text-muted-foreground font-medium">Manage legal and support content for the public landing page.</p>
       </div>
 

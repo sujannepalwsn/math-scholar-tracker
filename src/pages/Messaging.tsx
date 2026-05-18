@@ -571,12 +571,12 @@ export default function Messaging() {
               <MessageSquare className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Communications Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Direct & Broadcast Messaging Nexus</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Messaging Nexus</p>
               </div>
             </div>
           </div>
@@ -597,7 +597,7 @@ export default function Messaging() {
         </TabsList>
 
         <TabsContent value="direct">
-          <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] h-[calc(100vh-280px)] min-h-[500px] bg-card/40 backdrop-blur-md border border-white/20">
+          <Card className="border-none shadow-strong overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] h-[calc(100vh-280px)] min-h-[500px] bg-card/40 backdrop-blur-md border border-white/20">
             {isMobile ? (
               showChatView ? <ChatView /> : <ConversationList />
             ) : (
@@ -614,14 +614,14 @@ export default function Messaging() {
         </TabsContent>
 
           <TabsContent value="broadcast">
-            <Card className="border-none shadow-strong rounded-[2.5rem] overflow-hidden bg-card/40 backdrop-blur-md border border-white/20">
-              <CardHeader className="bg-primary/5 border-b border-border/10 px-8 py-6">
-                <CardTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tight">
-                  <Radio className="h-6 w-6 text-primary" /> Unified Broadcast Portal
+            <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden bg-card/40 backdrop-blur-md border border-white/20">
+              <CardHeader className="bg-primary/5 border-b border-border/10 px-6 md:px-8 py-4 md:py-6">
+                <CardTitle className="flex items-center gap-3 text-base md:text-xl font-black uppercase tracking-tight">
+                  <Radio className="h-5 w-5 md:h-6 md:w-6 text-primary" /> Broadcast Portal
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">Send a message to multiple recipients at once.</p>
+                <p className="text-[10px] md:text-sm text-muted-foreground">Send a message to multiple recipients.</p>
               </CardHeader>
-              <CardContent className="p-8">
+              <CardContent className="p-4 md:p-8">
                 {canEdit ? (
                   <form onSubmit={(e) => { e.preventDefault(); if (broadcastMessageText.trim()) sendBroadcastMessageMutation.mutate(); }} className="space-y-6 max-w-2xl mx-auto">
                     <div className="space-y-2">

@@ -380,7 +380,7 @@ const HeroSection = ({ scrollToNext, setActiveSection }: { scrollToNext: () => v
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-6xl md:text-8xl font-black text-white leading-[0.9] tracking-tighter mb-8 max-w-4xl"
+            className="text-4xl sm:text-6xl md:text-8xl font-black text-white leading-[1] md:leading-[0.9] tracking-tighter mb-6 md:mb-8 max-w-4xl px-4"
           >
             Run Your Entire School <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-blue-400">from One Platform</span>
@@ -390,7 +390,7 @@ const HeroSection = ({ scrollToNext, setActiveSection }: { scrollToNext: () => v
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl md:text-2xl text-slate-400 font-medium max-w-2xl mb-12"
+            className="text-lg md:text-2xl text-slate-400 font-medium max-w-2xl mb-8 md:mb-12 px-6"
           >
             From admissions to attendance, exams to finance. <br />
             Everything simplified, everything in sync.
@@ -459,9 +459,9 @@ const ProblemSection = ({ setActiveSection }: { setActiveSection: (i: number) =>
   return (
     <Section id="problems" index={1} setActiveSection={setActiveSection} className="bg-slate-900">
       <div className="container mx-auto">
-        <div className="text-center mb-20 space-y-4">
+        <div className="text-center mb-12 md:mb-20 space-y-4 px-4">
           <Badge className="bg-rose-500/10 text-rose-500 border-rose-500/20 rounded-full px-4 py-1">THE PAIN POINTS</Badge>
-          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">Managing a school <br /><span className="text-slate-500">shouldn't be this hard.</span></h2>
+          <h2 className="text-3xl md:text-6xl font-black text-white tracking-tighter leading-tight md:leading-normal">Managing a school <br /><span className="text-slate-500">shouldn't be this hard.</span></h2>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -491,11 +491,11 @@ const SolutionOverview = ({ setActiveSection }: { setActiveSection: (i: number) 
   return (
     <Section id="solution" index={2} setActiveSection={setActiveSection} className="bg-slate-950">
       <div className="container mx-auto flex flex-col lg:flex-row items-center gap-20">
-        <div className="flex-1 space-y-8">
+        <div className="flex-1 space-y-6 md:space-y-8 text-center lg:text-left">
           <Badge className="border-none rounded-full px-4 py-1 bg-indigo-500/10 text-indigo-400">THE SOLUTION</Badge>
-          <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[0.9]">
+          <h2 className="text-4xl md:text-7xl font-black text-white tracking-tighter leading-[1] md:leading-[0.9]">
             Meet EduFlow. <br />
-            <span className="text-slate-500 text-4xl md:text-5xl">Your digital command center.</span>
+            <span className="text-slate-500 text-3xl md:text-5xl">Your digital command center.</span>
           </h2>
           <p className="text-xl text-slate-400 font-medium leading-relaxed max-w-xl">
             We’ve consolidated every administrative tool into one beautiful, lightning-fast dashboard.
@@ -532,9 +532,9 @@ const FeatureSlide = ({ title, valueProp, icon: Icon, highlights, index, setActi
              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 bg-indigo-500/10 text-indigo-400">
                 <Icon className="w-8 h-8" />
              </div>
-             <div className="space-y-4">
-                <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">{title}</h2>
-                <p className="text-2xl font-bold text-indigo-400">{valueProp}</p>
+             <div className="space-y-4 text-center lg:text-left">
+                <h2 className="text-3xl md:text-6xl font-black text-white tracking-tighter leading-tight">{title}</h2>
+                <p className="text-xl md:text-2xl font-bold text-indigo-400">{valueProp}</p>
              </div>
              <div className="grid gap-4">
                 {highlights.map((h, i) => (
@@ -728,9 +728,9 @@ const RoleExperienceSection = ({ setActiveSection }: { setActiveSection: (i: num
   return (
     <Section id="roles" index={10} setActiveSection={setActiveSection} className="bg-slate-950">
       <div className="container mx-auto">
-        <div className="text-center mb-16 space-y-4">
+        <div className="text-center mb-12 md:mb-16 space-y-4 px-4">
           <Badge className="border-none rounded-full px-4 py-1 bg-indigo-500/10 text-indigo-400">EXPERIENCE ROLES</Badge>
-          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">One System. <br /><span className="text-slate-500">Every Perspective.</span></h2>
+          <h2 className="text-3xl md:text-6xl font-black text-white tracking-tighter leading-tight">One System. <br /><span className="text-slate-500">Every Perspective.</span></h2>
         </div>
 
         <Tabs defaultValue="admin" className="w-full" onValueChange={setActiveTab}>
@@ -833,9 +833,9 @@ const WorkflowSection = ({ setActiveSection }: { setActiveSection: (i: number) =
   return (
     <Section id="workflow" index={11} setActiveSection={setActiveSection} className="bg-slate-900">
       <div className="container mx-auto">
-        <div className="text-center mb-20 space-y-4">
+        <div className="text-center mb-12 md:mb-20 space-y-4 px-4">
           <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 rounded-full px-4 py-1">THE FLOW</Badge>
-          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">Everything Connects.</h2>
+          <h2 className="text-3xl md:text-6xl font-black text-white tracking-tighter">Everything Connects.</h2>
         </div>
 
         <div className="relative flex flex-col md:flex-row justify-between gap-8 max-w-6xl mx-auto">
@@ -877,9 +877,9 @@ const TrustSection = ({ setActiveSection }: { setActiveSection: (i: number) => v
   return (
     <Section id="trust" index={12} setActiveSection={setActiveSection} className="bg-slate-950">
       <div className="container mx-auto">
-        <div className="grid lg:grid-cols-2 gap-20 items-center">
-          <div className="space-y-8">
-            <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter">Trusted by Forward-Thinking Schools.</h2>
+        <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
+          <div className="space-y-6 md:space-y-8 text-center lg:text-left px-4">
+            <h2 className="text-4xl md:text-7xl font-black text-white tracking-tighter leading-tight">Trusted by Forward-Thinking Schools.</h2>
             <p className="text-xl text-slate-400 font-medium leading-relaxed">
               Join the growing network of educational institutions revolutionizing their management with EduFlow.
             </p>
@@ -934,8 +934,8 @@ const FinalCTASection = ({ setActiveSection, scrollToSection }: { setActiveSecti
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] border border-white/10 rounded-full animate-ping" />
       </div>
 
-      <div className="container mx-auto relative z-10 text-center flex flex-col items-center">
-        <h2 className="text-5xl md:text-8xl font-black text-white tracking-tighter leading-[0.9] mb-8 uppercase">
+      <div className="container mx-auto relative z-10 text-center flex flex-col items-center px-4">
+        <h2 className="text-4xl md:text-8xl font-black text-white tracking-tighter leading-[1] md:leading-[0.9] mb-8 uppercase">
           Start Managing Your <br />School Smarter Today.
         </h2>
         <p className="text-xl md:text-2xl text-white/80 font-medium mb-12 max-w-2xl">

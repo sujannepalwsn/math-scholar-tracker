@@ -744,12 +744,12 @@ export default function RegisterStudent() {
     <div className="space-y-8 animate-in fade-in duration-1000 page-enter">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+          <h1 className="text-xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
             Faculty Nexus: Enrolment
           </h1>
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <p className="text-muted-foreground text-sm font-medium">Onboard new students to the academic system.</p>
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <p className="text-muted-foreground text-[10px] md:text-sm font-medium uppercase tracking-widest">Onboard new students to the system</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -788,10 +788,10 @@ export default function RegisterStudent() {
 
         <TabsContent value="enrolment" className="space-y-8 outline-none">
       {/* Single Student Form Wizard */}
-      <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 group hover:shadow-xl transition-all duration-500">
-        <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-              <CardTitle className="text-lg md:text-xl font-black flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 group-hover:scale-110 transition-transform">
+      <Card className="border-none shadow-strong overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20 group hover:shadow-xl transition-all duration-500">
+        <CardHeader className="border-b border-muted/20 bg-primary/5 py-4 md:py-6">
+              <CardTitle className="text-base md:text-xl font-black flex items-center gap-3">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10 group-hover:scale-110 transition-transform">
                   <UserPlus className="h-5 w-5 md:h-6 md:w-6 text-primary" />
             </div>
             Student Registry Profile
@@ -1023,12 +1023,12 @@ export default function RegisterStudent() {
 
       {/* Students Table */}
       <Card className="border-none shadow-strong overflow-hidden rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-border/20">
-        <CardHeader className="border-b border-muted/20 bg-primary/5 py-8 px-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+        <CardHeader className="border-b border-muted/20 bg-primary/5 py-4 md:py-8 px-4 md:px-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 md:gap-8">
             <div className="space-y-1">
-              <CardTitle className="text-xl md:text-2xl font-black flex items-center gap-3">
-                <div className="p-2 md:p-2.5 rounded-xl md:rounded-2xl bg-primary/10">
-                  <Users className="h-6 w-6 md:h-7 md:w-7 text-primary" />
+              <CardTitle className="text-base md:text-2xl font-black flex items-center gap-3">
+                <div className="p-1.5 md:p-2.5 rounded-lg md:rounded-2xl bg-primary/10">
+                  <Users className="h-5 w-5 md:h-7 md:w-7 text-primary" />
                 </div>
                 Academic Roster
               </CardTitle>
@@ -1039,10 +1039,10 @@ export default function RegisterStudent() {
                  </p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-4 items-center">
-              <div className="flex items-center gap-2 bg-card/60 p-1.5 rounded-2xl border border-border/40 shadow-soft">
+            <div className="flex flex-wrap gap-2 md:gap-4 items-center">
+              <div className="flex items-center gap-1 md:gap-2 bg-card/60 p-1 rounded-xl md:rounded-2xl border border-border/40 shadow-soft w-full md:w-auto">
                   <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                    <SelectTrigger className="w-[140px] h-10 border-none bg-transparent shadow-none font-black text-[10px] uppercase tracking-widest focus:ring-0">
+                    <SelectTrigger className="flex-1 md:w-[140px] h-9 md:h-10 border-none bg-transparent shadow-none font-black text-[9px] md:text-[10px] uppercase tracking-widest focus:ring-0">
                       <SelectValue placeholder="Grade" />
                     </SelectTrigger>
                     <SelectContent className="backdrop-blur-xl bg-card/90 border-none rounded-2xl shadow-strong">
@@ -1053,14 +1053,14 @@ export default function RegisterStudent() {
                     </SelectContent>
                   </Select>
                   <div className="h-4 w-[1px] bg-slate-200" />
-                  <div className="relative">
+                  <div className="relative flex-[2]">
                     <Input
-                      placeholder="SYNCHRONIZED SEARCH..."
+                      placeholder="SEARCH..."
                       value={searchFilter}
                       onChange={(e) => setSearchFilter(e.target.value)}
-                      className="w-[220px] h-10 border-none bg-transparent shadow-none font-black text-[10px] uppercase tracking-widest focus-visible:ring-0 pl-8"
+                      className="w-full md:w-[220px] h-9 md:h-10 border-none bg-transparent shadow-none font-black text-[9px] md:text-[10px] uppercase tracking-widest focus-visible:ring-0 pl-7"
                     />
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
                   </div>
               </div>
             </div>

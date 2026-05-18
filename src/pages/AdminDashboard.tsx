@@ -86,18 +86,18 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-12 animate-in fade-in duration-1000">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+        <div className="space-y-1 md:space-y-2">
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
             Admin Dashboard
           </h1>
-          <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+          <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
             Global System Overview
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {kpis.map((kpi, index) => (
           <motion.div
             key={kpi.label}
@@ -116,16 +116,16 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <Card className="border-none shadow-strong rounded-[2.5rem] bg-white overflow-hidden">
-            <CardHeader className="p-8 border-b border-slate-50">
-              <CardTitle className="text-lg font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-primary" /> Center Performance Comparison
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="lg:col-span-2 space-y-6 md:space-y-8">
+          <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-white overflow-hidden">
+            <CardHeader className="p-5 md:p-8 border-b border-slate-50">
+              <CardTitle className="text-base md:text-lg font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-primary" /> Center Comparison
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-8">
-              <div className="h-[400px]">
+            <CardContent className="p-4 md:p-8">
+              <div className="h-[300px] md:h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={centerTrends}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -146,10 +146,10 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <Card className="border-none shadow-strong rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden">
-        <CardContent className="p-12">
-          <div className="max-w-2xl space-y-6">
-            <h2 className="text-3xl font-black tracking-tight">System Status</h2>
+      <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden">
+        <CardContent className="p-8 md:p-12">
+          <div className="max-w-2xl space-y-4 md:space-y-6">
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">System Status</h2>
             <p className="text-slate-400 font-medium leading-relaxed">
               All core services are operational. The global infrastructure is monitoring
               active sessions across all tuition centers. Automated backups and security

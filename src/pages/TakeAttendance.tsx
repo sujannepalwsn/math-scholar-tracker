@@ -559,7 +559,7 @@ export default function TakeAttendance() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="w-[140px] md:w-[160px] space-y-1.5 md:space-y-2">
+            <div className="w-full md:w-[160px] space-y-1.5 md:space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 ml-1">Filter Grade</label>
               <Select value={gradeFilter} onValueChange={setGradeFilter}>
                 <SelectTrigger className="h-10 md:h-11 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">

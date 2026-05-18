@@ -691,12 +691,12 @@ export default function ClassRoutine() {
               <Clock className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Scheduling Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Institutional Routine Matrix</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Routine Matrix</p>
               </div>
             </div>
           </div>
@@ -746,9 +746,9 @@ export default function ClassRoutine() {
         </TabsList>
 
         <TabsContent value="summary" className="space-y-4">
-          <Card className="border-none shadow-strong rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-primary/5 border-b border-border/10 px-8 py-6 flex flex-row items-center justify-between">
-              <CardTitle className="text-xl font-black uppercase tracking-widest">Timetable Matrix</CardTitle>
+          <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
+            <CardHeader className="bg-primary/5 border-b border-border/10 px-4 md:px-8 py-4 md:py-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-base md:text-xl font-black uppercase tracking-widest">Timetable Matrix</CardTitle>
               <div className="flex items-center gap-2 print:hidden">
                 <Select value={summaryDay.toString()} onValueChange={(v) => setSummaryDay(parseInt(v))}>
                   <SelectTrigger className="w-[150px]">
@@ -762,9 +762,9 @@ export default function ClassRoutine() {
                 </Select>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table className="border-collapse border border-slate-200">
+            <CardContent className="p-0 md:p-6">
+              <div className="overflow-x-auto table-scroll-shadow">
+                <Table className="border-collapse border border-slate-200 min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="border border-slate-200 bg-slate-50 font-black text-[10px] uppercase tracking-widest text-center min-w-[120px]">Period / Time</TableHead>
@@ -899,7 +899,7 @@ export default function ClassRoutine() {
         </TabsContent>
 
         <TabsContent value="schedule" className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:hidden px-2 md:px-0">
             <div className="flex flex-wrap items-center gap-2">
               <Select value={selectedGrade} onValueChange={setSelectedGrade}>
                 <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
@@ -986,14 +986,14 @@ export default function ClassRoutine() {
           )}
 
           <Card className="border-none shadow-strong rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-primary/5 border-b border-border/10 px-8 py-6">
-              <CardTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tight">
-                <BookOpen className="h-6 w-6 text-primary" /> Curricular Subjects
+            <CardHeader className="bg-primary/5 border-b border-border/10 px-6 md:px-8 py-4 md:py-6">
+              <CardTitle className="flex items-center gap-3 text-base md:text-xl font-black uppercase tracking-tight">
+                <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-primary" /> Curricular Subjects
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0 md:p-6">
               {subjectsLoading ? <p>Loading...</p> : registeredSubjects.length === 0 ? <p className="text-muted-foreground text-center py-4">No subjects defined.</p> : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto table-scroll-shadow">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1028,15 +1028,15 @@ export default function ClassRoutine() {
             </div>
           )}
 
-          <Card className="border-none shadow-strong rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
-            <CardHeader className="bg-primary/5 border-b border-border/10 px-8 py-6">
-              <CardTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tight">
-                <Clock className="h-6 w-6 text-primary" /> Time Slots
+          <Card className="border-none shadow-strong rounded-[1.5rem] md:rounded-[2.5rem] bg-card/40 backdrop-blur-md border border-white/20">
+            <CardHeader className="bg-primary/5 border-b border-border/10 px-6 md:px-8 py-4 md:py-6">
+              <CardTitle className="flex items-center gap-3 text-base md:text-xl font-black uppercase tracking-tight">
+                <Clock className="h-5 w-5 md:h-6 md:w-6 text-primary" /> Time Slots
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0 md:p-6">
               {periodsLoading ? <p>Loading...</p> : periods.length === 0 ? <p className="text-muted-foreground text-center py-4">No periods defined.</p> : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto table-scroll-shadow">
                   <Table>
                     <TableHeader>
                       <TableRow>

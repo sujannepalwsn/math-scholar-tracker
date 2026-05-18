@@ -175,16 +175,16 @@ export default function CostIntelligence() {
         <TabsContent value="overview" className="space-y-8">
           {/* Header Summary */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card className="rounded-[2rem] border-none shadow-sm bg-primary text-white overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-6 opacity-10">
-                <DollarSign className="h-24 w-24" />
+            <Card className="rounded-[1.5rem] md:rounded-[2rem] border-none shadow-sm bg-primary text-white overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 md:p-6 opacity-10">
+                <DollarSign className="h-16 w-16 md:h-24 md:w-24" />
               </div>
-              <CardContent className="p-8 space-y-2">
+              <CardContent className="p-6 md:p-8 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-black uppercase tracking-widest text-primary-foreground/60">Actual Monthly Est.</p>
+                  <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-primary-foreground/60">Monthly Est.</p>
                   <Badge className="bg-white/20 text-white border-none text-[8px] font-black">{tier}</Badge>
                 </div>
-                <h3 className="text-4xl font-black">${actualCost.totalMonthlyCost.toFixed(2)}</h3>
+                <h3 className="text-2xl md:text-4xl font-black">${actualCost.totalMonthlyCost.toFixed(2)}</h3>
                 <p className="text-[10px] font-bold opacity-80 flex items-center gap-1">
                    {systemStats?.counts ? <Activity className="h-3 w-3" /> : <Calculator className="h-3 w-3" />}
                    Based on {actualCounts.students} students {systemStats?.counts ? '(Real Data)' : '(Simulated)'}
@@ -192,13 +192,13 @@ export default function CostIntelligence() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
-              <CardContent className="p-8 space-y-2">
+            <Card className="rounded-[1.5rem] md:rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+              <CardContent className="p-6 md:p-8 space-y-2">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Database className="h-4 w-4" />
-                  <p className="text-xs font-black uppercase tracking-widest">DB Storage</p>
+                  <p className="text-[10px] md:text-xs font-black uppercase tracking-widest">DB Storage</p>
                 </div>
-                <h3 className="text-3xl font-black text-slate-700">{actualCost.categories.dbStorage.usageGb.toFixed(2)} GB</h3>
+                <h3 className="text-2xl md:text-3xl font-black text-slate-700">{actualCost.categories.dbStorage.usageGb.toFixed(2)} GB</h3>
                 <div className="w-full h-1 bg-slate-100 rounded-full mt-2">
                   <div
                     className="h-full bg-indigo-500 rounded-full"
@@ -208,13 +208,13 @@ export default function CostIntelligence() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
-              <CardContent className="p-8 space-y-2">
+            <Card className="rounded-[1.5rem] md:rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+              <CardContent className="p-6 md:p-8 space-y-2">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Activity className="h-4 w-4" />
-                  <p className="text-xs font-black uppercase tracking-widest">API Egress</p>
+                  <p className="text-[10px] md:text-xs font-black uppercase tracking-widest">API Egress</p>
                 </div>
-                <h3 className="text-3xl font-black text-slate-700">{actualCost.categories.egress.usageGb.toFixed(2)} GB</h3>
+                <h3 className="text-2xl md:text-3xl font-black text-slate-700">{actualCost.categories.egress.usageGb.toFixed(2)} GB</h3>
                 <div className="w-full h-1 bg-slate-100 rounded-full mt-2">
                   <div
                     className="h-full bg-emerald-500 rounded-full"
@@ -224,13 +224,13 @@ export default function CostIntelligence() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
-              <CardContent className="p-8 space-y-2">
+            <Card className="rounded-[1.5rem] md:rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+              <CardContent className="p-6 md:p-8 space-y-2">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Layers className="h-4 w-4" />
-                  <p className="text-xs font-black uppercase tracking-widest">Edge Functions</p>
+                  <p className="text-[10px] md:text-xs font-black uppercase tracking-widest">Functions</p>
                 </div>
-                <h3 className="text-3xl font-black text-slate-700">{(actualCost.categories.edgeFunctions.invocations / 1000).toFixed(1)}K</h3>
+                <h3 className="text-2xl md:text-3xl font-black text-slate-700">{(actualCost.categories.edgeFunctions.invocations / 1000).toFixed(1)}K</h3>
                 <div className="w-full h-1 bg-slate-100 rounded-full mt-2">
                   <div
                     className="h-full bg-amber-500 rounded-full"
@@ -244,12 +244,12 @@ export default function CostIntelligence() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Cost Breakdown & Visuals */}
             <div className="lg:col-span-2 space-y-8">
-              <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="p-8 border-b border-slate-50">
-                  <div className="flex items-center justify-between">
+              <Card className="rounded-[1.5rem] md:rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+                <CardHeader className="p-5 md:p-8 border-b border-slate-50">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <CardTitle className="text-2xl font-black uppercase tracking-tight">Module Cost Analysis</CardTitle>
+                        <CardTitle className="text-xl md:text-2xl font-black uppercase tracking-tight">Module Costs</CardTitle>
                         <TooltipProvider>
                            <Tooltip>
                               <TooltipTrigger>
@@ -268,8 +268,8 @@ export default function CostIntelligence() {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="p-8">
-                   <div className="h-[400px]">
+                <CardContent className="p-4 md:p-8">
+                   <div className="h-[300px] md:h-[400px]">
                      <ResponsiveContainer width="100%" height="100%">
                        <BarChart data={actualCost.moduleBreakdown.slice(0, 10)} layout="vertical">
                          <CartesianGrid strokeDasharray="3 3" horizontal={false} />

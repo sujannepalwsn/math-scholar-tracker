@@ -54,12 +54,12 @@ export default function HRManagement() {
               <Users className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Talent Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Faculty Lifecycle & Payroll</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Faculty Lifecycle</p>
               </div>
             </div>
           </div>
@@ -81,9 +81,9 @@ export default function HRManagement() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <Card className="lg:col-span-4 rounded-[2.5rem] border-none shadow-strong bg-card/40 backdrop-blur-md overflow-hidden h-fit border border-white/20">
-          <CardHeader className="bg-primary/5 border-b border-border/10 px-8 py-6">
-            <CardTitle className="flex items-center gap-3 text-lg font-black uppercase tracking-tight">
+        <Card className="lg:col-span-4 rounded-[1.5rem] md:rounded-[2.5rem] border-none shadow-strong bg-card/40 backdrop-blur-md overflow-hidden h-fit border border-white/20">
+          <CardHeader className="bg-primary/5 border-b border-border/10 px-6 md:px-8 py-4 md:py-6">
+            <CardTitle className="flex items-center gap-3 text-base md:text-lg font-black uppercase tracking-tight">
               <Users className="h-5 w-5 text-primary" /> Faculty Roster
             </CardTitle>
           </CardHeader>
@@ -128,16 +128,16 @@ export default function HRManagement() {
         <div className="lg:col-span-8">
           {selectedTeacherId ? (
             <div className="space-y-6">
-              <Card className="rounded-[2.5rem] border-none shadow-strong bg-card/40 backdrop-blur-md overflow-hidden border border-white/20">
-                <CardHeader className="bg-primary/5 border-b border-border/10 px-8 py-6">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                        <Briefcase className="h-6 w-6 text-primary" />
+              <Card className="rounded-[1.5rem] md:rounded-[2.5rem] border-none shadow-strong bg-card/40 backdrop-blur-md overflow-hidden border border-white/20">
+                <CardHeader className="bg-primary/5 border-b border-border/10 px-5 md:px-8 py-5 md:py-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-primary/10 flex items-center justify-center">
+                        <Briefcase className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-black uppercase tracking-tight">{selectedTeacher?.name}</CardTitle>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{selectedTeacher?.email}</p>
+                        <CardTitle className="text-lg md:text-xl font-black uppercase tracking-tight">{selectedTeacher?.name}</CardTitle>
+                        <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-widest">{selectedTeacher?.email}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -145,7 +145,7 @@ export default function HRManagement() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-8">
+                <CardContent className="p-4 md:p-8">
                   <StaffHRModule teacherId={selectedTeacherId} teacherName={selectedTeacher?.name || ""} canEdit={canEdit} />
                 </CardContent>
               </Card>

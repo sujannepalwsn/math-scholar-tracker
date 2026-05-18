@@ -145,18 +145,19 @@ export default function ParentManagement({ centerId }: { centerId: string }) {
                 Manage login credentials and access control for guardians
               </p>
             </div>
-            <div className="relative">
+            <div className="relative w-full md:w-auto">
               <Input
                 placeholder="SEARCH PARENTS..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
-                className="w-[300px] h-12 rounded-2xl bg-white/50 border-none shadow-soft font-black text-[10px] uppercase tracking-widest pl-10"
+                className="w-full md:w-[300px] h-11 md:h-12 rounded-2xl bg-white/50 border-none shadow-soft font-black text-[10px] uppercase tracking-widest pl-10"
               />
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          <div className="overflow-x-auto table-scroll-shadow">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/5 border-b border-slate-100">
@@ -261,7 +262,7 @@ export default function ParentManagement({ centerId }: { centerId: string }) {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
+          </Table></div>
         </CardContent>
       </Card>
 

@@ -234,7 +234,7 @@ export default function ParentStudentReport() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div className="space-y-4">
-          <h1 className="text-4xl font-black tracking-tight text-slate-900">Performance Analytics</h1>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tight text-slate-900">Performance Analytics</h1>
           <p className="text-slate-500 font-medium text-lg max-w-2xl leading-relaxed">
             Comprehensive breakdown of academic proficiency and growth trajectories for <span className="text-primary font-bold">{student?.name}</span>.
           </p>
@@ -288,7 +288,7 @@ export default function ParentStudentReport() {
               <CardContent className="p-6">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Avg Proficiency</p>
                 <div className="flex items-end gap-2">
-                  <p className="text-4xl font-black text-slate-900">{Math.round(stats.avgScore)}%</p>
+                  <p className="text-2xl md:text-4xl font-black text-slate-900">{Math.round(stats.avgScore)}%</p>
                   <TrendingUp className="h-6 w-6 text-emerald-500 mb-1" />
                 </div>
               </CardContent>
@@ -297,7 +297,7 @@ export default function ParentStudentReport() {
               <CardContent className="p-6">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Attendance Rate</p>
                 <div className="flex items-end gap-2">
-                  <p className="text-4xl font-black text-slate-900">{Math.round(stats.attendanceRate)}%</p>
+                  <p className="text-2xl md:text-4xl font-black text-slate-900">{Math.round(stats.attendanceRate)}%</p>
                   <Clock className="h-6 w-6 text-primary mb-1" />
                 </div>
               </CardContent>
@@ -306,7 +306,7 @@ export default function ParentStudentReport() {
               <CardContent className="p-6">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Behavioral Flags</p>
                 <div className="flex items-end gap-2">
-                  <p className="text-4xl font-black text-slate-900">{stats.disciplineCount}</p>
+                  <p className="text-2xl md:text-4xl font-black text-slate-900">{stats.disciplineCount}</p>
                   <AlertTriangle className={cn("h-6 w-6 mb-1", stats.disciplineCount > 0 ? "text-rose-500" : "text-emerald-500")} />
                 </div>
               </CardContent>

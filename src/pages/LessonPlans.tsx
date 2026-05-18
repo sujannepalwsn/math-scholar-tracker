@@ -469,23 +469,23 @@ export default function LessonPlans() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20">
-              <FileText className="h-8 w-8 text-primary animate-pulse" />
+            <div className="p-2 md:p-2.5 rounded-xl md:rounded-2xl bg-primary/10 border border-primary/20">
+              <FileText className="h-6 w-6 md:h-8 md:w-8 text-primary animate-pulse" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-violet-600">
                 Lesson Hub
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <p className="text-muted-foreground text-sm font-bold uppercase tracking-widest">Pedagogical Design & Curriculum Registry</p>
+              <div className="flex items-center gap-2 mt-0.5 md:mt-1">
+                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                 <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-widest">Pedagogical Design & Curriculum Registry</p>
               </div>
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex flex-wrap gap-2 md:gap-3 items-center">
           <Select value={subjectFilter} onValueChange={setSubjectFilter}>
-            <SelectTrigger className="w-[140px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-full md:w-[140px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Subject" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
@@ -494,7 +494,7 @@ export default function LessonPlans() {
             </SelectContent>
           </Select>
           <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="w-[130px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
+            <SelectTrigger className="w-full md:w-[130px] h-10 bg-card/50 border-muted-foreground/10 focus:ring-primary/20 rounded-xl">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-card/90 border-muted-foreground/10 rounded-xl">
@@ -522,9 +522,9 @@ export default function LessonPlans() {
       </div>
 
       <Card className="border-none shadow-strong overflow-hidden rounded-3xl bg-card/40 backdrop-blur-md border border-border/20">
-        <CardHeader className="border-b border-muted/20 bg-primary/5 py-6">
-          <CardTitle className="text-xl font-black flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10"><FileText className="h-6 w-6 text-primary" /></div>
+        <CardHeader className="border-b border-muted/20 bg-primary/5 py-4 md:py-6">
+          <CardTitle className="text-base md:text-xl font-black flex items-center gap-3">
+            <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-primary/10"><FileText className="h-5 w-5 md:h-6 md:w-6 text-primary" /></div>
             Institutional Plan Registry
           </CardTitle>
         </CardHeader>
@@ -532,7 +532,7 @@ export default function LessonPlans() {
           {isLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto table-scroll-shadow">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-muted/10">
@@ -651,7 +651,7 @@ export default function LessonPlans() {
              <div className="border-2 border-slate-900 rounded-2xl sm:rounded-3xl overflow-hidden divide-y-2 md:divide-y-0 md:divide-x-2 divide-slate-900 grid grid-cols-1 md:grid-cols-2">
                 <div className="divide-y-2 divide-slate-900">
                   <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[80px] sm:min-w-[100px]">Subject:</Label>
+                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[60px] md:min-w-[80px] sm:min-w-[70px] md:min-w-[100px]">Subject:</Label>
                     {isTeacher ? (
                       <Select value={subject} onValueChange={setSubject} disabled={selectedGrade === "all"}>
                         <SelectTrigger className="h-8 sm:h-9 border-0 border-b border-slate-400 rounded-none focus:ring-0 px-0 bg-transparent font-bold text-xs sm:text-sm">
@@ -666,17 +666,17 @@ export default function LessonPlans() {
                     )}
                   </div>
                   <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[80px] sm:min-w-[100px]">Unit:</Label>
+                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[60px] md:min-w-[80px] sm:min-w-[70px] md:min-w-[100px]">Unit:</Label>
                     <Input value={chapter} onChange={(e) => setChapter(e.target.value)} className="h-8 sm:h-9 border-0 border-b border-slate-400 rounded-none focus-visible:ring-0 px-0 bg-transparent font-bold text-xs sm:text-sm" />
                   </div>
                   <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[80px] sm:min-w-[100px]">Lesson Topic:</Label>
+                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[60px] md:min-w-[80px] sm:min-w-[70px] md:min-w-[100px]">Lesson Topic:</Label>
                     <Input value={topic} onChange={(e) => setTopic(e.target.value)} className="h-8 sm:h-9 border-0 border-b border-slate-400 rounded-none focus-visible:ring-0 px-0 bg-transparent font-bold text-xs sm:text-sm" />
                   </div>
                 </div>
                 <div className="divide-y-2 divide-slate-900">
                   <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[80px] sm:min-w-[100px]">Class:</Label>
+                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[60px] md:min-w-[80px] sm:min-w-[70px] md:min-w-[100px]">Class:</Label>
                     <Select value={selectedGrade} onValueChange={setSelectedGrade}>
                       <SelectTrigger className="h-8 sm:h-9 border-0 border-b border-slate-400 rounded-none focus:ring-0 px-0 bg-transparent font-bold text-xs sm:text-sm">
                         <SelectValue />
@@ -688,11 +688,11 @@ export default function LessonPlans() {
                     </Select>
                   </div>
                   <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[80px] sm:min-w-[100px]">Period:</Label>
+                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[60px] md:min-w-[80px] sm:min-w-[70px] md:min-w-[100px]">Period:</Label>
                     <Input value={period} onChange={(e) => setPeriod(e.target.value)} className="h-8 sm:h-9 border-0 border-b border-slate-400 rounded-none focus-visible:ring-0 px-0 bg-transparent font-bold text-xs sm:text-sm" />
                   </div>
                   <div className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[80px] sm:min-w-[100px]">Date:</Label>
+                    <Label className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest min-w-[60px] md:min-w-[80px] sm:min-w-[70px] md:min-w-[100px]">Date:</Label>
                     <Input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} className="h-8 sm:h-9 border-0 border-b border-slate-400 rounded-none focus-visible:ring-0 px-0 bg-transparent font-bold text-xs sm:text-sm" />
                   </div>
                 </div>
@@ -874,29 +874,29 @@ export default function LessonPlans() {
                     <div className="grid grid-cols-1 md:grid-cols-2">
                       <div className="md:border-r-2 border-slate-900 divide-y-2 divide-slate-900">
                         <div className="p-4 flex gap-2 items-center">
-                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[80px] md:min-w-[100px]">Subject:</span>
+                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[60px] md:min-w-[80px] md:min-w-[70px] md:min-w-[100px]">Subject:</span>
                           <span className="font-bold border-b border-slate-400 flex-1 text-sm">{viewingLessonPlan.subject}</span>
                         </div>
                         <div className="p-4 flex gap-2 items-center">
-                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[80px] md:min-w-[100px]">Unit:</span>
+                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[60px] md:min-w-[80px] md:min-w-[70px] md:min-w-[100px]">Unit:</span>
                           <span className="font-bold border-b border-slate-400 flex-1 text-sm">{viewingLessonPlan.chapter || 'N/A'}</span>
                         </div>
                         <div className="p-4 flex gap-2 items-center">
-                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[80px] md:min-w-[100px]">Topic:</span>
+                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[60px] md:min-w-[80px] md:min-w-[70px] md:min-w-[100px]">Topic:</span>
                           <span className="font-bold border-b border-slate-400 flex-1 text-sm">{viewingLessonPlan.topic || viewingLessonPlan.title}</span>
                         </div>
                       </div>
                       <div className="divide-y-2 divide-slate-900 border-t-2 md:border-t-0 border-slate-900">
                         <div className="p-4 flex gap-2 items-center">
-                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[80px]">Class:</span>
+                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[60px] md:min-w-[80px]">Class:</span>
                           <span className="font-bold border-b border-slate-400 flex-1 text-sm">{viewingLessonPlan.grade || 'General'}</span>
                         </div>
                         <div className="p-4 flex gap-2 items-center">
-                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[80px]">Period:</span>
+                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[60px] md:min-w-[80px]">Period:</span>
                           <span className="font-bold border-b border-slate-400 flex-1 text-sm">{viewingLessonPlan.period || 'N/A'}</span>
                         </div>
                         <div className="p-4 flex gap-2 items-center">
-                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[80px]">Date:</span>
+                          <span className="font-black uppercase text-[10px] md:text-xs min-w-[60px] md:min-w-[80px]">Date:</span>
                           <span className="font-bold border-b border-slate-400 flex-1 text-sm">{format(new Date(viewingLessonPlan.lesson_date), "PPP")}</span>
                         </div>
                       </div>
