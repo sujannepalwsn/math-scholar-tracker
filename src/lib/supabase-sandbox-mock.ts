@@ -119,6 +119,11 @@ export class SupabaseSandboxMock {
   // RPC
   rpc(fn: string, args?: any) {
     let data: any = [];
+    if (fn === 'record_invoice_payment') {
+      return {
+        then: (onfulfilled: any) => onfulfilled({ data: { success: true }, error: null })
+      };
+    }
     if (fn === 'calculate_effort_index') data = 85;
     if (fn === 'calculate_outcome_index') data = 78;
     if (fn === 'get_student_performance_trends') {
